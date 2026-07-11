@@ -42,7 +42,6 @@ import '../unicode/width.dart';
 
 /// Metadata for a touched line.
 ///
-/// Upstream: `third_party/ultraviolet/terminal_renderer.go` (`LineData`).
 final class DirtyDensityMap {
   DirtyDensityMap._(this.width, this.height, this._prefixSums);
 
@@ -162,7 +161,6 @@ final class LineData {
 
 /// A line is a fixed-width list of cells.
 ///
-/// Upstream: `third_party/ultraviolet/buffer.go` (`Line`, `Line.Set`).
 /// A single row of fixed-width [Cell]s.
 final class Line {
   Line._(this._cells);
@@ -198,10 +196,9 @@ final class Line {
     if (cachedHash != null) {
       final previous = _cells[x];
       _renderHash =
-          (cachedHash ^
-              _slotHash(x, previous.renderFingerprint) ^
-              _slotHash(x, cell.renderFingerprint)) &
-          0xFFFFFFFFFFFFFFFF;
+          cachedHash ^
+          _slotHash(x, previous.renderFingerprint) ^
+          _slotHash(x, cell.renderFingerprint);
     }
     _cells[x].dispose();
     _cells[x] = cell;
@@ -214,10 +211,9 @@ final class Line {
     if (cachedHash != null) {
       final previous = _cells[x];
       _renderHash =
-          (cachedHash ^
-              _slotHash(x, previous.renderFingerprint) ^
-              _slotHash(x, cell.renderFingerprint)) &
-          0xFFFFFFFFFFFFFFFF;
+          cachedHash ^
+          _slotHash(x, previous.renderFingerprint) ^
+          _slotHash(x, cell.renderFingerprint);
     }
     _cells[x].copyFrom(cell);
   }
@@ -230,7 +226,7 @@ final class Line {
     for (var i = 0; i < _cells.length; i++) {
       hash ^= _slotHash(i, _cells[i].renderFingerprint);
     }
-    _renderHash = hash & 0xFFFFFFFFFFFFFFFF;
+    _renderHash = hash;
     return hash;
   }
 
@@ -245,7 +241,6 @@ final class Line {
   void set(int x, Cell? cell) => _setInternal(x, cell, takeOwnership: false);
 
   void _setInternal(int x, Cell? cell, {required bool takeOwnership}) {
-    // Upstream: maxCellWidth = 5.
     const maxCellWidth = 5;
 
     final lineWidth = _cells.length;
@@ -306,7 +301,6 @@ final class Line {
 
   /// String representation without trailing spaces.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Line.String`).
   @override
   String toString() {
     final out = StringBuffer();
@@ -331,7 +325,6 @@ final class Line {
   /// Renders the line to a styled string (including SGR and OSC 8 sequences),
   /// trimming trailing spaces.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Line.Render`, `renderLine`).
   String render() {
     final out = StringBuffer();
     _renderLine(out, this);
@@ -344,7 +337,6 @@ final class Line {
 /// The buffer maintains a grid of [Cell]s and tracks which lines have been
 /// "touched" (modified) to allow for efficient incremental rendering.
 ///
-/// Upstream: `third_party/ultraviolet/buffer.go` (`Buffer`).
 final class Buffer {
   Buffer._(this.lines, {required this.tracksDirty})
     : touched = tracksDirty
@@ -393,7 +385,6 @@ final class Buffer {
 
   /// Returns the line at [y], or null if out of bounds.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Buffer.Line`).
   /// Returns the line at [y], or null if out of bounds.
   Line? line(int y) => (y < 0 || y >= lines.length) ? null : lines[y];
 
@@ -403,7 +394,6 @@ final class Buffer {
 
   /// Marks a single cell as dirty.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer_test.go` (`Touch`).
   /// Marks the cell at ([x], [y]) as dirty.
   void touch(int x, int y) => touchLine(x, y, 1);
 
@@ -538,7 +528,6 @@ final class Buffer {
 
   /// Fills the buffer with [cell] over its full bounds.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Fill`).
   void fill(Cell? cell) => fillArea(cell, bounds());
 
   /// Fills the buffer with [cell] within [area].
@@ -546,7 +535,6 @@ final class Buffer {
   /// Note: we step by cell width to avoid repeatedly overwriting wide-cell
   /// placeholders.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`FillArea`).
   void fillArea(Cell? cell, Rectangle area) {
     final clipped = area.intersect(bounds());
     if (clipped.isEmpty) return;
@@ -576,17 +564,14 @@ final class Buffer {
 
   /// Clears the buffer over its full bounds.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Clear`).
   void clear() => clearArea(bounds());
 
   /// Clears the buffer within [area] (fills with spaces).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`ClearArea`).
   void clearArea(Rectangle area) => fillArea(null, area);
 
   /// Clones [area] into a new buffer, or returns null if out-of-bounds.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`CloneArea`).
   Buffer? cloneArea(Rectangle area) {
     final b = bounds();
     if (!b.containsRect(area)) return null;
@@ -604,7 +589,6 @@ final class Buffer {
 
   /// Clones the entire buffer into a new buffer.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Clone`).
   Buffer clone() {
     final b = cloneArea(bounds());
     return b ?? Buffer.create(0, 0);
@@ -612,13 +596,11 @@ final class Buffer {
 
   /// Inserts [n] lines at [y] within full bounds.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`InsertLine`).
   void insertLine(int y, int n, Cell? cell) =>
       insertLineArea(y, n, cell, bounds());
 
   /// Inserts [n] lines at [y] within [area] (ansi IL semantics).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`InsertLineArea`).
   void insertLineArea(int y, int n, Cell? cell, Rectangle area) {
     if (n <= 0 || y < area.minY || y >= area.maxY || y >= height()) return;
     if (y + n > area.maxY) n = area.maxY - y;
@@ -640,13 +622,11 @@ final class Buffer {
 
   /// Deletes [n] lines at [y] within full bounds.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`DeleteLine`).
   void deleteLine(int y, int n, Cell? cell) =>
       deleteLineArea(y, n, cell, bounds());
 
   /// Deletes [n] lines at [y] within [area] (ansi DL semantics).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`DeleteLineArea`).
   void deleteLineArea(int y, int n, Cell? cell, Rectangle area) {
     if (n <= 0 || y < area.minY || y >= area.maxY || y >= height()) return;
     if (n > area.maxY - y) n = area.maxY - y;
@@ -669,13 +649,11 @@ final class Buffer {
 
   /// Inserts [n] cells at (x,y) within full bounds (ansi ICH semantics).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`InsertCell`).
   void insertCell(int x, int y, int n, Cell? cell) =>
       insertCellArea(x, y, n, cell, bounds());
 
   /// Inserts [n] cells at (x,y) within [area] (ansi ICH semantics).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`InsertCellArea`).
   void insertCellArea(int x, int y, int n, Cell? cell, Rectangle area) {
     if (n <= 0 ||
         y < area.minY ||
@@ -701,13 +679,11 @@ final class Buffer {
 
   /// Deletes [n] cells at (x,y) within full bounds (ansi DCH semantics).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`DeleteCell`).
   void deleteCell(int x, int y, int n, Cell? cell) =>
       deleteCellArea(x, y, n, cell, bounds());
 
   /// Deletes [n] cells at (x,y) within [area] (ansi DCH semantics).
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`DeleteCellArea`).
   void deleteCellArea(int x, int y, int n, Cell? cell, Rectangle area) {
     if (n <= 0 ||
         y < area.minY ||
@@ -736,7 +712,6 @@ final class Buffer {
 
   /// Renders buffer content to a string.
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Render`).
   String render() {
     final out = StringBuffer();
     for (var i = 0; i < lines.length; i++) {
@@ -958,7 +933,6 @@ final class Buffer {
 
   /// Draws this buffer onto [screen] at the specified [area].
   ///
-  /// Upstream: `third_party/ultraviolet/buffer.go` (`Buffer.Draw`).
   void draw(Screen screen, Rectangle area) {
     if (area.isEmpty) return;
     final bounds = screen.bounds();
@@ -1093,15 +1067,19 @@ bool _listEquals<T>(List<T> a, List<T> b) {
 int _dirtyWordCount(int width) => width <= 0 ? 0 : ((width - 1) >> 5) + 1;
 
 int _slotHash(int index, int value) {
-  var hash = 0xcbf29ce484222325;
+  // FNV-1a style hash using values safe for both native and JS/WASM platforms.
+  // Uses the 32-bit FNV offset basis and prime to avoid 64-bit literal issues.
+  const int fnvBasis = 0x811c9dc5; // 2166136261 — safe on JS
+  const int fnvPrime = 0x01000193; // 16777619 — safe on JS
+  var hash = fnvBasis;
   hash ^= index & 0xFFFFFFFF;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   hash ^= index >>> 32;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   hash ^= value & 0xFFFFFFFF;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   hash ^= value >>> 32;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   return hash;
 }
 
@@ -1114,7 +1092,6 @@ int _bitMask(int from, int to) {
 }
 
 void _renderLine(StringSink out, Line line) {
-  // Upstream: `third_party/ultraviolet/buffer.go` (`renderLine`).
   var pen = const UvStyle();
   var link = const Link();
   final pending = StringBuffer();
@@ -1172,7 +1149,6 @@ void _renderLine(StringSink out, Line line) {
 /// A screen buffer that implements `Screen` operations and carries a width
 /// method for calculating cell widths.
 ///
-/// Upstream: `third_party/ultraviolet/screen` + `NewScreenBuffer`.
 final class ScreenBuffer
     implements
         Screen,
@@ -1236,7 +1212,6 @@ final class ScreenBuffer
 
 /// Parses a string and returns its bounds (width/height) using a width method.
 ///
-/// Upstream: `third_party/ultraviolet/styled.go` (`StyledString.widthHeight`).
 Rectangle styledStringBounds(String text, WidthMethod method) {
   final normalized = text.contains('\r') ? text.replaceAll('\r\n', '\n') : text;
   final expanded = term_ansi.Ansi.expandTabs(normalized);

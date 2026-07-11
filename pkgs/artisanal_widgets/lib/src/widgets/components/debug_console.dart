@@ -1,4 +1,12 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color;
+// ignore_for_file: unused_shown_name
 
 DateTime _defaultDebugConsoleNowProvider() => DateTime.now();
 
@@ -397,20 +405,15 @@ class _DebugConsoleRow extends StatelessWidget {
   }
 }
 
-final class _DebugConsoleHelpKeyMap implements KeyMap {
-  _DebugConsoleHelpKeyMap({required bool showToggleShortcut})
-    : _bindings = <KeyBinding>[
-        if (showToggleShortcut) KeyBinding.withHelp(['f10'], 'f10', 'toggle'),
-        KeyBinding.withHelp(['ctrl+l'], 'ctrl+l', 'clear'),
-      ];
-
-  final List<KeyBinding> _bindings;
-
-  @override
-  List<KeyBinding> shortHelp() => _bindings;
-
-  @override
-  List<List<KeyBinding>> fullHelp() => <List<KeyBinding>>[_bindings];
+final class _DebugConsoleHelpKeyMap extends KeyMap {
+  _DebugConsoleHelpKeyMap({required bool showToggleShortcut}) {
+    final bindings = <KeyBinding>[
+      if (showToggleShortcut) KeyBinding.withHelp(['f10'], 'f10', 'toggle'),
+      KeyBinding.withHelp(['ctrl+l'], 'ctrl+l', 'clear'),
+    ];
+    shortHelp = bindings;
+    fullHelp = [bindings];
+  }
 }
 
 /// Wraps a subtree with a toggleable debug console overlay.

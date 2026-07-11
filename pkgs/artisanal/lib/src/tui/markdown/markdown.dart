@@ -4,7 +4,7 @@
 /// terminal output.
 ///
 /// ```dart
-/// import 'package:artisanal/markdown.dart';
+/// import 'package:artisanal/artisanal.dart';
 ///
 /// final styled = markdownToAnsi('''
 /// # Hello World

@@ -1,4 +1,12 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/style.dart' show Border, Color;
+import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
+
+import '../theme.dart';
 
 enum AlertVariant { info, success, warning, error, neutral }
 
@@ -29,13 +37,13 @@ class AlertBox extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final accent = _accentFor(theme);
 
-    final markerStyle = _copyStyle(theme.labelMedium)
+    final markerStyle = copyStyle(theme.labelMedium)
       ..foreground(accent)
       ..bold();
-    final titleStyle = _copyStyle(theme.titleSmall)
+    final titleStyle = copyStyle(theme.titleSmall)
       ..foreground(theme.onSurface)
       ..bold();
-    final bodyStyle = _copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
+    final bodyStyle = copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
 
     final header = title == null ? null : Text(title!, style: titleStyle);
     final content = child ?? Text(message ?? '', style: bodyStyle);

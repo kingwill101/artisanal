@@ -1,4 +1,4 @@
-part of 'layout_widgets.dart';
+import '../core/widget.dart';
 
 class Visibility extends Widget {
   Visibility({

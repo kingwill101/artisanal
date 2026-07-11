@@ -1,7 +1,15 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color;
 
 /// A single item in a [DialogSelect] list.
 ///
+
+// ignore_for_file: unused_shown_name
 /// Generic over [T] so callers can attach a typed value to each item.
 class DialogSelectItem<T> {
   const DialogSelectItem({
@@ -71,6 +79,66 @@ class DialogSelectItem<T> {
 /// )
 /// ```
 class DialogSelect<T> extends StatefulWidget {
+  /// Shows a [DialogSelect] in a modal dialog route.
+  ///
+  /// Returns a [Future] that resolves to the selected [DialogSelectItem] or
+  /// `null` if the dialog is dismissed without selection.
+  ///
+  /// ```dart
+  /// final selected = await DialogSelect.show<String>(
+  ///   context,
+  ///   title: 'Select Model',
+  ///   items: models.map((m) => DialogSelectItem(
+  ///     label: m.name,
+  ///     value: m.id,
+  ///   )).toList(),
+  /// );
+  /// if (selected != null) { ... }
+  /// ```
+  static Future<DialogSelectItem<R>?> show<R>(
+    BuildContext context, {
+    required List<DialogSelectItem<R>> items,
+    String? title,
+    String? searchHint,
+    void Function(DialogSelectItem<R> item)? onSelect,
+    int? width,
+    int? height,
+    List<({String key, String description})> keybinds = const [],
+    Widget Function(int filteredCount, int totalCount)? trailing,
+    void Function(DialogSelectItem<R> item)? onHighlightChanged,
+    Widget Function(String searchQuery)? emptyBuilder,
+    bool barrierDismissible = true,
+    Color? barrierColor,
+    AnimationStyle? animationStyle,
+  }) {
+    return Navigator.of(context).showDialog<DialogSelectItem<R>>(
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor,
+      animationStyle: animationStyle,
+      builder: (ctx) => DialogSelect<R>(
+        items: items,
+        title: title,
+        searchHint: searchHint,
+        onSelect: (item) {
+          Navigator.of(ctx).pop(item);
+          onSelect?.call(item);
+        },
+        onDismiss: barrierDismissible
+            ? () {
+                Navigator.of(ctx).pop();
+                return null;
+              }
+            : null,
+        width: width,
+        height: height,
+        keybinds: keybinds,
+        trailing: trailing,
+        onHighlightChanged: onHighlightChanged,
+        emptyBuilder: emptyBuilder,
+      ),
+    );
+  }
+
   DialogSelect({
     required this.items,
     this.title,
@@ -353,7 +421,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
                                   _searchQuery.isEmpty
                                       ? 'No items'
                                       : 'No matches for "$_searchQuery"',
-                                  style: _copyStyle(theme.bodySmall)
+                                  style: copyStyle(theme.bodySmall)
                                     ..foreground(hintFg),
                                 ),
                               ),
@@ -379,9 +447,9 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
   }
 
   Widget _buildTitleBar(Theme theme, Color hintFg) {
-    final titleStyle = _copyStyle(theme.titleMedium)
+    final titleStyle = copyStyle(theme.titleMedium)
       ..foreground(theme.onSurface);
-    final escStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final escStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     return Padding(
       padding: const EdgeInsets.only(left: 2, right: 2, top: 1),
@@ -408,7 +476,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
           children: [
             Text(
               '/',
-              style: _copyStyle(theme.bodySmall)..foreground(theme.muted),
+              style: copyStyle(theme.bodySmall)..foreground(theme.muted),
             ),
             SizedBox(width: 1),
             Expanded(
@@ -449,7 +517,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
       // Category header
       if (item.category != null && item.category != lastCategory) {
         lastCategory = item.category;
-        final headerStyle = _copyStyle(theme.titleSmall)
+        final headerStyle = copyStyle(theme.titleSmall)
           ..foreground(headerFg)
           ..bold();
         rows.add(
@@ -468,8 +536,8 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
           : defaultFg;
       final bg = isSelected ? selectedBg : item.background;
 
-      final labelStyle = _copyStyle(theme.bodyMedium)..foreground(fg);
-      final descStyle = _copyStyle(theme.bodySmall)
+      final labelStyle = copyStyle(theme.bodyMedium)..foreground(fg);
+      final descStyle = copyStyle(theme.bodySmall)
         ..foreground(
           isSelected
               ? theme.listRowSelectedMutedForeground
@@ -478,7 +546,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
 
       // Marker for current item
       final marker = item.isCurrent ? '●' : ' ';
-      final markerStyle = _copyStyle(theme.bodySmall)
+      final markerStyle = copyStyle(theme.bodySmall)
         ..foreground(
           isSelected
               ? theme.listRowSelectedMarkerForeground
@@ -546,7 +614,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
     List<DialogSelectItem<T>> filteredItems,
     Color hintFg,
   ) {
-    final hintStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final hintStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     final defaultHints = [
       (key: '↑↓', description: 'navigate'),

@@ -45,6 +45,7 @@ library;
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
+import 'package:artisanal/style.dart';
 
 DateTime _defaultBubbleNowProvider() => DateTime.now();
 
@@ -94,7 +95,12 @@ class Spinners {
 
   /// Pulse spinner.
   static const pulse = Spinner(
-    frames: ['█', '▓', '▒', '░'],
+    frames: [
+      BlockShades.full,
+      BlockShades.dark,
+      BlockShades.medium,
+      BlockShades.light,
+    ],
     fps: Duration(milliseconds: 125),
   );
 
@@ -123,9 +129,17 @@ class Spinners {
   );
 
   /// Meter spinner.
-  static const meter = Spinner(
-    frames: ['▱▱▱', '▰▱▱', '▰▰▱', '▰▰▰', '▰▰▱', '▰▱▱', '▱▱▱'],
-    fps: Duration(milliseconds: 143),
+  static final meter = Spinner(
+    frames: [
+      BlockMedium.empty + BlockMedium.empty + BlockMedium.empty,
+      BlockMedium.solid + BlockMedium.empty + BlockMedium.empty,
+      BlockMedium.solid + BlockMedium.solid + BlockMedium.empty,
+      BlockMedium.solid + BlockMedium.solid + BlockMedium.solid,
+      BlockMedium.solid + BlockMedium.solid + BlockMedium.empty,
+      BlockMedium.solid + BlockMedium.empty + BlockMedium.empty,
+      BlockMedium.empty + BlockMedium.empty + BlockMedium.empty,
+    ],
+    fps: const Duration(milliseconds: 143),
   );
 
   /// Hamburger spinner.
@@ -148,13 +162,25 @@ class Spinners {
 
   /// Circle quarters.
   static const circle = Spinner(
-    frames: ['◐', '◓', '◑', '◒'],
+    frames: [
+      ArcSegments.leftHalf,
+      ArcSegments.rightHalf,
+      ArcSegments.lowerHalfCircle,
+      ArcSegments.upperHalfCircle,
+    ],
     fps: Duration(milliseconds: 120),
   );
 
   /// Arc spinner.
   static const arc = Spinner(
-    frames: ['◜', '◠', '◝', '◞', '◡', '◟'],
+    frames: [
+      ArcSegments.upperLeftArc,
+      ArcSegments.upperHalf,
+      ArcSegments.upperRightArc,
+      ArcSegments.lowerRightArc,
+      ArcSegments.lowerHalf,
+      ArcSegments.lowerLeftArc,
+    ],
     fps: Duration(milliseconds: 100),
   );
 
@@ -166,7 +192,16 @@ class Spinners {
 
   /// Arrow spinner.
   static const arrows = Spinner(
-    frames: ['←', '↖', '↑', '↗', '→', '↘', '↓', '↙'],
+    frames: [
+      Arrows.left,
+      '↖',
+      Arrows.up,
+      '↗',
+      Arrows.right,
+      '↘',
+      Arrows.down,
+      '↙',
+    ],
     fps: Duration(milliseconds: 100),
   );
 
@@ -191,13 +226,23 @@ class Spinners {
 
   /// Box bounce spinner.
   static const boxBounce = Spinner(
-    frames: ['▖', '▘', '▝', '▗'],
+    frames: [
+      BlockQuadrants.lowerLeft,
+      BlockQuadrants.upperLeft,
+      BlockQuadrants.upperRight,
+      BlockQuadrants.lowerRight,
+    ],
     fps: Duration(milliseconds: 120),
   );
 
   /// Box bounce 2 spinner (larger).
   static const boxBounce2 = Spinner(
-    frames: ['▌', '▀', '▐', '▄'],
+    frames: [
+      BlockShades.left,
+      BlockShades.upper,
+      BlockShades.right,
+      BlockShades.lower,
+    ],
     fps: Duration(milliseconds: 100),
   );
 
@@ -214,25 +259,35 @@ class Spinners {
   );
 
   /// Aesthetic dots spinner.
-  static const aesthetic = Spinner(
+  static final aesthetic = Spinner(
     frames: [
-      '▰▱▱▱▱▱▱',
-      '▰▰▱▱▱▱▱',
-      '▰▰▰▱▱▱▱',
-      '▰▰▰▰▱▱▱',
-      '▰▰▰▰▰▱▱',
-      '▰▰▰▰▰▰▱',
-      '▰▰▰▰▰▰▰',
-      '▱▰▰▰▰▰▰',
-      '▱▱▰▰▰▰▰',
-      '▱▱▱▰▰▰▰',
-      '▱▱▱▱▰▰▰',
-      '▱▱▱▱▱▰▰',
-      '▱▱▱▱▱▱▰',
-      '▱▱▱▱▱▱▱',
+      _solidFrames(1),
+      _solidFrames(2),
+      _solidFrames(3),
+      _solidFrames(4),
+      _solidFrames(5),
+      _solidFrames(6),
+      _solidFrames(7),
+      _emptyFrames(1),
+      _emptyFrames(2),
+      _emptyFrames(3),
+      _emptyFrames(4),
+      _emptyFrames(5),
+      _emptyFrames(6),
+      _emptyFrames(7),
     ],
-    fps: Duration(milliseconds: 80),
+    fps: const Duration(milliseconds: 80),
   );
+
+  /// 7-char block frame: [count] solid + (7-[count]) empty.
+  static String _solidFrames(int count) =>
+      List.filled(count, BlockMedium.solid).join() +
+      List.filled(7 - count, BlockMedium.empty).join();
+
+  /// 7-char block frame: [count] empty + (7-[count]) solid.
+  static String _emptyFrames(int count) =>
+      List.filled(count, BlockMedium.empty).join() +
+      List.filled(7 - count, BlockMedium.solid).join();
 
   /// Flip spinner.
   static const flip = Spinner(
@@ -385,25 +440,30 @@ class Spinners {
 
   /// Toggle 2 spinner.
   static const toggle2 = Spinner(
-    frames: ['▫', '▪'],
+    frames: [SparseBlocks.smallEmpty, SparseBlocks.smallSolid],
     fps: Duration(milliseconds: 80),
   );
 
   /// Toggle 3 spinner.
   static const toggle3 = Spinner(
-    frames: ['□', '■'],
+    frames: [SparseBlocks.empty, SparseBlocks.solid],
     fps: Duration(milliseconds: 120),
   );
 
   /// Toggle 4 spinner.
   static const toggle4 = Spinner(
-    frames: ['■', '□', '▪', '▫'],
+    frames: [
+      SparseBlocks.solid,
+      SparseBlocks.empty,
+      SparseBlocks.smallSolid,
+      SparseBlocks.smallEmpty,
+    ],
     fps: Duration(milliseconds: 100),
   );
 
   /// Noise spinner.
   static const noise = Spinner(
-    frames: ['▓', '▒', '░'],
+    frames: [BlockShades.dark, BlockShades.medium, BlockShades.light],
     fps: Duration(milliseconds: 100),
   );
 
@@ -432,7 +492,7 @@ class Spinners {
   );
 
   /// Sand spinner.
-  static const sand = Spinner(
+  static final sand = Spinner(
     frames: [
       '⠁',
       '⠂',
@@ -441,7 +501,7 @@ class Spinners {
       '⡈',
       '⡐',
       '⡠',
-      '⣀',
+      BrailleChars.topRow,
       '⣁',
       '⣂',
       '⣄',
@@ -453,7 +513,7 @@ class Spinners {
       '⣮',
       '⣶',
       '⣷',
-      '⣿',
+      BrailleChars.full,
       '⡿',
       '⠿',
       '⢟',
@@ -470,8 +530,75 @@ class Spinners {
       '⠡',
       '⢁',
     ],
-    fps: Duration(milliseconds: 80),
+    fps: const Duration(milliseconds: 80),
   );
+
+  /// Creates a Knight Rider scanner animation.
+  ///
+  /// The scanner oscillates bidirectionally (left → right → left) with
+  /// configurable hold frames at each end, producing a glowing sweep
+  /// effect across the bar.
+  ///
+  /// Parameters:
+  /// - [color] — The bright color for the scanner head (defaults to
+  ///   [Colors.purple]).
+  /// - [width] — Number of character positions (default 8).
+  /// - [chars] — Character set for active/inactive positions
+  ///   (default [ScannerChars.blocks]).
+  /// - [holdStart] — Frames to hold at the start position (default 30).
+  /// - [holdEnd] — Frames to hold at the end position (default 9).
+  /// - [trailSteps] — Number of gradient steps in the trail (default 6).
+  /// - [fps] — Frame interval duration (default 40ms, matching opencode).
+  static Spinner scanner({
+    Color? color,
+    int width = 8,
+    ScannerCharSet chars = ScannerChars.blocks,
+    int holdStart = 30,
+    int holdEnd = 9,
+    int trailSteps = 6,
+    Duration fps = const Duration(milliseconds: 40),
+  }) {
+    final c = color ?? Colors.purple;
+    final trail = deriveTrail(c, steps: trailSteps);
+    final inactive = deriveInactive(c);
+
+    final frames = _generateScannerFrames(
+      width: width,
+      chars: chars,
+      trail: trail,
+      inactiveColor: inactive,
+      holdStart: holdStart,
+      holdEnd: holdEnd,
+    );
+
+    return Spinner(frames: frames, fps: fps);
+  }
+}
+
+/// Derives a gradient of trail colors from a single bright color.
+///
+/// Each step is progressively dimmed (via [Color.dim]) to create the
+/// falling trail effect behind the scanner head.
+List<Color> deriveTrail(Color bright, {int steps = 6}) {
+  final result = <Color>[bright];
+  var current = bright;
+  for (var i = 1; i < steps; i++) {
+    current = current.dim;
+    result.add(current);
+  }
+  return result;
+}
+
+/// Derives the inactive color for scanner background positions.
+///
+/// Produces a heavily dimmed version of [bright] so inactive dots
+/// recede into the background.
+Color deriveInactive(Color bright, {double factor = 0.2}) {
+  var result = bright;
+  for (var i = 0; i < 3; i++) {
+    result = result.dim;
+  }
+  return result;
 }
 
 /// Global ID counter for spinner instances.
@@ -634,4 +761,106 @@ class SpinnerModel extends ViewComponent {
     }
     return _spinner.frames[_frame];
   }
+}
+
+// ---------------------------------------------------------------------------
+// Scanner (Knight Rider) animation frame generation
+// ---------------------------------------------------------------------------
+
+class _ScannerState {
+  const _ScannerState({
+    required this.activePosition,
+    required this.isMovingForward,
+    required this.isHolding,
+    required this.holdProgress,
+  });
+
+  final int activePosition;
+  final bool isMovingForward;
+  final bool isHolding;
+  final int holdProgress;
+}
+
+_ScannerState _getScannerState(
+  int frameIndex,
+  int width,
+  int holdStart,
+  int holdEnd,
+) {
+  final forward = frameIndex;
+  if (forward < width) {
+    return _ScannerState(
+      activePosition: forward,
+      isMovingForward: true,
+      isHolding: false,
+      holdProgress: 0,
+    );
+  }
+  final holdEndPhase = forward - width;
+  if (holdEndPhase < holdEnd) {
+    return _ScannerState(
+      activePosition: width - 1,
+      isMovingForward: true,
+      isHolding: true,
+      holdProgress: holdEndPhase,
+    );
+  }
+  final backward = holdEndPhase - holdEnd;
+  if (backward < width - 1) {
+    return _ScannerState(
+      activePosition: width - 2 - backward,
+      isMovingForward: false,
+      isHolding: false,
+      holdProgress: 0,
+    );
+  }
+  final holdStartPhase = backward - (width - 1);
+  return _ScannerState(
+    activePosition: 0,
+    isMovingForward: false,
+    isHolding: true,
+    holdProgress: holdStartPhase,
+  );
+}
+
+int _trailDistance(int charIndex, _ScannerState state) {
+  final distance = state.isMovingForward
+      ? state.activePosition - charIndex
+      : charIndex - state.activePosition;
+  if (distance < 0) return -1;
+  if (state.isHolding) return distance + state.holdProgress;
+  return distance;
+}
+
+List<String> _generateScannerFrames({
+  required int width,
+  required ScannerCharSet chars,
+  required List<Color> trail,
+  required Color inactiveColor,
+  required int holdStart,
+  required int holdEnd,
+}) {
+  final totalFrames = width + holdEnd + (width - 1) + holdStart;
+  final activeChars = chars.active;
+  final inactiveChar = chars.inactive;
+
+  return List.generate(totalFrames, (frameIndex) {
+    final state = _getScannerState(frameIndex, width, holdStart, holdEnd);
+    final buf = StringBuffer();
+    for (var charIndex = 0; charIndex < width; charIndex++) {
+      final distance = _trailDistance(charIndex, state);
+      String char;
+      Color color;
+      if (distance >= 0 && distance < trail.length) {
+        final activeIndex = distance < activeChars.length ? distance : 0;
+        char = activeChars[activeIndex];
+        color = trail[distance];
+      } else {
+        char = inactiveChar;
+        color = inactiveColor;
+      }
+      buf.write(Style().foreground(color).render(char));
+    }
+    return buf.toString();
+  });
 }

@@ -6,7 +6,7 @@ library;
 
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 
 /// An entry in an [Overlay].
 ///

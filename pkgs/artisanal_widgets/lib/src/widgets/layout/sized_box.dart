@@ -1,4 +1,6 @@
-part of 'layout_widgets.dart';
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
 
 class RenderSizedBox extends RenderBox {
   RenderSizedBox({this.width, this.height});
@@ -13,8 +15,8 @@ class RenderSizedBox extends RenderBox {
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
 
-    final targetWidth = _resolveDimension(width)?.toDouble();
-    final targetHeight = _resolveDimension(height)?.toDouble();
+    final targetWidth = resolveDimension(width)?.toDouble();
+    final targetHeight = resolveDimension(height)?.toDouble();
 
     final childConstraints = BoxConstraints(
       minWidth: targetWidth ?? constraints.minWidth,
@@ -25,7 +27,7 @@ class RenderSizedBox extends RenderBox {
 
     _child?.layout(childConstraints);
 
-    final rendered = _constrainContent(
+    final rendered = constrainContent(
       _child?.paint() ?? '',
       width: targetWidth?.toInt(),
       height: targetHeight?.toInt(),
@@ -50,9 +52,9 @@ class RenderSizedBox extends RenderBox {
   }
 
   String _renderSized(String content) {
-    final targetWidth = _resolveDimension(width);
-    final targetHeight = _resolveDimension(height);
-    return _constrainContent(content, width: targetWidth, height: targetHeight);
+    final targetWidth = resolveDimension(width);
+    final targetHeight = resolveDimension(height);
+    return constrainContent(content, width: targetWidth, height: targetHeight);
   }
 }
 
@@ -83,11 +85,11 @@ class SizedBox extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child == null ? '' : _renderWidget(child!);
-    return _constrainContent(
+    final content = child == null ? '' : renderWidget(child!);
+    return constrainContent(
       content,
-      width: _resolveDimension(width),
-      height: _resolveDimension(height),
+      width: resolveDimension(width),
+      height: resolveDimension(height),
     );
   }
 }

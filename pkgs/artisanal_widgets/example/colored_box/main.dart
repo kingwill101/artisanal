@@ -1,4 +1,5 @@
 // ColoredBox Widget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates using ColoredBox to apply background colors to child widgets.
 //
@@ -9,7 +10,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ColoredBoxExample());
+  final app = WidgetApp(ColoredBoxExample());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

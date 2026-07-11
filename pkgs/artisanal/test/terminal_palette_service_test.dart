@@ -1,4 +1,4 @@
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/src/tui/cmd.dart' show WriteRawMsg;
 import 'package:test/test.dart';
 

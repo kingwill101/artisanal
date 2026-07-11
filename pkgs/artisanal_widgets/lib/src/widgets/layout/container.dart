@@ -1,4 +1,12 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart';
+
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
+import 'spacing.dart';
 
 class Decoration {
   const Decoration({this.color});
@@ -104,16 +112,16 @@ class RenderContainer extends RenderBox {
     final bdrBottom = (bdr != null && bdr.isVisible) ? bdr.getBottomSize() : 0;
     final bdrH = bdrLeft + bdrRight;
     final bdrV = bdrTop + bdrBottom;
-    final padLeft = _roundClamp(padding?.left ?? 0);
-    final padRight = _roundClamp(padding?.right ?? 0);
-    final padTop = _roundClamp(padding?.top ?? 0);
-    final padBottom = _roundClamp(padding?.bottom ?? 0);
+    final padLeft = roundClamp(padding?.left ?? 0);
+    final padRight = roundClamp(padding?.right ?? 0);
+    final padTop = roundClamp(padding?.top ?? 0);
+    final padBottom = roundClamp(padding?.bottom ?? 0);
     final padH = padLeft + padRight;
     final padV = padTop + padBottom;
-    final mrgLeft = _roundClamp(margin?.left ?? 0);
-    final mrgRight = _roundClamp(margin?.right ?? 0);
-    final mrgTop = _roundClamp(margin?.top ?? 0);
-    final mrgBottom = _roundClamp(margin?.bottom ?? 0);
+    final mrgLeft = roundClamp(margin?.left ?? 0);
+    final mrgRight = roundClamp(margin?.right ?? 0);
+    final mrgTop = roundClamp(margin?.top ?? 0);
+    final mrgBottom = roundClamp(margin?.bottom ?? 0);
     final mrgH = mrgLeft + mrgRight;
     final mrgV = mrgTop + mrgBottom;
 
@@ -169,14 +177,14 @@ class RenderContainer extends RenderBox {
     final contentW = _child?.size.width.toInt() ?? 0;
     final contentH = _child?.size.height.toInt() ?? 0;
 
-    // Compute the natural total size that _renderContainerContent would
+    // Compute the natural total size that renderContainerContent would
     // produce when width/height are null, accounting for padding, border,
-    // and margin — mirroring the same arithmetic in _renderContainerContent.
+    // and margin — mirroring the same arithmetic in renderContainerContent.
     final naturalInnerW = (width != null)
-        ? _resolveDimension(width)!
+        ? resolveDimension(width)!
         : (contentW + padH + bdrH);
     final naturalInnerH = (height != null)
-        ? _resolveDimension(height)!
+        ? resolveDimension(height)!
         : (contentH + padV + bdrV);
     final naturalTotalW = naturalInnerW + mrgH;
     final naturalTotalH = naturalInnerH + mrgV;
@@ -203,28 +211,28 @@ class RenderContainer extends RenderBox {
     size = constraints.constrain(
       Size(
         (renderWidth != null
-                ? _resolveDimension(renderWidth) ?? 0
+                ? resolveDimension(renderWidth) ?? 0
                 : naturalInnerW) +
             mrgH.toDouble(),
         (renderHeight != null
-                ? _resolveDimension(renderHeight) ?? 0
+                ? resolveDimension(renderHeight) ?? 0
                 : naturalInnerH) +
             mrgV.toDouble(),
       ),
     );
 
-    // Set child offset to match where _renderContainerContent places the
+    // Set child offset to match where renderContainerContent places the
     // content on the canvas: margin + border + padding + alignment.
     if (_child != null) {
-      final resolvedW = _resolveDimension(renderWidth);
-      final resolvedH = _resolveDimension(renderHeight);
+      final resolvedW = resolveDimension(renderWidth);
+      final resolvedH = resolveDimension(renderHeight);
 
       final resolvedAlign = alignment == null
           ? align
-          : _horizontalFromAlignment(alignment!);
+          : horizontalFromAlignment(alignment!);
       final resolvedVertical = alignment == null
           ? verticalAlign
-          : _verticalFromAlignment(alignment!);
+          : verticalFromAlignment(alignment!);
 
       final availW = resolvedW != null
           ? math.max(0, resolvedW - padLeft - padRight - bdrH)
@@ -234,10 +242,10 @@ class RenderContainer extends RenderBox {
           : 0;
 
       final alignedX = resolvedW != null
-          ? _offsetForHorizontal(resolvedAlign, availW, contentW)
+          ? offsetForHorizontal(resolvedAlign, availW, contentW)
           : 0;
       final alignedY = resolvedH != null
-          ? _offsetForVertical(resolvedVertical, availH, contentH)
+          ? offsetForVertical(resolvedVertical, availH, contentH)
           : 0;
 
       _child!.offset = Offset(
@@ -290,7 +298,7 @@ class RenderContainer extends RenderBox {
     final cached = _lastPaint;
     if (cached != null && _lastPaintKey == key) return cached;
 
-    final rendered = _renderContainerContent(
+    final rendered = renderContainerContent(
       contentStr: content,
       padding: padding,
       margin: margin,
@@ -382,8 +390,8 @@ class Container extends SingleChildRenderObjectWidget {
   Object view() => _render();
 
   String _render() {
-    final contentStr = child != null ? _renderWidget(child!) : '';
-    return _renderContainerContent(
+    final contentStr = child != null ? renderWidget(child!) : '';
+    return renderContainerContent(
       contentStr: contentStr,
       padding: padding,
       margin: margin,

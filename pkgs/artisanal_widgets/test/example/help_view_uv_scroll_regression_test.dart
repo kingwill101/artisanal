@@ -2,9 +2,8 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/terminal.dart' show StringTerminal;
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 Future<void> _waitForRender(
@@ -259,70 +258,72 @@ final class _TermGrid {
   String dump() => _rows.map((row) => row.join()).join('\n');
 }
 
-class _HelpScrollFixture extends w.StatelessWidget {
+class _HelpScrollFixture extends StatelessWidget {
   _HelpScrollFixture();
 
-  final w.WidgetScrollController _scrollController = w.WidgetScrollController();
-  final tui.KeyMap _keyMap = _FixtureKeyMap();
+  final WidgetScrollController _scrollController = WidgetScrollController();
+  final KeyMap _keyMap = _FixtureKeyMap();
 
   @override
-  w.Widget build(w.BuildContext context) {
+  Widget build(BuildContext context) {
     final theme = context.theme;
     final label = theme.labelSmall.copy()..foreground(theme.onBackground);
-    final contentWidth = (w.MediaQuery.of(context).size.width.round() - 4)
-        .clamp(32, 2000);
+    final contentWidth = (MediaQuery.of(context).size.width.round() - 4).clamp(
+      32,
+      2000,
+    );
     final dividerWidth = (contentWidth - 2).clamp(24, 2000);
 
-    return w.Container(
-      padding: const w.EdgeInsets.all(1),
+    return Container(
+      padding: const EdgeInsets.all(1),
       color: theme.background,
-      child: w.Scrollbar(
+      child: Scrollbar(
         controller: _scrollController,
         thickness: 1,
         gap: 1,
-        child: w.ScrollView(
+        child: ScrollView(
           controller: _scrollController,
-          child: w.Column(
+          child: Column(
             width: contentWidth,
             gap: 1,
-            crossAxisAlignment: w.CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              w.Text('HelpView Showcase', style: theme.titleLarge),
-              w.Text(
+              Text('HelpView Showcase', style: theme.titleLarge),
+              Text(
                 'Scroll downward to move the preview frame off-screen.',
                 style: label,
               ),
-              w.Divider(width: dividerWidth),
-              w.Text('Interactive Preview', style: theme.titleMedium),
-              w.Container(
+              Divider(width: dividerWidth),
+              Text('Interactive Preview', style: theme.titleMedium),
+              Container(
                 color: theme.surface,
-                padding: const w.EdgeInsets.symmetric(horizontal: 2),
-                child: w.Column(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Column(
                   gap: 1,
                   children: [
-                    w.Text('Compact mode', style: theme.labelSmall),
-                    w.HelpView(keyMap: _keyMap),
+                    Text('Compact mode', style: theme.labelSmall),
+                    HelpView(keyMap: _keyMap),
                   ],
                 ),
               ),
-              w.Divider(width: dividerWidth),
-              w.Text('Compact Footer Style', style: theme.titleMedium),
-              w.HelpView(keyMap: _keyMap),
-              w.Divider(width: dividerWidth),
-              w.Text('Full Grouped Help', style: theme.titleMedium),
-              w.HelpView(keyMap: _keyMap, showAll: true, columnGap: 6),
-              w.Divider(width: dividerWidth),
-              w.Text('Status Bar Pairing', style: theme.titleMedium),
-              w.StatusBar(
+              Divider(width: dividerWidth),
+              Text('Compact Footer Style', style: theme.titleMedium),
+              HelpView(keyMap: _keyMap),
+              Divider(width: dividerWidth),
+              Text('Full Grouped Help', style: theme.titleMedium),
+              HelpView(keyMap: _keyMap, showAll: true, columnGap: 6),
+              Divider(width: dividerWidth),
+              Text('Status Bar Pairing', style: theme.titleMedium),
+              StatusBar(
                 items: [
-                  w.KeyHint(keyLabel: '?', description: 'toggle preview'),
-                  w.KeyHint(keyLabel: 'j/k', description: 'navigate'),
-                  w.KeyHint(keyLabel: 'q', description: 'quit'),
+                  KeyHint(keyLabel: '?', description: 'toggle preview'),
+                  KeyHint(keyLabel: 'j/k', description: 'navigate'),
+                  KeyHint(keyLabel: 'q', description: 'quit'),
                 ],
               ),
-              w.Divider(width: dividerWidth),
+              Divider(width: dividerWidth),
               for (var i = 0; i < 8; i++)
-                w.Text('Filler section ${i + 1}', style: theme.bodyMedium),
+                Text('Filler section ${i + 1}', style: theme.bodyMedium),
             ],
           ),
         ),
@@ -331,24 +332,23 @@ class _HelpScrollFixture extends w.StatelessWidget {
   }
 }
 
-class _FixtureKeyMap implements tui.KeyMap {
-  final previous = tui.KeyBinding.withHelp(['up', 'k'], '↑/k', 'previous item');
-  final next = tui.KeyBinding.withHelp(['down', 'j'], '↓/j', 'next item');
-  final open = tui.KeyBinding.withHelp(['enter'], '↵', 'open item');
-  final commands = tui.KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'commands');
-  final search = tui.KeyBinding.withHelp(['/'], '/', 'search');
-  final help = tui.KeyBinding.withHelp(['?'], '?', 'toggle help');
-  final quit = tui.KeyBinding.withHelp(['q'], 'q', 'quit');
+class _FixtureKeyMap extends KeyMap {
+  _FixtureKeyMap() {
+    shortHelp = [commands, search, help, quit];
+    fullHelp = [
+      [previous, next, open],
+      [commands, search],
+      [help, quit],
+    ];
+  }
 
-  @override
-  List<tui.KeyBinding> shortHelp() => [commands, search, help, quit];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [previous, next, open],
-    [commands, search],
-    [help, quit],
-  ];
+  final previous = KeyBinding.withHelp(['up', 'k'], '↑/k', 'previous item');
+  final next = KeyBinding.withHelp(['down', 'j'], '↓/j', 'next item');
+  final open = KeyBinding.withHelp(['enter'], '↵', 'open item');
+  final commands = KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'commands');
+  final search = KeyBinding.withHelp(['/'], '/', 'search');
+  final help = KeyBinding.withHelp(['?'], '?', 'toggle help');
+  final quit = KeyBinding.withHelp(['q'], 'q', 'quit');
 }
 
 void main() {
@@ -363,13 +363,13 @@ void main() {
         terminalWidth: width,
         terminalHeight: height,
       );
-      final program = tui.Program<tui.WidgetApp>(
-        tui.WidgetApp(_HelpScrollFixture()),
-        options: const tui.ProgramOptions(
+      final program = Program<WidgetApp>(
+        WidgetApp(_HelpScrollFixture()),
+        options: const ProgramOptions(
           useUltravioletRenderer: true,
           altScreen: true,
           mouse: true,
-          mouseMode: tui.MouseMode.allMotion,
+          mouseMode: MouseMode.allMotion,
           signalHandlers: false,
           catchPanics: false,
         ),
@@ -388,9 +388,9 @@ void main() {
 
         for (var i = 0; i < 8; i++) {
           program.send(
-            const tui.MouseMsg(
-              action: tui.MouseAction.wheel,
-              button: tui.MouseButton.wheelDown,
+            const MouseMsg(
+              action: MouseAction.wheel,
+              button: MouseButton.wheelDown,
               x: 10,
               y: 10,
             ),

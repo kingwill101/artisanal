@@ -56,54 +56,11 @@
 /// ```
 library;
 
-// Display-only components (bubble-style string renderers)
 export 'components.dart';
-
-export 'key_binding.dart';
-export 'cursor.dart';
-export 'spinner.dart';
-export 'help.dart';
-export 'paginator.dart';
-export 'viewport.dart';
-export 'viewport_scroll_pane.dart';
-export 'text.dart';
-export 'progress.dart';
-export 'sequence_diagram.dart';
-export '../editor_core/text_decorations.dart';
-export '../editor_core/text_diagnostics.dart';
-export '../editor_core/text_highlighting.dart';
-export '../editor_core/text_change.dart';
-export '../editor_core/text_commands.dart';
-export '../editor_core/text_document.dart';
-export 'textinput.dart';
-export 'textarea.dart';
-export 'table.dart';
-export 'data_table.dart';
-export 'list.dart';
-export 'timer.dart';
-export 'stopwatch.dart';
-export 'filepicker.dart';
-export 'prompt.dart';
-export 'pause.dart';
-
-// Debug helpers
+export 'presentation.dart';
+export 'forms.dart';
+export 'data.dart';
 export 'debug_overlay.dart';
-
-// Interactive selection components
-export 'select.dart';
-export 'password.dart';
-export 'search.dart';
-export 'confirm.dart';
-export 'anticipate.dart';
-export 'wizard.dart' hide ValidateFunc;
-export 'number_input.dart';
-export 'suggest.dart';
-
-// Git
+export 'navigation.dart';
 export 'git_diff.dart';
-
-// Editor Core re-exports
 export '../editor_core/editor_core.dart';
-
-// Utilities
-export 'runeutil.dart';

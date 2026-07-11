@@ -36,7 +36,6 @@ final class UvEventStreamParser {
 
   // Win32 VT input mode UTF-16 buffers (serialized input records with vk==0).
   //
-  // Upstream: `third_party/ultraviolet/terminal_reader.go` (deserializeWin32Input)
   final List<bool> _win32Utf16Half = <bool>[false, false]; // 0 up, 1 down
   final List<int> _win32Utf16First = <int>[0, 0];
   final List<List<int>> _win32GraphemeBuf = <List<int>>[<int>[], <int>[]];

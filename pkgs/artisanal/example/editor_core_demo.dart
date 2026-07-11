@@ -1,4 +1,4 @@
-import 'package:artisanal/editor_core.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final buffer = EditBuffer(

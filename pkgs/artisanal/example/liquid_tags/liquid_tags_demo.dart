@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:artisanal/liquid.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:liquify/liquify.dart' as liquify;
 
 int _terminalColumns() {

@@ -31,7 +31,7 @@ final class GithubDashboardActionCoordinator {
   tui.Cmd? handleMessage(tui.Msg msg) {
     if (msg is GithubActionCompletedMsg) {
       detail.applyActionCompleted(msg.message);
-      return loadDashboard();
+      return null;
     }
     if (msg is GithubActionFailedMsg) {
       detail.applyActionError(msg.message);

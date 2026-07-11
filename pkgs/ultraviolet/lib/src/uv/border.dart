@@ -37,7 +37,6 @@ import 'screen.dart';
 
 /// UvBorder primitives.
 ///
-/// Upstream: `third_party/ultraviolet/border.go`.
 final class Side {
   const Side({
     this.content = '',
@@ -85,7 +84,6 @@ final class UvBorder implements Drawable {
 
   /// Returns a new [UvBorder] with [style] applied to all sides.
   ///
-  /// Upstream: `UvBorder.UvStyle`.
   UvBorder style(UvStyle style) => UvBorder(
     top: top.copyWith(style: style),
     bottom: bottom.copyWith(style: style),
@@ -99,7 +97,6 @@ final class UvBorder implements Drawable {
 
   /// Returns a new [UvBorder] with [link] applied to all sides.
   ///
-  /// Upstream: `UvBorder.Link`.
   UvBorder link(Link link) => UvBorder(
     top: top.copyWith(link: link),
     bottom: bottom.copyWith(link: link),

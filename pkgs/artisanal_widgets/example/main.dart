@@ -4,8 +4,8 @@
 // Run with: dart run example/main.dart
 
 import 'package:artisanal/bubbles.dart' as b;
-import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal/runtime.dart' show TuiTrace;
+import 'package:artisanal/tui.dart' as runtime;
+import 'package:artisanal/tui.dart' show TuiTrace;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/widgets.dart' as tui;
 
@@ -1251,7 +1251,16 @@ class _ClickCounterState extends tui.State<ClickCounter> {
   }
 }
 
-class _ComponentHelpKeyMap implements tui.KeyMap {
+class _ComponentHelpKeyMap extends tui.KeyMap {
+  _ComponentHelpKeyMap() {
+    shortHelp = [palette, search, help, quit];
+    fullHelp = [
+      [up, down, open],
+      [palette, search, help],
+      [quit],
+    ];
+  }
+
   final up = tui.KeyBinding.withHelp(['up', 'k'], '↑/k', 'move up');
   final down = tui.KeyBinding.withHelp(['down', 'j'], '↓/j', 'move down');
   final open = tui.KeyBinding.withHelp(['enter'], '↵', 'open');
@@ -1259,14 +1268,4 @@ class _ComponentHelpKeyMap implements tui.KeyMap {
   final search = tui.KeyBinding.withHelp(['/'], '/', 'search');
   final help = tui.KeyBinding.withHelp(['?'], '?', 'toggle help');
   final quit = tui.KeyBinding.withHelp(['q'], 'q', 'quit');
-
-  @override
-  List<tui.KeyBinding> shortHelp() => [palette, search, help, quit];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [up, down, open],
-    [palette, search, help],
-    [quit],
-  ];
 }

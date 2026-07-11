@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+// ignore_for_file: unused_shown_name
 
 class Radio<T> extends StatefulWidget {
   Radio({
@@ -69,13 +74,12 @@ class _RadioState<T> extends State<Radio<T>> {
     final mark = _selected ? '*' : ' ';
     final radioText = '($mark)';
 
-    final radioStyle = _copyStyle(theme.labelMedium)
+    final radioStyle = copyStyle(theme.labelMedium)
       ..foreground(_selected ? theme.primary : theme.muted);
     if (_hovered || _focused) radioStyle.bold();
     if (!_enabled) radioStyle.dim();
 
-    final labelStyle = _copyStyle(theme.bodyMedium)
-      ..foreground(theme.onSurface);
+    final labelStyle = copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
     if (!_enabled) labelStyle.dim();
 
     final row = Row(

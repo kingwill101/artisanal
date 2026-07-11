@@ -1,7 +1,83 @@
+import 'package:artisanal/bubbles.dart' as bubbles;
+import 'package:artisanal/bubbles.dart'
+    hide
+        CodeBlockCommentDelimiters,
+        CodeLanguageProfile,
+        Column,
+        CommonKeyBindings,
+        EditBuffer,
+        EditHistoryCoalescePredicate,
+        EditHistoryController,
+        EditHistoryMarkerBuilder,
+        EditHistoryStateEquals,
+        EditorCoreConfig,
+        EditorState,
+        GraphemePredicate,
+        GraphemeReader,
+        Help,
+        KeyBinding,
+        KeyMap,
+        PasteMsg,
+        Row,
+        Spinner,
+        SpinnerModel,
+        SpinnerTickMsg,
+        Spinners,
+        Text,
+        TextCommandResult,
+        TextCursorCommandResult,
+        TextDecorationLayerKey,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        TextDocument,
+        TextDocumentChange,
+        TextDocumentEditResult,
+        TextEditResult,
+        TextExtmark,
+        TextExtmarkOptions,
+        TextExtmarkPositionRange,
+        TextExtmarksController,
+        TextHighlightRange,
+        TextHitResult,
+        TextLineCommandResult,
+        TextLineDecoration,
+        TextLineStateCommandExtensions,
+        TextLineStateSnapshot,
+        TextOffsetStateCommandExtensions,
+        TextOffsetStateDocumentEditingExtensions,
+        TextOffsetStateSnapshot,
+        TextPasteChunk,
+        TextPasteChunkStep,
+        TextPasteController,
+        TextPasteMode,
+        TextPastePlan,
+        TextPasteReference,
+        TextPasteReferenceStore,
+        TextPasteSession,
+        TextPatternDiagnosticRule,
+        TextPosition,
+        TextPositionDiagnosticRange,
+        TextSelection,
+        TextSyntaxBuildResult,
+        TextSyntaxChangeWindow,
+        TextSyntaxDecorationPatch,
+        TextSyntaxLineWindow,
+        TextSyntaxProvider,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextView,
+        TextViewLine,
+        TextViewport,
+        TextVisualCursorPosition,
+        UndoCommandDecoder,
+        UndoCommandJournalEntry,
+        UndoManager,
+        UndoableCommand;
 import 'dart:async';
 import 'dart:io' as dartio;
 import 'package:artisanal/artisanal.dart';
-import 'package:artisanal/bubbles.dart' as bubbles;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 
 // #region verbosity_usage
@@ -45,6 +121,7 @@ Future<void> main(List<String> args) async {
     ..addCommand(UiSpinnerCommand())
     ..addCommand(UiSpinnerStylesCommand())
     ..addCommand(UiPanelCommand())
+    ..addCommand(UiFooterCommand())
     ..addCommand(UiTreeCommand())
     ..addCommand(UiTreeConvenienceCommand())
     ..addCommand(UiSearchCommand())
@@ -222,7 +299,7 @@ class DemoCommand extends Command<void> {
 
   @override
   String get description =>
-      'Showcase basic output helpers (title/section/blocks/listing).';
+      'Showcase output helpers plus rendering invariants.';
 
   @override
   Future<void> run() async {
@@ -252,6 +329,40 @@ class DemoCommand extends Command<void> {
         return TaskResult.success;
       },
     );
+
+    io.section('Rendering Invariants');
+
+    final centered = Style()
+        .width(12)
+        .height(3)
+        .align(HorizontalAlign.center, VerticalAlign.center)
+        .whitespaceChars('·')
+        .whitespaceForeground(Colors.brightMagenta)
+        .border(Border.rounded)
+        .render('Hi');
+    io.writeln(centered);
+
+    final parser = ConsoleTagParser();
+    io.writeln(parser.render('<fg=default>Terminal default foreground</>'));
+
+    final gradient = blend1D(8, [
+      Colors.red,
+      Colors.yellow,
+      Colors.green,
+    ], hasDarkBackground: true);
+    final swatch = gradient
+        .map((color) => Style().foreground(color).render('█'))
+        .join();
+    io.writeln(swatch);
+
+    try {
+      styleRanges('hello world', [
+        StyleRange(0, 5, Style().bold()),
+        StyleRange(4, 8, Style().italic()),
+      ]);
+    } catch (err) {
+      io.note('Overlapping ranges are rejected: $err');
+    }
   }
 }
 // #endregion
@@ -1071,6 +1182,41 @@ class UiPanelCommand extends Command<void> {
   }
 }
 
+/// Demonstrate a split footer similar to opencode.
+class UiFooterCommand extends Command<void> {
+  @override
+  String get name => 'ui:footer';
+
+  @override
+  String get description => 'Demonstrate a split-border footer strip.';
+
+  @override
+  Future<void> run() async {
+    io.title('Split Footer');
+    io.text('This uses Border.split with only the left rail visible.');
+    io.newLine();
+
+    final footer = Style()
+        .foreground(Colors.gray)
+        .borderForeground(Colors.gray)
+        .padding(0, 2)
+        .border(
+          Border.split,
+          left: true,
+          right: false,
+          top: false,
+          bottom: false,
+        )
+        .render(
+          'Subagent 2 of 5 · 12.4k tokens · \$0.14\nParent  p  ·  Prev  ${Arrows.left}  ·  Next  ${Arrows.right}',
+        );
+
+    io.writeln(footer);
+    io.newLine();
+    io.text('The rail is Border.split, matching the opencode footer style.');
+  }
+}
+
 /// Demonstrate tree rendering.
 class UiTreeCommand extends Command<void> {
   @override
@@ -1586,7 +1732,9 @@ class UiHorizontalTableCommand extends Command<void> {
     );
     HorizontalTableComponent(
       data: {
-        'Status': io.style.foreground(Colors.success).render('● Online'),
+        'Status': io.style
+            .foreground(Colors.success)
+            .render('${Circles.filled} Online'),
         'Uptime': '3 days, 14 hours',
         'Memory': '256 MB / 1 GB',
         'CPU': '12%',
@@ -1819,12 +1967,12 @@ class UiColumnsCommand extends Command<void> {
     io.section('Status Items');
     ColumnsComponent(
       items: [
-        '${io.style.foreground(Colors.success).render("●")} Online',
-        '${io.style.foreground(Colors.error).render("●")} Offline',
-        '${io.style.foreground(Colors.warning).render("●")} Degraded',
-        '${io.style.foreground(Colors.info).render("●")} Maintenance',
-        '${io.style.foreground(Colors.success).render("●")} Healthy',
-        '${io.style.foreground(Colors.error).render("●")} Critical',
+        '${io.style.foreground(Colors.success).render(Circles.filled)} Online',
+        '${io.style.foreground(Colors.error).render(Circles.filled)} Offline',
+        '${io.style.foreground(Colors.warning).render(Circles.filled)} Degraded',
+        '${io.style.foreground(Colors.info).render(Circles.filled)} Maintenance',
+        '${io.style.foreground(Colors.success).render(Circles.filled)} Healthy',
+        '${io.style.foreground(Colors.error).render(Circles.filled)} Critical',
       ],
       columnCount: 3,
       renderConfig: renderConfig,
@@ -2501,8 +2649,8 @@ class UiComponentSystemCommand extends Command<void> {
     ProgressBar(
       current: 3,
       total: 10,
-      fillChar: '▓',
-      emptyChar: '░',
+      fillChar: BlockShades.dark,
+      emptyChar: BlockShades.light,
     ).writelnTo(io);
     io.newLine();
 
@@ -2529,9 +2677,15 @@ class UiComponentSystemCommand extends Command<void> {
     io.writeln('Row composition:');
     RowComponent(
       children: [
-        StyledText.success('✓ Pass', renderConfig: renderConfig),
+        StyledText.success(
+          '${StatusChars.check} Pass',
+          renderConfig: renderConfig,
+        ),
         bubbles.Text(' | '),
-        StyledText.error('✗ Fail', renderConfig: renderConfig),
+        StyledText.error(
+          '${StatusChars.cross} Fail',
+          renderConfig: renderConfig,
+        ),
         bubbles.Text(' | '),
         StyledText.warning('⚠ Warn', renderConfig: renderConfig),
       ],

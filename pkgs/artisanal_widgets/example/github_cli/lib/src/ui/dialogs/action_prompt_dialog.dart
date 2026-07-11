@@ -1,4 +1,5 @@
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../../models/action_prompt.dart';
@@ -16,8 +17,8 @@ final class GithubActionPromptDialog extends w.StatefulWidget {
   final GithubActionPrompt prompt;
   final String? error;
   final bool running;
-  final tui.Cmd? Function(String value) onSubmit;
-  final tui.Cmd? Function() onCancel;
+  final Cmd? Function(String value) onSubmit;
+  final Cmd? Function() onCancel;
 
   @override
   w.State<GithubActionPromptDialog> createState() =>
@@ -41,16 +42,17 @@ final class _GithubActionPromptDialogState
   }
 
   @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is! tui.KeyMsg) return null;
+  Cmd? handleIntercept(Msg msg) {
+    if (msg is! KeyMsg) return null;
     if (widget.running) return null;
-    if (msg.key.type == tui.KeyType.escape) return widget.onCancel();
-    if (msg.key.type == tui.KeyType.enter) {
+    if (msg.key.type == KeyType.escape) return widget.onCancel();
+    if (msg.key.type == KeyType.enter) {
       return widget.onSubmit(_controller.text);
     }
     return null;
   }
 
+  final FocusController _editorFocus = FocusController();
   @override
   w.Widget build(w.BuildContext context) {
     final theme = w.ThemeScope.of(context);
@@ -78,10 +80,11 @@ final class _GithubActionPromptDialogState
             ),
             w.Text(widget.prompt.description, style: hint),
             w.Frame(
-              background: theme.background,
+              background: theme.resolvedSurfaceVariant,
               padding: const w.EdgeInsets.symmetric(horizontal: 1),
               child: w.TextField(
                 controller: _controller,
+                focusController: _editorFocus,
                 prompt: '> ',
                 placeholder: widget.prompt.placeholder,
                 autofocus: true,

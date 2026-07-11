@@ -1,5 +1,5 @@
 import 'package:artisanal_widgets/editors.dart';
-import 'package:artisanal_widgets/widgets.dart' as widgets;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as widgets;
 import 'package:test/test.dart';
 
 void main() {

@@ -1,10 +1,50 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+// ignore_for_file: unused_shown_name
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart'
+    show
+        Cmd,
+        Msg,
+        KeyType,
+        KeyMsg,
+        MouseMsg,
+        MouseAction,
+        MouseButton,
+        HitTestMouseMsg,
+        View,
+        TuiTrace,
+        TraceTag;
+import 'package:artisanal/uv.dart'
+    show
+        Canvas,
+        Cell,
+        Drawable,
+        ITerm2ImageDrawable,
+        KittyImageDrawable,
+        SixelImageDrawable,
+        StyledString,
+        TerminalCapabilities,
+        UvStyle,
+        UvBasic16,
+        UvColor,
+        UvIndexed256,
+        UvRgb,
+        UnderlineStyle,
+        HalfBlockImageDrawable,
+        mayContainTerminalGraphics;
+
+import '../core/element.dart' show elementOf;
+import '../core/widget.dart';
+import '../theme/theme.dart' show hasDarkBackground;
+import 'container.dart';
+import 'spacing.dart';
 
 final Expando<_UvColorCacheEntry> _uvColorCache = Expando<_UvColorCacheEntry>(
   'artisanal_widgets.uvColor',
 );
 
-UvColor? _colorToUvColor(Color? color) {
+UvColor? colorToUvColor(Color? color) {
   if (color == null || color is NoColor) return null;
 
   final cached = _uvColorCache[color];
@@ -60,46 +100,46 @@ final class _UvColorCacheEntry {
   UvColor? lightValue;
 }
 
-int _roundClamp(num value) => math.max(0, value.round());
+int roundClamp(num value) => math.max(0, value.round());
 
-int? _resolveDimension(num? value) {
+int? resolveDimension(num? value) {
   if (value == null) return null;
   if (value is double && (value.isNaN || value.isInfinite)) return null;
-  return _roundClamp(value);
+  return roundClamp(value);
 }
 
-double? _resolveDimensionDouble(num? value) {
+double? resolveDimensionDouble(num? value) {
   if (value == null) return null;
   if (value is double && value.isNaN) return null;
   if (value is double && value.isInfinite) return double.infinity;
   return value.toDouble();
 }
 
-HorizontalAlign _horizontalFromAlignment(Alignment alignment) {
+HorizontalAlign horizontalFromAlignment(Alignment alignment) {
   if (alignment.x <= -0.5) return HorizontalAlign.left;
   if (alignment.x >= 0.5) return HorizontalAlign.right;
   return HorizontalAlign.center;
 }
 
-VerticalAlign _verticalFromAlignment(Alignment alignment) {
+VerticalAlign verticalFromAlignment(Alignment alignment) {
   if (alignment.y <= -0.5) return VerticalAlign.top;
   if (alignment.y >= 0.5) return VerticalAlign.bottom;
   return VerticalAlign.center;
 }
 
-String _viewToString(Object v) {
+String viewToString(Object v) {
   if (v is String) return v;
   if (v is View) return v.content;
   return v.toString();
 }
 
-String _renderWidget(Widget widget) {
+String renderWidget(Widget widget) {
   final element = elementOf(widget);
   if (element != null) return element.render();
-  return _viewToString(widget.view());
+  return viewToString(widget.view());
 }
 
-String _constrainContent(String content, {int? width, int? height}) {
+String constrainContent(String content, {int? width, int? height}) {
   if (width != null && width <= 0) return '';
   if (height != null && height <= 0) return '';
 
@@ -128,7 +168,7 @@ String _constrainContent(String content, {int? width, int? height}) {
   );
 }
 
-String _padToWidth(String content, int targetWidth, int targetHeight) {
+String padToWidth(String content, int targetWidth, int targetHeight) {
   final lines = content.split('\n');
   final result = <String>[];
 
@@ -145,7 +185,7 @@ String _padToWidth(String content, int targetWidth, int targetHeight) {
   return result.join('\n');
 }
 
-String _padToStackSize(String content, int targetWidth, int targetHeight) {
+String padToStackSize(String content, int targetWidth, int targetHeight) {
   final lines = content.split('\n');
   final result = <String>[];
 
@@ -161,7 +201,7 @@ String _padToStackSize(String content, int targetWidth, int targetHeight) {
   return result.join('\n');
 }
 
-String _renderPlainContainerContent({
+String renderPlainContainerContent({
   required String content,
   required int contentHeight,
   required int targetWidth,
@@ -217,12 +257,12 @@ String _renderPlainContainerContent({
   return buffer.toString();
 }
 
-bool _needsPlainContainerCanvasComposition(String content) {
+bool needsPlainContainerCanvasComposition(String content) {
   if (mayContainTerminalGraphics(content)) return true;
-  return _hasUnsupportedPlainContainerControls(content);
+  return hasUnsupportedPlainContainerControls(content);
 }
 
-bool _hasUnsupportedPlainContainerControls(String text) {
+bool hasUnsupportedPlainContainerControls(String text) {
   for (var i = 0; i < text.length; i++) {
     final code = text.codeUnitAt(i);
     if (code == 0x1B) {
@@ -243,7 +283,7 @@ bool _mayLeaveTerminalStateOpen(String line) {
 
 const _ansiResetStyleForPlainComposition = '\x1b[m';
 
-int _offsetForHorizontal(
+int offsetForHorizontal(
   HorizontalAlign align,
   int containerWidth,
   int childWidth,
@@ -255,7 +295,7 @@ int _offsetForHorizontal(
   };
 }
 
-int _offsetForVertical(
+int offsetForVertical(
   VerticalAlign align,
   int containerHeight,
   int childHeight,
@@ -267,7 +307,7 @@ int _offsetForVertical(
   };
 }
 
-void _drawStyledContent(
+void drawStyledContent(
   Canvas canvas,
   String content,
   int startX,
@@ -293,7 +333,6 @@ void _drawStyledContent(
   };
   final tempCanvas = Canvas(styledWidth, styledHeight);
   styled.draw(tempCanvas, tempCanvas.bounds());
-  final terminalBg = _colorToUvColor(currentTheme.background);
 
   for (var y = 0; y < styledHeight; y++) {
     for (var x = 0; x < styledWidth; x++) {
@@ -305,33 +344,38 @@ void _drawStyledContent(
 
       final srcCell = tempCanvas.cellAt(x, y);
       if (srcCell == null || srcCell.isZero) continue;
-      // Skip plain unstyled spaces so that the container's pre-filled
-      // background color shows through.  This applies in transparent mode
-      // (Stack overlays) AND whenever the container has a background color,
-      // because Layout.place() padding produces isEmpty cells that would
-      // otherwise overwrite the bg-filled canvas.
-      if (srcCell.isEmpty && (transparent || bgStyle.bg != null)) continue;
+      final normalizedStyle = srcCell.style;
+      final isSingleWidthSpace = srcCell.content == ' ' && srcCell.width == 1;
 
-      // Styled text often ends with a reset that reverts to terminal default
-      // background. When those reset-derived spaces are parsed back into cells,
-      // they look like explicitly colored spaces and would incorrectly punch
-      // holes through container backgrounds. Treat this specific shape as
-      // transparent so the container's prefilled background remains visible.
-      if (bgStyle.bg != null &&
-          terminalBg != null &&
-          srcCell.content == ' ' &&
-          srcCell.width == 1 &&
-          srcCell.style.fg == null &&
-          srcCell.style.bg == terminalBg &&
-          srcCell.style.underlineColor == null &&
-          srcCell.style.underline == UnderlineStyle.none &&
-          srcCell.style.attrs == 0) {
+      // Skip layout/padding spaces that have no visible styling of their own so
+      // the destination background remains visible. This covers both plain empty
+      // cells and spaces that only carried a foreground/default-background style
+      // after ANSI round-tripping.
+      //
+      // We unconditionally skip empty cells and transparent spaces — regardless
+      // of whether the current container has a background color — so that
+      // Layout.place/pad trailing-space padding never overwrites background fill
+      // cells laid down by an inner widget. Without this, a no-bg intermediate
+      // container (e.g. Container(width: 58) with no color) would pass empty
+      // Layout.place spaces through to the parent canvas, overwriting the inner
+      // widget's bg=highlight fill cells.
+      final hasVisibleSpaceAttrs =
+          (normalizedStyle.attrs & 32) != 0; // 32 == Attr.reverse
+      final isTransparentSpace =
+          isSingleWidthSpace &&
+          normalizedStyle.fg == null &&
+          normalizedStyle.bg == null &&
+          normalizedStyle.underlineColor == null &&
+          normalizedStyle.underline == UnderlineStyle.none &&
+          !hasVisibleSpaceAttrs &&
+          srcCell.link.isZero;
+      if (srcCell.isEmpty || isTransparentSpace) {
         continue;
       }
 
-      final mergedStyle = srcCell.style.bg == null && bgStyle.bg != null
-          ? srcCell.style.copyWith(bg: bgStyle.bg)
-          : srcCell.style;
+      final mergedStyle = normalizedStyle.bg == null && bgStyle.bg != null
+          ? normalizedStyle.copyWith(bg: bgStyle.bg)
+          : normalizedStyle;
 
       canvas.setCell(
         destX,
@@ -348,7 +392,7 @@ void _drawStyledContent(
   span.end(extra: 'bounds=${styledWidth}x$styledHeight');
 }
 
-String _renderContainerContent({
+String renderContainerContent({
   required String contentStr,
   EdgeInsets? padding,
   EdgeInsets? margin,
@@ -364,7 +408,7 @@ String _renderContainerContent({
   VerticalAlign verticalAlign = VerticalAlign.top,
 }) {
   final span = TuiTrace.begin(
-    '_renderContainerContent',
+    'renderContainerContent',
     tag: TraceTag.paint,
     extra: 'w=$width h=$height',
   );
@@ -395,22 +439,22 @@ String _renderContainerContent({
   final hasBorder = border != null && border.isVisible;
   final hasGradient = gradient != null && gradient.colors.length >= 2;
 
-  final padLeft = _roundClamp(padding?.left ?? 0);
-  final padRight = _roundClamp(padding?.right ?? 0);
-  final padTop = _roundClamp(padding?.top ?? 0);
-  final padBottom = _roundClamp(padding?.bottom ?? 0);
+  final padLeft = roundClamp(padding?.left ?? 0);
+  final padRight = roundClamp(padding?.right ?? 0);
+  final padTop = roundClamp(padding?.top ?? 0);
+  final padBottom = roundClamp(padding?.bottom ?? 0);
 
-  final marginLeft = _roundClamp(margin?.left ?? 0);
-  final marginRight = _roundClamp(margin?.right ?? 0);
-  final marginTop = _roundClamp(margin?.top ?? 0);
-  final marginBottom = _roundClamp(margin?.bottom ?? 0);
+  final marginLeft = roundClamp(margin?.left ?? 0);
+  final marginRight = roundClamp(margin?.right ?? 0);
+  final marginTop = roundClamp(margin?.top ?? 0);
+  final marginBottom = roundClamp(margin?.bottom ?? 0);
 
   // Inner width/height includes border + padding + content.
   final paddedWidth = contentWidth + padLeft + padRight + borderH;
   final paddedHeight = contentHeight + padTop + padBottom + borderV;
 
-  final resolvedWidth = _resolveDimension(width);
-  final resolvedHeight = _resolveDimension(height);
+  final resolvedWidth = resolveDimension(width);
+  final resolvedHeight = resolveDimension(height);
   final innerWidth = resolvedWidth ?? paddedWidth;
   final innerHeight = resolvedHeight ?? paddedHeight;
 
@@ -422,8 +466,8 @@ String _renderContainerContent({
     return '';
   }
 
-  final bgColor = _colorToUvColor(color ?? decoration?.color ?? background);
-  final fgColor = _colorToUvColor(foregroundDecoration?.color ?? foreground);
+  final bgColor = colorToUvColor(color ?? decoration?.color ?? background);
+  final fgColor = colorToUvColor(foregroundDecoration?.color ?? foreground);
   final bgStyle = UvStyle(bg: bgColor, fg: fgColor);
   final hasVisualStyle =
       bgColor != null || fgColor != null || hasBorder || hasGradient;
@@ -445,10 +489,10 @@ String _renderContainerContent({
   // Compute alignment and content offset (inside border + padding).
   final resolvedAlign = alignment == null
       ? align
-      : _horizontalFromAlignment(alignment);
+      : horizontalFromAlignment(alignment);
   final resolvedVertical = alignment == null
       ? verticalAlign
-      : _verticalFromAlignment(alignment);
+      : verticalFromAlignment(alignment);
 
   final availableWidth = math.max(0, innerWidth - padLeft - padRight - borderH);
   final availableHeight = math.max(
@@ -457,10 +501,10 @@ String _renderContainerContent({
   );
 
   final alignedX = resolvedWidth != null
-      ? _offsetForHorizontal(resolvedAlign, availableWidth, contentWidth)
+      ? offsetForHorizontal(resolvedAlign, availableWidth, contentWidth)
       : 0;
   final alignedY = resolvedHeight != null
-      ? _offsetForVertical(resolvedVertical, availableHeight, contentHeight)
+      ? offsetForVertical(resolvedVertical, availableHeight, contentHeight)
       : 0;
 
   final offsetX = marginLeft + borderLeft + padLeft + alignedX;
@@ -469,8 +513,8 @@ String _renderContainerContent({
   if (!hasVisualStyle &&
       offsetX >= 0 &&
       offsetY >= 0 &&
-      !_needsPlainContainerCanvasComposition(contentStr)) {
-    final result = _renderPlainContainerContent(
+      !needsPlainContainerCanvasComposition(contentStr)) {
+    final result = renderPlainContainerContent(
       content: contentStr,
       contentHeight: contentHeight,
       targetWidth: targetWidth,
@@ -509,7 +553,7 @@ String _renderContainerContent({
         hasDarkBackground: hasDarkBackground,
       );
       for (var row = 0; row < gradientAreaHeight; row++) {
-        final rowColor = _colorToUvColor(gradientColors[row]);
+        final rowColor = colorToUvColor(gradientColors[row]);
         final rowStyle = UvStyle(bg: rowColor, fg: fgColor);
         final rowCell = Cell(content: ' ', width: 1, style: rowStyle);
         final y = gradientAreaTop + row;
@@ -531,7 +575,7 @@ String _renderContainerContent({
     // _drawStyledContent merges bg from bgStyle only when the source cell
     // has no bg. We pass the base bgStyle here; for gradient containers the
     // canvas already has per-row bg so the merge is harmless.
-    _drawStyledContent(
+    drawStyledContent(
       canvas,
       contentStr,
       offsetX,
@@ -648,7 +692,7 @@ String _renderContainerContent({
       marginRight > 0 ||
       marginTop > 0 ||
       marginBottom > 0) {
-    result = _padToWidth(result, targetWidth, targetHeight);
+    result = padToWidth(result, targetWidth, targetHeight);
   }
   span.end(extra: 'size=${targetWidth}x$targetHeight');
   return result;

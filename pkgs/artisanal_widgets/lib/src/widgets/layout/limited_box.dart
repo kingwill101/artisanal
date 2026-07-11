@@ -1,4 +1,9 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+
+import '../style.dart';
+import '../rendering/rendering.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
 
 /// A box that limits its size only when it's unconstrained.
 ///
@@ -45,12 +50,12 @@ class LimitedBox extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child == null ? '' : _renderWidget(child!);
+    final content = child == null ? '' : renderWidget(child!);
     // In the view path we don't have parent constraints, so just apply limits
     // as if unbounded.
     final w = maxWidth.isFinite ? maxWidth.toInt() : null;
     final h = maxHeight.isFinite ? maxHeight.toInt() : null;
-    return _constrainContent(content, width: w, height: h);
+    return constrainContent(content, width: w, height: h);
   }
 }
 
@@ -81,7 +86,7 @@ class _RenderLimitedBox extends RenderBox {
     final limited = _limitConstraints(constraints);
     super.layout(limited);
     _child?.layout(limited);
-    final rendered = _constrainContent(
+    final rendered = constrainContent(
       _child?.paint() ?? '',
       width: limited.hasBoundedWidth ? limited.maxWidth.toInt() : null,
       height: limited.hasBoundedHeight ? limited.maxHeight.toInt() : null,

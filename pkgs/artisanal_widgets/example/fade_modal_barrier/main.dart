@@ -1,4 +1,5 @@
 // FadeModalBarrier Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the FadeModalBarrier widget that overlays a semi-transparent
 // barrier over content. Press 'm' to toggle visibility, 'd' to toggle
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(FadeModalBarrierDemo());
+  final app = WidgetApp(FadeModalBarrierDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

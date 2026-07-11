@@ -1,7 +1,7 @@
-import 'package:artisanal/editor_core.dart';
-import 'package:artisanal/editor_core.dart' as commands;
-import 'package:artisanal/editor_core.dart' as edit_ops;
-import 'package:artisanal/editor_core.dart' as nav;
+import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/artisanal.dart' as commands;
+import 'package:artisanal/artisanal.dart' as edit_ops;
+import 'package:artisanal/artisanal.dart' as nav;
 import 'package:characters/characters.dart';
 import 'package:test/test.dart';
 

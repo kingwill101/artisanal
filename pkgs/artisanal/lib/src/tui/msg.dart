@@ -1,4 +1,5 @@
 import '../style/color.dart';
+import '../style/accessibility.dart' show isDarkColorRgb;
 import '../uv/terminal_renderer.dart' show RenderMetrics;
 import 'degradation.dart' show RenderBudgetState;
 import 'key.dart';
@@ -83,6 +84,50 @@ class KeyMsg extends Msg {
 
   @override
   int get hashCode => key.hashCode;
+}
+
+/// Message emitted when a chord prefix key is recognized.
+final class KeyChordPrefixMsg extends Msg {
+  const KeyChordPrefixMsg(this.prefix);
+
+  /// The prefix key that started the chord.
+  final Key prefix;
+}
+
+/// Message emitted when a chord resolves to a configured binding.
+final class KeyChordResolvedMsg extends Msg {
+  const KeyChordResolvedMsg({
+    required this.id,
+    required this.prefix,
+    required this.key,
+  });
+
+  /// The resolved chord identifier.
+  final String id;
+
+  /// The prefix key that started the chord.
+  final Key prefix;
+
+  /// The continuation key that completed the chord.
+  final Key key;
+}
+
+/// Message emitted when a pending chord is cancelled or times out.
+final class KeyChordCancelledMsg extends Msg {
+  const KeyChordCancelledMsg({
+    required this.prefix,
+    this.key,
+    this.timedOut = false,
+  });
+
+  /// The prefix key that started the chord.
+  final Key prefix;
+
+  /// The key that cancelled the chord, if cancellation came from a key.
+  final Key? key;
+
+  /// Whether the cancellation was caused by a timeout.
+  final bool timedOut;
 }
 
 /// Message used by the runtime to deliver collapsed large rune bursts as a
@@ -433,13 +478,7 @@ final class BackgroundColorMsg extends Msg {
     final rgb = _parseHexRgb(hex);
     if (rgb == null) return true;
     final (:r, :g, :b) = rgb;
-    final rn = r / 255.0;
-    final gn = g / 255.0;
-    final bn = b / 255.0;
-    final max = rn > gn ? (rn > bn ? rn : bn) : (gn > bn ? gn : bn);
-    final min = rn < gn ? (rn < bn ? rn : bn) : (gn < bn ? gn : bn);
-    final l = (max + min) / 2.0;
-    return l < 0.5;
+    return isDarkColorRgb(red: r, green: g, blue: b);
   }
 
   @override

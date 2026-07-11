@@ -18,13 +18,16 @@
 /// ```
 library;
 
-import 'package:html/dom.dart' as dom;
-import 'package:html/parser.dart' as html;
+import 'dart:math' as math;
 
 import 'border.dart';
 import 'blending.dart' as blend;
+import 'chars.dart';
 import 'color.dart';
 import 'properties.dart';
+import 'ranges.dart' as ranges;
+import 'style_model.dart';
+import 'tag_parser.dart';
 import '../layout/layout.dart';
 import '../renderer/renderer.dart';
 import '../terminal/ansi.dart';
@@ -99,6 +102,8 @@ class _PropBits {
   static const int underlineColor = 1 << 15;
   static const int paddingChar = 1 << 16;
   static const int marginChar = 1 << 17;
+  static const int whitespaceChar = 1 << 18;
+  static const int whitespaceForeground = 1 << 19;
 }
 
 /// Fluent, chainable style builder for terminal output.
@@ -313,12 +318,6 @@ class Style {
   /// Character used for margins.
   String _marginChar = ' ';
 
-  /// Individual border side visibility.
-  bool _borderTopVisible = true;
-  bool _borderRightVisible = true;
-  bool _borderBottomVisible = true;
-  bool _borderLeftVisible = true;
-
   // ─────────────────────────────────────────────────────────────────────────────
   // Rendering Context
   // ─────────────────────────────────────────────────────────────────────────────
@@ -329,6 +328,8 @@ class Style {
   /// Whether the terminal has a dark background.
   bool _hasDarkBackground = true;
 
+  RenderContext? _activeRenderContext;
+
   String? _cachedTextStylePrefix;
   String? _cachedTextStyleSuffix;
   bool _hasCachedTextStyle = false;
@@ -336,14 +337,16 @@ class Style {
   String? _cachedSpaceTextStyleSuffix;
   bool _hasCachedSpaceTextStyle = false;
 
-  ColorProfile get colorProfile => _colorProfile;
+  ColorProfile get colorProfile =>
+      _activeRenderContext?.colorProfile ?? _colorProfile;
   set colorProfile(ColorProfile value) {
     if (_colorProfile == value) return;
     _colorProfile = value;
     _invalidateTextStyleCache();
   }
 
-  bool get hasDarkBackground => _hasDarkBackground;
+  bool get hasDarkBackground =>
+      _activeRenderContext?.hasDarkBackground ?? _hasDarkBackground;
   set hasDarkBackground(bool value) {
     if (_hasDarkBackground == value) return;
     _hasDarkBackground = value;
@@ -554,6 +557,20 @@ class Style {
   Style unsetMarginChar() {
     _marginChar = ' ';
     _clearFlag2(_PropBits.marginChar);
+    return this;
+  }
+
+  /// Removes custom whitespace characters.
+  Style unsetWhitespaceChars() {
+    _whitespaceChar = ' ';
+    _clearFlag2(_PropBits.whitespaceChar);
+    return this;
+  }
+
+  /// Removes whitespace foreground styling.
+  Style unsetWhitespaceForeground() {
+    _whitespaceForeground = null;
+    _clearFlag2(_PropBits.whitespaceForeground);
     return this;
   }
 
@@ -1056,13 +1073,22 @@ class Style {
   ///     .whitespaceChars('·');
   /// ```
   Style whitespaceChars(String chars) {
+    if (Layout.visibleLength(chars) != 1) {
+      throw ArgumentError.value(
+        chars,
+        'chars',
+        'Whitespace characters must occupy one cell',
+      );
+    }
     _whitespaceChar = chars;
+    _setFlag2(_PropBits.whitespaceChar);
     return this;
   }
 
   /// Sets the foreground color for whitespace fill.
   Style whitespaceForeground(Color color) {
     _whitespaceForeground = color;
+    _setFlag2(_PropBits.whitespaceForeground);
     return this;
   }
 
@@ -1215,28 +1241,24 @@ class Style {
 
   /// Unsets top border visibility.
   Style unsetBorderTop() {
-    _borderTopVisible = true;
     _clearFlag2(_PropBits.borderTop);
     return this;
   }
 
   /// Unsets right border visibility.
   Style unsetBorderRight() {
-    _borderRightVisible = true;
     _clearFlag2(_PropBits.borderRight);
     return this;
   }
 
   /// Unsets bottom border visibility.
   Style unsetBorderBottom() {
-    _borderBottomVisible = true;
     _clearFlag2(_PropBits.borderBottom);
     return this;
   }
 
   /// Unsets left border visibility.
   Style unsetBorderLeft() {
-    _borderLeftVisible = true;
     _clearFlag2(_PropBits.borderLeft);
     return this;
   }
@@ -1411,22 +1433,22 @@ class Style {
 
   /// Gets whether top border is visible.
   bool get getBorderTop =>
-      _hasFlag2(_PropBits.borderTop) ? _borderTopVisible : true;
+      _hasFlag2(_PropBits.borderTop) ? _borderSides.top : true;
 
   /// Gets whether right border is visible.
   bool get getBorderRight =>
-      _hasFlag2(_PropBits.borderRight) ? _borderRightVisible : true;
+      _hasFlag2(_PropBits.borderRight) ? _borderSides.right : true;
 
   /// Gets whether bottom border is visible.
   bool get getBorderBottom =>
-      _hasFlag2(_PropBits.borderBottom) ? _borderBottomVisible : true;
+      _hasFlag2(_PropBits.borderBottom) ? _borderSides.bottom : true;
 
   /// Gets whether left border is visible.
   bool get getBorderLeft =>
-      _hasFlag2(_PropBits.borderLeft) ? _borderLeftVisible : true;
+      _hasFlag2(_PropBits.borderLeft) ? _borderSides.left : true;
 
   /// Gets the pre-set string value.
-  String? get value => _hasFlag2(_PropBits.stringValue) ? _string : _string;
+  String? get value => _hasFlag2(_PropBits.stringValue) ? _string : null;
 
   /// Gets the foreground color if set.
   Color? get getForeground =>
@@ -1564,8 +1586,8 @@ class Style {
   int get getHorizontalFrameSize {
     var size = _padding.horizontal;
     if (_hasFlag(_PropBits.border) && _border != null && _border!.isVisible) {
-      if (_borderSides.left) size += 1;
-      if (_borderSides.right) size += 1;
+      final metrics = _border!.measure(_borderSides);
+      size += metrics.horizontal;
     }
     return size;
   }
@@ -1574,8 +1596,8 @@ class Style {
   int get getVerticalFrameSize {
     var size = _padding.vertical;
     if (_hasFlag(_PropBits.border) && _border != null && _border!.isVisible) {
-      if (_borderSides.top) size += 1;
-      if (_borderSides.bottom) size += 1;
+      final metrics = _border!.measure(_borderSides);
+      size += metrics.vertical;
     }
     return size;
   }
@@ -1583,6 +1605,17 @@ class Style {
   /// Gets the frame size (border + padding) as (width, height).
   ({int width, int height}) get getFrameSize =>
       (width: getHorizontalFrameSize, height: getVerticalFrameSize);
+
+  /// Measures the current box model as immutable metrics.
+  BoxMetrics get boxMetrics => BoxMetrics(
+    contentWidth: _width > 0 ? _width : 0,
+    contentHeight: _height > 0 ? _height : 0,
+    padding: _padding,
+    margin: _margin,
+    border: _hasFlag(_PropBits.border) && _border != null
+        ? _border!.measure(_borderSides)
+        : const BorderMetrics.none(),
+  );
 
   /// Gets the transform function if set.
   String Function(String)? get getTransform =>
@@ -1662,7 +1695,7 @@ class Style {
     s._borderBottomBackground = _borderBottomBackground;
     s._borderLeftForeground = _borderLeftForeground;
     s._borderLeftBackground = _borderLeftBackground;
-    s._borderForegroundBlend = _borderForegroundBlend;
+    s._borderForegroundBlend = List<Color>.from(_borderForegroundBlend);
     s._borderForegroundBlendOffset = _borderForegroundBlendOffset;
     s._borderProps = _borderProps;
     s._width = _width;
@@ -1688,14 +1721,62 @@ class Style {
     s._hyperlinkUrl = _hyperlinkUrl;
     s._hyperlinkParams = _hyperlinkParams;
     s._marginBackground = _marginBackground;
-    s._borderTopVisible = _borderTopVisible;
-    s._borderRightVisible = _borderRightVisible;
-    s._borderBottomVisible = _borderBottomVisible;
-    s._borderLeftVisible = _borderLeftVisible;
     s._colorProfile = _colorProfile;
     s._hasDarkBackground = _hasDarkBackground;
     return s;
   }
+
+  /// Returns an immutable snapshot of the current style state.
+  StyleData get data => StyleData(
+    bold: _bold,
+    italic: _italic,
+    underline: _underline,
+    underlineStyle: _underlineStyle,
+    strikethrough: _strikethrough,
+    dim: _dim,
+    inverse: _inverse,
+    blink: _blink,
+    foreground: _foreground,
+    background: _background,
+    borderForeground: _borderForeground,
+    borderBackground: _borderBackground,
+    borderTopForeground: _borderTopForeground,
+    borderRightForeground: _borderRightForeground,
+    borderBottomForeground: _borderBottomForeground,
+    borderLeftForeground: _borderLeftForeground,
+    borderTopBackground: _borderTopBackground,
+    borderRightBackground: _borderRightBackground,
+    borderBottomBackground: _borderBottomBackground,
+    borderLeftBackground: _borderLeftBackground,
+    borderForegroundBlend: List<Color>.from(_borderForegroundBlend),
+    borderForegroundBlendOffset: _borderForegroundBlendOffset,
+    width: _width == 0 ? null : _width,
+    height: _height == 0 ? null : _height,
+    maxWidth: _maxWidth == 0 ? null : _maxWidth,
+    maxHeight: _maxHeight == 0 ? null : _maxHeight,
+    padding: _padding,
+    margin: _margin,
+    align: _align,
+    alignVertical: _alignVertical,
+    border: _border,
+    borderSides: _borderSides,
+    inline: _inline,
+    wrapAnsi: _wrapAnsi,
+    transform: _transform,
+    paddingChar: _paddingChar,
+    marginChar: _marginChar,
+    whitespaceChar: _whitespaceChar,
+    whitespaceForeground: _whitespaceForeground,
+    stringValue: _string,
+    tabWidth: _tabWidth,
+    underlineSpaces: _underlineSpaces,
+    strikethroughSpaces: _strikethroughSpaces,
+    colorWhitespace: _colorWhitespace,
+    hyperlinkUrl: _hyperlinkUrl,
+    hyperlinkParams: _hyperlinkParams,
+    marginBackground: _marginBackground,
+    underlineColor: _underlineColor,
+  );
 
   /// Inherits explicitly-set properties from another style.
   ///
@@ -1885,7 +1966,7 @@ class Style {
       _setFlag2(_PropBits.colorWhitespace);
     }
     if (other._hasFlag2(_PropBits.borderForegroundBlend)) {
-      _borderForegroundBlend = other._borderForegroundBlend;
+      _borderForegroundBlend = List<Color>.from(other._borderForegroundBlend);
       _setFlag2(_PropBits.borderForegroundBlend);
     }
     if (other._hasFlag2(_PropBits.borderForegroundBlendOffset)) {
@@ -1906,20 +1987,28 @@ class Style {
       _setFlag2(_PropBits.hyperlink);
     }
     if (other._hasFlag2(_PropBits.borderTop)) {
-      _borderTopVisible = other._borderTopVisible;
+      _borderSides = _borderSides.copyWith(top: other._borderSides.top);
       _setFlag2(_PropBits.borderTop);
     }
     if (other._hasFlag2(_PropBits.borderRight)) {
-      _borderRightVisible = other._borderRightVisible;
+      _borderSides = _borderSides.copyWith(right: other._borderSides.right);
       _setFlag2(_PropBits.borderRight);
     }
     if (other._hasFlag2(_PropBits.borderBottom)) {
-      _borderBottomVisible = other._borderBottomVisible;
+      _borderSides = _borderSides.copyWith(bottom: other._borderSides.bottom);
       _setFlag2(_PropBits.borderBottom);
     }
     if (other._hasFlag2(_PropBits.borderLeft)) {
-      _borderLeftVisible = other._borderLeftVisible;
+      _borderSides = _borderSides.copyWith(left: other._borderSides.left);
       _setFlag2(_PropBits.borderLeft);
+    }
+    if (other._hasFlag2(_PropBits.whitespaceChar)) {
+      _whitespaceChar = other._whitespaceChar;
+      _setFlag2(_PropBits.whitespaceChar);
+    }
+    if (other._hasFlag2(_PropBits.whitespaceForeground)) {
+      _whitespaceForeground = other._whitespaceForeground;
+      _setFlag2(_PropBits.whitespaceForeground);
     }
     return this;
   }
@@ -1955,7 +2044,25 @@ class Style {
         content = '$preset $content';
       }
     }
-    return _renderComposed(content);
+
+    return renderWithContext(
+      content,
+      RenderContext(
+        colorProfile: _colorProfile,
+        hasDarkBackground: _hasDarkBackground,
+      ),
+    );
+  }
+
+  /// Renders the given text with an explicit render context.
+  String renderWithContext(Object? text, RenderContext context) {
+    final previousContext = _activeRenderContext;
+    _activeRenderContext = context;
+    try {
+      return _renderComposed(text?.toString() ?? '');
+    } finally {
+      _activeRenderContext = previousContext;
+    }
   }
 
   /// Renders the given text using the settings from the provided [renderer].
@@ -1966,20 +2073,15 @@ class Style {
   ///
   /// The rendered text is also written to the [renderer].
   String renderTo(Renderer renderer, [Object? text]) {
-    final oldProfile = colorProfile;
-    final oldDark = hasDarkBackground;
-
-    colorProfile = renderer.colorProfile;
-    hasDarkBackground = renderer.hasDarkBackground;
-
-    try {
-      final result = render(text);
-      renderer.write(result);
-      return result;
-    } finally {
-      colorProfile = oldProfile;
-      hasDarkBackground = oldDark;
-    }
+    final result = renderWithContext(
+      text,
+      RenderContext(
+        colorProfile: renderer.colorProfile,
+        hasDarkBackground: renderer.hasDarkBackground,
+      ),
+    );
+    renderer.write(result);
+    return result;
   }
 
   String _renderComposed(String text) {
@@ -2086,8 +2188,8 @@ class Style {
     // Apply border
     if (_hasFlag(_PropBits.border) && _border != null && _border!.isVisible) {
       lines = _applyBorder(lines, contentWidth);
-      if (_borderSides.left) contentWidth += 1;
-      if (_borderSides.right) contentWidth += 1;
+      final metrics = _border!.measure(_borderSides);
+      contentWidth += metrics.horizontal;
     }
 
     // Apply fixed height (affects the styled box, margin is applied after)
@@ -2140,13 +2242,15 @@ class Style {
     }
 
     final buf = StringBuffer();
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-      if (char == ' ' || char == '\t' || char == '\u00A0') {
-        buf.write(_applyStylesToString(char, isSpace: true));
+    var i = 0;
+    while (i < text.length) {
+      final (:grapheme, :nextIndex) = uni.readGraphemeAt(text, i);
+      if (grapheme == ' ' || grapheme == '\t' || grapheme == '\u00A0') {
+        buf.write(_applyStylesToString(grapheme, isSpace: true));
       } else {
-        buf.write(_applyStylesToString(char, isSpace: false));
+        buf.write(_applyStylesToString(grapheme, isSpace: false));
       }
+      i = nextIndex;
     }
     return buf.toString();
   }
@@ -2300,7 +2404,10 @@ class Style {
   bool get _styleWhitespaceEnabled {
     final reverse = _hasFlag(_PropBits.inverse) && _inverse;
     final hasBg = _hasFlag(_PropBits.background) && _background != null;
-    return reverse || (_colorWhitespace && hasBg);
+    return reverse ||
+        (_colorWhitespace && hasBg) ||
+        _hasFlag2(_PropBits.whitespaceForeground) ||
+        _hasFlag2(_PropBits.whitespaceChar);
   }
 
   /// Styles whitespace outside the core text (padding/alignment fill).
@@ -2315,8 +2422,23 @@ class Style {
 
     final reverse = _hasFlag(_PropBits.inverse) && _inverse;
 
-    var styled = text;
+    var styled = _hasFlag2(_PropBits.whitespaceChar)
+        ? _whitespaceChar * Layout.visibleLength(text)
+        : text;
     var hasAnsi = false;
+
+    if (_hasFlag2(_PropBits.whitespaceForeground) &&
+        _whitespaceForeground != null) {
+      final ansi = _whitespaceForeground!.toAnsi(
+        colorProfile,
+        background: false,
+        hasDarkBackground: hasDarkBackground,
+      );
+      if (ansi.isNotEmpty) {
+        styled = '$ansi$styled';
+        hasAnsi = true;
+      }
+    }
 
     // Apply background only if colorWhitespace is enabled.
     if (_colorWhitespace &&
@@ -2429,175 +2551,17 @@ class Style {
     if (visible <= maxWidth) return line;
 
     final targetLen = maxWidth - 1; // Leave room for ellipsis
-    if (targetLen <= 0) return '…';
-
-    final buffer = StringBuffer();
-    final ansiPattern = Ansi.ansiPattern;
-    var currentLen = 0;
-    var i = 0;
-
-    while (i < line.length && currentLen < targetLen) {
-      // Check for ANSI escape sequence
-      final match = ansiPattern.matchAsPrefix(line, i);
-      if (match != null) {
-        // Include the ANSI code but don't count its length
-        buffer.write(match.group(0));
-        i += match.group(0)!.length;
-        continue;
-      }
-
-      // Regular character
-      buffer.write(line[i]);
-      currentLen++;
-      i++;
-    }
-
-    // Add reset and ellipsis
-    buffer.write('\x1B[0m…');
-    return buffer.toString();
+    if (targetLen <= 0) return EllipsisChars.horizontal;
+    final sliced = ranges.cutAnsiByCells(line, 0, targetLen);
+    return '$sliced\x1B[0m${EllipsisChars.horizontal}';
   }
 
   /// Wraps text to fit within a specified width.
   ///
   /// Breaks lines at word boundaries when possible, preserving ANSI codes.
   List<String> _wrapText(List<String> lines, int maxWidth) {
-    if (_wrapAnsi) {
-      final joined = lines.join('\n');
-      final wrapped = uv_wrap.wrapAnsiPreserving(joined, maxWidth);
-      return wrapped.split('\n');
-    }
-
-    final result = <String>[];
-
-    for (final line in lines) {
-      if (visibleLength(line) <= maxWidth) {
-        result.add(line);
-        continue;
-      }
-
-      // Need to wrap this line
-      result.addAll(_wrapLine(line, maxWidth));
-    }
-
-    return result;
-  }
-
-  /// Wraps a single line to fit within maxWidth.
-  List<String> _wrapLine(String line, int maxWidth) {
-    final result = <String>[];
-    final words = _splitIntoWords(line);
-    var currentLine = StringBuffer();
-    var currentLen = 0;
-
-    for (final word in words) {
-      final wordLen = visibleLength(word);
-
-      // If adding this word would exceed maxWidth
-      if (currentLen + wordLen > maxWidth) {
-        // If we have content, save it and start new line
-        if (currentLen > 0) {
-          result.add(currentLine.toString());
-          currentLine = StringBuffer();
-          currentLen = 0;
-        }
-
-        // If the word itself is longer than maxWidth, break it
-        if (wordLen > maxWidth) {
-          final broken = _breakLongWord(word, maxWidth);
-          // Add all but last piece as complete lines
-          for (var i = 0; i < broken.length - 1; i++) {
-            result.add(broken[i]);
-          }
-          // Continue with last piece
-          if (broken.isNotEmpty) {
-            currentLine.write(broken.last);
-            currentLen = visibleLength(broken.last);
-          }
-          continue;
-        }
-      }
-
-      currentLine.write(word);
-      currentLen += wordLen;
-    }
-
-    // Don't forget the last line
-    if (currentLen > 0) {
-      result.add(currentLine.toString());
-    }
-
-    return result.isEmpty ? [''] : result;
-  }
-
-  /// Splits text into words, preserving spaces and ANSI codes.
-  List<String> _splitIntoWords(String text) {
-    final words = <String>[];
-    final buffer = StringBuffer();
-    final ansiPattern = Ansi.ansiPattern;
-    var i = 0;
-
-    while (i < text.length) {
-      // Check for ANSI escape sequence
-      final match = ansiPattern.matchAsPrefix(text, i);
-      if (match != null) {
-        buffer.write(match.group(0));
-        i += match.group(0)!.length;
-        continue;
-      }
-
-      final char = text[i];
-      if (char == ' ') {
-        // Include space with current word
-        buffer.write(char);
-        words.add(buffer.toString());
-        buffer.clear();
-      } else {
-        buffer.write(char);
-      }
-      i++;
-    }
-
-    // Don't forget the last word
-    if (buffer.isNotEmpty) {
-      words.add(buffer.toString());
-    }
-
-    return words;
-  }
-
-  /// Breaks a long word into pieces that fit within maxWidth.
-  List<String> _breakLongWord(String word, int maxWidth) {
-    final result = <String>[];
-    final ansiPattern = Ansi.ansiPattern;
-    var buffer = StringBuffer();
-    var currentLen = 0;
-    var i = 0;
-
-    while (i < word.length) {
-      // Check for ANSI escape sequence
-      final match = ansiPattern.matchAsPrefix(word, i);
-      if (match != null) {
-        buffer.write(match.group(0));
-        i += match.group(0)!.length;
-        continue;
-      }
-
-      if (currentLen >= maxWidth) {
-        result.add(buffer.toString());
-        buffer = StringBuffer();
-        currentLen = 0;
-      }
-
-      buffer.write(word[i]);
-      currentLen++;
-      i++;
-    }
-
-    if (buffer.isNotEmpty) {
-      result.add(buffer.toString());
-    }
-
-    return result;
+    final joined = lines.join('\n');
+    return uv_wrap.wrapAnsiPreserving(joined, maxWidth).split('\n');
   }
 
   /// Aligns lines horizontally, like lipgloss's alignTextHorizontal.
@@ -2655,237 +2619,11 @@ class Style {
     return Ansi.expandTabs(text, tabWidth: tw);
   }
 
-  static const _resetAnsi = '\x1B[0m';
-
   String _applyConsoleTags(String text) {
-    // Quick exit if no tags
-    if (!text.contains('<')) return text;
-
-    final wrapped = _wrapConsoleTags(text);
-    if (wrapped == null) return text;
-
-    final normalized = wrapped.replaceAll('</>', '</span>');
-    final fragment = html.parseFragment(normalized);
-    final buf = StringBuffer();
-    final stack = <String>[];
-
-    void walk(dom.Node node) {
-      if (node.nodeType == dom.Node.TEXT_NODE) {
-        buf.write(node.text);
-        return;
-      }
-      if (node is dom.Element) {
-        String? applied;
-        if (node.localName == 'span') {
-          final data = node.attributes['data-console'];
-          if (data != null) {
-            applied = _consoleToAnsi(data);
-            if (applied.isNotEmpty) {
-              buf.write(applied);
-              stack.add(applied);
-            }
-          }
-        }
-        for (final child in node.nodes) {
-          walk(child);
-        }
-        if (applied != null && stack.isNotEmpty) {
-          // restore previous style or reset
-          stack.removeLast();
-          final prev = stack.isNotEmpty ? stack.last : null;
-          buf.write(prev ?? _resetAnsi);
-        }
-      }
-    }
-
-    for (final node in fragment.nodes) {
-      walk(node);
-    }
-
-    buf.write(_resetAnsi);
-    return buf.toString();
-  }
-
-  String _consoleToAnsi(String tag) {
-    var fg = '';
-    var bg = '';
-    var opts = '';
-    var href = '';
-
-    for (final part in tag.split(';')) {
-      final kv = part.split('=');
-      if (kv.length != 2) continue;
-      switch (kv[0].toLowerCase()) {
-        case 'fg':
-          fg = kv[1];
-          break;
-        case 'bg':
-          bg = kv[1];
-          break;
-        case 'options':
-          opts = kv[1];
-          break;
-        case 'href':
-          href = kv[1];
-          break;
-      }
-    }
-
-    final buf = StringBuffer();
-    if (fg.isNotEmpty) buf.write(_colorAnsi(fg, true));
-    if (bg.isNotEmpty) buf.write(_colorAnsi(bg, false));
-    if (opts.isNotEmpty) buf.write(_optionsAnsi(opts));
-    if (href.isNotEmpty) {
-      buf.write('\u001b]8;;$href\u0007');
-    }
-
-    return buf.toString();
-  }
-
-  String _colorAnsi(String color, bool foreground) {
-    final lower = color.toLowerCase();
-
-    // Handle hex colors
-    if (lower.startsWith('#')) {
-      return BasicColor(lower).toAnsi(
-        colorProfile,
-        background: !foreground,
-        hasDarkBackground: hasDarkBackground,
-      );
-    }
-
-    final map = <String, int>{
-      'black': 0,
-      'red': 1,
-      'green': 2,
-      'yellow': 3,
-      'blue': 4,
-      'magenta': 5,
-      'cyan': 6,
-      'white': 7,
-      'default': 9,
-      'gray': 7,
-      'grey': 7,
-    };
-
-    final bright = lower.startsWith('bright-');
-    final name = bright ? lower.substring(7) : lower;
-    final code = map[name];
-
-    if (code != null) {
-      final base = foreground ? 30 : 40;
-      final value = bright ? base + 60 + code : base + code;
-      return '\x1B[${value}m';
-    }
-
-    // Try parsing as ANSI code (0-255)
-    final ansiCode = int.tryParse(lower);
-    if (ansiCode != null && ansiCode >= 0 && ansiCode <= 255) {
-      return AnsiColor(ansiCode).toAnsi(colorProfile, background: !foreground);
-    }
-
-    return '';
-  }
-
-  String _optionsAnsi(String opts) {
-    final parts = opts.split(',').map((s) => s.trim().toLowerCase());
-    final codes = <int>[];
-    for (final p in parts) {
-      switch (p) {
-        case 'bold':
-          codes.add(1);
-          break;
-        case 'dim':
-          codes.add(2);
-          break;
-        case 'italic':
-          codes.add(3);
-          break;
-        case 'underscore':
-        case 'underline':
-          codes.add(4);
-          break;
-        case 'blink':
-          codes.add(5);
-          break;
-        case 'reverse':
-        case 'inverse':
-          codes.add(7);
-          break;
-        case 'conceal':
-        case 'hidden':
-          codes.add(8);
-          break;
-        case 'strikethrough':
-          codes.add(9);
-          break;
-      }
-    }
-    if (codes.isEmpty) return '';
-    return '\x1B[${codes.join(';')}m';
-  }
-
-  /// Wrap console tags into spans for HTML parsing without regex usage.
-  /// Returns null if no wrapping was needed.
-  String? _wrapConsoleTags(String text) {
-    final buf = StringBuffer();
-    var i = 0;
-    var changed = false;
-    var appliedAny = false;
-
-    while (i < text.length) {
-      final ch = text[i];
-      if (ch != '<') {
-        buf.write(ch);
-        i++;
-        continue;
-      }
-
-      final end = text.indexOf('>', i + 1);
-      if (end == -1) {
-        buf.write(text.substring(i));
-        break;
-      }
-
-      final token = text.substring(i + 1, end);
-
-      // Handle reset </>
-      if (token == '/') {
-        if (appliedAny) {
-          buf.write('</span>');
-          changed = true;
-        } else {
-          buf.write('</>');
-        }
-        i = end + 1;
-        continue;
-      }
-
-      // Closing tags pass through
-      if (token.startsWith('/')) {
-        buf.write('<$token>');
-        i = end + 1;
-        continue;
-      }
-
-      final lower = token.toLowerCase();
-      final hasSupported =
-          lower.contains('fg=') ||
-          lower.contains('bg=') ||
-          lower.contains('options=') ||
-          lower.contains('href=');
-
-      if (hasSupported) {
-        buf.write('<span data-console="$token">');
-        appliedAny = true;
-        changed = true;
-      } else {
-        buf.write('<$token>');
-      }
-      i = end + 1;
-    }
-
-    return changed ? buf.toString() : null;
+    return ConsoleTagParser(
+      colorProfile: colorProfile,
+      hasDarkBackground: hasDarkBackground,
+    ).render(text);
   }
 
   /// Applies padding (fixed spaces, not filling to width).
@@ -3131,9 +2869,32 @@ class Style {
     }
 
     final result = List<String>.from(lines);
-    final width = lines.isNotEmpty ? visibleLength(lines.first) : 0;
-    while (result.length < targetHeight) {
-      result.add(' ' * width);
+    final width = result.isEmpty
+        ? 0
+        : result.map(visibleLength).reduce(math.max);
+    final fillLine = _styleWhitespace(' ' * width);
+    final remaining = targetHeight - result.length;
+
+    var top = 0;
+    var bottom = 0;
+    switch (_alignVertical) {
+      case VerticalAlign.top:
+        bottom = remaining;
+        break;
+      case VerticalAlign.center:
+        top = remaining ~/ 2;
+        bottom = remaining - top;
+        break;
+      case VerticalAlign.bottom:
+        top = remaining;
+        break;
+    }
+
+    for (var i = 0; i < top; i++) {
+      result.insert(0, fillLine);
+    }
+    for (var i = 0; i < bottom; i++) {
+      result.add(fillLine);
     }
     return result;
   }
@@ -3190,8 +2951,6 @@ List<T> _rotateGradient<T>(List<T> gradient, int offset) {
 
 /// Styles individual runes in a string using a styler function.
 ///
-/// Ported from lipgloss v2:
-/// - `third_party/lipgloss/runes.go`
 String styleRunes(String s, Style Function(int rune, int index) styler) {
   final runes = s.runes.toList(growable: false);
   if (runes.isEmpty) return '';

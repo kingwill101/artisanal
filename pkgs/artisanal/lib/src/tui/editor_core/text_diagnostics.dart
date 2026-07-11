@@ -117,9 +117,7 @@ List<TextPositionDiagnosticRange> textPatternDiagnosticsForDocument({
     if (endColumnComparison != 0) {
       return endColumnComparison;
     }
-    return _diagnosticSeverityRank(
-      b.severity,
-    ).compareTo(_diagnosticSeverityRank(a.severity));
+    return b.severity.rank.compareTo(a.severity.rank);
   });
 
   return List<TextPositionDiagnosticRange>.unmodifiable(diagnostics);
@@ -145,13 +143,4 @@ bool _isWordGrapheme(String grapheme) {
   final isAsciiUpper = codePoint >= 0x41 && codePoint <= 0x5a;
   final isAsciiLower = codePoint >= 0x61 && codePoint <= 0x7a;
   return isAsciiDigit || isAsciiUpper || isAsciiLower || codePoint == 0x5f;
-}
-
-int _diagnosticSeverityRank(TextDiagnosticSeverity severity) {
-  return switch (severity) {
-    TextDiagnosticSeverity.error => 4,
-    TextDiagnosticSeverity.warning => 3,
-    TextDiagnosticSeverity.info => 2,
-    TextDiagnosticSeverity.hint => 1,
-  };
 }

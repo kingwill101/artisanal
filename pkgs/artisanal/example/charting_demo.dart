@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/uv.dart' show Rectangle;
 

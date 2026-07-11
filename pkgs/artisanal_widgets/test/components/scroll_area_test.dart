@@ -1,8 +1,7 @@
 library;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/testing.dart';
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {

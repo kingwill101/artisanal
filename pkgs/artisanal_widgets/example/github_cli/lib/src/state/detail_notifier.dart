@@ -153,6 +153,8 @@ final class GithubDetailNotifier extends ChangeNotifier {
   int _diffFileIndex = 0;
   bool _diffLoading = false;
   String? _diffError;
+  List<GithubPullRequestReviewComment> _diffReviewComments =
+      const <GithubPullRequestReviewComment>[];
 
   GithubDisplayItem? get diffItem => _diffItem;
   String get diff => _diff;
@@ -160,6 +162,8 @@ final class GithubDetailNotifier extends ChangeNotifier {
   int get diffFileIndex => _diffFileIndex;
   bool get diffLoading => _diffLoading;
   String? get diffError => _diffError;
+  List<GithubPullRequestReviewComment> get diffReviewComments =>
+      _diffReviewComments;
 
   void openDiff(GithubDisplayItem item) {
     _clearActiveDetailPane();
@@ -231,6 +235,13 @@ final class GithubDetailNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  void applyDiffReviewCommentsLoaded(
+    List<GithubPullRequestReviewComment> comments,
+  ) {
+    _diffReviewComments = comments;
+    notifyListeners();
+  }
+
   void closeDiff() {
     if (_diffItem == null) return;
     _diffItem = null;
@@ -239,6 +250,7 @@ final class GithubDetailNotifier extends ChangeNotifier {
     _diffFileIndex = 0;
     _diffError = null;
     _diffLoading = false;
+    _diffReviewComments = const <GithubPullRequestReviewComment>[];
     notifyListeners();
   }
 
@@ -413,10 +425,24 @@ final class GithubDetailNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _searchOpen = false;
   bool _repoPromptOpen = false;
   bool _repositoryListOpen = false;
   String? _repoPromptError;
   String? _notice;
+
+  bool get searchOpen => _searchOpen;
+
+  void openSearch() {
+    _searchOpen = true;
+    notifyListeners();
+  }
+
+  void closeSearch() {
+    if (!_searchOpen) return;
+    _searchOpen = false;
+    notifyListeners();
+  }
 
   bool get repoPromptOpen => _repoPromptOpen;
   bool get repositoryListOpen => _repositoryListOpen;
@@ -468,6 +494,7 @@ final class GithubDetailNotifier extends ChangeNotifier {
     _diffFileIndex = 0;
     _diffError = null;
     _diffLoading = false;
+    _diffReviewComments = const <GithubPullRequestReviewComment>[];
   }
 
   /// Close all inline modals at once, for example on tab switch or data reload.
@@ -487,6 +514,7 @@ final class GithubDetailNotifier extends ChangeNotifier {
     _diffFileIndex = 0;
     _diffError = null;
     _diffLoading = false;
+    _diffReviewComments = const <GithubPullRequestReviewComment>[];
     _runDetailItem = null;
     _runDetail = null;
     _runDetailError = null;

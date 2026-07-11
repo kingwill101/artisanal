@@ -16,6 +16,11 @@ import 'timer.dart';
 /// A tap is defined as a pointer-down followed by a pointer-up within
 /// [kTouchSlop] cells of movement. If the pointer moves beyond the slop
 /// before release, the tap is cancelled.
+///
+/// The [onTapDown] callback fires immediately on pointer down.
+/// The [onTapUp] callback fires on pointer up if within slop.
+/// The [onTap] callback fires after a successful tap.
+/// The [onTapCancel] callback fires if the tap is cancelled due to movement.
 class TapGestureRecognizer extends GestureRecognizer {
   /// Callback fired when the pointer goes down.
   GestureTapDownCallback? onTapDown;
@@ -114,7 +119,12 @@ class TapGestureRecognizer extends GestureRecognizer {
 /// Recognizes double-tap gestures.
 ///
 /// A double-tap is two taps within [doubleTapTimeout] and [kDoubleTapSlop]
-/// cells of each other.
+/// cells of each other. The first tap sets up the recognizer, and if a
+/// second tap occurs within the time and distance thresholds, [onDoubleTap]
+/// is invoked.
+///
+/// If the timeout expires before a second tap, the recognizer resets and
+/// waits for a new first tap.
 class DoubleTapGestureRecognizer extends GestureRecognizer {
   DoubleTapGestureRecognizer({GestureTimerFactory? timerFactory})
     : _timerFactory = timerFactory ?? defaultGestureTimerFactory;

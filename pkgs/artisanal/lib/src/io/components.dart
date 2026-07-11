@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../style/chars.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../tui/bubbles/components/alert.dart' show Alert, AlertDisplayStyle;
@@ -81,7 +82,7 @@ class Components {
         .configureStyle(
           io.getStyle('muted') ?? Style().foreground(Colors.muted),
         )
-        .render('•');
+        .render(DotChars.bullet);
     _writeComponent(
       BulletList(
         items: items.map((e) => e.toString()).toList(),

@@ -1,4 +1,5 @@
 // RichText & TextSpan Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates nested styled text spans, text alignment (left/center/right),
 // and overflow modes (clip/ellipsis).
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(RichTextDemo());
+  final app = WidgetApp(RichTextDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

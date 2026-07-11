@@ -1,4 +1,28 @@
-part of 'layout_widgets.dart';
+import 'dart:async' as dart_async;
+import 'dart:async';
+import 'dart:collection';
+import 'dart:math' as math;
+import 'dart:typed_data' show BytesBuilder, Uint8List;
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/uv.dart'
+// ignore_for_file: use_null_aware_elements
+    show
+        Canvas,
+        Drawable,
+        TerminalCapabilities,
+        KittyImageDrawable,
+        ITerm2ImageDrawable,
+        SixelImageDrawable,
+        HalfBlockImageDrawable;
+import 'package:image/image.dart' as img;
+
+import 'package:artisanal/compat.dart';
+import '../core/widget.dart';
+import '../framework.dart';
+import '../render_object.dart';
+import 'geometry.dart';
+import 'text.dart';
 
 /// Data class holding a decoded image.
 class ImageData {
@@ -274,7 +298,7 @@ class NetworkImage extends ImageProvider {
         throw Exception('Failed to load image: HTTP ${response.statusCode}');
       }
 
-      final contentType = response.headers.contentType?.mimeType.toLowerCase();
+      final contentType = response.headers.contentType?.mimeType?.toLowerCase();
       _checkContentType(contentType);
       final maximumBytes = this.maximumBytes;
       final contentLength = response.contentLength;
@@ -350,9 +374,7 @@ Future<ImageData> _decodeImageData(
   String source, {
   int? frame,
 }) async {
-  final decoded = await dart_isolate.Isolate.run(
-    () => img.decodeImage(bytes, frame: frame),
-  );
+  final decoded = await Isolate.run(() => img.decodeImage(bytes, frame: frame));
   if (decoded == null) {
     throw Exception('Failed to decode $source');
   }
@@ -1094,8 +1116,7 @@ T withImageAutoConfiguration<T>({
       _imageAutoModeZoneKey: mode,
       _imageCapabilitiesZoneKey: ?capabilities,
       if (cellPixelWidth != null) _imageCellPixelWidthZoneKey: cellPixelWidth,
-      if (cellPixelHeight != null)
-        _imageCellPixelHeightZoneKey: cellPixelHeight,
+      if (cellPixelHeight != null) _imageCellPixelHeightZoneKey: cellPixelHeight,
     },
   );
 }

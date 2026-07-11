@@ -237,7 +237,7 @@ void main() {
           totalPages: 5,
           type: PaginationType.dots,
         );
-        expect(paginator.view(), '•○○○○');
+        expect(paginator.view(), '●○○○○');
       });
 
       test('renders dots with custom characters', () {
@@ -257,7 +257,7 @@ void main() {
           totalPages: 1,
           type: PaginationType.dots,
         );
-        expect(paginator.view(), '•');
+        expect(paginator.view(), '●');
       });
     });
 
@@ -308,13 +308,13 @@ void main() {
 
     test('shortHelp returns bindings', () {
       final keyMap = PaginatorKeyMap();
-      final help = keyMap.shortHelp();
+      final help = keyMap.shortHelp;
       expect(help, hasLength(2));
     });
 
     test('fullHelp returns grouped bindings', () {
       final keyMap = PaginatorKeyMap();
-      final help = keyMap.fullHelp();
+      final help = keyMap.fullHelp;
       expect(help, isNotEmpty);
       expect(help.first, hasLength(2));
     });

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:characters/characters.dart';
 
 import '../../unicode/grapheme.dart' as uni;
+import 'editor_core_config.dart';
 import 'editor_state.dart';
 import 'state_bridge.dart';
 import 'text_change.dart';
@@ -25,8 +26,9 @@ bool _isControlRune(int rune) {
 }
 
 List<int> textSanitizeRunes(List<int> runes, {required bool multiline}) {
+  final tabWidth = EditorCoreConfig.current.tabWidth;
   final tabRunes = multiline
-      ? const <int>[0x20, 0x20, 0x20, 0x20]
+      ? List<int>.filled(tabWidth, 0x20)
       : const <int>[0x20];
   final newlineRunes = multiline ? const <int>[0x0A] : const <int>[0x20];
   final result = <int>[];
@@ -55,8 +57,9 @@ List<int> textSanitizeRunesLimited(
 }) {
   if (maxOutputCodepoints <= 0) return const [];
 
+  final tabWidth = EditorCoreConfig.current.tabWidth;
   final tabRunes = multiline
-      ? const <int>[0x20, 0x20, 0x20, 0x20]
+      ? List<int>.filled(tabWidth, 0x20)
       : const <int>[0x20];
   final newlineRunes = multiline ? const <int>[0x0A] : const <int>[0x20];
   final result = <int>[];

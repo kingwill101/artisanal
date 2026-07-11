@@ -1,4 +1,5 @@
 // LimitedBox Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the LimitedBox widget which limits its child's size only
 // when the parent provides no constraints. Shows different maxWidth and
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(LimitedBoxDemo());
+  final app = WidgetApp(LimitedBoxDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

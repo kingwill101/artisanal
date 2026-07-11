@@ -5,6 +5,7 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 // ---------------------------------------------------------------------------
 // Single-series line chart (backward-compatible)
@@ -27,9 +28,9 @@ void drawLineChart(
   bool showGrid = false,
   int gridRows = 3,
   int gridCols = 3,
-  bool showMarkers = true,
-  String markerChar = '●',
-  String lineChar = '•',
+  bool showMarkers = false,
+  String markerChar = Circles.filled,
+  String lineChar = DotChars.bullet,
   List<String>? xLabels,
   List<String>? yLabels,
   double? minValue,
@@ -82,8 +83,8 @@ void drawMultiSeriesLineChart(
   bool showGrid = false,
   int gridRows = 3,
   int gridCols = 3,
-  bool showMarkers = true,
-  String markerChar = '●',
+  bool showMarkers = false,
+  String markerChar = Circles.filled,
   List<String>? xLabels,
   List<String>? yLabels,
   double? minValue,
@@ -100,9 +101,9 @@ void drawMultiSeriesLineChart(
       rows: gridRows,
       cols: gridCols,
       style: gridStyle,
-      hChar: '·',
-      vChar: '·',
-      intersectionChar: '·',
+      hChar: DotChars.middle,
+      vChar: DotChars.middle,
+      intersectionChar: DotChars.middle,
     );
   }
 

@@ -1,4 +1,5 @@
 // Wrap, Divider, Icon & Spacer Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Wrap with spacing/runSpacing, Divider, Icon with
 // built-in Icons constants, Spacer, and ShrinkWrap widgets.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(WrapDividerShowcase());
+  final app = WidgetApp(WrapDividerShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

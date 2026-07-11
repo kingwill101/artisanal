@@ -15,9 +15,7 @@ library;
 /// This class provides static constants for common terminal control sequences
 /// such as cursor movement, screen clearing, and mode switching.
 ///
-/// Upstream: `github.com/charmbracelet/x/ansi` (used by `third_party/ultraviolet/*`).
 abstract final class UvAnsi {
-  /// Upstream: `github.com/charmbracelet/x/ansi` (`ResetStyle`).
   static const resetStyle = '\x1b[m';
 
   /// Moves the cursor to the home position (top-left corner).

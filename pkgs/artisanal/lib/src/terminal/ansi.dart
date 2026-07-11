@@ -23,12 +23,10 @@ import '../unicode/width.dart';
 abstract final class Ansi {
   /// Non-breaking space (NBSP, U+00A0).
   ///
-  /// Upstream parity: `x/ansi.NBSP`.
   static const nbsp = '\u00A0';
 
   /// Default tab width used by our string renderers when expanding `\t`.
   ///
-  /// Upstream parity: lipgloss v2 default tab width is 4.
   static const defaultTabWidth = 4;
 
   /// Expands tab characters (`\t`) to spaces.
@@ -112,7 +110,6 @@ abstract final class Ansi {
   ///
   /// Terminal responds with `ESC [ ? <attrs> c`.
   ///
-  /// Upstream parity: `x/ansi.RequestPrimaryDeviceAttributes`.
   static const requestPrimaryDeviceAttributes = '\x1b[c';
 
   /// Request secondary device attributes (DA2).
@@ -317,6 +314,16 @@ abstract final class Ansi {
 
   /// Scrolls screen down by [n] lines.
   static String scrollDownBy(int n) => '\x1b[${n}T';
+
+  /// Sets the vertical scrolling region using DECSTBM.
+  ///
+  /// [top] and [bottom] are 1-based terminal rows. While a scroll region is
+  /// active, line feeds at the bottom margin scroll only that region, leaving
+  /// rows outside the margins untouched.
+  static String setScrollRegion(int top, int bottom) => '\x1b[$top;${bottom}r';
+
+  /// Resets the vertical scrolling region to the full terminal.
+  static const resetScrollRegion = '\x1b[r';
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Alternate Screen Buffer
@@ -716,7 +723,6 @@ abstract final class Ansi {
   ///
   /// [start] and [end] are indices into the *stripped* version of the string.
   ///
-  /// Upstream parity: `x/ansi.Cut`.
   static String cut(String text, int start, int end) {
     if (start < 0) start = 0;
     final stripped = stripAnsi(text);
@@ -782,7 +788,6 @@ abstract final class Ansi {
 
   /// Truncates a string from the left by [n] characters, preserving ANSI state.
   ///
-  /// Upstream parity: `x/ansi.TruncateLeft`.
   static String truncateLeft(String text, int n, [String replacement = '']) {
     final stripped = stripAnsi(text);
     final strippedChars = stripped.characters;

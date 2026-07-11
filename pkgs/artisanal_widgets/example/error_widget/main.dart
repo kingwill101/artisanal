@@ -1,4 +1,5 @@
 // TUIErrorWidget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the TUIErrorWidget for displaying error messages with
 // optional details and icon. Press 'd' to toggle details, 'i' to toggle icon.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ErrorWidgetDemo());
+  final app = WidgetApp(ErrorWidgetDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

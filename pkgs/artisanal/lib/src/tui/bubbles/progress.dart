@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:artisanal/src/style/style.dart';
-import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/style/blending.dart' as blending;
 import 'package:artisanal/src/tui/harmonica.dart' as hz;
+import 'package:artisanal/style.dart';
 
 import '../cmd.dart';
 import '../component.dart';
@@ -34,13 +33,13 @@ const _defaultDamping = 1.0;
 
 /// Default character used to fill the progress bar.
 /// It is a half block, which allows more granular color blending control.
-const String defaultFullCharHalfBlock = '▌';
+const String defaultFullCharHalfBlock = BlockShades.left;
 
 /// Default character used to fill the progress bar (full block).
-const String defaultFullCharFullBlock = '█';
+const String defaultFullCharFullBlock = BlockShades.full;
 
 /// Default character used to fill the empty portion of the progress bar.
-const String defaultEmptyCharBlock = '░';
+const String defaultEmptyCharBlock = BlockShades.light;
 
 /// Function that can be used to dynamically fill the progress bar.
 /// [total] is the total filled percentage, and [current] is the current

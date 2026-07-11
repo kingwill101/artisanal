@@ -1,4 +1,9 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+import 'package:artisanal/uv.dart' show StyledString, Canvas, Cell;
+import '../rendering/render_object.dart';
+import '../style.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
 
 /// A widget that applies spatial transformations to its child.
 ///
@@ -80,7 +85,7 @@ class Transform extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child != null ? _renderWidget(child!) : '';
+    final content = child != null ? renderWidget(child!) : '';
     return _applyTransform(content, translateX, translateY, flipH, flipV);
   }
 }

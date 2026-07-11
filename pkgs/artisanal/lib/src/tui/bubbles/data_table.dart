@@ -2,8 +2,7 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../view.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import 'key_binding.dart';
 import 'textinput.dart';
 import 'paginator.dart';
@@ -93,8 +92,8 @@ class DataTableModel<T> extends ViewComponent {
     _paginator = PaginatorModel(
       perPage: pageSize,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
 
     _runFilter();
@@ -293,7 +292,8 @@ class DataTableModel<T> extends ViewComponent {
     }
 
     if (showHelp) {
-      final help = '↑/↓ navigate  ↵ select  esc cancel';
+      final help =
+          '${Arrows.up}/${Arrows.down} navigate  ${KeyboardChars.enter} select  esc cancel';
       buffer.writeln(styles.dimmed.render(help));
     }
 

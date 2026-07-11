@@ -1,4 +1,5 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/style.dart' show Color, Style;
+import 'package:artisanal/widgets.dart';
 
 /// A typed item that can be displayed in a [StatusLine].
 ///
@@ -12,6 +13,7 @@ part of 'components_widgets.dart';
 /// StatusItem.spinner(frameIndex)
 /// StatusItem.spacer()
 /// ```
+// ignore_for_file: use_null_aware_elements
 sealed class StatusItem {
   const StatusItem._();
 
@@ -179,7 +181,7 @@ class StatusLine extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final bg = background ?? theme.surface;
     final fg = foreground ?? theme.onSurface;
-    final fgStyle = _copyStyle(theme.bodySmall)..foreground(fg);
+    final fgStyle = copyStyle(theme.bodySmall)..foreground(fg);
 
     return Container(
       padding:

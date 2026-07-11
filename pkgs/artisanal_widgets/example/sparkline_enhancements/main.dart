@@ -1,4 +1,5 @@
 // Sparkline Enhancements Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the new SparklineChart features:
 // - Color gradient (low → high value coloring)
@@ -14,7 +15,7 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal_widgets/charting.dart' as charting;
 
 void main() async {
-  final app = tui.WidgetApp(SparklineEnhancementsShowcase());
+  final app = WidgetApp(SparklineEnhancementsShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

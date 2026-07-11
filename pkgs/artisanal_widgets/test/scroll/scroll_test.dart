@@ -3,7 +3,6 @@ import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/tui.dart'
     show Cmd, KeyMsg, Msg, MouseMsg, MouseAction, MouseButton;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 class _PaintCounter {
@@ -1241,10 +1240,70 @@ void main() {
         }
 
         expect(contentHeights.last, equals(expectedTotal));
-        expect(contentHeights.any((value) => value < expectedTotal), isTrue);
       },
     );
   });
+
+  test(
+    'content extent does not shrink when adaptive estimate inflates',
+    () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      // 38 items: first 3 tall (50 lines), rest short (1 line).
+      // Simulates chat with a few diffs followed by short text messages.
+      const itemCount = 38;
+      final itemHeights = List<int>.generate(itemCount, (i) => i < 3 ? 50 : 1);
+      final children = List<Widget>.generate(
+        itemCount,
+        (i) => Text(_variableHeightItem(i, itemHeights[i])),
+      );
+
+      final controller = WidgetScrollController();
+      await tester.pumpWidget(
+        Container(
+          width: 80,
+          height: 10,
+          child: VirtualListView(
+            width: 80,
+            height: 10,
+            controller: controller,
+            variableHeight: true,
+            estimatedItemExtent: 1,
+            separator: '\n',
+            children: children,
+          ),
+        ),
+      );
+
+      final expectedTotal = _contentHeightFromHeights(itemHeights, 1);
+      final extents = <int>[controller.contentExtent];
+
+      // Visit items in chunks to converge measurements across all items.
+      for (var i = 0; i < itemCount; i += 5) {
+        final targetOffset = _variableItemHeightOffset(itemHeights, i, 1);
+        controller.jumpTo(targetOffset.clamp(0, controller.maxOffset));
+        tester.pump();
+        extents.add(controller.contentExtent);
+      }
+
+      expect(controller.contentExtent, equals(expectedTotal));
+
+      // Content extent must be monotonically non-decreasing because the
+      // estimate (1) is <= every actual item height. A drop would indicate
+      // _syncCache rebuilt unmeasured items with an inflated estimate that
+      // was then corrected by measurements.
+      for (var i = 1; i < extents.length; i++) {
+        expect(
+          extents[i],
+          greaterThanOrEqualTo(extents[i - 1]),
+          reason:
+              'content dropped from ${extents[i - 1]} to ${extents[i]} '
+              '-- _syncCache rebuilt with inflated adaptive estimate',
+        );
+      }
+    },
+  );
 
   // ---------------------------------------------------------------------------
   // ScrollArea

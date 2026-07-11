@@ -1,4 +1,5 @@
 library;
+// ignore_for_file: unused_element
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui;
@@ -7,21 +8,39 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import '../theme.dart';
 
 class ThemeListDialog extends w.StatefulWidget {
+  /// Shows a [ThemeListDialog] in a modal dialog route.
+  ///
+  /// Returns a [Future] that resolves to the selected theme name or
+  /// `null` if the dialog is dismissed without selection.
+  static Future<String?> show(
+    w.NavigatorState navigator, {
+    required List<String> themes,
+    required String currentTheme,
+    void Function(String themeName)? onSelect,
+    bool barrierDismissible = true,
+  }) {
+    return navigator.showDialog<String>(
+      barrierDismissible: barrierDismissible,
+      builder: (ctx) => ThemeListDialog(
+        themes: themes,
+        currentTheme: currentTheme,
+        onSelect: (themeName) {
+          w.Navigator.of(ctx).pop(themeName);
+          onSelect?.call(themeName);
+        },
+      ),
+    );
+  }
+
   ThemeListDialog({
-    required this.child,
     required this.themes,
     required this.currentTheme,
-    this.open = false,
-    this.onDismiss,
     this.onSelect,
     super.key,
   });
 
-  final w.Widget child;
   final List<String> themes;
   final String currentTheme;
-  final bool open;
-  final w.CmdCallback? onDismiss;
   final void Function(String themeName)? onSelect;
 
   @override
@@ -37,17 +56,6 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
   void initState() {
     super.initState();
     _searchController = w.TextEditingController();
-  }
-
-  @override
-  tui.Cmd? didUpdateWidget(covariant ThemeListDialog oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.open && !oldWidget.open) {
-      _searchQuery = '';
-      _searchController.clear();
-      _selectedIndex = _indexOfTheme(widget.currentTheme);
-    }
-    return null;
   }
 
   @override
@@ -84,8 +92,6 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
 
   @override
   w.Widget build(w.BuildContext context) {
-    if (!widget.open) return widget.child;
-
     final theme = w.ThemeScope.of(context);
     final cpTheme = theme.commandPaletteTheme;
     final dialogBg = cpTheme?.background ?? OC.backgroundPanel;
@@ -147,7 +153,7 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
       );
     }
 
-    final dialog = w.SizedBox(
+    return w.SizedBox(
       width: 64,
       height: 22,
       child: w.Container(
@@ -255,14 +261,6 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
         ),
       ),
     );
-
-    return w.Modal(
-      open: true,
-      onDismiss: widget.onDismiss,
-      backdropOpacity: 0.72,
-      child: widget.child,
-      dialog: dialog,
-    );
   }
 
   w.Widget _hintKey(String text) {
@@ -285,22 +283,12 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
 
   @override
   tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (!widget.open) return null;
     if (msg is! tui.KeyMsg) return null;
-
     final key = msg.key;
     final filtered = _filteredThemes;
 
-    if (key.type == tui.KeyType.escape) {
-      widget.onDismiss?.call();
-      return tui.Cmd.none();
-    }
-
     if (key.type == tui.KeyType.enter && filtered.isNotEmpty) {
       widget.onSelect?.call(filtered[_selectedIndex]);
-      return tui.Cmd.none();
-    }
-    if (key.type == tui.KeyType.enter) {
       return tui.Cmd.none();
     }
 

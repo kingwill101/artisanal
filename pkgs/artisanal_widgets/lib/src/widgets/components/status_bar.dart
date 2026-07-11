@@ -1,4 +1,5 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/style.dart' show Color;
+import 'package:artisanal/widgets.dart';
 
 /// A horizontal bar that displays a row of [KeyHint] items.
 ///
@@ -61,7 +62,7 @@ class StatusBar extends StatelessWidget {
     final bg = background ?? sbTheme?.background ?? theme.surface;
     final fg = foreground ?? sbTheme?.foreground ?? theme.onSurface;
     final sep = separator ?? sbTheme?.separator;
-    final fgStyle = _copyStyle(theme.bodySmall)..foreground(fg);
+    final fgStyle = copyStyle(theme.bodySmall)..foreground(fg);
 
     final children = <Widget>[];
 

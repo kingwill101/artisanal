@@ -3,8 +3,6 @@
 /// Extracts substrings from ANSI-escaped text using cell indices (terminal
 /// columns), properly restoring pen state (SGR attributes, OSC 8 hyperlinks)
 /// at cut boundaries.
-///
-/// Ported from lipgloss v2 `ranges.go` ANSI slicing helpers.
 library;
 
 import 'ansi.dart' as uv_ansi;

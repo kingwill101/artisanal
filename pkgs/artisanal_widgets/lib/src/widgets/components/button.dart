@@ -1,9 +1,38 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Style, Border, Color;
+import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme/theme.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
+import 'package:artisanal/terminal.dart' as terminal_keys;
 
+import '../focus/focus.dart';
+
+/// Visual style variants for [Button].
 enum ButtonVariant { primary, secondary, outline, ghost, danger }
 
+/// Size variants for [Button].
 enum ButtonSize { small, medium, large }
 
+/// Flutter-style button widget for triggering callbacks.
+///
+/// The [Button] widget is the base button implementation used by
+/// [ElevatedButton], [FilledButton], [TextButton], and [OutlinedButton].
+/// It supports hover and focus states, keyboard activation, and custom styling
+/// through [ButtonVariant] and [ButtonSize].
+///
+/// The [variant] controls the visual appearance:
+/// - [ButtonVariant.primary] - filled with primary color background
+/// - [ButtonVariant.secondary] - filled with secondary/surface color
+/// - [ButtonVariant.danger] - filled with error color background
+/// - [ButtonVariant.outline] - transparent with border outline
+/// - [ButtonVariant.ghost] - transparent, no border
+///
+/// The button is disabled when [enabled] is `false` or when [onPressed] is `null`.
+/// Use [autofocus] and [focusController] to control keyboard focus behavior.
 class Button extends StatefulWidget {
   Button({
     this.label,
@@ -90,7 +119,7 @@ class _ButtonState extends State<Button> {
     );
 
     final padding = widget.padding ?? _defaultPadding(widget.size);
-    final labelStyle = _copyStyle(widget.textStyle ?? theme.labelMedium)
+    final labelStyle = copyStyle(widget.textStyle ?? theme.labelMedium)
       ..foreground(colors.foreground);
 
     if (!_enabled) {
@@ -109,7 +138,7 @@ class _ButtonState extends State<Button> {
     if (widget.variant == ButtonVariant.outline) {
       frameBorder = null;
       frameBorderColor = null;
-      frameStyle = _copyStyle(null)
+      frameStyle = copyStyle(null)
         ..border(
           Border.normal,
           top: false,

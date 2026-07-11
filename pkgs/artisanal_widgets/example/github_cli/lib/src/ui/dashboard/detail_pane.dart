@@ -1,5 +1,5 @@
 import 'package:artisanal/style.dart'
-    show Color, Colors, HorizontalAlign, Style, VerticalAlign;
+    show Color, HorizontalAlign, Style, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -9,6 +9,7 @@ import '../../models/display_item.dart';
 import 'panels.dart';
 import '../label_style.dart';
 import '../../utils/time.dart';
+import '../../utils/diff_comment_mapper.dart';
 import '../markdown/body.dart';
 import '../../utils/text_format.dart';
 
@@ -36,6 +37,7 @@ w.Widget githubDetailPane({
   required int diffFileIndex,
   required bool diffLoading,
   required String? diffError,
+  List<GithubPullRequestReviewComment> diffReviewComments = const [],
   required w.DiffViewMode diffViewMode,
   w.GitDiffController? diffController,
   List<w.DiffCommentLineHighlight> diffCommentHighlights =
@@ -63,7 +65,6 @@ w.Widget githubDetailPane({
   }
   final showingComments = _sameItem(selectedItem, commentsItem);
   final showingCommits = _sameItem(selectedItem, commitsItem);
-  final showingReviewComments = _sameItem(selectedItem, reviewCommentsItem);
   final showingDiff = _sameItem(selectedItem, diffItem);
   final showingMergeInfo = _sameItem(selectedItem, mergeInfoItem);
   final showingRepositoryLabels = _sameItem(selectedItem, repositoryLabelsItem);
@@ -78,9 +79,9 @@ w.Widget githubDetailPane({
         item: selectedItem,
         showingComments: showingComments,
         showingCommits: showingCommits,
-        showingReviewComments: showingReviewComments,
         showingDiff: showingDiff,
         showingRun: showingRun,
+        reviewCommentCount: diffReviewComments.length,
         onChanged: onTabChanged,
       ),
       w.Divider(
@@ -96,6 +97,7 @@ w.Widget githubDetailPane({
           diffFileIndex: diffFileIndex,
           loading: diffLoading,
           error: diffError,
+          diffReviewComments: diffReviewComments,
           viewMode: diffViewMode,
           diffController: diffController,
           diffCommentHighlights: diffCommentHighlights,
@@ -140,24 +142,6 @@ w.Widget githubDetailPane({
           error: commitsError,
           controller: controller,
         )
-      else if (showingReviewComments)
-        _inlineReviewComments(
-          theme: theme,
-          item: selectedItem,
-          comments: reviewComments,
-          loading: reviewCommentsLoading,
-          error: reviewCommentsError,
-          controller: controller,
-        )
-      else if (showingComments)
-        _inlineComments(
-          theme: theme,
-          item: selectedItem,
-          comments: comments,
-          loading: commentsLoading,
-          error: commentsError,
-          controller: controller,
-        )
       else if (navigating)
         // While the user scrolls rapidly, skip the expensive markdown /
         // avatar-image render and show a cheap spinner placeholder instead.
@@ -165,7 +149,15 @@ w.Widget githubDetailPane({
         // once the user pauses, triggering a full render of the real content.
         w.Expanded(child: githubNavigatingPanel(theme))
       else
-        _inlineBody(theme, selectedItem, controller),
+        _inlineBody(
+          theme,
+          selectedItem,
+          controller,
+          showingComments: showingComments,
+          comments: comments,
+          commentsLoading: commentsLoading,
+          commentsError: commentsError,
+        ),
     ],
   );
 }
@@ -175,9 +167,9 @@ w.Widget _detailTabs({
   required GithubDisplayItem item,
   required bool showingComments,
   required bool showingCommits,
-  required bool showingReviewComments,
   required bool showingDiff,
   required bool showingRun,
+  required int reviewCommentCount,
   required tui.Cmd? Function(int index) onChanged,
 }) {
   final tabs = <w.TabItem>[
@@ -186,9 +178,9 @@ w.Widget _detailTabs({
     if (item.target == GithubDisplayTarget.pullRequest)
       w.TabItem('Commits${_commitCountLabel(item)}'),
     if (item.target == GithubDisplayTarget.pullRequest)
-      const w.TabItem('Reviews'),
-    if (item.target == GithubDisplayTarget.pullRequest)
-      w.TabItem('Files changed${_fileCountLabel(item)}'),
+      w.TabItem(
+        'Files changed${_fileCountLabel(item)}${_reviewCountLabel(reviewCommentCount)}',
+      ),
     if (item.target == GithubDisplayTarget.workflowRun)
       const w.TabItem('Run info'),
   ];
@@ -196,8 +188,7 @@ w.Widget _detailTabs({
 
   final index = switch (item.target) {
     GithubDisplayTarget.pullRequest when showingCommits => 1,
-    GithubDisplayTarget.pullRequest when showingReviewComments => 2,
-    GithubDisplayTarget.pullRequest when showingDiff => 3,
+    GithubDisplayTarget.pullRequest when showingDiff => 2,
     GithubDisplayTarget.workflowRun => 0,
     _ => 0,
   };
@@ -218,8 +209,13 @@ w.Widget _detailTabs({
 w.Widget _inlineBody(
   w.Theme theme,
   GithubDisplayItem item,
-  w.ScrollController controller,
-) {
+  w.ScrollController controller, {
+  bool showingComments = false,
+  List<GithubCommentItem> comments = const [],
+  bool commentsLoading = false,
+  String? commentsError,
+}) {
+  final hint = theme.bodySmall.copy()..foreground(theme.muted);
   return w.Expanded(
     child: w.ScrollArea(
       controller: controller,
@@ -240,6 +236,26 @@ w.Widget _inlineBody(
             fallbackMarkdown: '_No description provided._',
             rawText: item.body,
           ),
+          if (showingComments) ...[
+            w.Divider(
+              width: 80,
+              style: theme.bodySmall.copy()..foreground(theme.border),
+            ),
+            w.Text(
+              'All comments ${item.kind.toUpperCase()} #${item.number}',
+              style: theme.titleMedium,
+            ),
+            if (commentsError != null)
+              w.Text(
+                commentsError,
+                style: theme.bodyMedium.copy()..foreground(theme.error),
+              ),
+            if (commentsLoading && comments.isEmpty)
+              w.Text('Loading comments from gh...', style: hint),
+            if (!commentsLoading && comments.isEmpty && commentsError == null)
+              w.Text('No comments returned by gh.', style: hint),
+            for (final comment in comments) _commentCard(theme, comment),
+          ],
         ],
       ),
     ),
@@ -289,11 +305,11 @@ w.Widget _checkItem(
   required int maxWidth,
 }) {
   final color = check.failing
-      ? Colors.red
+      ? theme.error
       : check.passing
-      ? Colors.green
+      ? theme.success
       : check.status == 'in_progress'
-      ? Colors.warning
+      ? theme.warning
       : theme.muted;
   return w.Row(
     children: [
@@ -309,29 +325,6 @@ w.Widget _checkItem(
   );
 }
 
-w.Widget _inlineComments({
-  required w.Theme theme,
-  required GithubDisplayItem item,
-  required List<GithubCommentItem> comments,
-  required bool loading,
-  required String? error,
-  required w.ScrollController controller,
-}) {
-  return w.Expanded(
-    child: w.Scrollbar(
-      controller: controller,
-      child: _commentList(
-        theme: theme,
-        item: item,
-        comments: comments,
-        loading: loading,
-        error: error,
-        controller: controller,
-      ),
-    ),
-  );
-}
-
 w.Widget _inlineReviewComments({
   required w.Theme theme,
   required GithubDisplayItem item,
@@ -339,20 +332,23 @@ w.Widget _inlineReviewComments({
   required bool loading,
   required String? error,
   required w.ScrollController controller,
+  int? height,
 }) {
-  return w.Expanded(
-    child: w.Scrollbar(
+  final content = w.Scrollbar(
+    controller: controller,
+    child: _reviewCommentList(
+      theme: theme,
+      item: item,
+      comments: comments,
+      loading: loading,
+      error: error,
       controller: controller,
-      child: _reviewCommentList(
-        theme: theme,
-        item: item,
-        comments: comments,
-        loading: loading,
-        error: error,
-        controller: controller,
-      ),
     ),
   );
+  if (height != null) {
+    return w.SizedBox(height: height, child: content);
+  }
+  return w.Expanded(child: content);
 }
 
 w.Widget _inlineCommits({
@@ -375,69 +371,6 @@ w.Widget _inlineCommits({
         controller: controller,
       ),
     ),
-  );
-}
-
-w.Widget _commentList({
-  required w.Theme theme,
-  required GithubDisplayItem item,
-  required List<GithubCommentItem> comments,
-  required bool loading,
-  required String? error,
-  required w.ScrollController controller,
-}) {
-  final hasBody = item.body.trim().isNotEmpty;
-  final statusCount =
-      (error == null ? 0 : 1) +
-      (loading && comments.isEmpty ? 1 : 0) +
-      (!loading && comments.isEmpty ? 1 : 0);
-  final commentStart = 2 + (hasBody ? 1 : 0) + statusCount;
-  return w.VirtualListView.builder(
-    controller: controller,
-    variableHeight: true,
-    estimatedItemExtent: 7,
-    separator: '\n',
-    itemCount: commentStart + comments.length,
-    itemBuilder: (context, index) {
-      var cursor = 0;
-      if (index == cursor++) {
-        return w.Text(
-          'All comments ${item.kind.toUpperCase()} #${item.number}',
-          style: theme.titleMedium,
-        );
-      }
-      if (hasBody && index == cursor++) {
-        return _timelineCard(
-          theme: theme,
-          author: item.author,
-          avatarUrl: item.authorAvatarUrl,
-          metadata:
-              '${item.author} / updated ${relativeGithubTime(item.updatedAt)}',
-          fallbackMarkdown: '_No description provided._',
-          rawText: item.body,
-        );
-      }
-      if (index == cursor++) {
-        return w.Divider(
-          width: 80,
-          style: theme.bodySmall.copy()..foreground(theme.border),
-        );
-      }
-      if (error != null && index == cursor++) {
-        return w.Text(
-          error,
-          style: theme.bodyMedium.copy()..foreground(theme.error),
-        );
-      }
-      final hint = theme.bodySmall.copy()..foreground(theme.muted);
-      if (loading && comments.isEmpty && index == cursor++) {
-        return w.Text('Loading comments from gh...', style: hint);
-      }
-      if (!loading && comments.isEmpty && index == cursor++) {
-        return w.Text('No comments returned by gh.', style: hint);
-      }
-      return _commentCard(theme, comments[index - cursor]);
-    },
   );
 }
 
@@ -488,7 +421,7 @@ w.Widget _commitList({
 w.Widget _commitRow(w.Theme theme, GithubPullRequestCommit commit) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   final verifiedStyle = theme.bodySmall.copy()
-    ..foreground(commit.verified ? Colors.green : Colors.warning);
+    ..foreground(commit.verified ? theme.success : theme.warning);
   final author = commit.displayAuthor;
   return w.Frame(
     background: theme.surface,
@@ -587,8 +520,8 @@ w.Widget _inlineMergeInfo({
   required w.ScrollController controller,
 }) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
-  final ok = theme.bodyMedium.copy()..foreground(Colors.green);
-  final warn = theme.bodyMedium.copy()..foreground(Colors.warning);
+  final ok = theme.bodyMedium.copy()..foreground(theme.success);
+  final warn = theme.bodyMedium.copy()..foreground(theme.warning);
   return w.Expanded(
     child: w.ScrollArea(
       controller: controller,
@@ -735,6 +668,8 @@ w.Widget _timelineCard({
   required String fallbackMarkdown,
   required String rawText,
   bool showImageGallery = githubCliNetworkImagesEnabled,
+  int bodyMaxWidth = 82,
+  int metadataMaxWidth = 100,
 }) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   return w.Frame(
@@ -753,12 +688,12 @@ w.Widget _timelineCard({
                 metadata,
                 style: hint,
                 overflow: w.TextOverflow.ellipsis,
-                maxWidth: 100,
+                maxWidth: metadataMaxWidth,
               ),
               GithubMarkdownBody(
                 data: rawText,
                 fallbackMarkdown: fallbackMarkdown,
-                maxWidth: 82,
+                maxWidth: bodyMaxWidth,
                 textStyle: theme.bodyMedium,
               ),
               if (showImageGallery) ..._imageGallery(theme, rawText),
@@ -879,6 +814,7 @@ w.Widget _inlineDiff({
   required int diffFileIndex,
   required bool loading,
   required String? error,
+  required List<GithubPullRequestReviewComment> diffReviewComments,
   required w.DiffViewMode viewMode,
   w.GitDiffController? diffController,
   required List<w.DiffCommentLineHighlight> diffCommentHighlights,
@@ -915,6 +851,13 @@ w.Widget _inlineDiff({
   final rightWidth = diffFiles.isEmpty
       ? targetWidth
       : (targetWidth - _diffFileListWidth(targetWidth) - 2).clamp(40, 180);
+  // Inline comments now render between diff lines, so only show the separate
+  // panel when the selected file is collapsed (inline blocks are suppressed
+  // for collapsed files).
+  final reviewCommentsHeight =
+      diffReviewComments.isNotEmpty && selectedFile?.isCollapsed == true
+      ? (height * 0.35).clamp(8, 30).toInt()
+      : 0;
   return w.Expanded(
     child: w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -931,6 +874,7 @@ w.Widget _inlineDiff({
         w.Expanded(
           child: diffFiles.isEmpty
               ? _selectedFileDiff(
+                  theme: theme,
                   diff: diff,
                   width: rightWidth,
                   height: viewportHeight,
@@ -939,6 +883,7 @@ w.Widget _inlineDiff({
                   scrollController: controller,
                   diffCommentHighlights: diffCommentHighlights,
                   onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+                  diffReviewComments: diffReviewComments,
                 )
               : w.Row(
                   crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -957,6 +902,7 @@ w.Widget _inlineDiff({
                     ),
                     w.Expanded(
                       child: _selectedFileDiff(
+                        theme: theme,
                         diff: diff,
                         selectedFile: selectedFile,
                         width: rightWidth,
@@ -967,11 +913,24 @@ w.Widget _inlineDiff({
                         diffCommentHighlights: diffCommentHighlights,
                         onDiffCommentAnchorSelected:
                             onDiffCommentAnchorSelected,
+                        diffReviewComments: diffReviewComments,
                       ),
                     ),
                   ],
                 ),
         ),
+        if (reviewCommentsHeight > 0) ...[
+          w.Divider(width: width),
+          _inlineReviewComments(
+            theme: theme,
+            item: item,
+            comments: diffReviewComments,
+            loading: false,
+            error: null,
+            controller: controller,
+            height: reviewCommentsHeight,
+          ),
+        ],
       ],
     ),
   );
@@ -986,10 +945,10 @@ w.Widget _diffHeader({
 }) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   final addStyle = theme.bodySmall.copy()
-    ..foreground(Colors.green)
+    ..foreground(theme.success)
     ..bold();
   final deleteStyle = theme.bodySmall.copy()
-    ..foreground(Colors.red)
+    ..foreground(theme.error)
     ..bold();
   final total = _changeTotals(item, files);
   final hasTotals = total.files > 0;
@@ -1170,10 +1129,12 @@ w.Widget _diffFileRow({
   final metaStyle = theme.bodySmall.copy()..foreground(muted);
   final addStyle = theme.bodySmall.copy()
     ..foreground(
-      selected ? theme.listRowSelectedAccentForeground : Colors.green,
+      selected ? theme.listRowSelectedAccentForeground : theme.success,
     );
   final deleteStyle = theme.bodySmall.copy()
-    ..foreground(selected ? theme.listRowSelectedAccentForeground : Colors.red);
+    ..foreground(
+      selected ? theme.listRowSelectedAccentForeground : theme.error,
+    );
   final statusStyle = theme.bodySmall.copy()
     ..foreground(selected ? theme.listRowSelectedMutedForeground : theme.muted);
   final title = _ellipsizePath(file.filename, (width - 2).clamp(8, 80));
@@ -1204,6 +1165,7 @@ w.Widget _diffFileRow({
 }
 
 w.Widget _selectedFileDiff({
+  required w.Theme theme,
   required String diff,
   GithubPullRequestDiffFile? selectedFile,
   required int width,
@@ -1213,7 +1175,65 @@ w.Widget _selectedFileDiff({
   required w.ScrollController scrollController,
   required List<w.DiffCommentLineHighlight> diffCommentHighlights,
   tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
+  required List<GithubPullRequestReviewComment> diffReviewComments,
 }) {
+  if (diffReviewComments.isEmpty) {
+    return w.GitDiffViewer(
+      diff: diff,
+      width: width,
+      height: height,
+      wrapLines: true,
+      viewMode: selectedFile?.isCollapsed == true
+          ? w.DiffViewMode.unified
+          : viewMode,
+      controller: controller,
+      scrollController: scrollController,
+      handleKeys: false,
+      commentHighlights: selectedFile?.isCollapsed == true
+          ? const <w.DiffCommentLineHighlight>[]
+          : diffCommentHighlights,
+      onCommentAnchorSelected: selectedFile?.isCollapsed == true
+          ? null
+          : onDiffCommentAnchorSelected,
+    );
+  }
+
+  final diffController = controller ?? w.GitDiffController();
+  if (diff.isNotEmpty) {
+    diffController.setDiff(diff);
+  }
+  diffController.setSize(width, height);
+
+  final model = diffController.model;
+  final anchors = model.commentAnchors;
+
+  final commentsByLine = mapReviewCommentsToRenderLines(
+    diffReviewComments,
+    anchors,
+  );
+
+  List<w.DiffCommentLineHighlight> reviewHighlights = [];
+  for (final entry in commentsByLine.entries) {
+    final anchor = anchors.where((a) => a.renderLine == entry.key).firstOrNull;
+    if (anchor != null) {
+      for (final _ in entry.value) {
+        reviewHighlights.add(w.DiffCommentLineHighlight.thread(anchor));
+      }
+    }
+  }
+
+  final combinedHighlights = selectedFile?.isCollapsed == true
+      ? <w.DiffCommentLineHighlight>[]
+      : [...diffCommentHighlights, ...reviewHighlights];
+
+  final commentBlocks = selectedFile?.isCollapsed == true
+      ? const <w.DiffCommentBlock>[]
+      : _buildDiffCommentBlocks(
+          theme: theme,
+          commentsByLine: commentsByLine,
+          width: width,
+        );
+
   return w.GitDiffViewer(
     diff: diff,
     width: width,
@@ -1222,16 +1242,116 @@ w.Widget _selectedFileDiff({
     viewMode: selectedFile?.isCollapsed == true
         ? w.DiffViewMode.unified
         : viewMode,
-    controller: controller,
+    controller: diffController,
     scrollController: scrollController,
     handleKeys: false,
-    commentHighlights: selectedFile?.isCollapsed == true
-        ? const <w.DiffCommentLineHighlight>[]
-        : diffCommentHighlights,
+    commentHighlights: combinedHighlights,
+    commentBlocks: commentBlocks,
     onCommentAnchorSelected: selectedFile?.isCollapsed == true
         ? null
         : onDiffCommentAnchorSelected,
   );
+}
+
+/// Builds rich inline comment blocks (one per diff render-line) from the
+/// review comments mapped to that line. Each block renders the same
+/// [_commentCard] used by the Review tab, so avatar images and markdown are
+/// preserved. [DiffCommentBlock.height] is an estimate of the card's row
+/// height used for scroll metrics and click mapping; the actual height is
+/// measured by the diff viewer's scrollable content.
+List<w.DiffCommentBlock> _buildDiffCommentBlocks({
+  required w.Theme theme,
+  required Map<int, List<GithubPullRequestReviewComment>> commentsByLine,
+  required int width,
+}) {
+  if (commentsByLine.isEmpty) return const [];
+  final blocks = <w.DiffCommentBlock>[];
+  for (final entry in commentsByLine.entries) {
+    final renderLine = entry.key;
+    final comments = entry.value;
+    if (comments.isEmpty) continue;
+
+    final cards = <w.Widget>[];
+    var estRows = 0;
+    for (final comment in comments) {
+      cards.add(_commentCard(theme, _reviewCommentToItem(comment)));
+      estRows += _estimateCommentRows(comment, width, theme);
+    }
+
+    final side = comments.first.side == 'LEFT'
+        ? w.DiffCommentSide.left
+        : w.DiffCommentSide.right;
+    final child = cards.length == 1
+        ? cards.single
+        : w.Column(
+            crossAxisAlignment: w.CrossAxisAlignment.stretch,
+            gap: 1,
+            children: cards,
+          );
+
+    blocks.add(
+      w.DiffCommentBlock(
+        renderLine: renderLine,
+        child: child,
+        height: estRows < 6 ? 6 : estRows,
+        side: side,
+      ),
+    );
+  }
+  return blocks;
+}
+
+GithubCommentItem _reviewCommentToItem(GithubPullRequestReviewComment c) {
+  return GithubCommentItem(
+    author: c.author,
+    body: c.body,
+    url: c.url,
+    createdAt: c.createdAt,
+    avatarUrl: c.avatarUrl,
+  );
+}
+
+int _estimateCommentRows(
+  GithubPullRequestReviewComment comment,
+  int width,
+  w.Theme theme,
+) {
+  final innerW = (width - 4).clamp(1, 240);
+  final markdownRows = _renderMarkdownLines(comment.body, innerW, theme).length;
+  final gallery = githubImageReferences(comment.body).take(3).length;
+  // Card height = frame padding (2) + max(avatar 4, metadata 1 + body + gallery).
+  final body = 1 + markdownRows + gallery;
+  return 2 + (body < 4 ? 4 : body);
+}
+
+/// Renders [body] as markdown and returns the visual rows, mirroring
+/// [GithubMarkdownBody] (segmented, with a 1-row gap between segments).
+List<String> _renderMarkdownLines(String body, int width, w.Theme theme) {
+  final options = githubMarkdownOptions(
+    theme,
+    hasDarkBackground: w.hasDarkBackground,
+  );
+  final segments = githubDisplayMarkdownSegments(body);
+  if (segments.isEmpty) return const [''];
+  final out = <String>[];
+  for (var i = 0; i < segments.length; i++) {
+    final markdown = switch (segments[i]) {
+      GithubMarkdownTextSegment(:final markdown) => markdown,
+      GithubMarkdownDetailsSegment(:final summary) => summary,
+    };
+    final rendered =
+        w.MarkdownText(
+              data: markdown,
+              options: options,
+              softWrap: true,
+              maxWidth: width,
+              textStyle: theme.bodyMedium,
+            ).view()
+            as String;
+    out.addAll(rendered.replaceAll(RegExp(r'\n+$'), '').split('\n'));
+    if (i > 0) out.add('');
+  }
+  return out;
 }
 
 int _diffFileListWidth(int width) {
@@ -1246,6 +1366,10 @@ String _fileCountLabel(GithubDisplayItem item) {
 
 String _commitCountLabel(GithubDisplayItem item) {
   return item.commitCount == 0 ? '' : ' ${item.commitCount}';
+}
+
+String _reviewCountLabel(int count) {
+  return count == 0 ? '' : ' ($count inline)';
 }
 
 ({int additions, int deletions, int files}) _changeTotals(
@@ -1327,7 +1451,7 @@ w.Widget _inlineRunDetail({
 
 w.Widget _runDetailBody(w.Theme theme, GithubWorkflowRunDetail detail) {
   final run = detail.run;
-  final statusColor = run.hasFailures ? Colors.red : Colors.green;
+  final statusColor = run.hasFailures ? theme.error : theme.success;
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   return w.Column(
     crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -1339,7 +1463,7 @@ w.Widget _runDetailBody(w.Theme theme, GithubWorkflowRunDetail detail) {
           w.Badge(
             run.statusLabel,
             background: statusColor,
-            foreground: Colors.black,
+            foreground: theme.onError,
           ),
           w.Badge(
             run.workflowName,
@@ -1369,7 +1493,7 @@ w.Widget _runDetailBody(w.Theme theme, GithubWorkflowRunDetail detail) {
 }
 
 w.Widget _jobCard(w.Theme theme, GithubWorkflowJobItem job) {
-  final color = job.hasFailures ? Colors.red : Colors.green;
+  final color = job.hasFailures ? theme.error : theme.success;
   return w.Frame(
     background: theme.surface,
     padding: const w.EdgeInsets.symmetric(horizontal: 1, vertical: 1),
@@ -1390,7 +1514,7 @@ w.Widget _jobCard(w.Theme theme, GithubWorkflowJobItem job) {
           w.Text(
             '${step.hasFailures ? 'x' : 'v'} ${step.number}. ${step.name} (${step.statusLabel})',
             style: theme.bodySmall.copy()
-              ..foreground(step.hasFailures ? Colors.red : theme.muted),
+              ..foreground(step.hasFailures ? theme.error : theme.muted),
             overflow: w.TextOverflow.ellipsis,
             maxWidth: 120,
           ),
@@ -1415,7 +1539,7 @@ bool _sameItem(GithubDisplayItem? left, GithubDisplayItem? right) {
 }
 
 w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
-  final statusColor = item.hasWarning ? Colors.red : Colors.green;
+  final statusColor = item.hasWarning ? theme.error : theme.success;
   final statusText = item.target == GithubDisplayTarget.issue
       ? ''
       : item.status;
@@ -1482,7 +1606,7 @@ List<w.Widget> _detailLabelBadges(
       for (final label in labels.take(4))
         w.Badge(
           label.name,
-          background: labelBackgroundColor(label, fallback: Colors.warning),
+          background: labelBackgroundColor(label, fallback: theme.warning),
           foreground: labelForegroundColor(label),
         ),
     ];
@@ -1509,7 +1633,7 @@ w.Widget _repositorySummary(w.Theme theme, GithubDashboardData dashboard) {
     children: [
       w.Text(
         repo.nameWithOwner,
-        style: theme.titleLarge.copy()..foreground(Colors.warning),
+        style: theme.titleLarge.copy()..foreground(theme.warning),
       ),
       if (repo.description.isNotEmpty)
         w.Text(repo.description, style: theme.bodyMedium),
@@ -1519,8 +1643,8 @@ w.Widget _repositorySummary(w.Theme theme, GithubDashboardData dashboard) {
           if (repo.primaryLanguage.isNotEmpty)
             w.Badge(
               repo.primaryLanguage,
-              background: Colors.cyan,
-              foreground: Colors.black,
+              background: theme.primary,
+              foreground: theme.onPrimary,
             ),
           w.Badge(
             '${repo.stars} stars',

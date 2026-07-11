@@ -5,9 +5,83 @@
 /// Run with: dart run example/lipgloss_list.dart
 library;
 
-import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/bubbles.dart'
+    hide
+        CodeBlockCommentDelimiters,
+        CodeLanguageProfile,
+        Column,
+        CommonKeyBindings,
+        EditBuffer,
+        EditHistoryCoalescePredicate,
+        EditHistoryController,
+        EditHistoryMarkerBuilder,
+        EditHistoryStateEquals,
+        EditorCoreConfig,
+        EditorState,
+        GraphemePredicate,
+        GraphemeReader,
+        Help,
+        KeyBinding,
+        KeyMap,
+        PasteMsg,
+        Row,
+        Spinner,
+        SpinnerModel,
+        SpinnerTickMsg,
+        Spinners,
+        Text,
+        TextCommandResult,
+        TextCursorCommandResult,
+        TextDecorationLayerKey,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        TextDocument,
+        TextDocumentChange,
+        TextDocumentEditResult,
+        TextEditResult,
+        TextExtmark,
+        TextExtmarkOptions,
+        TextExtmarkPositionRange,
+        TextExtmarksController,
+        TextHighlightRange,
+        TextHitResult,
+        TextLineCommandResult,
+        TextLineDecoration,
+        TextLineStateCommandExtensions,
+        TextLineStateSnapshot,
+        TextOffsetStateCommandExtensions,
+        TextOffsetStateDocumentEditingExtensions,
+        TextOffsetStateSnapshot,
+        TextPasteChunk,
+        TextPasteChunkStep,
+        TextPasteController,
+        TextPasteMode,
+        TextPastePlan,
+        TextPasteReference,
+        TextPasteReferenceStore,
+        TextPasteSession,
+        TextPatternDiagnosticRule,
+        TextPosition,
+        TextPositionDiagnosticRange,
+        TextSelection,
+        TextSyntaxBuildResult,
+        TextSyntaxChangeWindow,
+        TextSyntaxDecorationPatch,
+        TextSyntaxLineWindow,
+        TextSyntaxProvider,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextView,
+        TextViewLine,
+        TextViewport,
+        TextVisualCursorPosition,
+        UndoCommandDecoder,
+        UndoCommandJournalEntry,
+        UndoManager,
+        UndoableCommand;
+
 import 'package:artisanal/style.dart';
-import 'package:artisanal/tui.dart';
 
 void main() {
   print('=== Simple List ===\n');
@@ -97,7 +171,7 @@ void _groceryList() {
 
   for (final item in items) {
     final isPurchased = purchased.contains(item);
-    final marker = isPurchased ? '✓' : '•';
+    final marker = isPurchased ? StatusChars.check : DotChars.bullet;
 
     final markerStyle = isPurchased
         ? Style().foreground(AnsiColor(10)).margin(0, 1, 0, 0)

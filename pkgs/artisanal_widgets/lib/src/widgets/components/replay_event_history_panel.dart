@@ -1,4 +1,6 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
 
 enum ReplayEventHistoryFilter { all, renderCaptures, custom }
 

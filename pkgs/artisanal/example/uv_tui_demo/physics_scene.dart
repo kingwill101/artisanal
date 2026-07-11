@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/physics.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 
 import 'theme.dart';
@@ -218,8 +218,8 @@ List<String> renderPhysicsScene({
     final glyph = speed > 12
         ? '◆'
         : speed > 6
-        ? '●'
-        : '•';
+        ? Circles.filled
+        : DotChars.bullet;
 
     for (final fixture in body.fixtures) {
       final shape = fixture.shape;
@@ -236,7 +236,7 @@ List<String> renderPhysicsScene({
         setCell(
           toX(center.x),
           toY(center.y),
-          Style().foreground(color).bold().render('●'),
+          Style().foreground(color).bold().render(Circles.filled),
         );
       } else if (shape is PolygonShape) {
         final verts = shape.vertices;
@@ -244,7 +244,7 @@ List<String> renderPhysicsScene({
           final a = body.worldPoint(verts[i]);
           final b = body.worldPoint(verts[(i + 1) % verts.length]);
           _plotLine(toX(a.x), toY(a.y), toX(b.x), toY(b.y), (x, y) {
-            setCell(x, y, Style().foreground(color).render('■'));
+            setCell(x, y, Style().foreground(color).render(SparseBlocks.solid));
           });
         }
       }
@@ -256,7 +256,11 @@ List<String> renderPhysicsScene({
       final vx = pos.x - vel.x * 0.05;
       final vy = pos.y - vel.y * 0.05;
       _plotLine(toX(pos.x), toY(pos.y), toX(vx), toY(vy), (x, y) {
-        setCell(x, y, Style().foreground(theme.palette.textDim).render('·'));
+        setCell(
+          x,
+          y,
+          Style().foreground(theme.palette.textDim).render(DotChars.middle),
+        );
       });
     }
   }

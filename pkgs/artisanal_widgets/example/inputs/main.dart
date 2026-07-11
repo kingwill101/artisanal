@@ -1,4 +1,5 @@
 // Form Inputs Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Checkbox, Radio, Switch, and Select widgets
 // with interactive state management, plus a scrollable log
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(InputShowcase());
+  final app = WidgetApp(InputShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

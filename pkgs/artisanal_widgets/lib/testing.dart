@@ -16,6 +16,8 @@
 ///   });
 /// }
 /// ```
+///
+/// {@category Testing}
 library;
 
 export 'src/widgets/testing/widget_testing.dart';

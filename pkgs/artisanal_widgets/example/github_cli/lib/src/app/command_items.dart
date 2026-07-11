@@ -30,6 +30,7 @@ final class GithubDashboardCommandItems {
     required this.openSelectedRepositoryLabels,
     required this.openActionPrompt,
     required this.toggleSelectedPullRequestDraft,
+    required this.openSearch,
   });
 
   final GithubDashboardUiState uiState;
@@ -54,6 +55,7 @@ final class GithubDashboardCommandItems {
   final tui.Cmd Function() openSelectedRepositoryLabels;
   final tui.Cmd Function(GithubActionPromptKind kind) openActionPrompt;
   final tui.Cmd Function() toggleSelectedPullRequestDraft;
+  final tui.Cmd Function() openSearch;
 
   List<w.CommandPaletteItem> build() {
     final item = queue.selectedItem;
@@ -164,6 +166,15 @@ final class GithubDashboardCommandItems {
         group: 'Navigation',
         tags: const ['runs', 'workflows', 'ci'],
         onSelect: () => paletteAction(() => switchTab(3)),
+      ),
+      w.CommandPaletteItem(
+        label: 'Search PRs & Issues',
+        description:
+            'Search across open PRs and issues with a free-text query.',
+        shortcut: '/',
+        group: 'Navigation',
+        tags: const ['search', 'find', 'query', 'filter'],
+        onSelect: () => paletteAction(openSearch),
       ),
       w.CommandPaletteItem(
         label: 'View details',

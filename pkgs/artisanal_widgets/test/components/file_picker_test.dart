@@ -1,10 +1,9 @@
 import 'dart:io';
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/testing.dart';
 import 'package:artisanal/tui.dart'
     show InterruptMsg, MouseAction, MouseButton, MouseMsg;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 Future<void> _pumpUntil(

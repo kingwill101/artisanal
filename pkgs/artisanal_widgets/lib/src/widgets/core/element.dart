@@ -29,7 +29,7 @@ import '../layout/geometry.dart' show BoxConstraints, HitTestResult;
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart'
     show RenderRow, RenderColumn, FlexParentData, RenderFlexFit;
-import '../layout/layout_widgets.dart'
+import '../layout/layout.dart'
     show
         Flexible,
         Spacer,
@@ -311,28 +311,6 @@ abstract class Element {
   /// - Unmount any remaining unmatched keyed old children.
   void updateChildren(List<Widget> newWidgets) {
     if (_children.isEmpty && newWidgets.isEmpty) return;
-    if (_children.length == newWidgets.length) {
-      var allIdentical = true;
-      var allCanUpdateInPlace = true;
-      for (var i = 0; i < newWidgets.length; i++) {
-        if (!identical(_children[i].widget, newWidgets[i])) {
-          allIdentical = false;
-          if (!Widget.canUpdate(_children[i].widget, newWidgets[i])) {
-            allCanUpdateInPlace = false;
-            break;
-          }
-        }
-      }
-      if (allIdentical) return;
-      if (allCanUpdateInPlace) {
-        for (var i = 0; i < newWidgets.length; i++) {
-          if (!identical(_children[i].widget, newWidgets[i])) {
-            _children[i].update(newWidgets[i]);
-          }
-        }
-        return;
-      }
-    }
 
     var structureChanged = false;
 
@@ -900,6 +878,9 @@ class InheritedElement extends Element {
     if ((newWidget as InheritedWidget).updateShouldNotify(oldWidget)) {
       for (final dependent in _dependents) {
         dependent.markNeedsBuild();
+        if (dependent is StatefulElement) {
+          dependent.state.didChangeDependencies();
+        }
       }
     }
   }

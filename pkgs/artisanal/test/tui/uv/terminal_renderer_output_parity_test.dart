@@ -3,9 +3,6 @@ import 'dart:io' show Platform;
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/terminal_renderer_output_test.go`
-
 final class _TestSink implements StringSink {
   final StringBuffer _b = StringBuffer();
 

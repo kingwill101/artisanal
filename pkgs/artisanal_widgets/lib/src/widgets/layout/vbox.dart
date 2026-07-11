@@ -1,4 +1,6 @@
-part of 'layout_widgets.dart';
+import '../style.dart';
+import 'column.dart';
+import 'enums.dart';
 
 class VBox extends Column {
   VBox({

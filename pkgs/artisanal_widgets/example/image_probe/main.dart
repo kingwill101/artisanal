@@ -72,7 +72,7 @@ Future<void> main(List<String> arguments) async {
     initialImageCellPixelHeight: terminalProbe?.cellPixelHeight,
   );
 
-  await w.runWidgetApp(app, imageAutoMode: config.autoMode);
+  await artisanal.runWidgetApp(app, imageAutoMode: config.autoMode);
 }
 
 final class ImageProbeConfig {

@@ -1,4 +1,4 @@
-part of 'selection_widgets.dart';
+part of 'selection.dart';
 
 int _selectionAreaAutoScrollDelta({
   required int localY,

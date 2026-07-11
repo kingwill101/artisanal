@@ -1,6 +1,5 @@
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 import '../../example/opencode/models/message.dart';

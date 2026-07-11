@@ -1,10 +1,10 @@
-import 'package:artisanal/runtime.dart' as tui;
-import 'package:artisanal/testing.dart';
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/artisanal.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 
-import '../../example/opencode/main.dart' as example;
 import '../../example/opencode/models/chat_model.dart';
+import '../../example/opencode/screens/session.dart';
 import '../../example/opencode/theme.dart';
 
 void main() {
@@ -26,7 +26,7 @@ void main() {
     await tester.pumpWidget(
       w.ThemeScope(
         theme: openCodeTheme(),
-        child: example.SessionContentPane(
+        child: SessionContentPane(
           model: model,
           scrollController: w.WidgetScrollController(),
           promptController: w.TextFieldController(),

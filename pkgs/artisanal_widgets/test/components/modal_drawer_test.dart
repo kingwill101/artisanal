@@ -1,7 +1,6 @@
-import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/testing.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -157,7 +156,7 @@ void main() {
     });
 
     test('open modal freezes background subtree updates', () {
-      final app = tui.WidgetApp(
+      final app = WidgetApp(
         Container(
           width: 40,
           height: 10,

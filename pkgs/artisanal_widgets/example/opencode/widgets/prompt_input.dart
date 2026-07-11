@@ -1,20 +1,19 @@
 /// Prompt input widget — matches the real OpenCode prompt.
 ///
 /// Left ┃ border colored by agent, backgroundElement bg,
-/// textarea, agent/model/provider labels below input,
-/// bottom shadow with ╹ and ▀ half-block.
+/// textarea, agent/model/provider labels below input.
 library;
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import 'left_accent_pane.dart';
+import 'state/open_code_ui_state.dart';
 import '../theme.dart';
 
 /// Agent color lookup (matches OpenCode agent system).
 style.Color agentColor(String agent) {
   return switch (agent) {
-    // Match OpenCode's agent palette order more closely.
     'build' => OC.secondary,
     'code' => OC.secondary,
     'task' => OC.accent,
@@ -31,6 +30,9 @@ class PromptInput extends w.StatelessWidget {
     this.providerName = 'OpenAI',
     this.showPlaceholder = true,
     this.onChanged,
+    this.enterBehavior = EnterBehavior.send,
+    this.onSubmit,
+    this.dimmed = false,
     super.key,
   });
 
@@ -40,17 +42,23 @@ class PromptInput extends w.StatelessWidget {
   final String providerName;
   final bool showPlaceholder;
   final w.TextChangedCallback? onChanged;
+  final EnterBehavior enterBehavior;
+  final void Function(String text)? onSubmit;
+  final bool dimmed;
 
   @override
   w.Widget build(w.BuildContext context) {
     final color = agentColor(agentName);
     final agentLabel = '${agentName[0].toUpperCase()}${agentName.substring(1)}';
 
-    // Model display name: "claude-opus-4-20250514" -> "claude-opus-4"
     final modelParts = modelName.split('-');
     final modelDisplay = modelParts.length > 3
         ? modelParts.take(3).join('-')
         : modelName;
+
+    final submitHelper = enterBehavior == EnterBehavior.send
+        ? 'Enter'
+        : 'Ctrl+Enter';
 
     return w.Row(
       children: [
@@ -58,6 +66,7 @@ class PromptInput extends w.StatelessWidget {
           child: LeftAccentPane(
             accentColor: color,
             backgroundColor: OC.backgroundElement,
+            dimmed: dimmed,
             padding: const w.EdgeInsets.only(
               left: 2,
               right: 2,
@@ -92,6 +101,11 @@ class PromptInput extends w.StatelessWidget {
                     ),
                     w.Text(
                       providerName,
+                      style: style.Style()..foreground(OC.textMuted),
+                    ),
+                    w.Spacer(),
+                    w.Text(
+                      submitHelper,
                       style: style.Style()..foreground(OC.textMuted),
                     ),
                   ],

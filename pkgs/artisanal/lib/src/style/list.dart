@@ -11,7 +11,7 @@
 /// ```
 library;
 
-import 'style.dart';
+import 'package:artisanal/style.dart';
 import '../tui/bubbles/components/tree.dart' as lip_tree;
 import '../tui/bubbles/components/base.dart' show RenderConfig;
 
@@ -299,7 +299,7 @@ class ListEnumerators {
   ListEnumerators._();
 
   /// Bullet enumerator (•).
-  static String bullet(ListItems items, int index) => '•';
+  static String bullet(ListItems items, int index) => DotChars.bullet;
 
   /// Dash enumerator (-).
   static String dash(ListItems items, int index) => '-';
@@ -412,7 +412,7 @@ class ListIndenters {
   }
 
   /// Arrow indent.
-  static String arrow(ListItems items, int index) => '→ ';
+  static String arrow(ListItems items, int index) => '${Arrows.right} ';
 
   /// Creates a fixed indenter.
   static ListIndenterFunc fixed(String indent) =>

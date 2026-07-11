@@ -113,62 +113,11 @@
 /// {@endtemplate}
 library;
 
-export 'src/uv/terminal.dart';
-export 'src/uv/buffer.dart' show Buffer, Line, LineData;
-export 'src/uv/cell.dart'
-    show
-        Cell,
-        Link,
-        UvStyle,
-        UvColor,
-        UvBasic16,
-        UvIndexed256,
-        UvRgb,
-        Attr,
-        UnderlineStyle;
-export 'src/uv/event.dart';
-export 'src/uv/mouse.dart' show MouseMode, MouseButton, Mouse;
-export 'src/uv/border.dart';
-export 'src/uv/cursor.dart';
-export 'src/uv/decoder.dart' show EventDecoder, LegacyKeyEncoding;
-export 'src/uv/terminal_renderer.dart';
-export 'src/uv/geometry.dart' show Position, Rectangle, rect;
-export 'src/uv/capabilities.dart';
-export 'src/uv/styled_string.dart'
-    show
-        StyledString,
-        newStyledString,
-        LinkState,
-        StyleState,
-        readLink,
-        readStyle,
-        SgrParam;
-export 'src/uv/layer.dart' show Layer, Compositor, newLayer, LayerHit;
-export 'src/uv/canvas.dart' show Canvas;
+export 'src/uv/core_exports.dart';
+export 'src/uv/input_exports.dart';
+export 'src/uv/rendering_exports.dart';
+export 'src/uv/terminal_exports.dart';
 export 'src/uv/layout.dart';
-export 'src/uv/screen.dart';
-export 'src/uv/filters.dart'
-    show
-        BufferFilter,
-        BufferRenderSink,
-        LiquifyFilter,
-        CompositeFilter,
-        VignetteFilter,
-        ScanlineFilter,
-        WaveDistortionFilter,
-        GhostingFilter,
-        CrtFilter,
-        AtmosphereFilter;
-export 'src/uv/effects.dart'
-    show
-        AmberTrailFilter,
-        ColorMatrix,
-        ColorMatrixFilter,
-        AmberTerminalFilter,
-        CrtTrailFilter,
-        PhosphorFilter,
-        PhosphorTrailFilter;
-export 'src/uv/drawable.dart' show Drawable, EmptyDrawable;
 export 'src/unicode/width.dart'
     show
         runeWidth,

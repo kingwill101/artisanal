@@ -1,4 +1,4 @@
-import '../../../style/style.dart';
+import 'package:artisanal/style.dart';
 import 'base.dart';
 
 /// Callback for per-item styling in lists.
@@ -21,7 +21,7 @@ class ListEnumerator {
   static ListEnumerator fixed(String symbol) => ListEnumerator((_) => symbol);
 
   /// Standard bullet (•).
-  static final bullet = fixed('•');
+  static final bullet = fixed(DotChars.bullet);
 
   /// Arabic numerals (1., 2., 3.).
   static final arabic = ListEnumerator((i) => '${i + 1}.');
@@ -65,7 +65,7 @@ String _toRoman(int n) {
 class BulletList extends DisplayComponent {
   const BulletList({
     required this.items,
-    this.bullet = '•',
+    this.bullet = DotChars.bullet,
     this.indent = 2,
     this.enumerator,
     this.itemStyleFunc,

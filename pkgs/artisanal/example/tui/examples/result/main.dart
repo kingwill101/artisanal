@@ -1,6 +1,7 @@
 /// Result example: get final model data after program exit.
 library;
 
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 const _choices = ['Taro', 'Coffee', 'Lychee'];
@@ -64,7 +65,7 @@ class ResultModel implements tui.Model {
       ..writeln('What kind of Bubble Tea would you like to order?\n');
 
     for (var i = 0; i < _choices.length; i++) {
-      buffer.write(cursor == i ? '(•) ' : '( ) ');
+      buffer.write(cursor == i ? '(${DotChars.bullet}) ' : '( ) ');
       buffer.writeln(_choices[i]);
     }
 

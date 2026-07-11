@@ -8,13 +8,11 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/src/style/style.dart';
-import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/style.dart';
 
 import '../tui.dart';
 import 'key_binding.dart';
 import 'paginator.dart';
-import 'spinner.dart';
 import 'textinput.dart';
 import 'help.dart';
 
@@ -206,7 +204,7 @@ int _scoreRank(Rank rank, String target) {
 }
 
 /// Key map for list navigation.
-class ListKeyMap implements KeyMap {
+class ListKeyMap extends KeyMap {
   /// Creates a list key map with default bindings.
   ListKeyMap({
     KeyBinding? cursorUp,
@@ -227,25 +225,25 @@ class ListKeyMap implements KeyMap {
            cursorUp ??
            KeyBinding(
              keys: ['up', 'k'],
-             help: Help(key: '↑/k', desc: 'up'),
+             help: Help(key: '${Arrows.up}/k', desc: 'up'),
            ),
        cursorDown =
            cursorDown ??
            KeyBinding(
              keys: ['down', 'j'],
-             help: Help(key: '↓/j', desc: 'down'),
+             help: Help(key: '${Arrows.down}/j', desc: 'down'),
            ),
        nextPage =
            nextPage ??
            KeyBinding(
              keys: ['right', 'l', 'pgdown'],
-             help: Help(key: '→/l', desc: 'next page'),
+             help: Help(key: '${Arrows.right}/l', desc: 'next page'),
            ),
        prevPage =
            prevPage ??
            KeyBinding(
              keys: ['left', 'h', 'pgup'],
-             help: Help(key: '←/h', desc: 'prev page'),
+             help: Help(key: '${Arrows.left}/h', desc: 'prev page'),
            ),
        goToStart =
            goToStart ??
@@ -301,7 +299,16 @@ class ListKeyMap implements KeyMap {
            KeyBinding(
              keys: ['?'],
              help: Help(key: '?', desc: 'less'),
-           );
+           ) {
+    shortHelp = [this.cursorUp, this.cursorDown, this.filter, this.quit];
+    fullHelp = [
+      [this.cursorUp, this.cursorDown],
+      [this.nextPage, this.prevPage],
+      [this.goToStart, this.goToEnd],
+      [this.filter, this.clearFilter],
+      [this.quit, this.forceQuit],
+    ];
+  }
 
   /// Move cursor up.
   final KeyBinding cursorUp;
@@ -344,18 +351,6 @@ class ListKeyMap implements KeyMap {
 
   /// Close full help.
   final KeyBinding closeFullHelp;
-
-  @override
-  List<KeyBinding> shortHelp() => [cursorUp, cursorDown, filter, quit];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [cursorUp, cursorDown],
-    [nextPage, prevPage],
-    [goToStart, goToEnd],
-    [filter, clearFilter],
-    [quit, forceQuit],
-  ];
 }
 
 /// Styles for list rendering.
@@ -454,8 +449,12 @@ class ListStyles {
     noItems: Style().foreground(AnsiColor(240)), // Dark gray
     paginationStyle: Style().foreground(AnsiColor(241)),
     helpStyle: Style().foreground(AnsiColor(241)),
-    activePaginationDot: Style().foreground(AnsiColor(62)).render('●'),
-    inactivePaginationDot: Style().foreground(AnsiColor(241)).render('○'),
+    activePaginationDot: Style()
+        .foreground(AnsiColor(62))
+        .render(PaginationDots.active),
+    inactivePaginationDot: Style()
+        .foreground(AnsiColor(241))
+        .render(PaginationDots.inactive),
     dividerDot: Style().foreground(AnsiColor(240)).padding(0, 1),
   );
 }
@@ -521,8 +520,8 @@ class ListModel extends ViewComponent {
        _height = height {
     paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: this.styles.activePaginationDot ?? '●',
-      inactiveDot: this.styles.inactivePaginationDot ?? '○',
+      activeDot: this.styles.activePaginationDot ?? PaginationDots.active,
+      inactiveDot: this.styles.inactivePaginationDot ?? PaginationDots.inactive,
     );
     filterInput = TextInputModel(prompt: 'Filter: ', charLimit: 64);
     spinner = SpinnerModel(spinner: Spinners.line);
@@ -1201,7 +1200,7 @@ class ListModel extends ViewComponent {
         // Truncate if needed (simplified)
         if (view.length > _width - spinnerWidth) {
           view =
-              '${view.substring(0, math.max(0, _width - spinnerWidth - 1))}…';
+              '${view.substring(0, math.max(0, _width - spinnerWidth - 1))}${EllipsisChars.horizontal}';
         }
       }
     }
@@ -1243,7 +1242,9 @@ class ListModel extends ViewComponent {
       final filtered = _filterState == FilterState.filterApplied;
       if (filtered) {
         var f = filterInput.value.trim();
-        if (f.length > 10) f = '${f.substring(0, 9)}…';
+        if (f.length > 10) {
+          f = '${f.substring(0, 9)}${EllipsisChars.horizontal}';
+        }
         status += '“$f” ';
       }
       status += itemsDisplay;
@@ -1251,7 +1252,7 @@ class ListModel extends ViewComponent {
 
     final numFiltered = totalItems - visibleItemsCount;
     if (numFiltered > 0) {
-      status += styles.dividerDot.render('•');
+      status += styles.dividerDot.render(DotChars.bullet);
       status += styles.statusBarFilterCount.render('$numFiltered filtered');
     }
 

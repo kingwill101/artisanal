@@ -64,14 +64,12 @@ class SharedInputStream {
 
     try {
       await _subscription?.cancel();
-    } catch (_) {
-    }
+    } catch (_) {}
     _subscription = null;
 
     try {
       await _controller?.close();
-    } catch (_) {
-    }
+    } catch (_) {}
     _controller = null;
   }
 }

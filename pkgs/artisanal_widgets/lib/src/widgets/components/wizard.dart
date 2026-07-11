@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
 
 typedef WizardValidateFunc = String? Function(String value);
 
@@ -765,7 +770,7 @@ class _WizardState extends State<Wizard> {
           focusController: _focusController,
           focusId: _textFocusId,
           autofocus: true,
-          echoMode: EchoMode.password,
+          echoMode: .password,
           onChanged: (_) {
             if (_validationError != null) {
               setState(() {
@@ -821,14 +826,16 @@ class _WizardState extends State<Wizard> {
   }
 }
 
-final class _WizardHelpKeyMap implements KeyMap {
+final class _WizardHelpKeyMap extends KeyMap {
   _WizardHelpKeyMap({
     required WizardFormStep step,
     required bool showExit,
     required bool isLastStep,
-  }) : _shortHelp = _buildShortHelp(step, showExit, isLastStep);
-
-  final List<KeyBinding> _shortHelp;
+  }) {
+    final help = _buildShortHelp(step, showExit, isLastStep);
+    shortHelp = help;
+    fullHelp = [help];
+  }
 
   static List<KeyBinding> _buildShortHelp(
     WizardFormStep step,
@@ -865,12 +872,6 @@ final class _WizardHelpKeyMap implements KeyMap {
 
     return bindings;
   }
-
-  @override
-  List<KeyBinding> shortHelp() => _shortHelp;
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [_shortHelp];
 }
 
 final class _WizardChoiceRow extends StatelessWidget {

@@ -1,5 +1,23 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/artisanal.dart' show Style;
+import 'package:artisanal/style.dart' show Color, Border;
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
 
+/// A container with optional padding, margin, background and border.
+///
+/// The [Frame] widget wraps its [child] in a [Container] with optional
+/// [padding] and [margin], and renders a [border] with [borderColor].
+///
+/// Example:
+/// ```dart
+/// Frame(
+///   padding: EdgeInsets.all(1),
+///   background: Colors.blue,
+///   border: Border.rounded,
+///   child: Text('Content'),
+/// )
+/// ```
 class Frame extends StatelessWidget {
   Frame({
     required this.child,

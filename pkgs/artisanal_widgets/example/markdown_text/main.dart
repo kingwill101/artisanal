@@ -1,4 +1,5 @@
 // MarkdownText Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the MarkdownText widget rendering different Markdown content.
 // Press 't' to cycle through content tabs showing headings, formatting,
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(MarkdownTextDemo());
+  final app = WidgetApp(MarkdownTextDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

@@ -4,7 +4,7 @@ library;
 import 'dart:math' as math;
 import 'dart:math' show Random;
 
-import 'package:artisanal/artisanal.dart' show AnsiColor, Style;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 const _eyeWidth = 15;
@@ -15,7 +15,7 @@ const _blinkFrames = 20;
 const _openTimeMin = 1000;
 const _openTimeMax = 4000;
 
-const _eyeChar = '●';
+const _eyeChar = Circles.filled;
 const _bgChar = ' ';
 
 class TickMsg extends tui.Msg {

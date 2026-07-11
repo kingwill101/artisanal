@@ -1,4 +1,8 @@
-part of 'components_widgets.dart';
+
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Border, Style, Colors;
 
 /// A debug overlay that displays rendering metrics.
 ///
@@ -15,6 +19,8 @@ part of 'components_widgets.dart';
 ///   enabled: true,
 ///   child: MyApp(),
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class DebugOverlay extends StatefulWidget {
   DebugOverlay({

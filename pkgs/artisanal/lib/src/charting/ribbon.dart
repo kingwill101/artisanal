@@ -5,6 +5,7 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Draws a stacked ribbon chart of multiple [series] into [area] on [screen].
 ///
@@ -18,7 +19,7 @@ void drawRibbonChart(
   List<List<double>> series, {
   List<UvStyle>? styles,
   bool normalizeTotals = true,
-  String fillChar = '█',
+  String fillChar = BlockShades.full,
   bool showGrid = false,
   int gridRows = 3,
   int gridCols = 0,
@@ -56,8 +57,8 @@ void drawRibbonChart(
 
   final maxTotal = totals.reduce((a, b) => a > b ? a : b);
 
-  // Use sub-cell (half-block) resolution: 2 half-rows per cell.
-  final subHeight = height * 2;
+  // Use sub-cell resolution: 8 sub-rows per cell for smoother gradients.
+  final subHeight = height * 8;
 
   for (var x = 0; x < width; x++) {
     final total = totals[x];
@@ -65,13 +66,15 @@ void drawRibbonChart(
         ? (total <= 0 ? 0.0 : subHeight / total)
         : (maxTotal <= 0 ? 0.0 : subHeight / maxTotal);
 
-    // Compute the series index for each sub-row (bottom = index 0).
-    // -1 means empty.
     final subRows = List<int>.filled(subHeight, -1);
     var cursor = 0;
+    var cumulative = 0.0;
     for (var i = 0; i < seriesCount; i++) {
       final value = sampled[i][x];
-      final bandHeight = (value * scale).round();
+      final prevRound = cumulative.round();
+      cumulative += value * scale;
+      final nextRound = cumulative.round();
+      final bandHeight = nextRound - prevRound;
       for (var s = 0; s < bandHeight && cursor + s < subHeight; s++) {
         subRows[cursor + s] = i;
       }
@@ -79,17 +82,12 @@ void drawRibbonChart(
       if (cursor >= subHeight) break;
     }
 
-    // Now render pairs of sub-rows into cells.
-    // Sub-row 0 is the bottom of the chart; cell row (height-1) is the
-    // bottom screen row.  Within a cell, the lower half corresponds to the
-    // even sub-row and the upper half to the odd sub-row.
     for (var cellRow = 0; cellRow < height; cellRow++) {
       final screenY = area.minY + cellRow;
-      // Map: cellRow 0 = top of area.  Sub-row for top-of-chart is
-      // subHeight-1.
-      final upperSub = subHeight - 1 - cellRow * 2; // top half of cell
-      final lowerSub = upperSub - 1; // bottom half of cell
+      final upperSub = subHeight - 1 - cellRow * 8; // top sub-row of cell
+      final lowerSub = upperSub - 7; // bottom sub-row of cell (8 sub-rows)
 
+      // Determine series indices for this cell's 8 sub-rows, clamping.
       final upperIdx = (upperSub >= 0 && upperSub < subHeight)
           ? subRows[upperSub]
           : -1;
@@ -98,37 +96,44 @@ void drawRibbonChart(
           : -1;
 
       if (upperIdx == -1 && lowerIdx == -1) {
-        // Empty cell — skip.
         continue;
       }
 
-      if (upperIdx == lowerIdx) {
-        // Both halves are the same series — full block.
+      if (upperIdx == lowerIdx && upperIdx != -1) {
         final sty = palette[upperIdx % palette.length];
-        final bgColor = sty.bg ?? sty.fg;
-        if (bgColor != null) {
-          putCell(screen, area.minX + x, screenY, ' ', UvStyle(bg: bgColor));
-        } else {
-          putCell(screen, area.minX + x, screenY, fillChar, sty);
-        }
+        putSolidChartCell(screen, area.minX + x, screenY, sty, fillChar);
       } else if (upperIdx == -1) {
-        // Only the lower half has content — draw ▄ (lower half block).
         final sty = palette[lowerIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;
-        putCell(screen, area.minX + x, screenY, '▄', UvStyle(fg: fgColor));
+        putCell(
+          screen,
+          area.minX + x,
+          screenY,
+          BlockShades.lower,
+          UvStyle(fg: fgColor),
+        );
       } else if (lowerIdx == -1) {
-        // Only the upper half has content — draw ▀ (upper half block).
         final sty = palette[upperIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;
-        putCell(screen, area.minX + x, screenY, '▀', UvStyle(fg: fgColor));
+        putCell(
+          screen,
+          area.minX + x,
+          screenY,
+          BlockShades.upper,
+          UvStyle(fg: fgColor),
+        );
       } else {
-        // Two different series meet — draw ▀ with fg = upper color,
-        // bg = lower color.
         final upperSty = palette[upperIdx % palette.length];
         final lowerSty = palette[lowerIdx % palette.length];
         final fg = upperSty.bg ?? upperSty.fg;
         final bg = lowerSty.bg ?? lowerSty.fg;
-        putCell(screen, area.minX + x, screenY, '▀', UvStyle(fg: fg, bg: bg));
+        putCell(
+          screen,
+          area.minX + x,
+          screenY,
+          BlockShades.upper,
+          UvStyle(fg: fg, bg: bg),
+        );
       }
     }
   }

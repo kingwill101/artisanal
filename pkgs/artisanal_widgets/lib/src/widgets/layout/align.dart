@@ -1,4 +1,10 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'geometry.dart';
+import '../rendering/render_object.dart';
+import 'spacing.dart';
+
+import '_layout_utils.dart';
 
 class RenderAlign extends RenderBox {
   RenderAlign({
@@ -31,12 +37,12 @@ class RenderAlign extends RenderBox {
     // Match Flutter Align/Center semantics: when width/height factors are not
     // provided, expand to fill bounded constraints; otherwise shrink-wrap.
     final resolvedWidth =
-        _resolveDimension(width) ??
+        resolveDimension(width) ??
         (constraints.hasBoundedWidth
             ? constraints.maxWidth.toInt()
             : contentWidth);
     final resolvedHeight =
-        _resolveDimension(height) ??
+        resolveDimension(height) ??
         (constraints.hasBoundedHeight
             ? constraints.maxHeight.toInt()
             : contentHeight);
@@ -44,10 +50,10 @@ class RenderAlign extends RenderBox {
     if (child != null) {
       final resolvedAlign = alignment == null
           ? align
-          : _horizontalFromAlignment(alignment!);
+          : horizontalFromAlignment(alignment!);
       final resolvedVertical = alignment == null
           ? verticalAlign
-          : _verticalFromAlignment(alignment!);
+          : verticalFromAlignment(alignment!);
 
       final maxDx = math.max(0, resolvedWidth - contentWidth);
       final maxDy = math.max(0, resolvedHeight - contentHeight);
@@ -89,21 +95,21 @@ class RenderAlign extends RenderBox {
     // Match Flutter Align/Center semantics: when width/height factors are not
     // provided, expand to fill bounded constraints; otherwise shrink-wrap.
     final resolvedWidth =
-        _resolveDimension(width) ??
+        resolveDimension(width) ??
         (constraints.hasBoundedWidth
             ? constraints.maxWidth.toInt()
             : contentWidth);
     final resolvedHeight =
-        _resolveDimension(height) ??
+        resolveDimension(height) ??
         (constraints.hasBoundedHeight
             ? constraints.maxHeight.toInt()
             : contentHeight);
     final resolvedAlign = alignment == null
         ? align
-        : _horizontalFromAlignment(alignment!);
+        : horizontalFromAlignment(alignment!);
     final resolvedVertical = alignment == null
         ? verticalAlign
-        : _verticalFromAlignment(alignment!);
+        : verticalFromAlignment(alignment!);
     return Layout.place(
       width: resolvedWidth,
       height: resolvedHeight,
@@ -155,16 +161,16 @@ class Align extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child == null ? '' : _renderWidget(child!);
-    final resolvedWidth = _resolveDimension(width) ?? Layout.getWidth(content);
+    final content = child == null ? '' : renderWidget(child!);
+    final resolvedWidth = resolveDimension(width) ?? Layout.getWidth(content);
     final resolvedHeight =
-        _resolveDimension(height) ?? Layout.getHeight(content);
+        resolveDimension(height) ?? Layout.getHeight(content);
     final resolvedAlign = alignment == null
         ? align
-        : _horizontalFromAlignment(alignment!);
+        : horizontalFromAlignment(alignment!);
     final resolvedVertical = alignment == null
         ? verticalAlign
-        : _verticalFromAlignment(alignment!);
+        : verticalFromAlignment(alignment!);
     return Layout.place(
       width: resolvedWidth,
       height: resolvedHeight,

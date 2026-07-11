@@ -1,5 +1,9 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/widgets.dart';
 
+/// An option for use with [Select] or [DropdownButton].
 class SelectOption<T> {
   const SelectOption({
     required this.label,
@@ -12,6 +16,24 @@ class SelectOption<T> {
   final bool enabled;
 }
 
+/// A button-style dropdown selector that cycles through options.
+///
+/// The [Select] widget displays the currently selected option and cycles
+/// to the next enabled option when activated. Use [placeholder] to show text
+/// when no value is selected.
+///
+/// Example:
+/// ```dart
+/// Select<String>(
+///   options: [
+///     SelectOption(label: 'Light', value: 'light'),
+///     SelectOption(label: 'Dark', value: 'dark'),
+///     SelectOption(label: 'Auto', value: 'auto'),
+///   ],
+///   value: 'dark',
+///   onChanged: (mode) => print('Theme: $mode'),
+/// )
+/// ```
 class Select<T> extends StatelessWidget {
   Select({
     required this.options,
@@ -41,7 +63,7 @@ class Select<T> extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final selected = _selectedOption();
     final label = selected?.label ?? placeholder;
-    final style = _copyStyle(textStyle ?? theme.bodyMedium)
+    final style = copyStyle(textStyle ?? theme.bodyMedium)
       ..foreground(theme.onSurface);
     final content = Row(
       gap: 1,
@@ -94,7 +116,11 @@ class Select<T> extends StatelessWidget {
   }
 }
 
-/// Flutter-style dropdown menu item.
+/// A dropdown menu item for use with [DropdownButton].
+///
+/// The [label] is used for display in the dropdown. If [label] is not
+/// provided, the [child] widget's text content is extracted, or the
+/// [value] is converted to a string.
 class DropdownMenuItem<T> extends StatelessWidget {
   DropdownMenuItem({
     required this.value,
@@ -130,7 +156,11 @@ class DropdownMenuItem<T> extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
-/// Flutter-style dropdown button wrapper.
+/// A button-styled dropdown that displays one [DropdownMenuItem] at a time.
+///
+/// Unlike [Select] which cycles through options, [DropdownButton] presents
+/// a single selected item. Use [items] to provide the options and [hint]
+/// to show a placeholder when no value is selected.
 class DropdownButton<T> extends StatelessWidget {
   DropdownButton({
     required this.items,

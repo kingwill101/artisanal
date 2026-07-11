@@ -1,4 +1,3 @@
-import 'remote_surface_host_connection.dart';
 import 'remote_surface_layers.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_state.dart';
@@ -22,21 +21,6 @@ final class RemotePluginSurfaceInputRouter {
              sendersBySurfaceId,
            ),
        placements = List<RemotePluginSurfacePlacement>.of(placements);
-
-  factory RemotePluginSurfaceInputRouter.forConnections({
-    required RemotePluginSurfaceStore surfaces,
-    required Map<String, RemotePluginHostConnection> connectionsBySurfaceId,
-    Iterable<RemotePluginSurfacePlacement> placements = const [],
-  }) {
-    return RemotePluginSurfaceInputRouter(
-      surfaces: surfaces,
-      sendersBySurfaceId: <String, RemotePluginSurfaceMessageSender>{
-        for (final entry in connectionsBySurfaceId.entries)
-          entry.key: entry.value.send,
-      },
-      placements: placements,
-    );
-  }
 
   final RemotePluginSurfaceStore surfaces;
   final Map<String, RemotePluginSurfaceMessageSender> _sendersBySurfaceId;

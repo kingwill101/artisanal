@@ -1,4 +1,11 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/compat.dart';
 
 class FilePicker extends StatefulWidget {
   FilePicker({
@@ -45,7 +52,7 @@ class FilePicker extends StatefulWidget {
   final CmdCallback? onExit;
 
   @override
-  State createState() => _FilePickerState();
+  State<FilePicker> createState() => _FilePickerState();
 }
 
 class _FilePickerState extends State<FilePicker> {
@@ -925,26 +932,21 @@ class _FilePickerRow extends StatelessWidget {
   }
 }
 
-final class _FilePickerHelpKeyMap implements KeyMap {
-  _FilePickerHelpKeyMap({required bool showExit})
-    : _bindings = <KeyBinding>[
-        KeyBinding.withHelp(['up', 'k'], 'up/k', 'move'),
-        KeyBinding.withHelp(['down', 'j'], 'down/j', 'move'),
-        KeyBinding.withHelp(['enter'], 'enter', 'select'),
-        KeyBinding.withHelp(['right', 'l'], 'right/l', 'open'),
-        KeyBinding.withHelp(['left', 'backspace'], 'left', 'up'),
-        KeyBinding.withHelp(['.'], '.', 'hidden'),
-        KeyBinding.withHelp(['esc'], 'esc', 'cancel'),
-        if (showExit) KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'quit'),
-      ];
-
-  final List<KeyBinding> _bindings;
-
-  @override
-  List<KeyBinding> shortHelp() => _bindings;
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [_bindings];
+final class _FilePickerHelpKeyMap extends KeyMap {
+  _FilePickerHelpKeyMap({required bool showExit}) {
+    final bindings = <KeyBinding>[
+      KeyBinding.withHelp(['up', 'k'], 'up/k', 'move'),
+      KeyBinding.withHelp(['down', 'j'], 'down/j', 'move'),
+      KeyBinding.withHelp(['enter'], 'enter', 'select'),
+      KeyBinding.withHelp(['right', 'l'], 'right/l', 'open'),
+      KeyBinding.withHelp(['left', 'backspace'], 'left', 'up'),
+      KeyBinding.withHelp(['.'], '.', 'hidden'),
+      KeyBinding.withHelp(['esc'], 'esc', 'cancel'),
+      if (showExit) KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'quit'),
+    ];
+    shortHelp = bindings;
+    fullHelp = [bindings];
+  }
 }
 
 String _basename(String path) {

@@ -1,4 +1,7 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Border;
+// ignore_for_file: unused_shown_name
 
 class Toast extends StatelessWidget {
   Toast({

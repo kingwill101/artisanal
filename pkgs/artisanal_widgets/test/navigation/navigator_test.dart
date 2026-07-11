@@ -60,6 +60,78 @@ class _PushPageState extends w.State<_PushPage> {
   }
 }
 
+/// A page that intercepts Escape to simulate a modal overlay.
+///
+/// When [modalOpen] is true, `handleIntercept` consumes Escape so the
+/// Navigator does NOT pop the route. When false, Escape passes through
+/// and the Navigator pops normally.
+class _EscapeModalPage extends w.StatefulWidget {
+  _EscapeModalPage({required this.label, this.modalOpen = false});
+  final String label;
+  final bool modalOpen;
+
+  @override
+  w.State<_EscapeModalPage> createState() => _EscapeModalPageState();
+}
+
+class _EscapeModalPageState extends w.State<_EscapeModalPage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg &&
+        msg.key.type == KeyType.escape &&
+        widget.modalOpen) {
+      return tui.Cmd.none();
+    }
+    return null;
+  }
+}
+
+/// A page that can push a page that intercepts Escape.
+///
+/// Pushes [_EscapeModalPage] on 'p'. Used to test that a child widget's
+/// Escape interception prevents the Navigator from popping.
+class _EscapeModalPushPage extends w.StatefulWidget {
+  _EscapeModalPushPage({
+    required this.label,
+    this.childModalOpen = false,
+    this.childLabel = 'Child',
+  });
+  final String label;
+  final bool childModalOpen;
+  final String childLabel;
+
+  @override
+  w.State<_EscapeModalPushPage> createState() => _EscapeModalPushPageState();
+}
+
+class _EscapeModalPushPageState extends w.State<_EscapeModalPushPage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.type == KeyType.runes) {
+      if (String.fromCharCodes(msg.key.runes) == 'p') {
+        w.Navigator.of(context).pushWidget(
+          _EscapeModalPage(
+            label: widget.childLabel,
+            modalOpen: widget.childModalOpen,
+          ),
+        );
+        return tui.Cmd.none();
+      }
+    }
+    return null;
+  }
+}
+
 /// A page that pops itself when 'b' is pressed, optionally with a result.
 class _PopPage extends w.StatefulWidget {
   _PopPage({required this.label, this.result});
@@ -552,6 +624,122 @@ void main() {
       expect(tester.find.text('Root'), isTrue);
     });
 
+    test('child handling Escape prevents Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Navigator(
+          home: _EscapeModalPushPage(
+            label: 'Home',
+            childModalOpen: true,
+            childLabel: 'Modal Open',
+          ),
+        ),
+      );
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push page that intercepts Escape.
+      tester.sendKey('p');
+      expect(tester.find.text('Modal Open'), isTrue);
+
+      // Escape should be consumed by the child — route stays.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('Modal Open'), isTrue);
+      expect(tester.find.text('Home'), isFalse);
+    });
+
+    test('child not handling Escape allows Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Navigator(
+          home: _EscapeModalPushPage(
+            label: 'Home',
+            childModalOpen: false,
+            childLabel: 'Modal Closed',
+          ),
+        ),
+      );
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push page that does NOT intercept Escape.
+      tester.sendKey('p');
+      expect(tester.find.text('Modal Closed'), isTrue);
+
+      // Escape should pop back to Home.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('Home'), isTrue);
+      expect(tester.find.text('Modal Closed'), isFalse);
+    });
+
+    test('route willHandlePopInternally prevents Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Navigator(home: _WillHandlePopPage(label: 'Home')),
+      );
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push a page that claims it handles pops internally.
+      tester.sendKey('p');
+      expect(tester.find.text('Pushed'), isTrue);
+
+      // Escape should not pop because the route handles it internally.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('Pushed'), isTrue);
+      expect(tester.find.text('Home'), isFalse);
+    });
+
+    test('route popDisposition doNotPop prevents Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(w.Navigator(home: _NoPopPage(label: 'Home')));
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push a page whose popDisposition is doNotPop.
+      tester.sendKey('p');
+      expect(tester.find.text('No Pop'), isTrue);
+
+      // Escape should not pop because disposition says so.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('No Pop'), isTrue);
+      expect(tester.find.text('Home'), isFalse);
+    });
+
+    test('PopBehavior canPop callback prevents Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Navigator(
+          home: _BlockedPage(label: 'Home'),
+          popBehavior: w.PopBehavior(
+            escapeEnabled: true,
+            canPop: (route) => route.settings.name != '/blocked',
+          ),
+        ),
+      );
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push a page with a name that the canPop callback blocks.
+      tester.sendKey('p');
+      expect(tester.find.text('Pushed'), isTrue);
+
+      // Escape should not pop because canPop returned false.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('Pushed'), isTrue);
+      expect(tester.find.text('Home'), isFalse);
+    });
+
     test('empty navigator renders shrink box', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -745,13 +933,152 @@ class _MultiPushPageState extends w.State<_MultiPushPage> {
           _MultiPushPage(label: 'Level $_pushCount'),
           name: '/level/$_pushCount',
         );
-        return null;
+        return tui.Cmd.none();
       }
       if (char == 'u') {
         // popUntil the root (first route).
         final nav = w.Navigator.of(context);
         nav.popUntil((route) => nav.routes.first == route);
-        return null;
+        return tui.Cmd.none();
+      }
+    }
+    return null;
+  }
+}
+
+/// Simple page that pushes on 'p' and returns, with a route that claims
+/// it handles pops internally.
+class _WillHandlePopPage extends w.StatefulWidget {
+  _WillHandlePopPage({required this.label});
+  final String label;
+
+  @override
+  w.State<_WillHandlePopPage> createState() => _WillHandlePopPageState();
+}
+
+class _WillHandlePopPageState extends w.State<_WillHandlePopPage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.type == KeyType.runes) {
+      final char = String.fromCharCodes(msg.key.runes);
+      if (char == 'p') {
+        w.Navigator.of(context).push(
+          _HandlePopInternallyRoute(
+            builder: (_) => w.Text('Pushed'),
+            settings: w.RouteSettings(name: '/pushed'),
+          ),
+        );
+        return tui.Cmd.none();
+      }
+    }
+    return null;
+  }
+}
+
+/// Simple page whose route reports `willHandlePopInternally = true`.
+class _HandlePopInternallyRoute extends w.Route<void> {
+  _HandlePopInternallyRoute({required this.builder, super.settings});
+
+  final w.Widget Function(w.BuildContext) builder;
+
+  @override
+  bool get willHandlePopInternally => true;
+
+  @override
+  List<w.OverlayEntry> createOverlayEntries() {
+    return [
+      w.OverlayEntry(opaque: true, maintainState: true, builder: builder),
+    ];
+  }
+}
+
+/// Simple page whose route reports `popDisposition = doNotPop`.
+class _NoPopRoute extends w.Route<void> {
+  _NoPopRoute({required this.builder, super.settings});
+
+  final w.Widget Function(w.BuildContext) builder;
+
+  @override
+  w.RoutePopDisposition get popDisposition => w.RoutePopDisposition.doNotPop;
+
+  @override
+  List<w.OverlayEntry> createOverlayEntries() {
+    return [
+      w.OverlayEntry(opaque: true, maintainState: true, builder: builder),
+    ];
+  }
+}
+
+/// Simple page that pushes on 'p'.
+class _SimplePage extends w.StatefulWidget {
+  _SimplePage({required this.label});
+  final String label;
+
+  @override
+  w.State<_SimplePage> createState() => _SimplePageState();
+}
+
+class _SimplePageState extends w.State<_SimplePage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.type == KeyType.runes) {
+      final char = String.fromCharCodes(msg.key.runes);
+      if (char == 'p') {
+        w.Navigator.of(context).push(
+          _HandlePopInternallyRoute(
+            builder: (_) => w.Text('Pushed'),
+            settings: w.RouteSettings(name: '/blocked'),
+          ),
+        );
+        return tui.Cmd.none();
+      }
+    }
+    return null;
+  }
+}
+
+/// Page used in the PopBehavior.canPop test. Any pushed child page will
+/// display "Blocked" and is named `/blocked` so the canPop callback blocks it.
+class _BlockedPage extends _SimplePage {
+  _BlockedPage({required super.label});
+}
+
+class _NoPopPage extends w.StatefulWidget {
+  _NoPopPage({required this.label});
+  final String label;
+
+  @override
+  w.State<_NoPopPage> createState() => _NoPopPageState();
+}
+
+class _NoPopPageState extends w.State<_NoPopPage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.type == KeyType.runes) {
+      final char = String.fromCharCodes(msg.key.runes);
+      if (char == 'p') {
+        w.Navigator.of(context).push(
+          _NoPopRoute(
+            builder: (_) => w.Text('No Pop'),
+            settings: w.RouteSettings(name: '/nopop'),
+          ),
+        );
+        return tui.Cmd.none();
       }
     }
     return null;

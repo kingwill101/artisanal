@@ -77,6 +77,9 @@ w.Widget githubDashboardBody({
           onOverviewFilterChanged:
               onOverviewFilterChanged ?? (_) => tui.Cmd.none(),
           onItemSelected: onItemSelected,
+          searchQuery: null,
+          searchLoading: false,
+          searchError: null,
         ),
       ),
       w.VerticalDivider(

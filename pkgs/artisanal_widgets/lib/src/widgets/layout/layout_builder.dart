@@ -1,4 +1,10 @@
-part of 'layout_widgets.dart';
+
+// ignore_for_file: unused_shown_name
+import 'geometry.dart';
+import '../core/framework.dart'
+    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../core/widget.dart';
+import '../media/media_query.dart' show MediaQuery;
 
 /// A widget that provides its parent's constraints to a builder callback.
 ///

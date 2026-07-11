@@ -1,4 +1,4 @@
-import 'package:artisanal/charting.dart';
+import 'package:artisanal/src/charting/charting.dart';
 import 'package:artisanal/src/tui/component.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/cmd.dart';

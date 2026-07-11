@@ -1,4 +1,8 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color;
 
 /// Manages a stack of modal dialogs.
 ///
@@ -17,7 +21,13 @@ part of 'components_widgets.dart';
 ///
 /// // Close the top dialog
 /// DialogStack.of(context).pop();
+
+// ignore_for_file: unused_shown_name
 /// ```
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class DialogStack extends StatefulWidget {
   DialogStack({
     required this.child,
@@ -62,6 +72,10 @@ class DialogStack extends StatefulWidget {
 }
 
 /// State for [DialogStack], providing the push/pop/replace/clear API.
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class DialogStackState extends State<DialogStack> {
   final List<Widget> _stack = [];
 

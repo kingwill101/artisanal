@@ -1,4 +1,5 @@
 // Command Palette Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the CommandPalette widget with Bayesian scoring, tag
 // matching, and incremental filtering. Open with Ctrl+P or 'p'.
@@ -15,7 +16,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(CommandPaletteShowcase());
+  final app = WidgetApp(CommandPaletteShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

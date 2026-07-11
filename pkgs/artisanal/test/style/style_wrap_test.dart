@@ -18,7 +18,7 @@ void main() {
       expect(lines[1], contains(blue));
     });
 
-    test('does not preserve SGR state across wrapped lines by default', () {
+    test('preserves SGR state across wrapped lines by default', () {
       final style = Style().width(4);
 
       const blue = '\x1b[34m';
@@ -30,7 +30,7 @@ void main() {
 
       expect(lines.length, greaterThanOrEqualTo(2));
       expect(lines[0], contains(blue));
-      expect(lines[1], isNot(contains(blue)));
+      expect(lines[1], contains(blue));
     });
 
     test(
@@ -51,24 +51,19 @@ void main() {
       },
     );
 
-    test(
-      'does not preserve OSC8 hyperlink state across wrapped lines by default',
-      () {
-        final style = Style().width(4);
+    test('preserves OSC8 hyperlink state across wrapped lines by default', () {
+      final style = Style().width(4);
 
-        const linkStart = '\x1b]8;;https://example.com\x07';
-        const linkEnd = '\x1b]8;;\x07';
-        final input = '${linkStart}AAA BBB$linkEnd';
+      const linkStart = '\x1b]8;;https://example.com\x07';
+      const linkEnd = '\x1b]8;;\x07';
+      final input = '${linkStart}AAA BBB$linkEnd';
 
-        final rendered = style.render(input);
-        final lines = rendered.split('\n');
+      final rendered = style.render(input);
+      final lines = rendered.split('\n');
 
-        expect(lines.length, greaterThanOrEqualTo(2));
-        // Legacy wrapping is not OSC-aware: it won't re-open hyperlink state on
-        // wrapped lines. The hyperlink opener remains in the first line only.
-        expect(lines[0], contains(linkStart));
-        expect(lines[1], isNot(contains(linkStart)));
-      },
-    );
+      expect(lines.length, greaterThanOrEqualTo(2));
+      expect(lines[0], contains(linkStart));
+      expect(lines[1], contains(linkStart));
+    });
   });
 }

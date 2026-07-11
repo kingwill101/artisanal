@@ -29,6 +29,7 @@ enum GithubDashboardShortcut {
   switchRepository,
   toggleFocusedView,
   cycleTheme,
+  search,
 }
 
 GithubDashboardShortcut? githubDashboardShortcutFor(tui.KeyMsg msg) {
@@ -100,6 +101,9 @@ GithubDashboardShortcut? githubDashboardShortcutFor(tui.KeyMsg msg) {
   }
   if (key.isChar('p')) {
     return GithubDashboardShortcut.commandPalette;
+  }
+  if (key.isChar('/') && !key.shift) {
+    return GithubDashboardShortcut.search;
   }
   if (key.type == tui.KeyType.enter) {
     return GithubDashboardShortcut.viewDetails;

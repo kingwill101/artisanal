@@ -2,9 +2,6 @@ import 'package:artisanal/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-// Upstream parity (scoped subset):
-// - `third_party/ultraviolet/key_test.go` (TestFocus/TestBlur/TestParseSequence)
-
 List<Event> _decodeAll(EventDecoder d, List<int> bytes) {
   final out = <Event>[];
   var buf = List<int>.from(bytes);

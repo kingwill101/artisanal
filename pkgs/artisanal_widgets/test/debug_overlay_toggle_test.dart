@@ -13,18 +13,16 @@
 /// - Full pipeline test via [WidgetTester.sendSpecialKey]
 library;
 
-import 'package:artisanal/terminal.dart' show Key, KeyType;
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart' hide Key;
 import 'package:test/test.dart';
 
 void main() {
   group('WidgetApp F12 debug overlay toggle', () {
     group('debugOverlay: true (starts enabled)', () {
       test('overlay is visible in initial render', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(output, contains('FPS:'), reason: 'overlay should show FPS');
@@ -32,17 +30,17 @@ void main() {
       });
 
       test('debugOverlayEnabled getter is true initially', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
         expect(app.debugOverlayEnabled, isTrue);
       });
 
       test('F12 disables the overlay', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Toggle off
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         expect(app.debugOverlayEnabled, isFalse);
@@ -59,16 +57,16 @@ void main() {
       });
 
       test('F12 twice re-enables the overlay', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Toggle off
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         expect(app.debugOverlayEnabled, isFalse);
 
         // Toggle back on
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         expect(app.debugOverlayEnabled, isTrue);
@@ -82,8 +80,8 @@ void main() {
 
     group('debugOverlay: false (starts disabled)', () {
       test('overlay is not visible in initial render', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(
@@ -95,17 +93,17 @@ void main() {
       });
 
       test('debugOverlayEnabled getter is false initially', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: false);
+        final app = WidgetApp(Text('hello'), debugOverlay: false);
         expect(app.debugOverlayEnabled, isFalse);
       });
 
       test('F12 enables the overlay on the fly', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Toggle on
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         expect(app.debugOverlayEnabled, isTrue);
@@ -118,10 +116,10 @@ void main() {
       });
 
       test('default (no debugOverlay param) starts disabled', () {
-        final app = tui.WidgetApp(w.Text('hello'));
+        final app = WidgetApp(Text('hello'));
         expect(app.debugOverlayEnabled, isFalse);
 
-        app.update(tui.WindowSizeMsg(80, 24));
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
         expect(output, isNot(contains('FPS:')));
       });
@@ -130,12 +128,12 @@ void main() {
     group('F12 event consumption', () {
       test('F12 is consumed and not forwarded to child widgets', () {
         // Use a StatefulWidget that tracks whether it received F12
-        final app = tui.WidgetApp(_F12Tracker(), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(_F12Tracker(), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Send F12
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         // The _F12Tracker widget should NOT have received the F12 event
@@ -147,13 +145,13 @@ void main() {
       });
 
       test('non-F12 keys are forwarded to child widgets', () {
-        final app = tui.WidgetApp(_F12Tracker(), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(_F12Tracker(), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Send a regular key — should be forwarded
         app.update(
-          tui.KeyMsg(
+          KeyMsg(
             const Key(KeyType.runes, runes: [0x61]), // 'a'
           ),
         );
@@ -169,12 +167,12 @@ void main() {
 
     group('DebugOverlayPosition', () {
       test('debugOverlayPosition: topRight (default) is accepted', () {
-        final app = tui.WidgetApp(
-          w.Text('hello'),
+        final app = WidgetApp(
+          Text('hello'),
           debugOverlay: true,
-          debugOverlayPosition: w.DebugOverlayPosition.topRight,
+          debugOverlayPosition: DebugOverlayPosition.topRight,
         );
-        app.update(tui.WindowSizeMsg(80, 24));
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(output, contains('FPS:'));
@@ -182,53 +180,53 @@ void main() {
       });
 
       test('debugOverlayPosition: topLeft is accepted', () {
-        final app = tui.WidgetApp(
-          w.Text('hello'),
+        final app = WidgetApp(
+          Text('hello'),
           debugOverlay: true,
-          debugOverlayPosition: w.DebugOverlayPosition.topLeft,
+          debugOverlayPosition: DebugOverlayPosition.topLeft,
         );
-        app.update(tui.WindowSizeMsg(80, 24));
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(output, contains('FPS:'));
       });
 
       test('debugOverlayPosition: bottomLeft is accepted', () {
-        final app = tui.WidgetApp(
-          w.Text('hello'),
+        final app = WidgetApp(
+          Text('hello'),
           debugOverlay: true,
-          debugOverlayPosition: w.DebugOverlayPosition.bottomLeft,
+          debugOverlayPosition: DebugOverlayPosition.bottomLeft,
         );
-        app.update(tui.WindowSizeMsg(80, 24));
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(output, contains('FPS:'));
       });
 
       test('debugOverlayPosition: bottomRight is accepted', () {
-        final app = tui.WidgetApp(
-          w.Text('hello'),
+        final app = WidgetApp(
+          Text('hello'),
           debugOverlay: true,
-          debugOverlayPosition: w.DebugOverlayPosition.bottomRight,
+          debugOverlayPosition: DebugOverlayPosition.bottomRight,
         );
-        app.update(tui.WindowSizeMsg(80, 24));
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(output, contains('FPS:'));
       });
 
       test('position is preserved across F12 toggle cycles', () {
-        final app = tui.WidgetApp(
-          w.Text('hello'),
+        final app = WidgetApp(
+          Text('hello'),
           debugOverlay: true,
-          debugOverlayPosition: w.DebugOverlayPosition.bottomLeft,
+          debugOverlayPosition: DebugOverlayPosition.bottomLeft,
         );
-        app.update(tui.WindowSizeMsg(80, 24));
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Toggle off then on
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         // Overlay should still be showing (position is stored in WidgetApp)
@@ -238,12 +236,12 @@ void main() {
 
     group('overlay survives window resize', () {
       test('enabled overlay persists after WindowSizeMsg', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Resize
-        app.update(tui.WindowSizeMsg(120, 40));
+        app.update(WindowSizeMsg(120, 40));
         final output = app.view();
 
         expect(app.debugOverlayEnabled, isTrue);
@@ -252,17 +250,17 @@ void main() {
       });
 
       test('F12-toggled overlay persists after WindowSizeMsg', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Enable via F12
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         app.view();
         expect(app.debugOverlayEnabled, isTrue);
 
         // Resize — overlay should survive
-        app.update(tui.WindowSizeMsg(120, 40));
+        app.update(WindowSizeMsg(120, 40));
         final output = app.view();
 
         expect(app.debugOverlayEnabled, isTrue);
@@ -270,16 +268,16 @@ void main() {
       });
 
       test('disabled overlay stays disabled after WindowSizeMsg', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Disable via F12
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         expect(app.debugOverlayEnabled, isFalse);
 
         // Resize — overlay should stay disabled
-        app.update(tui.WindowSizeMsg(120, 40));
+        app.update(WindowSizeMsg(120, 40));
         final output = app.view();
 
         expect(app.debugOverlayEnabled, isFalse);
@@ -290,12 +288,12 @@ void main() {
     group('user-provided DebugOverlay is not affected by F12', () {
       test('user DebugOverlay passes through _currentRoot() untouched', () {
         // User wraps their root in their own DebugOverlay (no _debugOverlayKey)
-        final userOverlay = w.DebugOverlay(
+        final userOverlay = DebugOverlay(
           enabled: true,
-          child: w.Text('user content'),
+          child: Text('user content'),
         );
-        final app = tui.WidgetApp(userOverlay, debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(userOverlay, debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         final output = app.view();
 
         expect(
@@ -307,16 +305,16 @@ void main() {
       });
 
       test('F12 adds WidgetApp overlay on top of user overlay', () {
-        final userOverlay = w.DebugOverlay(
+        final userOverlay = DebugOverlay(
           enabled: true,
-          child: w.Text('user content'),
+          child: Text('user content'),
         );
-        final app = tui.WidgetApp(userOverlay, debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(userOverlay, debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // F12 enables the WidgetApp-managed overlay
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         // Both the user overlay and the WidgetApp overlay should be present
@@ -325,16 +323,16 @@ void main() {
       });
 
       test('F12 toggle does not strip user DebugOverlay', () {
-        final userOverlay = w.DebugOverlay(
+        final userOverlay = DebugOverlay(
           enabled: true,
-          child: w.Text('user content'),
+          child: Text('user content'),
         );
-        final app = tui.WidgetApp(userOverlay, debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(userOverlay, debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
 
         // Toggle on then off
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
-        app.update(tui.KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
+        app.update(KeyMsg(const Key(KeyType.f12)));
         final output = app.view();
 
         // User overlay should still be there
@@ -349,15 +347,15 @@ void main() {
 
     group('overlay shows FPS data with RenderMetricsMsg', () {
       test('built-in overlay updates when receiving RenderMetricsMsg', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
-        final metrics = tui.RenderMetrics();
+        final metrics = RenderMetrics();
         metrics.beginFrame();
         metrics.endFrame();
 
-        app.update(tui.RenderMetricsMsg(metrics));
+        app.update(RenderMetricsMsg(metrics));
         final output = app.view();
 
         expect(output, contains('FPS:'));
@@ -367,15 +365,15 @@ void main() {
       });
 
       test('overlay shows frame and render timing labels', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
-        final metrics = tui.RenderMetrics();
+        final metrics = RenderMetrics();
         metrics.beginFrame();
         metrics.endFrame();
 
-        app.update(tui.RenderMetricsMsg(metrics));
+        app.update(RenderMetricsMsg(metrics));
         final output = app.view();
 
         expect(output, contains('Frame Time:'));
@@ -384,18 +382,18 @@ void main() {
 
       test('built-in overlay updates without rebuilding child subtree', () {
         final counter = _BuildCounter();
-        final app = tui.WidgetApp(counter, debugOverlay: true);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(counter, debugOverlay: true);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         final buildsBefore = counter.buildCount;
         expect(buildsBefore, greaterThan(0));
 
-        final metrics = tui.RenderMetrics();
+        final metrics = RenderMetrics();
         metrics.beginFrame();
         metrics.endFrame();
 
-        app.update(tui.RenderMetricsMsg(metrics));
+        app.update(RenderMetricsMsg(metrics));
         final output = app.view();
 
         expect(output, contains('FPS:'));
@@ -405,22 +403,22 @@ void main() {
       test(
         'built-in overlay continues updating when the same metrics object mutates during mouse motion',
         () {
-          final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
-          app.update(tui.WindowSizeMsg(80, 24));
+          final app = WidgetApp(Text('hello'), debugOverlay: true);
+          app.update(WindowSizeMsg(80, 24));
           app.view();
 
-          final metrics = tui.RenderMetrics();
+          final metrics = RenderMetrics();
           metrics.beginFrame();
           metrics.endFrame();
 
-          app.update(tui.RenderMetricsMsg(metrics));
+          app.update(RenderMetricsMsg(metrics));
           final firstOutput = _stripAnsi(app.view());
           expect(firstOutput, contains('Frames: 1'));
 
           app.update(
-            const tui.MouseMsg(
-              action: tui.MouseAction.motion,
-              button: tui.MouseButton.none,
+            const MouseMsg(
+              action: MouseAction.motion,
+              button: MouseButton.none,
               x: 10,
               y: 4,
             ),
@@ -430,7 +428,7 @@ void main() {
           metrics.beginFrame();
           metrics.endFrame();
 
-          app.update(tui.RenderMetricsMsg(metrics));
+          app.update(RenderMetricsMsg(metrics));
           final secondOutput = _stripAnsi(app.view());
 
           expect(secondOutput, contains('Frames: 2'));
@@ -441,13 +439,13 @@ void main() {
 
     group('rapid F12 toggling', () {
       test('multiple rapid toggles do not corrupt state', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Toggle 10 times
         for (var i = 0; i < 10; i++) {
-          app.update(tui.KeyMsg(const Key(KeyType.f12)));
+          app.update(KeyMsg(const Key(KeyType.f12)));
         }
 
         // Even number of toggles → back to original (false)
@@ -458,13 +456,13 @@ void main() {
       });
 
       test('odd number of toggles enables overlay', () {
-        final app = tui.WidgetApp(w.Text('hello'), debugOverlay: false);
-        app.update(tui.WindowSizeMsg(80, 24));
+        final app = WidgetApp(Text('hello'), debugOverlay: false);
+        app.update(WindowSizeMsg(80, 24));
         app.view();
 
         // Toggle 7 times
         for (var i = 0; i < 7; i++) {
-          app.update(tui.KeyMsg(const Key(KeyType.f12)));
+          app.update(KeyMsg(const Key(KeyType.f12)));
         }
 
         // Odd number of toggles → enabled
@@ -481,7 +479,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        w.Text('tester content'),
+        Text('tester content'),
         debugOverlay: true,
         width: 80,
         height: 24,
@@ -527,7 +525,7 @@ void main() {
         addTearDown(() => tester.dispose());
 
         await tester.pumpWidget(
-          w.Text('no overlay'),
+          Text('no overlay'),
           debugOverlay: false,
           width: 80,
           height: 24,
@@ -543,7 +541,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        w.Text('content'),
+        Text('content'),
         debugOverlay: false,
         width: 80,
         height: 24,
@@ -565,7 +563,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        w.Text('resizable'),
+        Text('resizable'),
         debugOverlay: true,
         width: 80,
         height: 24,
@@ -588,9 +586,9 @@ void main() {
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        w.Text('positioned'),
+        Text('positioned'),
         debugOverlay: true,
-        debugOverlayPosition: w.DebugOverlayPosition.bottomLeft,
+        debugOverlayPosition: DebugOverlayPosition.bottomLeft,
         width: 80,
         height: 24,
       );
@@ -611,19 +609,19 @@ String _stripAnsi(Object value) {
 // ---------------------------------------------------------------------------
 
 /// A widget that tracks whether it received an F12 key event or any other key.
-class _F12Tracker extends w.StatefulWidget {
+class _F12Tracker extends StatefulWidget {
   _F12Tracker();
 
   @override
-  w.State<_F12Tracker> createState() => _F12TrackerState();
+  State<_F12Tracker> createState() => _F12TrackerState();
 }
 
-class _F12TrackerState extends w.State<_F12Tracker> {
+class _F12TrackerState extends State<_F12Tracker> {
   String _status = 'NO_KEY';
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       if (msg.key.type == KeyType.f12) {
         setState(() => _status = 'F12_RECEIVED');
       } else {
@@ -634,24 +632,24 @@ class _F12TrackerState extends w.State<_F12Tracker> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text(_status);
+  Widget build(BuildContext context) {
+    return Text(_status);
   }
 }
 
-class _BuildCounter extends w.StatefulWidget {
+class _BuildCounter extends StatefulWidget {
   _BuildCounter();
 
   int buildCount = 0;
 
   @override
-  w.State<_BuildCounter> createState() => _BuildCounterState();
+  State<_BuildCounter> createState() => _BuildCounterState();
 }
 
-class _BuildCounterState extends w.State<_BuildCounter> {
+class _BuildCounterState extends State<_BuildCounter> {
   @override
-  w.Widget build(w.BuildContext context) {
+  Widget build(BuildContext context) {
     widget.buildCount += 1;
-    return w.Text('BUILD_COUNT:${widget.buildCount}');
+    return Text('BUILD_COUNT:${widget.buildCount}');
   }
 }

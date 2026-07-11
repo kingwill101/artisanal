@@ -1,17 +1,17 @@
-part of 'layout_widgets.dart';
+import 'flex.dart';
 
 class Row extends Flex {
   Row({
     super.children = const [],
     super.gap = 0,
-    super.mainAxisAlignment = MainAxisAlignment.start,
-    super.crossAxisAlignment = CrossAxisAlignment.start,
-    super.mainAxisSize = MainAxisSize.min,
+    super.mainAxisAlignment = .start,
+    super.crossAxisAlignment = .start,
+    super.mainAxisSize = .min,
     int? width,
     int? height,
     super.key,
   }) : super(
-         direction: Axis.horizontal,
+         direction: .horizontal,
          mainAxisExtent: width,
          crossAxisExtent: height,
        );

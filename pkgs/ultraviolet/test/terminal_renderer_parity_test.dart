@@ -2,8 +2,6 @@ import 'package:ultraviolet/src/colorprofile/profile.dart' as cp;
 import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/terminal_renderer_test.go`
 
 final class _TestSink implements StringSink {
   final StringBuffer _b = StringBuffer();
@@ -337,7 +335,6 @@ void main() {
   });
 
   test('UvTerminalRenderer parity: phantom cursor handling', () {
-    // Upstream: `third_party/ultraviolet/terminal_renderer_test.go`
     // (TestRendererPhantomCursor)
     final out = _TestSink();
     final r = UvTerminalRenderer(

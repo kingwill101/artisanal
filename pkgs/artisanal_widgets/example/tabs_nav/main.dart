@@ -1,4 +1,5 @@
 // Tabs, Breadcrumbs & Pagination Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Tabs with TabItem, Breadcrumbs with BreadcrumbItem,
 // and Pagination with interactive page switching.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(TabsNavShowcase());
+  final app = WidgetApp(TabsNavShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

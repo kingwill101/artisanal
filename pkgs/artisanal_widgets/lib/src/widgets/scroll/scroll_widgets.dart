@@ -25,13 +25,14 @@ import '../core/element.dart'
         LazyRenderObjectWidget,
         RenderObjectElement;
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
+import '../layout/_layout_utils.dart';
 import '../layout/geometry.dart'
     show BoxConstraints, Size, HitTestResult, Offset;
 import '../rendering/render_object.dart';
 import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
-import '../layout/layout_widgets.dart' show EdgeInsets, Padding;
+import '../layout/layout.dart' show EdgeInsets, Padding;
 import '../selection/selection_text_utils.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart'
@@ -111,6 +112,14 @@ class WidgetScrollController implements ScrollController {
   // Shrinks are deferred until drag ends to avoid mid-drag remapping/clamping.
   int? _deferredContentExtent;
 
+  // When true, _contentExtent can only grow (never shrink) in updateMetrics.
+  // Set after thumb drag release to prevent snap-back until user scrolls.
+  bool _contentFrozen = false;
+
+  /// When true, scrolls to the bottom (maxOffset) on the next updateMetrics
+  /// call that has non-zero content. Auto-cleared after the jump.
+  bool autoScrollToBottom = false;
+
   // ---- Selection state ----
 
   /// Start of selection in content coordinates (x, y) where Y includes
@@ -153,12 +162,23 @@ class WidgetScrollController implements ScrollController {
     if (_thumbDragActive == active) return;
     _thumbDragActive = active;
     if (!active && _deferredContentExtent != null) {
-      final target = _deferredContentExtent!;
+      assert(
+        _deferredContentExtent! >= _contentExtent,
+        'setThumbDragActive: deferred content extent $_deferredContentExtent '
+        '< current content extent $_contentExtent',
+      );
+      final target = math.max(_contentExtent, _deferredContentExtent!);
       _deferredContentExtent = null;
+      _contentFrozen = true;
       if (target != _contentExtent) {
         final beforeContent = _contentExtent;
         final beforeOffset = _offset;
         _contentExtent = target;
+        if (autoScrollToBottom && _contentExtent > _viewportExtent) {
+          autoScrollToBottom = false;
+          _offset = maxOffset;
+        }
+
         final clamped = _clampOffset();
         _traceScroll(
           'widget_scroll.metrics.deferred '
@@ -167,6 +187,10 @@ class WidgetScrollController implements ScrollController {
           'clamped=$clamped',
         );
       }
+      assert(
+        _contentExtent >= 0,
+        'setThumbDragActive: content extent must be non-negative',
+      );
     }
   }
 
@@ -226,19 +250,39 @@ class WidgetScrollController implements ScrollController {
     final prevOffset = _offset;
     final nextViewport = math.max(0, viewportExtent);
     final incomingContent = math.max(0, contentExtent);
+    assert(
+      !_thumbDragActive ||
+          _deferredContentExtent == null ||
+          _deferredContentExtent! >= incomingContent,
+      'updateMetrics: deferred content shrank during drag '
+      '($_deferredContentExtent -> $incomingContent)',
+    );
 
     _viewportExtent = nextViewport;
     if (_thumbDragActive) {
-      _deferredContentExtent = incomingContent;
-      // Keep content extent fixed while thumb drag is active so the
-      // thumb-to-offset mapping remains stable and does not remap as
-      // variable-height measurements fluctuate.
+      // Track the max content extent observed during drag so releasing at
+      // the bottom never snaps the offset upward even if measurements
+      // temporarily shrink the estimate.
+      _deferredContentExtent = math.max(
+        _deferredContentExtent ?? incomingContent,
+        incomingContent,
+      );
     } else {
       _deferredContentExtent = null;
-      _contentExtent = incomingContent;
+      if (_contentFrozen) {
+        assert(incomingContent >= 0);
+        _contentExtent = math.max(_contentExtent, incomingContent);
+      } else {
+        _contentExtent = incomingContent;
+      }
     }
 
     final clamped = _clampOffset();
+    assert(_offset >= 0, 'updateMetrics: offset must be non-negative');
+    assert(
+      _offset <= maxOffset,
+      'updateMetrics: offset $_offset exceeds max $maxOffset',
+    );
     if (prevViewport != _viewportExtent ||
         prevContent != _contentExtent ||
         clamped) {
@@ -1206,8 +1250,12 @@ class RenderSingleChildViewport extends RenderBox {
     );
 
     // Update controller metrics.
-    final viewportHeight = size.height.round();
-    final contentHeight = child.size.height.round();
+    final viewportHeight = size.height.isNaN || size.height.isInfinite
+        ? 0
+        : size.height.round();
+    final contentHeight = child.size.height.isNaN || child.size.height.isInfinite
+        ? 0
+        : child.size.height.round();
     if (_controller is WidgetScrollController) {
       (_controller as WidgetScrollController).updateMetrics(
         viewportExtent: viewportHeight,
@@ -2442,21 +2490,41 @@ class RenderScrollbar extends RenderBox {
           .max(thickness, gutterWidth ?? thickness)
           .toDouble();
       final reserved = overlay ? 0.0 : (math.max(0, gap) + trackWidth);
-      var childConstraints = constraints;
-      if (!overlay && constraints.hasBoundedWidth) {
+
+      if (overlay || !constraints.hasBoundedWidth) {
+        child.layout(constraints);
+        size = constraints.constrain(
+          Size(
+            child.size.width + (overlay ? 0.0 : reserved),
+            child.size.height,
+          ),
+        );
+        return;
+      }
+
+      // First measure at full width so the child can publish accurate scroll
+      // metrics. Only reserve a gutter when scrolling is actually needed.
+      child.layout(constraints);
+      final needsScrollbar =
+          controller.contentExtent > controller.viewportExtent;
+      if (needsScrollbar) {
         final maxWidth = math.max(0.0, constraints.maxWidth - reserved);
         final minWidth = math.min(constraints.minWidth, maxWidth);
-        childConstraints = BoxConstraints(
-          minWidth: minWidth,
-          maxWidth: maxWidth,
-          minHeight: constraints.minHeight,
-          maxHeight: constraints.maxHeight,
+        child.layout(
+          BoxConstraints(
+            minWidth: minWidth,
+            maxWidth: maxWidth,
+            minHeight: constraints.minHeight,
+            maxHeight: constraints.maxHeight,
+          ),
         );
+        size = constraints.constrain(
+          Size(child.size.width + reserved, child.size.height),
+        );
+        return;
       }
-      child.layout(childConstraints);
-      size = constraints.constrain(
-        Size(child.size.width + reserved, child.size.height),
-      );
+
+      size = constraints.constrain(Size(child.size.width, child.size.height));
     }
   }
 
@@ -3278,7 +3346,7 @@ class _ListViewViewport extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      final text = _renderWidget(children[i]);
+      final text = renderWidget(children[i]);
       buffer.write(text);
       _writeListItemBoundary(
         buffer,
@@ -4174,7 +4242,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      final text = _renderWidget(children[i]);
+      final text = renderWidget(children[i]);
       buffer.write(text);
       _writeListItemBoundary(
         buffer,
@@ -4299,7 +4367,6 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   final _FenwickTree _strideTree = _FenwickTree(0);
   int _cachedItemCount = -1;
   int _cachedSeparatorBreaks = -1;
-  int _cachedEstimated = -1;
   int? _lastMaxWidth;
   bool _needsRepaint = false;
   int _lastPaintOffset = -1;
@@ -4313,6 +4380,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   int _cachedVisibleItemCount = -1;
   int _cachedVisibleSeparatorBreaks = -1;
   bool _cachedVisibleVariableHeight = false;
+  int _measuredWarmupCount = 0;
 
   @override
   set childManager(LazyRenderObjectChildManager? manager) {
@@ -4386,11 +4454,47 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   }
 
   void _clearMeasurements() {
+    assert(
+      _strideTree.total >= 0,
+      '_clearMeasurements: stride tree total must be non-negative (was ${_strideTree.total})',
+    );
     _invalidateMeasurements();
     _measuredHeights.clear();
     _childPaintCache.clear();
     _invalidateVisiblePaintCache();
     _strideTree.resize(0);
+    _cachedItemCount = -1;
+    _cachedSeparatorBreaks = -1;
+    _measuredWarmupCount = 0;
+  }
+
+  static const int _warmupItemLimit = 500;
+
+  void _preMeasureItems({
+    required int itemCount,
+    required int maxWidth,
+    required int estimate,
+    required int separatorBreaks,
+  }) {
+    if (maxWidth <= 0) return;
+    final warmUntil = math.min(
+      _measuredWarmupCount + _warmupItemLimit,
+      itemCount,
+    );
+    if (_measuredWarmupCount >= warmUntil) return;
+    for (var i = _measuredWarmupCount; i < warmUntil; i++) {
+      final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
+      if (_measuredHeights[i] != resolved.measured) {
+        _storeMeasuredHeight(
+          index: i,
+          measured: resolved.measured,
+          itemCount: itemCount,
+          estimate: estimate,
+          separatorBreaks: separatorBreaks,
+        );
+      }
+    }
+    _measuredWarmupCount = warmUntil;
   }
 
   @override
@@ -4422,7 +4526,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     if (_needsRepaint || _cachedVisibleContent == null) return false;
     return _cachedVisibleOffset == offset &&
         _cachedVisibleViewportHeight == viewportHeight &&
-        _cachedVisibleMaxWidth == maxWidth &&
+        (_cachedVisibleMaxWidth - maxWidth).abs() <= 4 &&
         _cachedVisibleItemCount == itemCount &&
         _cachedVisibleSeparatorBreaks == separatorBreaks &&
         _cachedVisibleVariableHeight == isVariableHeight;
@@ -4448,19 +4552,28 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
 
   void _syncCache(int itemCount, int separatorBreaks, int estimate) {
     if (_cachedItemCount != itemCount ||
-        _cachedSeparatorBreaks != separatorBreaks ||
-        _cachedEstimated != estimate) {
+        _cachedSeparatorBreaks != separatorBreaks) {
+      _traceScroll(
+        'virtual_list.sync_cache_rebuild '
+        'zone=$zoneId items=$itemCount estimate=$estimate '
+        'sep=$separatorBreaks prevItems=$_cachedItemCount prevSep=$_cachedSeparatorBreaks',
+      );
       _cachedItemCount = itemCount;
       _cachedSeparatorBreaks = separatorBreaks;
-      _cachedEstimated = estimate;
       _measuredHeights.removeWhere((index, _) => index >= itemCount);
       _childPaintCache.removeWhere((index, _) => index >= itemCount);
       _strideTree.setAll(itemCount, 0);
+      int expectedTotal = 0;
       for (var i = 0; i < itemCount; i++) {
         final height = _resolveItemHeight(i, estimate);
         final stride = height + (i < itemCount - 1 ? separatorBreaks : 0);
         _strideTree.set(i, stride);
+        expectedTotal += stride;
       }
+      assert(
+        _strideTree.total == expectedTotal,
+        '_syncCache: stride tree total $_strideTree.total != $expectedTotal',
+      );
     }
   }
 
@@ -4472,7 +4585,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     final cached = _childPaintCache[index];
     if (cached != null &&
         identical(cached.child, child) &&
-        cached.maxWidth == maxWidth &&
+        (cached.maxWidth - maxWidth).abs() <= 4 &&
         !child.paintDirty) {
       return (text: cached.text, measured: cached.measured);
     }
@@ -4623,6 +4736,11 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     required int separatorBreaks,
   }) {
     if (_measuredHeights[index] == measured) return;
+    assert(measured >= 1, '_storeMeasuredHeight: height $measured < 1');
+    assert(
+      index >= 0 && index < _strideTree.size,
+      '_storeMeasuredHeight: index $index out of range [0, $_strideTree.size)',
+    );
     _measuredHeights[index] = measured;
     _strideTree.set(
       index,
@@ -4740,14 +4858,34 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     final itemCount = _itemCount;
     if (variableHeight) {
       if (_lastMaxWidth != maxWidth) {
+        assert(
+          _lastMaxWidth == null || (_lastMaxWidth! - maxWidth).abs() <= 100,
+          'layout: maxWidth jumped from $_lastMaxWidth to $maxWidth',
+        );
+        final widthDiff = _lastMaxWidth != null
+            ? (_lastMaxWidth! - maxWidth).abs()
+            : 0;
+        _traceScroll(
+          'virtual_list.clear_measurements '
+          'zone=$zoneId reason=_lastMaxWidth($_lastMaxWidth)!=maxWidth($maxWidth)'
+          ' diff=$widthDiff',
+        );
         _lastMaxWidth = maxWidth;
-        _clearMeasurements();
+        if (widthDiff > 4) {
+          _clearMeasurements();
+        }
       }
       final baseEstimate = math
           .max(1, estimatedItemExtent ?? itemExtent)
           .toInt();
       final estimate = _resolveAdaptiveEstimate(baseEstimate);
       _syncCache(itemCount, separatorBreaks, estimate);
+      _preMeasureItems(
+        itemCount: itemCount,
+        maxWidth: maxWidth,
+        estimate: estimate,
+        separatorBreaks: separatorBreaks,
+      );
       final contentHeight = _estimatedContentHeight();
       final layoutHeight = viewportHeight ?? contentHeight;
       _setMetrics(
@@ -5072,6 +5210,8 @@ class _FenwickTree {
 
   int _size;
   late List<int> _tree;
+
+  int get size => _size;
 
   void resize(int length) {
     if (_size == length) return;
@@ -5431,11 +5571,4 @@ String _renderViewportString({
     );
   }
   return result;
-}
-
-String _renderWidget(Widget widget) {
-  final element = elementOf(widget);
-  if (element != null) return element.render();
-  final view = widget.view();
-  return view is String ? view : view.toString();
 }

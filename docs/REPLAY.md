@@ -451,3 +451,136 @@ python analyze_trace.py "$LATEST_TRACE" --top 12
 - [TUI.md](TUI.md) - TUI runtime and Program class
 - [TESTING.md](TESTING.md) - Testing infrastructure including storms and gauntlet
 - [UV.md](UV.md) - UV renderer integration
+
+## Replay Harness Mixin
+
+The `ReplayHarnessMixin` (exported from `package:artisanal/tui.dart`) wraps trace-to-scenario conversion, child-process spawning, and trace-summary analysis into a reusable mixin so any TUI app can add `replay` and `profile` subcommands in ~10 lines.
+
+### Quick Start — Auto-Wired Runner
+
+```dart
+import 'package:artisanal/args.dart' show CommandRunner;
+import 'package:artisanal/tui.dart' show HarnessCommandsMixin;
+
+class MyRunner extends CommandRunner<void> with HarnessCommandsMixin {
+  MyRunner() : super('myapp', 'My TUI app');
+
+  @override
+  String get harnessEntrypointPath => 'bin/myapp.dart';
+}
+```
+
+This automatically registers `myapp replay` and `myapp profile` subcommands. Running:
+
+```bash
+# Convert a trace to a replay scenario
+dart run bin/myapp.dart replay --replay-trace traces/latest --replay-convert-only
+
+# Run the replay
+dart run bin/myapp.dart replay --replay-scenario scenarios/demo.json --replay-speed 8 --replay-block-input
+
+# Profile the replay
+dart run bin/myapp.dart profile --replay-scenario scenarios/demo.json
+```
+
+### Flags
+
+The harness registers the following CLI flags:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--replay-trace` | — | Trace log to convert |
+| `--replay-scenario` | — | Scenario file to load |
+| `--replay-scenario-out` | — | Where to write the converted scenario |
+| `--replay-speed` | `1.0` | Speed multiplier |
+| `--replay-block-input` | `false` | Ignore manual input during replay |
+| `--replay-loop` | `false` | Restart replay on finish |
+| `--replay-keep-open` | `false` | Keep the app alive after replay |
+| `--replay-lead-in-ms` | `3500` | Initial wait before first action |
+| `--replay-script-filter` | `bin/*.dart` | Session filter for multi-session traces |
+| `--replay-trace-min-sleep-us` | `30000` | Minimum trace gap preserved as sleep |
+| `--replay-trace-screen-width` | `0` | Override source screen width |
+| `--replay-trace-screen-height` | `0` | Override source screen height |
+| `--replay-trace-fixed-right-width` | `60` | Right-pane anchor for mouse scaling |
+| `--replay-trace-from-us` | — | Trim trace before this microsecond |
+| `--replay-trace-to-us` | — | Trim trace after this microsecond |
+| `--replay-trace-include-hover` | `false` | Include hover-only mouse moves |
+| `--replay-convert-only` | `false` | Convert trace without running app |
+| `--replay-capture-trace` | `true` | Capture a lightweight trace while replaying |
+| `--replay-trace-out` | `.dart_tool/replay/trace.log` | Where to write the replay trace |
+| `--replay-trace-tags` | `general,render,layout,paint,scroll` | Trace tags for capture |
+| `--replay-capture-dispatch` | `false` | Include dispatch capture diagnostics |
+| `--replay-summary-count` | `12` | Number of slowest spans to print |
+| `--replay-max-span-us` | `0` | Fail if the slowest span exceeds this |
+| `--replay-timeout-seconds` | `180` | Kill child process after this timeout |
+
+Profile subcommand adds:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--profile-profiler-command` | `devtools-profiler` | Profiler executable |
+| `--profile-artifact-dir` | `.dart_tool/profile` | Where to write artifacts |
+| `--profile-clean-artifact-dir` | `true` | Delete artifact dir before profiling |
+| `--profile-region` | `true` | Mark replay window as profile region |
+| `--profile-region-name` | `app.replay` | Profile region name |
+| `--profile-timeout-seconds` | `240` | Kill profiler after this timeout |
+
+### Override Points
+
+Override these in a command or runner that mixes in `ReplayHarnessMixin` / `ProfileHarnessMixin`:
+
+| Method | Type | Default | Purpose |
+|--------|------|---------|---------|
+| `harnessEntrypointPath` | `String` (getter) | required | Path to the app entrypoint |
+| `buildAppSpecificReplayArgs` | `(config, scenarioPath) → List<String>` | `[]` | App-specific CLI args (e.g. `--limit`, `--view`) |
+| `customizeReplayEnvironment` | `(config) → Map<String, String>?` | `null` | Override child-process env vars |
+| `customizeReplayScenario` | `(scenario, path) → Future<Scenario?>` | `null` | Transform the scenario before execution |
+| `resolveTracePath` | `(path) → String` | file-exists check | Resolve `--replay-trace` paths |
+| `tryResolveTracePath` | `(path) → Future<String?>` | `traces/` search | Resolve `latest` alias to newest trace |
+| `resolveScenarioPath` | `(path) → String` | file-exists check | Resolve `--replay-scenario` paths |
+| `tryResolveScenarioPath` | `(path) → Future<String?>` | `null` | Resolve special scenario paths (e.g. `issues` → `scenarios/issues_scroll_detail.json`) |
+| `onReplayPrepared` | `(prepared) → void` | — | Log or inspect the prepared scenario |
+| `onReplayCompleted` | `(prepared, exitCode, …) → void` | — | Post-replay logging / summary |
+| `enableReplayHarness` | `bool` (getter) | `true` | Gate for auto-adding replay subcommand |
+| `enableProfileHarness` | `bool` (getter) | `true` | Gate for auto-adding profile subcommand |
+
+`ProfileHarnessMixin` adds:
+
+| Method | Type | Default | Purpose |
+|--------|------|---------|---------|
+| `profileProfilerCommand` | `String` (getter) | required | Profiler executable name |
+| `profileArtifactDir` | `String` (getter) | required | Artifact directory path |
+| `profileRegionName` | `String` (getter) | required | Profile region identifier |
+| `profileEventPrefix` | `String` (getter) | `profile.harness` | Event type prefix for profile regions |
+| `profileRegionMetadata` | `(scenarioPath) → Map` | `{}` | Extra fields on the start event |
+| `buildProfileArgs` | `(config, scenarioPath) → List<String>` | defaults | Full profiler command arguments |
+| `buildDevtoolsProfilerRunArgs` | `(config, scenarioPath) → List<String>` | devtools args | Args after the profiler executable |
+| `onProfileCompleted` | `(config, exitCode) → void` | — | Post-profile logging |
+
+### Standalone Helpers
+
+For apps that don't use the auto-wired commands, these top-level utilities provide the same functionality:
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `loadReplayPlan()` | `({required ReplayHarnessConfig config, Future<String?> Function(String)? resolveScenarioPath}) → Future<ResolvedReplay>` | Load and resolve a replay plan from the given config. Parses the scenario, processes traces, and returns a `ResolvedReplay` ready for execution. |
+| `registerReplayFlags()` | Extension `ReplayFlagsArgParser` on `ArgParser` | Registers all `--replay-*` flags. |
+| `registerProfileFlags()` | Extension `ProfileFlagsArgParser` on `ArgParser` with optional defaults | Registers all `--profile-*` flags. Defaults: `profilerCommand = 'devtools-profiler'`, `artifactDir = '.dart_tool/profile'`, `regionName = 'app.replay'`. |
+
+```dart
+import 'package:artisanal/args.dart' show ArgParser;
+import 'package:artisanal/tui.dart'
+    show registerReplayFlags, registerProfileFlags, loadReplayPlan;
+
+final parser = ArgParser()
+  ..registerReplayFlags()
+  ..registerProfileFlags();
+final config = ReplayHarnessConfig.fromArgResults(parser.parse(args));
+final resolved = await loadReplayPlan(config: config);
+```
+
+### References
+
+- **`example/tui/examples/harness_demo/main.dart`** — minimal example (10 lines of app code).
+- **`example/github_cli/lib/src/app/runner.dart`** — full-featured example using compile-time flags (`enableReplayHarness`, `enableProfileHarness`).
+- **`lib/src/tui/replay_harness_mixin.dart`** — source of `ReplayHarnessMixin`, `ProfileHarnessMixin`, `HarnessCommandsMixin`.

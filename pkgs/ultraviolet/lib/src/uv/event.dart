@@ -36,7 +36,6 @@ import 'mouse.dart';
 
 /// Base type for UV-style input events.
 ///
-/// Upstream: `third_party/ultraviolet/event.go` (`type Event interface{}`).
 /// Base type for all UV input and terminal events.
 sealed class Event {
   const Event();

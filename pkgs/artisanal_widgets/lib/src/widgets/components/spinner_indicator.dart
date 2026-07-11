@@ -1,5 +1,20 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Style;
+import 'package:artisanal/widgets.dart';
 
+/// An animated spinner indicator for loading states.
+///
+/// The [SpinnerIndicator] cycles through [frames] at the specified [interval].
+/// Set [active] to false to pause the animation. Customize the appearance with
+/// [color] and [textStyle].
+///
+/// Example:
+/// ```dart
+/// SpinnerIndicator(
+///   frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧'],
+///   interval: Duration(milliseconds: 100),
+/// )
+/// ```
 class SpinnerIndicator extends StatefulWidget {
   SpinnerIndicator({
     this.frames = const ['|', '/', '-', '\\'],
@@ -80,7 +95,7 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
   Widget build(BuildContext context) {
     if (widget.frames.isEmpty) return SizedBox.shrink();
     final theme = ThemeScope.of(context);
-    final style = _copyStyle(widget.textStyle ?? theme.bodyMedium)
+    final style = copyStyle(widget.textStyle ?? theme.bodyMedium)
       ..foreground(widget.color ?? theme.primary);
     final frame = widget.frames[_index % widget.frames.length];
     return Text(frame, style: style);
@@ -122,7 +137,7 @@ class CircularProgressIndicator extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final clamped = value!.clamp(0.0, 1.0);
     final index = (clamped * (_determinateGlyphs.length - 1)).round();
-    final style = _copyStyle(Style())..foreground(color ?? theme.primary);
+    final style = copyStyle(Style())..foreground(color ?? theme.primary);
     return Text(_determinateGlyphs[index], style: style);
   }
 }

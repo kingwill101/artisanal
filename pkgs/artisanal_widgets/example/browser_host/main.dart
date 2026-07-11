@@ -1,67 +1,68 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:artisanal/app.dart' as app;
+import 'package:artisanal/artisanal.dart' as artisanal;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal/terminal.dart' show BrowserTerminalHostServer;
 
 Future<void> main(List<String> args) async {
   final config = _parseArgs(args);
   final controller = app.ReloadController();
-  final watchedHost = config.watchRoots.isEmpty
-      ? null
-      : await app.serveWatchedArtisanalAppInBrowser(
-          port: config.port,
-          browserTitle: 'Artisanal Widgets Browser Host',
-          title: 'Browser Host Demo',
-          controller: controller,
-          watchRoots: config.watchRoots,
-          watchMode: config.watchMode,
-          homeBuilder: (context, revision) => _BrowserHostScreen(
-            revision: revision,
-            watchRoots: config.watchRoots,
-            watchMode: config.watchMode,
-          ),
-        );
-  final host =
-      watchedHost?.server ??
-      await app.serveReloadableArtisanalAppInBrowser(
-        port: config.port,
-        browserTitle: 'Artisanal Widgets Browser Host',
-        title: 'Browser Host Demo',
-        controller: controller,
-        homeBuilder: (context, revision) => _BrowserHostScreen(
-          revision: revision,
-          watchRoots: config.watchRoots,
-          watchMode: config.watchMode,
-        ),
-      );
+  app.ReloadFileWatcher? watcher;
 
-  stdout.writeln('Browser host listening on ${host.pageUri}');
-  stdout.writeln('WebSocket endpoint: ${host.webSocketUri}');
-  if (config.watchRoots.isNotEmpty) {
-    stdout.writeln(
-      'Watching ${config.watchRoots.join(", ")} (${config.watchMode.name})',
-    );
-  }
-  stdout.writeln('Press Ctrl+C to stop.');
-
-  StreamSubscription<ProcessSignal>? sigintSubscription;
   try {
-    final done = Completer<void>();
-    sigintSubscription = ProcessSignal.sigint.watch().listen((_) {
-      if (!done.isCompleted) {
-        done.complete();
-      }
-    });
-    await done.future;
-  } finally {
-    await sigintSubscription?.cancel();
-    if (watchedHost != null) {
-      await watchedHost.close(force: true);
-    } else {
-      await host.close(force: true);
-      await controller.dispose();
+    if (config.watchRoots.isNotEmpty) {
+      watcher = await app.ReloadFileWatcher.watch(
+        controller: controller,
+        roots: config.watchRoots,
+        mode: config.watchMode,
+      );
     }
+    final host =
+        await artisanal.serveWidgetApp(
+              transport: artisanal.Transport.browser,
+              port: config.port,
+              browserTitle: 'Artisanal Widgets Browser Host',
+              appBuilder: () => app.ArtisanalApp(
+                title: 'Browser Host Demo',
+                child: app.ReloadHost(
+                  controller: controller,
+                  builder: (context, revision) => _BrowserHostScreen(
+                    revision: revision,
+                    watchRoots: config.watchRoots,
+                    watchMode: config.watchMode,
+                  ),
+                ),
+              ),
+            )
+            as BrowserTerminalHostServer;
+
+    stdout.writeln('Browser host listening on ${host.pageUri}');
+    stdout.writeln('WebSocket endpoint: ${host.webSocketUri}');
+    if (config.watchRoots.isNotEmpty) {
+      stdout.writeln(
+        'Watching ${config.watchRoots.join(", ")} (${config.watchMode.name})',
+      );
+    }
+    stdout.writeln('Press Ctrl+C to stop.');
+
+    StreamSubscription<ProcessSignal>? sigintSubscription;
+    try {
+      final done = Completer<void>();
+      sigintSubscription = ProcessSignal.sigint.watch().listen((_) {
+        if (!done.isCompleted) {
+          done.complete();
+        }
+      });
+      await done.future;
+    } finally {
+      await sigintSubscription?.cancel();
+      await host.close(force: true);
+    }
+  } finally {
+    await controller.dispose();
+    await watcher?.dispose();
   }
 }
 

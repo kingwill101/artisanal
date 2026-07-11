@@ -1,12 +1,16 @@
 /// Tests for the sequence diagram parser.
 library;
 
-import 'package:artisanal/charting.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 import 'package:ultraviolet/ultraviolet.dart' show UvColor, UvRgb;
 
 void _expectRgb(UvColor? color, int r, int g, int b) {
-  expect(color, isA<UvRgb>(), reason: 'expected UvRgb but got ${color.runtimeType}');
+  expect(
+    color,
+    isA<UvRgb>(),
+    reason: 'expected UvRgb but got ${color.runtimeType}',
+  );
   final rgb = color as UvRgb;
   expect(rgb.r, r, reason: 'red channel');
   expect(rgb.g, g, reason: 'green channel');

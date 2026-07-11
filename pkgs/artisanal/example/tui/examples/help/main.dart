@@ -1,17 +1,175 @@
 /// Help view example ported from Bubble Tea.
 library;
 
+import 'package:artisanal/bubbles.dart'
+    as tui
+    hide
+        CodeBlockCommentDelimiters,
+        CodeLanguageProfile,
+        Column,
+        CommonKeyBindings,
+        EditBuffer,
+        EditHistoryCoalescePredicate,
+        EditHistoryController,
+        EditHistoryMarkerBuilder,
+        EditHistoryStateEquals,
+        EditorCoreConfig,
+        EditorState,
+        GraphemePredicate,
+        GraphemeReader,
+        Help,
+        KeyBinding,
+        KeyMap,
+        PasteMsg,
+        Row,
+        Spinner,
+        SpinnerModel,
+        SpinnerTickMsg,
+        Spinners,
+        Text,
+        TextCommandResult,
+        TextCursorCommandResult,
+        TextDecorationLayerKey,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        TextDocument,
+        TextDocumentChange,
+        TextDocumentEditResult,
+        TextEditResult,
+        TextExtmark,
+        TextExtmarkOptions,
+        TextExtmarkPositionRange,
+        TextExtmarksController,
+        TextHighlightRange,
+        TextHitResult,
+        TextLineCommandResult,
+        TextLineDecoration,
+        TextLineStateCommandExtensions,
+        TextLineStateSnapshot,
+        TextOffsetStateCommandExtensions,
+        TextOffsetStateDocumentEditingExtensions,
+        TextOffsetStateSnapshot,
+        TextPasteChunk,
+        TextPasteChunkStep,
+        TextPasteController,
+        TextPasteMode,
+        TextPastePlan,
+        TextPasteReference,
+        TextPasteReferenceStore,
+        TextPasteSession,
+        TextPatternDiagnosticRule,
+        TextPosition,
+        TextPositionDiagnosticRange,
+        TextSelection,
+        TextSyntaxBuildResult,
+        TextSyntaxChangeWindow,
+        TextSyntaxDecorationPatch,
+        TextSyntaxLineWindow,
+        TextSyntaxProvider,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextView,
+        TextViewLine,
+        TextViewport,
+        TextVisualCursorPosition,
+        UndoCommandDecoder,
+        UndoCommandJournalEntry,
+        UndoManager,
+        UndoableCommand;
+import 'package:artisanal/bubbles.dart'
+    hide
+        CodeBlockCommentDelimiters,
+        CodeLanguageProfile,
+        Column,
+        CommonKeyBindings,
+        EditBuffer,
+        EditHistoryCoalescePredicate,
+        EditHistoryController,
+        EditHistoryMarkerBuilder,
+        EditHistoryStateEquals,
+        EditorCoreConfig,
+        EditorState,
+        GraphemePredicate,
+        GraphemeReader,
+        Help,
+        KeyBinding,
+        KeyMap,
+        PasteMsg,
+        Row,
+        Spinner,
+        SpinnerModel,
+        SpinnerTickMsg,
+        Spinners,
+        Text,
+        TextCommandResult,
+        TextCursorCommandResult,
+        TextDecorationLayerKey,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        TextDocument,
+        TextDocumentChange,
+        TextDocumentEditResult,
+        TextEditResult,
+        TextExtmark,
+        TextExtmarkOptions,
+        TextExtmarkPositionRange,
+        TextExtmarksController,
+        TextHighlightRange,
+        TextHitResult,
+        TextLineCommandResult,
+        TextLineDecoration,
+        TextLineStateCommandExtensions,
+        TextLineStateSnapshot,
+        TextOffsetStateCommandExtensions,
+        TextOffsetStateDocumentEditingExtensions,
+        TextOffsetStateSnapshot,
+        TextPasteChunk,
+        TextPasteChunkStep,
+        TextPasteController,
+        TextPasteMode,
+        TextPastePlan,
+        TextPasteReference,
+        TextPasteReferenceStore,
+        TextPasteSession,
+        TextPatternDiagnosticRule,
+        TextPosition,
+        TextPositionDiagnosticRange,
+        TextSelection,
+        TextSyntaxBuildResult,
+        TextSyntaxChangeWindow,
+        TextSyntaxDecorationPatch,
+        TextSyntaxLineWindow,
+        TextSyntaxProvider,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextView,
+        TextViewLine,
+        TextViewport,
+        TextVisualCursorPosition,
+        UndoCommandDecoder,
+        UndoCommandJournalEntry,
+        UndoManager,
+        UndoableCommand;
+
 import 'package:artisanal/artisanal.dart' show Style, AnsiColor;
 import 'package:artisanal/tui.dart' as tui;
 
-class HelpKeys implements tui.KeyMap {
+class HelpKeys extends tui.KeyMap {
   HelpKeys()
     : up = tui.KeyBinding.withHelp(['up', 'k'], '↑/k', 'move up'),
       down = tui.KeyBinding.withHelp(['down', 'j'], '↓/j', 'move down'),
       left = tui.KeyBinding.withHelp(['left', 'h'], '←/h', 'move left'),
       right = tui.KeyBinding.withHelp(['right', 'l'], '→/l', 'move right'),
       help = tui.KeyBinding.withHelp(['?'], '?', 'toggle help'),
-      quit = tui.KeyBinding.withHelp(['q', 'esc', 'ctrl+c'], 'q', 'quit');
+      quit = tui.KeyBinding.withHelp(['q', 'esc', 'ctrl+c'], 'q', 'quit') {
+    shortHelp = [help, quit];
+    fullHelp = [
+      [up, down, left, right],
+      [help, quit],
+    ];
+  }
 
   final tui.KeyBinding up;
   final tui.KeyBinding down;
@@ -19,15 +177,6 @@ class HelpKeys implements tui.KeyMap {
   final tui.KeyBinding right;
   final tui.KeyBinding help;
   final tui.KeyBinding quit;
-
-  @override
-  List<tui.KeyBinding> shortHelp() => [help, quit];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [up, down, left, right],
-    [help, quit],
-  ];
 }
 
 class HelpModel implements tui.Model {

@@ -1,4 +1,5 @@
 // WidgetApp Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Run with: dart run example/widget-app/main.dart
 
@@ -7,7 +8,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(CounterApp());
+  final app = WidgetApp(CounterApp());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

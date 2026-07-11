@@ -16,7 +16,6 @@ int _shift16To8(int x) {
   return 0xff;
 }
 
-/// Upstream: `third_party/ultraviolet/decoder.go` (`shift`).
 /// Shifts a 16-bit color component down to 8-bit.
 int shift(int x) => _shift16To8(x);
 
@@ -27,7 +26,6 @@ int clampRgbChannel(int x) {
   return x;
 }
 
-/// Upstream: `third_party/ultraviolet/decoder.go` (`colorToHex`).
 /// Formats [c] as a `#RRGGBB` hex string, or empty if null.
 String colorToHex(UvRgb? c) {
   if (c == null) return '';
@@ -39,7 +37,6 @@ String colorToHex(UvRgb? c) {
       '${b.toRadixString(16).padLeft(2, '0')}';
 }
 
-/// Upstream: `third_party/ultraviolet/decoder.go` (`getMaxMin`).
 /// Returns the max and min of three values.
 (double max, double min) getMaxMin(double a, double b, double c) {
   double ma;
@@ -61,7 +58,6 @@ String colorToHex(UvRgb? c) {
 
 double _round3(double x) => (x * 1000).roundToDouble() / 1000;
 
-/// Upstream: `third_party/ultraviolet/decoder.go` (`rgbToHSL`).
 ///
 /// Returns `(h, s, l)` where `h` is degrees `[0, 360)`.
 (double h, double s, double l) rgbToHsl(int r, int g, int b) {
@@ -95,7 +91,6 @@ double _round3(double x) => (x * 1000).roundToDouble() / 1000;
   return (h, _round3(s), _round3(l));
 }
 
-/// Upstream: `third_party/ultraviolet/decoder.go` (`isDarkColor`).
 /// Returns whether [c] is considered dark using HSL lightness.
 bool isDarkColor(UvRgb? c) {
   if (c == null) return true;

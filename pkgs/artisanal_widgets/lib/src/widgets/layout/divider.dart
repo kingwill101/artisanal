@@ -1,4 +1,8 @@
-part of 'layout_widgets.dart';
+import '../core/widget.dart';
+import '../framework.dart';
+import '../theme/theme_scope.dart' show ThemeScope;
+import '../style.dart';
+import 'text.dart';
 
 class Divider extends StatelessWidget {
   Divider({this.width = 40, this.char = '─', this.style, super.key});

@@ -203,7 +203,7 @@ The widget system bridges these two systems:
 
 ```dart
 // In layout_widgets.dart
-UvColor? _colorToUvColor(Color? color) {
+UvColor? colorToUvColor(Color? color) {
   if (color is AdaptiveColor) {
     resolved = hasDarkBackground ? color.dark : color.light;
   }

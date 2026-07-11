@@ -7,6 +7,7 @@ import '../uv/canvas.dart';
 import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
+import 'package:artisanal/style.dart';
 
 /// Signature for chart painters.
 typedef ChartPainter = void Function(Screen screen, Rectangle area);
@@ -47,6 +48,26 @@ List<String> renderChartLines(int width, int height, ChartPainter painter) {
 /// Places a single [glyph] cell at ([x], [y]) on the [screen].
 void putCell(Screen screen, int x, int y, String glyph, UvStyle style) {
   screen.setCell(x, y, Cell(content: glyph, style: style));
+}
+
+/// Places a solid chart cell at ([x], [y]) on the [screen].
+///
+/// When the resulting style has a background color, the cell content is
+/// rendered as a space with the background color applied (solid fill).  When
+/// there is no background color, the [glyph] is drawn with the background
+/// cleared so that only the foreground is visible.
+void putSolidChartCell(
+  Screen screen,
+  int x,
+  int y,
+  UvStyle style,
+  String glyph,
+) {
+  final bg = style.bg;
+  final useBg = bg != null;
+  final drawGlyph = useBg ? ' ' : glyph;
+  final cellStyle = useBg ? style : style.copyWith(clearBg: true);
+  putCell(screen, x, y, drawGlyph, cellStyle);
 }
 
 void putText(
@@ -193,7 +214,7 @@ final class ChartLegendEntry {
   const ChartLegendEntry({
     required this.label,
     required this.style,
-    this.glyph = '■',
+    this.glyph = SparseBlocks.solid,
     this.labelStyle = const UvStyle(),
   });
 

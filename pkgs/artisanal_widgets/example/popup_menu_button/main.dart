@@ -1,4 +1,5 @@
 // PopupMenuButton Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates PopupMenuButton, PopupMenuItem, CheckedPopupMenuItem,
 // and PopupMenuDivider.
@@ -30,7 +31,7 @@ Future<void> main(List<String> args) async {
     );
   }
 
-  final app = tui.WidgetApp(
+  final app = WidgetApp(
     PopupMenuButtonShowcase(),
     enableRenderMetrics: false,
     enableRenderMetricsInjection: false,

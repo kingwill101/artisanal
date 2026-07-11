@@ -14,8 +14,7 @@ class SizeNotifier {
   Stream<void> get stream => _controller.stream;
 
   /// Starts listening for window size changes.
-  void start() {
-  }
+  void start() {}
 
   /// Stops the notifier and cleans up resources.
   Future<void> stop() async {

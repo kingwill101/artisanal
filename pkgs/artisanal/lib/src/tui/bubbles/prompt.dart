@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import '../cmd.dart';
-import '../key.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../view.dart' as tui_view;

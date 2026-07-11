@@ -27,6 +27,7 @@ This index links the current primary documentation across the workspace.
 > Build UIs with `implements Model` + `runProgram()`. Direct, lightweight, composable with Bubbles.
 
 - TUI runtime and inline mode: [TUI.md](TUI.md)
+- Inline non-alt-screen TUIs: [INLINE_TUI.md](INLINE_TUI.md)
 - Replay automation: [REPLAY.md](REPLAY.md)
 - TEA-composable Bubbles components: [BUBBLES.md](BUBBLES.md)
 - Console component helpers: [IO_COMPONENTS.md](IO_COMPONENTS.md)

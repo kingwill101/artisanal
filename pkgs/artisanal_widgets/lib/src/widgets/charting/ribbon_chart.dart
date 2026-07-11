@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A stacked area (ribbon) chart widget for visualising multiple data series.
 ///

@@ -1,4 +1,6 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Style;
 
 /// A node in a [TreeView] widget.
 ///
@@ -6,6 +8,8 @@ part of 'components_widgets.dart';
 /// individually via [style], or use the tree's default styling.
 ///
 /// Named `TreeViewNode` to avoid collision with the bubbles `TreeNode`
+
+// ignore_for_file: unused_shown_name
 /// interface from `package:artisanal`.
 class TreeViewNode {
   const TreeViewNode({
@@ -105,9 +109,9 @@ class TreeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final lStyle = _copyStyle(labelStyle ?? theme.bodyMedium)
+    final lStyle = copyStyle(labelStyle ?? theme.bodyMedium)
       ..foreground(theme.onSurface);
-    final cStyle = _copyStyle(connectorStyle ?? theme.bodySmall)
+    final cStyle = copyStyle(connectorStyle ?? theme.bodySmall)
       ..foreground(theme.border);
 
     final effectiveIndent = indentSize < 2 ? 2 : indentSize;
@@ -138,8 +142,8 @@ class TreeView extends StatelessWidget {
       final childPrefix = isRoot ? '' : (isLast ? ' $padding ' : '│$padding ');
 
       final resolvedLabelStyle = node.style != null
-          ? _copyStyle(node.style!)
-          : _copyStyle(labelStyle);
+          ? copyStyle(node.style!)
+          : copyStyle(labelStyle);
 
       final iconPart = node.icon != null ? '${node.icon} ' : '';
       final connectorWidget = connector.isEmpty

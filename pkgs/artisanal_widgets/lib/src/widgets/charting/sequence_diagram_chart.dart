@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A sequence diagram widget that renders Mermaid sequence diagram syntax.
 ///

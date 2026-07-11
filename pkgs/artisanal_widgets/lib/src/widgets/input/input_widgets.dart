@@ -17,12 +17,11 @@ import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
 import '../core/framework.dart'
     show BuildContext, State, StatefulWidget, StatelessWidget;
-import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
+import '../layout/layout.dart' show Text, TextAlign, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
 import '../layout/geometry.dart' show BoxConstraints, Size;
-import '../selection/selection_widgets.dart'
-    show SelectableView, SelectionController;
+import '../selection/selection.dart' show SelectableView, SelectionController;
 import '../theme/theme.dart' show Theme, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../core/widget.dart';
@@ -340,16 +339,16 @@ TextInputStyles _textInputStylesFromTheme(Theme theme) {
       .foreground(theme.resolvedOnHighlight);
   return TextInputStyles(
     focused: TextInputStyleState(
-      prompt: theme.labelLarge.copy(),
-      text: theme.bodyMedium.copy(),
-      placeholder: theme.labelSmall.copy(),
+      prompt: theme.labelLarge.copy().foreground(theme.onBackground),
+      text: theme.bodyMedium.copy().foreground(theme.onBackground),
+      placeholder: theme.labelSmall.copy().foreground(theme.muted),
       suggestion: theme.labelSmall.copy(),
       selection: selection,
     ),
     blurred: TextInputStyleState(
-      prompt: theme.labelSmall.copy(),
-      text: theme.bodySmall.copy(),
-      placeholder: theme.labelSmall.copy(),
+      prompt: theme.labelSmall.copy().foreground(theme.onBackground),
+      text: theme.bodySmall.copy().foreground(theme.onBackground),
+      placeholder: theme.labelSmall.copy().foreground(theme.muted),
       suggestion: theme.labelSmall.copy(),
       selection: selection,
     ),
@@ -471,7 +470,10 @@ TextAreaStyles textAreaStylesFromTheme(Theme theme) {
         ),
       },
       lineDecorationStyles: <String, Style>{
-        textActiveLineDecorationKey: Style().background(theme.surface),
+        textActiveLineDecorationKey: Style().background(
+          editorTheme?.blurredCursorLineBackground ??
+              theme.resolvedSurfaceVariant,
+        ),
         textActiveLineNumberDecorationKey: theme.labelSmall.copy().foreground(
           theme.primary,
         ),

@@ -1842,7 +1842,15 @@ class AnsiRenderer implements NodeVisitor {
       content = content.trimLeft();
     }
 
+    final textStyle = options.textStyle;
+    if (textStyle == null) {
+      buffer.write(content);
+      return;
+    }
+
+    buffer.write(_styleToAnsiOpen(textStyle));
     buffer.write(content);
+    buffer.write(_ansiReset);
   }
 
   String _htmlPlainText(List<dom.Node> nodes) {
@@ -2072,13 +2080,24 @@ class AnsiRenderer implements NodeVisitor {
     // Add foreground color
     final fg = style.getForeground;
     if (fg != null) {
-      buffer.write(fg.toAnsi(ColorProfile.trueColor));
+      buffer.write(
+        fg.toAnsi(
+          ColorProfile.trueColor,
+          hasDarkBackground: style.hasDarkBackground,
+        ),
+      );
     }
 
     // Add background color
     final bg = style.getBackground;
     if (bg != null) {
-      buffer.write(bg.toAnsi(ColorProfile.trueColor, background: true));
+      buffer.write(
+        bg.toAnsi(
+          ColorProfile.trueColor,
+          background: true,
+          hasDarkBackground: style.hasDarkBackground,
+        ),
+      );
     }
 
     return buffer.toString();

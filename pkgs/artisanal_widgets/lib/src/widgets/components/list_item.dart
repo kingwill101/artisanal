@@ -1,5 +1,26 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/widgets.dart';
 
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Style;
+
+/// A single row in a Material-style list with optional leading/trailing controls.
+///
+/// The [ListTile] widget arranges [title], [subtitle], [leading], and [trailing]
+/// widgets in a standard list row layout. Use [onTap] for interactivity.
+///
+/// Example:
+/// ```dart
+/// ListTile(
+///   title: 'Settings',
+///   subtitle: 'Configure preferences',
+///   leading: Icon('⚙'),
+///   trailing: Icon('>'),
+///   onTap: () => navigate('/settings'),
+/// )
+
+// ignore_for_file: unused_shown_name
+/// ```
 class ListTile extends StatelessWidget {
   /// Creates a Material-style list tile.
   ///
@@ -85,9 +106,9 @@ class ListTile extends StatelessWidget {
         ? (selectedBackground ?? theme.listRowSelectedBackground)
         : (background ?? theme.listRowBackground);
 
-    final resolvedTitleStyle = _copyStyle(titleStyle ?? theme.bodyMedium)
+    final resolvedTitleStyle = copyStyle(titleStyle ?? theme.bodyMedium)
       ..foreground(fg);
-    final resolvedSubtitleStyle = _copyStyle(subtitleStyle ?? theme.bodySmall)
+    final resolvedSubtitleStyle = copyStyle(subtitleStyle ?? theme.bodySmall)
       ..foreground(secondaryFg);
     if (!enabled) {
       resolvedTitleStyle.dim();
@@ -387,7 +408,7 @@ class _ExpansionTileState extends State<ExpansionTile> {
         widget.trailing ??
         Text(
           _expanded ? 'v' : '>',
-          style: _copyStyle(theme.labelMedium)..foreground(theme.muted),
+          style: copyStyle(theme.labelMedium)..foreground(theme.muted),
         );
 
     return Column(

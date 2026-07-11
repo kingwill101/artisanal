@@ -1,5 +1,16 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/artisanal.dart' show Layout;
+import 'package:artisanal_widgets/src/widgets/core/element.dart';
+import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
+import 'dart:math' as math;
 
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style;
+
+
+// ignore_for_file: unused_shown_name
+/// Preferred position for tooltip placement relative to its child.
 enum TooltipPosition { above, below }
 
 /// A hover-triggered message bubble for a child widget.
@@ -10,6 +21,14 @@ enum TooltipPosition { above, below }
 /// Passive hover requires `MouseMode.allMotion` when widgets are launched
 /// through the low-level runtime directly. The higher-level widget runners
 /// already opt into that mode by default.
+///
+/// Example:
+/// ```dart
+/// Tooltip(
+///   message: 'Save your changes before closing',
+///   child: IconButton(icon: Icon('💾')),
+/// )
+/// ```
 class Tooltip extends StatefulWidget {
   Tooltip({
     required this.message,
@@ -103,10 +122,10 @@ class _TooltipState extends State<Tooltip> {
   ({int x, int y, int width, int height})? _triggerGeometry() {
     final host = elementOf(widget);
     if (host == null) return null;
-    final root = _firstRenderObject(host);
+    final root = firstRenderObject(host);
     if (root == null) return null;
-    final anchor = _bestPopupAnchorRenderObject(host, root);
-    final global = _globalOffset(anchor);
+    final anchor = bestPopupAnchorRenderObject(host, root);
+    final global = globalOffset(anchor);
     return (
       x: global.x.floor(),
       y: global.y.floor(),
@@ -169,7 +188,7 @@ class _TooltipState extends State<Tooltip> {
 
   Widget _buildBubble(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final labelStyle = _copyStyle(widget.textStyle ?? theme.bodySmall)
+    final labelStyle = copyStyle(widget.textStyle ?? theme.bodySmall)
       ..foreground(widget.foreground ?? theme.onSurface);
     return Frame(
       padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 1),

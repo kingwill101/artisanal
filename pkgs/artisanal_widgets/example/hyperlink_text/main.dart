@@ -1,131 +1,123 @@
 // HyperlinkText Showcase
-//
-// Demonstrates HyperlinkText with labeled links, bare URLs, custom colors,
-// and links embedded in other layouts. Requires a terminal that supports
-// OSC 8 hyperlinks (e.g., iTerm2, WezTerm, Windows Terminal, foot, kitty).
-//
-// Run with: dart run example/hyperlink_text/main.dart
 
-import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal/style.dart' show Border;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 
 void main() async {
-  final app = tui.WidgetApp(HyperlinkTextShowcase());
-  await tui.runProgram(
+  final app = WidgetApp(HyperlinkTextShowcase());
+  await runProgram(
     app,
-    options: const tui.ProgramOptions(
+    options: const ProgramOptions(
       altScreen: true,
       mouse: true,
-      mouseMode: tui.MouseMode.allMotion,
+      mouseMode: MouseMode.allMotion,
     ),
   );
 }
 
-class HyperlinkTextShowcase extends w.StatefulWidget {
+class HyperlinkTextShowcase extends StatefulWidget {
   HyperlinkTextShowcase({super.key});
 
   @override
-  w.State createState() => _HyperlinkTextShowcaseState();
+  State createState() => _HyperlinkTextShowcaseState();
 }
 
-class _HyperlinkTextShowcaseState extends w.State<HyperlinkTextShowcase> {
+class _HyperlinkTextShowcaseState extends State<HyperlinkTextShowcase> {
   @override
-  w.Widget build(w.BuildContext context) {
+  Widget build(BuildContext context) {
     final theme = widget.theme;
     final label = theme.labelSmall.copy()..foreground(theme.onBackground);
 
-    return w.Container(
-      padding: const w.EdgeInsets.all(1),
+    return Container(
+      padding: const EdgeInsets.all(1),
       color: theme.background,
-      child: w.Column(
+      child: Column(
         gap: 1,
         children: [
-          w.Text('HyperlinkText Showcase', style: theme.titleLarge),
-          w.Text(
+          Text('HyperlinkText Showcase', style: theme.titleLarge),
+          Text(
             'Hover/click links if your terminal supports OSC 8.  q: quit',
             style: label,
           ),
-          w.Divider(width: 60),
+          Divider(width: 60),
 
           // -- Labeled links --
-          w.Text('Labeled Links', style: theme.titleMedium),
-          w.HyperlinkText(
+          Text('Labeled Links', style: theme.titleMedium),
+          HyperlinkText(
             url: 'https://dart.dev',
             label: 'Dart Programming Language',
           ),
-          w.HyperlinkText(url: 'https://github.com', label: 'GitHub'),
-          w.HyperlinkText(
+          HyperlinkText(url: 'https://github.com', label: 'GitHub'),
+          HyperlinkText(
             url: 'https://pub.dev',
             label: 'Dart Package Registry (pub.dev)',
           ),
-          w.Divider(width: 60),
+          Divider(width: 60),
 
           // -- Bare URL (no label) --
-          w.Text('Bare URL (no label)', style: theme.titleMedium),
-          w.HyperlinkText(
-            url: 'https://example.com/some/long/path?query=value',
-          ),
-          w.Divider(width: 60),
+          Text('Bare URL (no label)', style: theme.titleMedium),
+          HyperlinkText(url: 'https://example.com/some/long/path?query=value'),
+          Divider(width: 60),
 
           // -- Custom colors --
-          w.Text('Custom Link Colors', style: theme.titleMedium),
-          w.HyperlinkText(
+          Text('Custom Link Colors', style: theme.titleMedium),
+          HyperlinkText(
             url: 'https://dart.dev',
             label: 'Primary colored link',
             linkColor: theme.primary,
           ),
-          w.HyperlinkText(
+          HyperlinkText(
             url: 'https://dart.dev',
             label: 'Success colored link',
             linkColor: theme.success,
           ),
-          w.HyperlinkText(
+          HyperlinkText(
             url: 'https://dart.dev',
             label: 'Warning colored link',
             linkColor: theme.warning,
           ),
-          w.HyperlinkText(
+          HyperlinkText(
             url: 'https://dart.dev',
             label: 'Error colored link',
             linkColor: theme.error,
           ),
-          w.Divider(width: 60),
+          Divider(width: 60),
 
           // -- Links in a layout --
-          w.Text('Links in Context', style: theme.titleMedium),
-          w.Frame(
+          Text('Links in Context', style: theme.titleMedium),
+          Frame(
             border: Border.rounded,
             borderColor: theme.border,
-            padding: const w.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-            child: w.Column(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            child: Column(
               gap: 0,
               children: [
-                w.Row(
+                Row(
                   gap: 1,
                   children: [
-                    w.Text('Docs:', style: label),
-                    w.HyperlinkText(
+                    Text('Docs:', style: label),
+                    HyperlinkText(
                       url: 'https://api.dart.dev',
                       label: 'API Reference',
                     ),
                   ],
                 ),
-                w.Row(
+                Row(
                   gap: 1,
                   children: [
-                    w.Text('Repo:', style: label),
-                    w.HyperlinkText(
+                    Text('Repo:', style: label),
+                    HyperlinkText(
                       url: 'https://github.com/dart-lang/sdk',
                       label: 'dart-lang/sdk',
                     ),
                   ],
                 ),
-                w.Row(
+                Row(
                   gap: 1,
                   children: [
-                    w.Text('Chat:', style: label),
-                    w.HyperlinkText(
+                    Text('Chat:', style: label),
+                    HyperlinkText(
                       url: 'https://discord.gg/dart',
                       label: 'Discord',
                     ),
@@ -140,9 +132,9 @@ class _HyperlinkTextShowcaseState extends w.State<HyperlinkTextShowcase> {
   }
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == 'q') {
-      return tui.Cmd.quit();
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'q') {
+      return Cmd.quit();
     }
     return null;
   }

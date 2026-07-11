@@ -6,10 +6,7 @@
 /// Based on the Bubble Tea table component.
 library;
 
-import '../../style/style.dart';
-import '../../style/color.dart';
-import '../../style/properties.dart';
-import '../../layout/layout.dart';
+import 'package:artisanal/style.dart';
 import '../tui.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
@@ -32,7 +29,7 @@ class Column {
 typedef Row = List<String>;
 
 /// Key map for table navigation.
-class TableKeyMap implements KeyMap {
+class TableKeyMap extends KeyMap {
   /// Creates a table key map with default bindings.
   TableKeyMap({
     KeyBinding? lineUp,
@@ -47,13 +44,13 @@ class TableKeyMap implements KeyMap {
            lineUp ??
            KeyBinding(
              keys: ['up', 'k'],
-             help: Help(key: '↑/k', desc: 'up'),
+             help: Help(key: '${Arrows.up}/k', desc: 'up'),
            ),
        lineDown =
            lineDown ??
            KeyBinding(
              keys: ['down', 'j'],
-             help: Help(key: '↓/j', desc: 'down'),
+             help: Help(key: '${Arrows.down}/j', desc: 'down'),
            ),
        pageUp =
            pageUp ??
@@ -90,7 +87,15 @@ class TableKeyMap implements KeyMap {
            KeyBinding(
              keys: ['end', 'G'],
              help: Help(key: 'G/end', desc: 'go to end'),
-           );
+           ) {
+    shortHelp = [this.lineUp, this.lineDown];
+    fullHelp = [
+      [this.lineUp, this.lineDown],
+      [this.gotoTop, this.gotoBottom],
+      [this.pageUp, this.pageDown],
+      [this.halfPageUp, this.halfPageDown],
+    ];
+  }
 
   /// Move selection up one row.
   final KeyBinding lineUp;
@@ -115,17 +120,6 @@ class TableKeyMap implements KeyMap {
 
   /// Move selection to last row.
   final KeyBinding gotoBottom;
-
-  @override
-  List<KeyBinding> shortHelp() => [lineUp, lineDown];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [lineUp, lineDown],
-    [gotoTop, gotoBottom],
-    [pageUp, pageDown],
-    [halfPageUp, halfPageDown],
-  ];
 }
 
 /// Styles for table rendering.
@@ -400,7 +394,7 @@ class TableModel extends ViewComponent {
     for (final col in _columns) {
       if (col.width <= 0) continue;
 
-      final content = truncate(col.title, col.width, '…');
+      final content = truncate(col.title, col.width, EllipsisChars.horizontal);
       final padded = content.padRight(col.width);
       cells.add(styles.header.render(padded));
     }
@@ -414,7 +408,7 @@ class TableModel extends ViewComponent {
       if (col.width <= 0) continue;
 
       final value = _rows[r][i];
-      final content = truncate(value, col.width, '…');
+      final content = truncate(value, col.width, EllipsisChars.horizontal);
       final padded = content.padRight(col.width);
       cells.add(styles.cell.render(padded));
     }

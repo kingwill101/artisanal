@@ -1,6 +1,6 @@
 import 'package:artisanal/tui.dart' show Cmd, Msg;
 import 'package:artisanal/style.dart';
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,7 +1,6 @@
 library;
 
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -36,7 +35,7 @@ void main() {
             child: Text('ABCDEFGHIJ'),
           ),
         );
-        // The 10-char text should be truncated by _constrainContent
+        // The 10-char text should be truncated by constrainContent
         // using Layout.truncateLines with ellipsis='...'
         // Full 10-char text should NOT appear
         expect(tester.find.text('ABCDEFGHIJ'), isFalse);

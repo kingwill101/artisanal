@@ -1,4 +1,3 @@
-import 'package:artisanal/style.dart' show Colors;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -32,7 +31,7 @@ w.Widget githubDashboardTopBar({
         children: [
           w.Text(
             'GHUI',
-            style: theme.titleLarge.copy()..foreground(Colors.cyan),
+            style: theme.titleLarge.copy()..foreground(theme.primary),
           ),
           w.Spacer(size: 2),
           w.Text(title, style: theme.titleMedium),

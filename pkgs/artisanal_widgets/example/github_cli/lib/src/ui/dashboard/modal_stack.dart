@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -13,6 +14,7 @@ import '../dialogs/merge_dialog.dart';
 import '../dialogs/repositories_dialog.dart';
 import '../dialogs/repository_prompt.dart';
 import '../dialogs/run_detail_dialog.dart';
+import '../dialogs/search_prompt.dart';
 
 w.Widget wrapGithubDashboardModals({
   required w.Widget child,
@@ -41,6 +43,7 @@ w.Widget wrapGithubDashboardModals({
   required String? actionPromptError,
   required bool actionRunning,
   required bool repoPromptOpen,
+  required bool searchOpen,
   required bool repositoryListOpen,
   required GithubDashboardData? dashboard,
   required List<GithubRepositorySummary> repositories,
@@ -61,6 +64,8 @@ w.Widget wrapGithubDashboardModals({
   required tui.Cmd? Function(String value) onSubmitRepository,
   required tui.Cmd? Function() onCloseRepositoryList,
   required tui.Cmd? Function(String repository) onSelectRepository,
+  required tui.Cmd? Function() onCloseSearch,
+  required tui.Cmd? Function(String value) onSubmitSearch,
 }) {
   var result = child;
   if (detailItem != null) {
@@ -171,6 +176,17 @@ w.Widget wrapGithubDashboardModals({
         error: repoPromptError,
         onSubmit: onSubmitRepository,
         onCancel: onCloseRepositoryPrompt,
+      ),
+      child: result,
+    );
+  }
+  if (searchOpen) {
+    result = w.Modal(
+      open: true,
+      onDismiss: onCloseSearch,
+      dialog: GithubSearchPrompt(
+        onSubmit: onSubmitSearch,
+        onCancel: onCloseSearch,
       ),
       child: result,
     );

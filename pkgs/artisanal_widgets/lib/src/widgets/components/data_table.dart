@@ -1,4 +1,6 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Color, Style;
 
 /// A simple data table widget that renders tabular data with column headers,
 /// row separators, and optional theming.
@@ -45,12 +47,12 @@ class DataTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final bColor = borderColor ?? theme.border;
-    final hStyle = _copyStyle(headerStyle ?? theme.titleSmall)
+    final hStyle = copyStyle(headerStyle ?? theme.titleSmall)
       ..foreground(theme.onSurface)
       ..bold();
-    final cStyle = _copyStyle(cellStyle ?? theme.bodyMedium)
+    final cStyle = copyStyle(cellStyle ?? theme.bodyMedium)
       ..foreground(theme.onSurface);
-    final bStyle = _copyStyle(Style())..foreground(bColor);
+    final bStyle = copyStyle(Style())..foreground(bColor);
 
     // Calculate column widths.
     final colCount = columns.length;

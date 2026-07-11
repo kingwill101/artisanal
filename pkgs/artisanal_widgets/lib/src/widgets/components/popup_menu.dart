@@ -1,5 +1,15 @@
-part of 'components_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/core/element.dart';
+import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
+import 'dart:math' as math;
 
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style;
+
+
+// ignore_for_file: unused_shown_name
 /// Base class for entries used in [PopupMenuButton].
 abstract class PopupMenuEntry<T> extends StatelessWidget {
   PopupMenuEntry({super.key});
@@ -162,10 +172,10 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   ({int x, int y, int width, int height})? _triggerGeometry() {
     final host = elementOf(widget);
     if (host == null) return null;
-    final root = _firstRenderObject(host);
+    final root = firstRenderObject(host);
     if (root == null) return null;
-    final anchor = _bestPopupAnchorRenderObject(host, root);
-    final global = _globalOffset(anchor);
+    final anchor = bestPopupAnchorRenderObject(host, root);
+    final global = globalOffset(anchor);
     return (
       x: global.x.floor(),
       y: global.y.floor(),
@@ -474,7 +484,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
             padding: EdgeInsets.symmetric(horizontal: 1),
             child: Text(
               '-' * width,
-              style: _copyStyle(bodySmall)..foreground(theme.border),
+              style: copyStyle(bodySmall)..foreground(theme.border),
             ),
           );
           _menuRowWidgetCache[dividerKey] = divider;
@@ -494,12 +504,12 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
           widget.menuSelectedForeground ?? theme.listRowSelectedForeground;
       final normalFg = widget.menuForeground ?? theme.listRowForeground;
       final foreground = selected ? selectedFg : normalFg;
-      final textStyle = _copyStyle(bodyMedium)..foreground(foreground);
+      final textStyle = copyStyle(bodyMedium)..foreground(foreground);
       if (!entry.enabled) {
         textStyle.dim();
       }
 
-      final markerStyle = _copyStyle(labelSmall)..foreground(foreground);
+      final markerStyle = copyStyle(labelSmall)..foreground(foreground);
       if (selected) markerStyle.bold();
       if (!entry.enabled) markerStyle.dim();
 
@@ -736,23 +746,14 @@ class _PopupMenuFloatingMenuState<T> extends State<_PopupMenuFloatingMenu<T>> {
   }
 }
 
-RenderObject? _firstRenderObject(Element element) {
-  final direct = element.renderObject;
-  if (direct != null) return direct;
-  for (final child in element.children) {
-    final nested = _firstRenderObject(child);
-    if (nested != null) return nested;
-  }
-  return null;
-}
-
-RenderObject _bestPopupAnchorRenderObject(Element host, RenderObject root) {
+/// Returns the render object to use as the anchor for a popup menu.
+RenderObject bestPopupAnchorRenderObject(Element host, RenderObject root) {
   final rootWidth = root.size.width;
   final rootHeight = root.size.height;
   if (rootWidth <= 0 || rootHeight <= 0) return root;
 
   RenderObject? best;
-  for (final candidate in _renderObjectsInSubtree(host)) {
+  for (final candidate in renderObjectsInSubtree(host)) {
     if (identical(candidate, root)) continue;
 
     final width = candidate.size.width;
@@ -771,24 +772,4 @@ RenderObject _bestPopupAnchorRenderObject(Element host, RenderObject root) {
   // Only switch anchors when the descendant is materially narrower.
   if (rootWidth - best.size.width < 2) return root;
   return best;
-}
-
-Iterable<RenderObject> _renderObjectsInSubtree(Element element) sync* {
-  final ro = element.renderObject;
-  if (ro != null) yield ro;
-  for (final child in element.children) {
-    yield* _renderObjectsInSubtree(child);
-  }
-}
-
-({double x, double y}) _globalOffset(RenderObject renderObject) {
-  var x = 0.0;
-  var y = 0.0;
-  RenderObject? current = renderObject;
-  while (current != null) {
-    x += current.offset.dx;
-    y += current.offset.dy;
-    current = current.parent;
-  }
-  return (x: x, y: y);
 }

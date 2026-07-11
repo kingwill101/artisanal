@@ -1,4 +1,6 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Color, Style;
 
 /// A text widget that renders as a clickable hyperlink using OSC 8 escape
 /// sequences in terminals that support them.
@@ -14,6 +16,8 @@ part of 'components_widgets.dart';
 ///   label: 'Example Website',
 ///   showUrl: true, // renders: "Example Website (https://example.com)"
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class HyperlinkText extends StatelessWidget {
   HyperlinkText({
@@ -47,7 +51,7 @@ class HyperlinkText extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final color = linkColor ?? theme.resolvedInfo;
-    final resolvedStyle = _copyStyle(style ?? theme.bodyMedium)
+    final resolvedStyle = copyStyle(style ?? theme.bodyMedium)
       ..foreground(color)
       ..underline()
       ..hyperlink(url);
@@ -57,7 +61,7 @@ class HyperlinkText extends StatelessWidget {
 
     // Show URL in parens when label is different and showUrl is enabled.
     if (showUrl && label != null && label != url) {
-      final urlStyle = _copyStyle(Style())..foreground(theme.muted);
+      final urlStyle = copyStyle(Style())..foreground(theme.muted);
       return Row(
         gap: 1,
         children: [Text(styledLink), Text('(${urlStyle.render(url)})')],

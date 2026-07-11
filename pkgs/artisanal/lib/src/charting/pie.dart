@@ -7,6 +7,7 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Returns the slice index for a point at distance [dist] from the center
 /// at the given [angle], or -1 if outside the pie.
@@ -29,10 +30,11 @@ int _sliceIndex(
 
 /// Draws a pie (or donut) chart of [values] into [area] on [screen].
 ///
-/// Each cell is sampled at 2x2 sub-cell resolution (upper/lower x left/right)
-/// and rendered with quarter/half block glyphs where possible. This improves
-/// circular edges (less staircase aliasing) and allows top-bottom or
-/// left-right slice blending at boundaries.
+/// Each cell is sampled at configurable sub-cell resolution.  When
+/// [subSamples] is 4 (default), cells are sampled at 4×8 resolution
+/// (4 columns × 8 rows) which produces smoother circular edges and
+/// reduces staircase aliasing.  Pass `subSamples: 2` to restore the
+/// original 2×2 quadrant sampling.
 void drawPieChart(
   Screen screen,
   Rectangle area,
@@ -43,6 +45,7 @@ void drawPieChart(
   double innerRadiusRatio = 0.45,
   double cellAspect = 2.0,
   String glyph = ' ',
+  int subSamples = 4,
 }) {
   if (values.isEmpty) return;
   final width = area.width;
@@ -70,105 +73,244 @@ void drawPieChart(
 
   for (var y = area.minY; y < area.maxY; y++) {
     for (var x = area.minX; x < area.maxX; x++) {
-      final ul = _sampleSlice(
-        x,
-        y,
-        cx,
-        cy,
-        cellAspect,
-        radius,
-        innerRadius,
-        angles,
-        palette.length,
-        dxOffset: -0.25,
-        dyOffset: -0.25,
-      );
-      final ur = _sampleSlice(
-        x,
-        y,
-        cx,
-        cy,
-        cellAspect,
-        radius,
-        innerRadius,
-        angles,
-        palette.length,
-        dxOffset: 0.25,
-        dyOffset: -0.25,
-      );
-      final ll = _sampleSlice(
-        x,
-        y,
-        cx,
-        cy,
-        cellAspect,
-        radius,
-        innerRadius,
-        angles,
-        palette.length,
-        dxOffset: -0.25,
-        dyOffset: 0.25,
-      );
-      final lr = _sampleSlice(
-        x,
-        y,
-        cx,
-        cy,
-        cellAspect,
-        radius,
-        innerRadius,
-        angles,
-        palette.length,
-        dxOffset: 0.25,
-        dyOffset: 0.25,
-      );
-
-      var mask = 0;
-      if (ul >= 0) mask |= 0x1;
-      if (ur >= 0) mask |= 0x2;
-      if (ll >= 0) mask |= 0x4;
-      if (lr >= 0) mask |= 0x8;
-      if (mask == 0) continue;
-
-      // Fully covered cell. If all quadrants belong to the same slice,
-      // preserve the original background-fill path for solid interior output.
-      if (mask == 0xF && ul == ur && ul == ll && ul == lr) {
-        final baseStyle = palette[ul];
-        final useBg =
-            useBackground && (baseStyle.bg != null || baseStyle.fg != null);
-        final cellStyle = useBg
-            ? (baseStyle.bg != null
-                  ? baseStyle
-                  : baseStyle.copyWith(bg: baseStyle.fg, clearFg: true))
-            : baseStyle.copyWith(clearBg: true);
-        final drawGlyph = useBg ? glyph : '█';
-        putCell(screen, x, y, drawGlyph, cellStyle);
-        continue;
+      if (subSamples <= 2) {
+        _renderPieCellLegacy(
+          screen,
+          x,
+          y,
+          cx,
+          cy,
+          cellAspect,
+          radius,
+          innerRadius,
+          angles,
+          palette,
+          useBackground,
+          glyph,
+        );
+      } else {
+        _renderPieCellHighRes(
+          screen,
+          x,
+          y,
+          cx,
+          cy,
+          cellAspect,
+          radius,
+          innerRadius,
+          angles,
+          palette,
+          subSamples,
+          useBackground,
+          glyph,
+        );
       }
-
-      // Full cell but split by slice boundary: encode top/bottom or left/right
-      // slice pairs when possible using fg/bg block blending.
-      if (mask == 0xF && ul == ur && ll == lr && ul != ll) {
-        final fg = _sliceColor(palette[ul]);
-        final bg = _sliceColor(palette[ll]);
-        putCell(screen, x, y, '▀', UvStyle(fg: fg, bg: bg));
-        continue;
-      }
-      if (mask == 0xF && ul == ll && ur == lr && ul != ur) {
-        final fg = _sliceColor(palette[ul]);
-        final bg = _sliceColor(palette[ur]);
-        putCell(screen, x, y, '▌', UvStyle(fg: fg, bg: bg));
-        continue;
-      }
-
-      final dominant = _dominantSlice(ul, ur, ll, lr);
-      if (dominant < 0) continue;
-      final color = _sliceColor(palette[dominant]);
-      final edgeGlyph = _maskToBlockGlyph(mask);
-      if (edgeGlyph.isEmpty) continue;
-      putCell(screen, x, y, edgeGlyph, UvStyle(fg: color));
     }
   }
+}
+
+void _renderPieCellLegacy(
+  Screen screen,
+  int x,
+  int y,
+  double cx,
+  double cy,
+  double cellAspect,
+  double radius,
+  double innerRadius,
+  List<double> angles,
+  List<UvStyle> palette,
+  bool useBackground,
+  String glyph,
+) {
+  final ul = _sampleSlice(
+    x,
+    y,
+    cx,
+    cy,
+    cellAspect,
+    radius,
+    innerRadius,
+    angles,
+    palette.length,
+    dxOffset: -0.25,
+    dyOffset: -0.25,
+  );
+  final ur = _sampleSlice(
+    x,
+    y,
+    cx,
+    cy,
+    cellAspect,
+    radius,
+    innerRadius,
+    angles,
+    palette.length,
+    dxOffset: 0.25,
+    dyOffset: -0.25,
+  );
+  final ll = _sampleSlice(
+    x,
+    y,
+    cx,
+    cy,
+    cellAspect,
+    radius,
+    innerRadius,
+    angles,
+    palette.length,
+    dxOffset: -0.25,
+    dyOffset: 0.25,
+  );
+  final lr = _sampleSlice(
+    x,
+    y,
+    cx,
+    cy,
+    cellAspect,
+    radius,
+    innerRadius,
+    angles,
+    palette.length,
+    dxOffset: 0.25,
+    dyOffset: 0.25,
+  );
+
+  var mask = 0;
+  if (ul >= 0) mask |= 0x1;
+  if (ur >= 0) mask |= 0x2;
+  if (ll >= 0) mask |= 0x4;
+  if (lr >= 0) mask |= 0x8;
+  if (mask == 0) return;
+
+  // Fully covered cell. If all quadrants belong to the same slice,
+  // preserve the original background-fill path for solid interior output.
+  if (mask == 0xF && ul == ur && ul == ll && ul == lr) {
+    final baseStyle = palette[ul];
+    final useBg =
+        useBackground && (baseStyle.bg != null || baseStyle.fg != null);
+    final cellStyle = useBg
+        ? (baseStyle.bg != null
+              ? baseStyle
+              : baseStyle.copyWith(bg: baseStyle.fg, clearFg: true))
+        : baseStyle.copyWith(clearBg: true);
+    final drawGlyph = useBg ? glyph : BlockShades.full;
+    putCell(screen, x, y, drawGlyph, cellStyle);
+    return;
+  }
+
+  // Full cell but split by slice boundary: encode top/bottom or left/right
+  // slice pairs when possible using fg/bg block blending.
+  if (mask == 0xF && ul == ur && ll == lr && ul != ll) {
+    final fg = _sliceColor(palette[ul]);
+    final bg = _sliceColor(palette[ll]);
+    putCell(screen, x, y, BlockShades.upper, UvStyle(fg: fg, bg: bg));
+    return;
+  }
+  if (mask == 0xF && ul == ll && ur == lr && ul != ur) {
+    final fg = _sliceColor(palette[ul]);
+    final bg = _sliceColor(palette[ur]);
+    putCell(screen, x, y, BlockShades.left, UvStyle(fg: fg, bg: bg));
+    return;
+  }
+
+  final dominant = _dominantSlice(ul, ur, ll, lr);
+  if (dominant < 0) return;
+  final color = _sliceColor(palette[dominant]);
+  final edgeGlyph = _maskToBlockGlyph(mask);
+  if (edgeGlyph.isEmpty) return;
+  putCell(screen, x, y, edgeGlyph, UvStyle(fg: color));
+}
+
+void _renderPieCellHighRes(
+  Screen screen,
+  int x,
+  int y,
+  double cx,
+  double cy,
+  double cellAspect,
+  double radius,
+  double innerRadius,
+  List<double> angles,
+  List<UvStyle> palette,
+  int subSamples,
+  bool useBackground,
+  String glyph,
+) {
+  final samples = _sampleCell(
+    x,
+    y,
+    cx,
+    cy,
+    cellAspect,
+    radius,
+    innerRadius,
+    angles,
+    palette.length,
+    subSamples: subSamples,
+  );
+
+  final counts = <int, int>{};
+  for (final idx in samples) {
+    if (idx < 0) continue;
+    counts[idx] = (counts[idx] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return;
+
+  final dominant = counts.entries
+      .reduce((a, b) => a.value > b.value ? a : b)
+      .key;
+
+  final baseStyle = palette[dominant];
+  final useBg = useBackground && (baseStyle.bg != null || baseStyle.fg != null);
+  final cellStyle = useBg
+      ? (baseStyle.bg != null
+            ? baseStyle
+            : baseStyle.copyWith(bg: baseStyle.fg, clearFg: true))
+      : baseStyle.copyWith(clearBg: true);
+  final drawGlyph = useBg ? glyph : BlockShades.full;
+  putCell(screen, x, y, drawGlyph, cellStyle);
+}
+
+List<int> _sampleCell(
+  int x,
+  int y,
+  double cx,
+  double cy,
+  double cellAspect,
+  double radius,
+  double innerRadius,
+  List<double> angles,
+  int paletteLength, {
+  required int subSamples,
+}) {
+  final cols = subSamples <= 2 ? 2 : subSamples;
+  final rows = subSamples <= 2 ? 2 : subSamples * 2;
+  final dxStep = 1.0 / cols;
+  final dyStep = 1.0 / rows;
+  final results = <int>[];
+  for (var row = 0; row < rows; row++) {
+    final dyOffset = -0.5 + dyStep * (row + 0.5);
+    for (var col = 0; col < cols; col++) {
+      final dxOffset = -0.5 + dxStep * (col + 0.5);
+      results.add(
+        _sampleSlice(
+          x,
+          y,
+          cx,
+          cy,
+          cellAspect,
+          radius,
+          innerRadius,
+          angles,
+          paletteLength,
+          dxOffset: dxOffset,
+          dyOffset: dyOffset,
+        ),
+      );
+    }
+  }
+  return results;
 }
 
 int _sampleSlice(
@@ -214,21 +356,21 @@ int _dominantSlice(int ul, int ur, int ll, int lr) {
 
 String _maskToBlockGlyph(int mask) {
   return switch (mask) {
-    0x1 => '▘', // upper-left
-    0x2 => '▝', // upper-right
-    0x3 => '▀', // top half
-    0x4 => '▖', // lower-left
-    0x5 => '▌', // left half
-    0x6 => '▞', // upper-right + lower-left
-    0x7 => '▛', // all but lower-right
-    0x8 => '▗', // lower-right
-    0x9 => '▚', // upper-left + lower-right
-    0xA => '▐', // right half
-    0xB => '▜', // all but lower-left
-    0xC => '▄', // bottom half
-    0xD => '▙', // all but upper-right
-    0xE => '▟', // all but upper-left
-    0xF => '█', // full
+    0x1 => BlockQuadrants.upperLeft,
+    0x2 => BlockQuadrants.upperRight,
+    0x3 => BlockShades.upper,
+    0x4 => BlockQuadrants.lowerLeft,
+    0x5 => BlockShades.left,
+    0x6 => BlockQuadrants.rightHalves,
+    0x7 => BlockQuadrants.allButLowerRight,
+    0x8 => BlockQuadrants.lowerRight,
+    0x9 => BlockQuadrants.leftHalves,
+    0xA => BlockShades.right,
+    0xB => BlockQuadrants.allButLowerLeft,
+    0xC => BlockShades.lower,
+    0xD => BlockQuadrants.allButUpperRight,
+    0xE => BlockQuadrants.allButUpperLeft,
+    0xF => BlockShades.full,
     _ => '',
   };
 }

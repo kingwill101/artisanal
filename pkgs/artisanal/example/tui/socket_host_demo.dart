@@ -2,8 +2,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:artisanal/hosts.dart';
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 void main(List<String> args) async {
   final port = _parsePort(args);

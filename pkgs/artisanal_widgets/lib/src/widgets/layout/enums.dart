@@ -1,5 +1,3 @@
-part of 'layout_widgets.dart';
-
 enum Axis { horizontal, vertical }
 
 enum MainAxisAlignment {

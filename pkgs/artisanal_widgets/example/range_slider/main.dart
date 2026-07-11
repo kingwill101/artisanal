@@ -1,4 +1,5 @@
 // RangeSlider Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates RangeSlider mouse and keyboard interactions.
 //
@@ -8,7 +9,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(RangeSliderShowcase());
+  final app = WidgetApp(RangeSliderShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

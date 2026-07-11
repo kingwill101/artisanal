@@ -13,7 +13,7 @@ import '../components/components_widgets.dart'
 import '../components/overlay.dart';
 import '../core/framework.dart' show BuildContext;
 import '../core/widget.dart';
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 import 'route_settings.dart';
 
 /// A builder that creates a widget for a route.
@@ -83,6 +83,27 @@ abstract class Route<T> {
   ///
   /// Override to prevent popping (e.g., for routes with unsaved changes).
   bool canPop() => true;
+
+  /// Whether calling [Navigator.pop] when this route is current should do anything.
+  RoutePopDisposition get popDisposition => RoutePopDisposition.pop;
+
+  /// Whether calling [didPop] would return false.
+  ///
+  /// Routes that can handle pops internally (e.g., because they have their
+  /// own stack of internal state) should return `true` here.
+  bool get willHandlePopInternally => false;
+}
+
+/// Indicates whether the current route should be popped.
+enum RoutePopDisposition {
+  /// Pop the route.
+  pop,
+
+  /// Do not pop the route.
+  doNotPop,
+
+  /// Delegate this to the next level of navigation.
+  bubble,
 }
 
 /// A full-screen page route.
@@ -123,6 +144,10 @@ class PageRoute<T> extends Route<T> {
 ///   alignment: Alignment.center,
 /// ));
 /// ```
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class ModalRoute<T> extends Route<T> {
   /// Creates a modal route with the given [builder] and barrier options.
   ModalRoute({

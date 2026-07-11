@@ -25,17 +25,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
         with:
-          sdk: stable
+          submodules: recursive
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
       - name: Get dependencies
-        run: dart pub get
+        run: flutter pub get
 
       - name: Analyze workspace
-        run: dart analyze
+        run: flutter analyze
 
   test:
     runs-on: ubuntu-latest
@@ -48,14 +50,25 @@ jobs:
           - pkgs/artisanal_widgets
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
         with:
-          sdk: stable
+          submodules: recursive
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
       - name: Get dependencies
-        run: dart pub get
+        run: flutter pub get
+
+      - name: Precompile remote plugins
+        working-directory: pkgs/artisanal
+        run: dart run tool/precompile_remote_plugins.dart
 
       - name: Test ${{ matrix.package }}
-        run: dart test ${{ matrix.package }} -r compact
+        run: |
+          if [ "${{ matrix.package }}" = "pkgs/artisanal_widgets" ]; then
+            flutter test ${{ matrix.package }} -r compact
+          else
+            dart test ${{ matrix.package }} -r compact
+          fi

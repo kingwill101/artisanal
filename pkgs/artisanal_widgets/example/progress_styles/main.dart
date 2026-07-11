@@ -1,4 +1,5 @@
 // Enhanced ProgressIndicator Styles Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates all ProgressStyle variants, label positioning,
 // custom borders, and labelFormat callbacks.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ProgressStylesExample());
+  final app = WidgetApp(ProgressStylesExample());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

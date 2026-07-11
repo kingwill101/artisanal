@@ -1,4 +1,5 @@
-part of 'layout_widgets.dart';
+import '../core/widget.dart';
+import 'enums.dart';
 
 class Flexible extends Widget {
   Flexible({

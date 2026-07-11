@@ -1,5 +1,13 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
 
+import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Style;
+
+
+// ignore_for_file: unused_shown_name
 /// Predefined fill/track character sets for [ProgressIndicator].
 enum ProgressStyle {
   /// Hash fill, dash track: `[####----]`
@@ -122,8 +130,8 @@ class ProgressIndicator extends StatelessWidget {
     final fillStr = fill * filledCount;
     final trackStr = track * (width - filledCount);
 
-    final fillStyle = _copyStyle(Style())..foreground(color ?? theme.primary);
-    final trackStyle = _copyStyle(Style())
+    final fillStyle = copyStyle(Style())..foreground(color ?? theme.primary);
+    final trackStyle = copyStyle(Style())
       ..foreground(trackColor ?? theme.border);
 
     final barContent =
@@ -132,8 +140,7 @@ class ProgressIndicator extends StatelessWidget {
     // Build border-wrapped bar.
     String bar;
     if (showBorder && (borderLeft.isNotEmpty || borderRight.isNotEmpty)) {
-      final bStyle = _copyStyle(Style())
-        ..foreground(borderColor ?? theme.muted);
+      final bStyle = copyStyle(Style())..foreground(borderColor ?? theme.muted);
       final left = borderLeft.isNotEmpty ? bStyle.render(borderLeft) : '';
       final right = borderRight.isNotEmpty ? bStyle.render(borderRight) : '';
       bar = '$left$barContent$right';
@@ -150,7 +157,7 @@ class ProgressIndicator extends StatelessWidget {
     final labelText = labelFormat != null
         ? labelFormat!(clamped)
         : label ?? '${(clamped * 100).round()}%';
-    final resolvedLabelStyle = _copyStyle(labelStyle ?? theme.labelSmall)
+    final resolvedLabelStyle = copyStyle(labelStyle ?? theme.labelSmall)
       ..foreground(theme.muted);
 
     if (labelPosition == ProgressLabelPosition.inside) {
@@ -264,8 +271,8 @@ class _LinearProgressIndicatorState extends State<LinearProgressIndicator>
     final width = math.max(1, widget.width);
     final chunk = widget.indeterminateChunkSize.clamp(1, width);
     final theme = ThemeScope.of(context);
-    final fill = _copyStyle(Style())..foreground(widget.color ?? theme.primary);
-    final track = _copyStyle(Style())
+    final fill = copyStyle(Style())..foreground(widget.color ?? theme.primary);
+    final track = copyStyle(Style())
       ..foreground(widget.backgroundColor ?? theme.border);
 
     final activeCells = List<bool>.filled(width, false);

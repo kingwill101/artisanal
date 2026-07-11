@@ -1,4 +1,6 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Color, Style;
 
 /// A small widget that displays a keyboard shortcut key and its label.
 ///
@@ -7,6 +9,8 @@ part of 'components_widgets.dart';
 /// ```dart
 /// KeyHint(keyLabel: 'esc', description: 'interrupt')
 /// KeyHint(keyLabel: 'ctrl+p', description: 'commands')
+
+// ignore_for_file: unused_shown_name
 /// ```
 class KeyHint extends StatelessWidget {
   KeyHint({
@@ -57,9 +61,9 @@ class KeyHint extends StatelessWidget {
     final kFg = keyForeground ?? sbTheme?.keyForeground ?? theme.onSurface;
     final dFg = descriptionForeground ?? theme.muted;
 
-    final kStyle = _copyStyle(keyStyle ?? sbTheme?.keyStyle ?? theme.labelSmall)
+    final kStyle = copyStyle(keyStyle ?? sbTheme?.keyStyle ?? theme.labelSmall)
       ..foreground(kFg);
-    final dStyle = _copyStyle(
+    final dStyle = copyStyle(
       descriptionStyle ?? sbTheme?.labelStyle ?? theme.bodySmall,
     )..foreground(dFg);
 

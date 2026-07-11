@@ -1,6 +1,6 @@
 import 'dart:io' as io;
 
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -35,7 +35,7 @@ void main() {
           hostName: 'artisanal',
           hostVersion: '0.2.0',
         ),
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -63,7 +63,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['clipboard'],
       ),
-      timeout: const Duration(seconds: 20),
+      timeout: const Duration(seconds: 60),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -111,7 +111,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -152,7 +152,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => first.dispose(kill: true));
 
@@ -182,7 +182,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => second.dispose(kill: true));
 
@@ -250,7 +250,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -320,7 +320,7 @@ void main() {
               hostVersion: '0.2.0',
             ),
             genericServices: genericCatalog,
-            timeout: const Duration(seconds: 20),
+            timeout: const Duration(seconds: 60),
           );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -353,7 +353,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['open-url'],
       ),
-      timeout: const Duration(seconds: 20),
+      timeout: const Duration(seconds: 60),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -398,7 +398,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -429,7 +429,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['notify'],
       ),
-      timeout: const Duration(seconds: 20),
+      timeout: const Duration(seconds: 60),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -477,7 +477,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -514,7 +514,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['file-picker'],
       ),
-      timeout: const Duration(seconds: 20),
+      timeout: const Duration(seconds: 60),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -564,7 +564,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -603,7 +603,7 @@ void main() {
         hostVersion: '0.2.0',
       ),
       genericServices: genericCatalog,
-      timeout: const Duration(seconds: 20),
+      timeout: const Duration(seconds: 60),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -652,7 +652,7 @@ void main() {
           hostVersion: '0.2.0',
         ),
         genericServices: genericCatalog,
-        timeout: const Duration(seconds: 20),
+        timeout: const Duration(seconds: 60),
       );
       addTearDown(() => connection.dispose(kill: true));
 

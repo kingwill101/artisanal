@@ -1,5 +1,27 @@
-part of 'components_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
 
+/// An expandable/collapsible section with a header.
+///
+/// The [Accordion] widget shows a [title] and expands to reveal its [child]
+/// when [expanded] is `true`. Clicking the header toggles the expanded state
+/// if [onChanged] is provided.
+///
+/// Use [leading] to add an icon or indicator before the title.
+///
+/// Example:
+/// ```dart
+/// Accordion(
+///   title: 'Advanced Settings',
+///   leading: Icon('⚙'),
+///   expanded: _expanded,
+///   onChanged: (v) => setState(() => _expanded = v),
+///   child: Column(children: [Toggle('Option 1'), Toggle('Option 2')]),
+/// )
+/// ```
 class Accordion extends StatelessWidget {
   Accordion({
     required this.title,
@@ -23,10 +45,10 @@ class Accordion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final titleStyle = _copyStyle(theme.bodyMedium)
+    final titleStyle = copyStyle(theme.bodyMedium)
       ..foreground(theme.onSurface)
       ..bold();
-    final chevronStyle = _copyStyle(theme.labelMedium)..foreground(theme.muted);
+    final chevronStyle = copyStyle(theme.labelMedium)..foreground(theme.muted);
 
     Widget header = Row(
       gap: 1,

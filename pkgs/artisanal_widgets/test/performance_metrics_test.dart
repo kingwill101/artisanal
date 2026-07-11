@@ -8,16 +8,15 @@
 /// - [DebugOverlay] — overlay consuming real metrics
 library;
 
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('WidgetFrameTiming', () {
     test('constructor stores all fields correctly', () {
       final timestamp = DateTime(2026, 1, 1);
-      final timing = w.WidgetFrameTiming(
+      final timing = WidgetFrameTiming(
         frameNumber: 42,
         buildDuration: const Duration(microseconds: 100),
         layoutDuration: const Duration(microseconds: 200),
@@ -35,7 +34,7 @@ void main() {
     });
 
     test('isSlowFrame returns true when totalDuration > 16.67ms', () {
-      final timing = w.WidgetFrameTiming(
+      final timing = WidgetFrameTiming(
         frameNumber: 1,
         buildDuration: Duration.zero,
         layoutDuration: Duration.zero,
@@ -47,7 +46,7 @@ void main() {
     });
 
     test('isSlowFrame returns false when totalDuration <= 16.67ms', () {
-      final timing = w.WidgetFrameTiming(
+      final timing = WidgetFrameTiming(
         frameNumber: 1,
         buildDuration: Duration.zero,
         layoutDuration: Duration.zero,
@@ -59,7 +58,7 @@ void main() {
     });
 
     test('isSlowFrame returns false for fast frames', () {
-      final timing = w.WidgetFrameTiming(
+      final timing = WidgetFrameTiming(
         frameNumber: 1,
         buildDuration: Duration.zero,
         layoutDuration: Duration.zero,
@@ -71,7 +70,7 @@ void main() {
     });
 
     test('toString() produces expected format', () {
-      final timing = w.WidgetFrameTiming(
+      final timing = WidgetFrameTiming(
         frameNumber: 7,
         buildDuration: const Duration(microseconds: 100),
         layoutDuration: const Duration(microseconds: 200),
@@ -91,7 +90,7 @@ void main() {
 
   group('PerformanceMetricsSnapshot', () {
     test('empty widgetTimings returns Duration.zero for all averages', () {
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: [],
         widgetFrameCount: 0,
       );
@@ -109,7 +108,7 @@ void main() {
         _makeTiming(buildUs: 300, layoutUs: 0, paintUs: 0, totalUs: 300),
       ];
 
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: timings,
         widgetFrameCount: 3,
       );
@@ -126,7 +125,7 @@ void main() {
         _makeTiming(buildUs: 0, layoutUs: 250, paintUs: 0, totalUs: 250),
       ];
 
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: timings,
         widgetFrameCount: 2,
       );
@@ -143,7 +142,7 @@ void main() {
         _makeTiming(buildUs: 0, layoutUs: 0, paintUs: 600, totalUs: 600),
       ];
 
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: timings,
         widgetFrameCount: 2,
       );
@@ -160,7 +159,7 @@ void main() {
         _makeTiming(buildUs: 50, layoutUs: 50, paintUs: 50, totalUs: 3000),
       ];
 
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: timings,
         widgetFrameCount: 2,
       );
@@ -194,7 +193,7 @@ void main() {
         ), // slow
       ];
 
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: timings,
         widgetFrameCount: 4,
       );
@@ -210,7 +209,7 @@ void main() {
         _makeTiming(buildUs: 0, layoutUs: 0, paintUs: 0, totalUs: 25000),
       ];
 
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: timings,
         widgetFrameCount: 4,
       );
@@ -220,7 +219,7 @@ void main() {
     });
 
     test('slowFramePercentage returns 0 for empty timings', () {
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         widgetTimings: [],
         widgetFrameCount: 0,
       );
@@ -229,7 +228,7 @@ void main() {
     });
 
     test('renderMetrics can be null', () {
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final snapshot = PerformanceMetricsSnapshot(
         renderMetrics: null,
         widgetTimings: [],
         widgetFrameCount: 0,
@@ -239,8 +238,8 @@ void main() {
     });
 
     test('renderMetrics stores a real RenderMetrics instance', () {
-      final metrics = tui.RenderMetrics();
-      final snapshot = w.PerformanceMetricsSnapshot(
+      final metrics = RenderMetrics();
+      final snapshot = PerformanceMetricsSnapshot(
         renderMetrics: metrics,
         widgetTimings: [],
         widgetFrameCount: 0,
@@ -252,8 +251,8 @@ void main() {
 
   group('BuildOwner frame timing', () {
     test('widgetFrameCount increments after ElementTree.render()', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
 
       expect(owner.widgetFrameCount, equals(0));
 
@@ -268,8 +267,8 @@ void main() {
     });
 
     test('recentTimings has entries with non-zero durations after render', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
 
       expect(owner.recentTimings, isEmpty);
 
@@ -284,8 +283,8 @@ void main() {
 
     test('frame timing timestamps can be driven by an injected clock', () {
       final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
-      final owner = w.BuildOwner(nowProvider: () => clock.now);
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner(nowProvider: () => clock.now);
+      final tree = ElementTree(Text('hello'), owner: owner);
 
       tree.render();
       expect(owner.recentTimings.single.timestamp, equals(clock.now));
@@ -296,8 +295,8 @@ void main() {
     });
 
     test('recentTimings is capped at 120 entries', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
 
       // Render 130 times — should cap at 120
       for (var i = 0; i < 130; i++) {
@@ -314,9 +313,9 @@ void main() {
     });
 
     test('addFrameTimingCallback fires after each render', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
-      final receivedTimings = <w.WidgetFrameTiming>[];
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
+      final receivedTimings = <WidgetFrameTiming>[];
 
       owner.addFrameTimingCallback((timing) {
         receivedTimings.add(timing);
@@ -332,11 +331,11 @@ void main() {
     });
 
     test('removeFrameTimingCallback stops the callback from firing', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
-      final receivedTimings = <w.WidgetFrameTiming>[];
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
+      final receivedTimings = <WidgetFrameTiming>[];
 
-      void callback(w.WidgetFrameTiming timing) {
+      void callback(WidgetFrameTiming timing) {
         receivedTimings.add(timing);
       }
 
@@ -353,8 +352,8 @@ void main() {
     });
 
     test('performanceSnapshot returns a valid PerformanceMetricsSnapshot', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
 
       tree.render();
       tree.render();
@@ -366,9 +365,9 @@ void main() {
     });
 
     test('performanceSnapshot includes renderMetrics when provided', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
-      final metrics = tui.RenderMetrics();
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
+      final metrics = RenderMetrics();
 
       tree.render();
 
@@ -378,8 +377,8 @@ void main() {
     });
 
     test('multiple callbacks all fire', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
       var callbackACount = 0;
       var callbackBCount = 0;
 
@@ -396,8 +395,8 @@ void main() {
     });
 
     test('timing entries contain build, layout, and paint durations', () {
-      final owner = w.BuildOwner();
-      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+      final owner = BuildOwner();
+      final tree = ElementTree(Text('hello'), owner: owner);
 
       tree.render();
 
@@ -417,46 +416,46 @@ void main() {
 
   group('WidgetApp performance integration', () {
     test('wantsRenderMetrics is true by default', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       expect(app.wantsRenderMetrics, isTrue);
     });
 
     test('wantsRenderMetrics is false when enableRenderMetrics is false', () {
-      final app = tui.WidgetApp(w.Text('hello'), enableRenderMetrics: false);
+      final app = WidgetApp(Text('hello'), enableRenderMetrics: false);
       expect(app.wantsRenderMetrics, isFalse);
     });
 
     test('latestRenderMetrics is null initially', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view();
       expect(app.latestRenderMetrics, isNull);
     });
 
     test('latestRenderMetrics stores metrics after RenderMetricsMsg', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view();
 
-      final metrics = tui.RenderMetrics();
-      app.update(tui.RenderMetricsMsg(metrics));
+      final metrics = RenderMetrics();
+      app.update(RenderMetricsMsg(metrics));
 
       expect(app.latestRenderMetrics, same(metrics));
     });
 
     test('latestRenderMetrics updates on subsequent RenderMetricsMsg', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view();
 
-      final metrics1 = tui.RenderMetrics();
-      app.update(tui.RenderMetricsMsg(metrics1));
+      final metrics1 = RenderMetrics();
+      app.update(RenderMetricsMsg(metrics1));
       expect(app.latestRenderMetrics, same(metrics1));
 
-      final metrics2 = tui.RenderMetrics();
-      app.update(tui.RenderMetricsMsg(metrics2));
+      final metrics2 = RenderMetrics();
+      app.update(RenderMetricsMsg(metrics2));
       expect(app.latestRenderMetrics, same(metrics2));
     });
 
     test('performanceSnapshot returns data after rendering', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view(); // first render
 
       final snapshot = app.performanceSnapshot;
@@ -466,13 +465,13 @@ void main() {
     });
 
     test('performanceSnapshot includes render metrics after msg', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view();
 
-      final metrics = tui.RenderMetrics();
-      app.update(tui.RenderMetricsMsg(metrics));
+      final metrics = RenderMetrics();
+      app.update(RenderMetricsMsg(metrics));
       // RenderMetricsMsg alone doesn't dirty plain widgets — force a re-render.
-      app.update(tui.WindowSizeMsg(80, 24));
+      app.update(WindowSizeMsg(80, 24));
       app.view(); // second render
 
       final snapshot = app.performanceSnapshot;
@@ -481,24 +480,24 @@ void main() {
     });
 
     test('performanceSnapshot frame count increments with each render', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
 
       app.view();
       expect(app.performanceSnapshot.widgetFrameCount, equals(1));
 
       // Force a re-render by sending a WindowSizeMsg
-      app.update(tui.WindowSizeMsg(80, 24));
+      app.update(WindowSizeMsg(80, 24));
       app.view();
       expect(app.performanceSnapshot.widgetFrameCount, equals(2));
 
-      app.update(tui.WindowSizeMsg(100, 30));
+      app.update(WindowSizeMsg(100, 30));
       app.view();
       expect(app.performanceSnapshot.widgetFrameCount, equals(3));
     });
 
     test('addFrameTimingCallback delegates to BuildOwner', () {
-      final app = tui.WidgetApp(w.Text('hello'));
-      final timings = <w.WidgetFrameTiming>[];
+      final app = WidgetApp(Text('hello'));
+      final timings = <WidgetFrameTiming>[];
 
       app.addFrameTimingCallback((timing) {
         timings.add(timing);
@@ -510,10 +509,10 @@ void main() {
     });
 
     test('removeFrameTimingCallback stops callback from firing', () {
-      final app = tui.WidgetApp(w.Text('hello'));
-      final timings = <w.WidgetFrameTiming>[];
+      final app = WidgetApp(Text('hello'));
+      final timings = <WidgetFrameTiming>[];
 
-      void callback(w.WidgetFrameTiming timing) {
+      void callback(WidgetFrameTiming timing) {
         timings.add(timing);
       }
 
@@ -524,7 +523,7 @@ void main() {
       app.removeFrameTimingCallback(callback);
 
       // Force re-render
-      app.update(tui.WindowSizeMsg(80, 24));
+      app.update(WindowSizeMsg(80, 24));
       app.view();
 
       // Should still be 1
@@ -534,19 +533,19 @@ void main() {
     test('RenderMetricsInjector stream updates latestRenderMetrics', () async {
       final tester = WidgetTester();
       try {
-        await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+        await tester.pumpWidget(Text('content'), debugOverlay: true);
 
-        final metrics = tui.RenderMetrics();
+        final metrics = RenderMetrics();
         metrics.beginFrame();
         metrics.endFrame();
 
-        w.RenderMetricsInjector.instance.injectRuntime(metrics);
+        RenderMetricsInjector.instance.injectRuntime(metrics);
         tester.pump();
 
         expect(tester.app, isNotNull);
         expect(tester.app!.latestRenderMetrics, same(metrics));
       } finally {
-        w.RenderMetricsInjector.instance.clearMetrics();
+        RenderMetricsInjector.instance.clearMetrics();
         await tester.dispose();
       }
     });
@@ -556,19 +555,16 @@ void main() {
       () async {
         final tester = WidgetTester();
         try {
-          await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+          await tester.pumpWidget(Text('content'), debugOverlay: true);
 
-          w.RenderMetricsInjector.instance.setMetric(
-            'Key->Render p50',
-            '4.8ms',
-          );
-          w.RenderMetricsInjector.instance.setMetric('Queue depth', 2);
+          RenderMetricsInjector.instance.setMetric('Key->Render p50', '4.8ms');
+          RenderMetricsInjector.instance.setMetric('Queue depth', 2);
           tester.pump();
 
           expect(tester.find.text('Key->Render p50: 4.8ms'), isTrue);
           expect(tester.find.text('Queue depth: 2'), isTrue);
         } finally {
-          w.RenderMetricsInjector.instance.clearMetrics();
+          RenderMetricsInjector.instance.clearMetrics();
           await tester.dispose();
         }
       },
@@ -579,9 +575,9 @@ void main() {
       () async {
         final tester = WidgetTester();
         try {
-          await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+          await tester.pumpWidget(Text('content'), debugOverlay: true);
 
-          const stats = tui.ProgramRenderStats(
+          const stats = ProgramRenderStats(
             totalRenders: 12,
             changedRenders: 9,
             totalChangedCells: 144,
@@ -591,11 +587,11 @@ void main() {
             maxChangedSpans: 4,
             totalRenderDuration: Duration(milliseconds: 60),
             lastRenderGeneration: 12,
-            lastDegradationLevel: tui.DegradationLevel.full,
+            lastDegradationLevel: DegradationLevel.full,
             lastChangeSummary: null,
           );
 
-          w.RenderMetricsInjector.instance.setRenderStats(
+          RenderMetricsInjector.instance.setRenderStats(
             stats,
             prefix: 'Monitor',
             replace: true,
@@ -615,7 +611,7 @@ void main() {
           expect(tester.find.text('Monitor dirty: 3 peak'), isTrue);
           expect(tester.find.text('Monitor level: full'), isTrue);
         } finally {
-          w.RenderMetricsInjector.instance.clearMetrics();
+          RenderMetricsInjector.instance.clearMetrics();
           await tester.dispose();
         }
       },
@@ -639,7 +635,7 @@ void main() {
           isTrue,
         );
       } finally {
-        w.RenderMetricsInjector.instance.clearMetrics();
+        RenderMetricsInjector.instance.clearMetrics();
         await tester.dispose();
       }
     });
@@ -647,8 +643,8 @@ void main() {
 
   group('DebugOverlay with performance metrics', () {
     test('before any handleUpdate, shows FPS: 0.0 and Frames: 0', () {
-      final app = tui.WidgetApp(
-        w.DebugOverlay(enabled: true, child: w.Text('content')),
+      final app = WidgetApp(
+        DebugOverlay(enabled: true, child: Text('content')),
       );
       final output = app.view();
       expect(output, contains('FPS: 0.0'));
@@ -656,8 +652,8 @@ void main() {
     });
 
     test('disabled overlay only shows child content', () {
-      final app = tui.WidgetApp(
-        w.DebugOverlay(enabled: false, child: w.Text('content')),
+      final app = WidgetApp(
+        DebugOverlay(enabled: false, child: Text('content')),
       );
       final output = app.view();
       expect(output, contains('content'));
@@ -667,19 +663,19 @@ void main() {
     });
 
     test('after RenderMetricsMsg, shows real FPS data', () {
-      final app = tui.WidgetApp(
-        w.DebugOverlay(enabled: true, child: w.Text('content')),
+      final app = WidgetApp(
+        DebugOverlay(enabled: true, child: Text('content')),
       );
-      app.update(tui.WindowSizeMsg(80, 24));
+      app.update(WindowSizeMsg(80, 24));
       app.view();
 
       // Create a RenderMetrics with some frame data
-      final metrics = tui.RenderMetrics();
+      final metrics = RenderMetrics();
       // Simulate some frames to get non-zero FPS
       metrics.beginFrame();
       metrics.endFrame();
 
-      app.update(tui.RenderMetricsMsg(metrics));
+      app.update(RenderMetricsMsg(metrics));
       final output = app.view();
 
       // After receiving real metrics, the overlay should show real data
@@ -694,39 +690,39 @@ void main() {
     test('overlay shows runtime frame and render timing labels', () async {
       final tester = WidgetTester();
       try {
-        await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+        await tester.pumpWidget(Text('content'), debugOverlay: true);
 
-        final metrics = tui.RenderMetrics();
+        final metrics = RenderMetrics();
         metrics.beginFrame();
         metrics.endFrame();
 
-        w.RenderMetricsInjector.instance.injectRuntime(metrics);
+        RenderMetricsInjector.instance.injectRuntime(metrics);
         tester.pump();
 
         expect(tester.view, contains('Frame Time:'));
         expect(tester.view, contains('Render Time:'));
       } finally {
-        w.RenderMetricsInjector.instance.clearMetrics();
+        RenderMetricsInjector.instance.clearMetrics();
         await tester.dispose();
       }
     });
 
     test('DebugOverlay stores an injected fallback clock', () {
       final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
-      final overlay = w.DebugOverlay(
+      final overlay = DebugOverlay(
         enabled: true,
         nowProvider: () => clock.now,
-        child: w.Text('content'),
+        child: Text('content'),
       );
 
       expect(overlay.nowProvider(), equals(clock.now));
     });
 
     test('PerformanceOverlay shows fallback before metrics', () {
-      final app = tui.WidgetApp(
-        w.PerformanceOverlay(enabled: true, child: w.Text('content')),
+      final app = WidgetApp(
+        PerformanceOverlay(enabled: true, child: Text('content')),
       );
-      app.update(tui.WindowSizeMsg(80, 24));
+      app.update(WindowSizeMsg(80, 24));
       final output = app.view();
 
       // Before any metrics, shows widget frame count
@@ -734,8 +730,8 @@ void main() {
     });
 
     test('PerformanceOverlay disabled only shows child', () {
-      final app = tui.WidgetApp(
-        w.PerformanceOverlay(enabled: false, child: w.Text('content')),
+      final app = WidgetApp(
+        PerformanceOverlay(enabled: false, child: Text('content')),
       );
       final output = app.view();
       expect(output, contains('content'));
@@ -745,10 +741,10 @@ void main() {
 
     test('PerformanceOverlay stores an injected fallback clock', () {
       final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
-      final overlay = w.PerformanceOverlay(
+      final overlay = PerformanceOverlay(
         enabled: true,
         nowProvider: () => clock.now,
-        child: w.Text('content'),
+        child: Text('content'),
       );
 
       expect(overlay.nowProvider(), equals(clock.now));
@@ -759,9 +755,9 @@ void main() {
     test(
       'publishes render stats and clears injected metrics on stop',
       () async {
-        final monitor = w.RenderMetricsProgramMonitor(prefix: 'Monitor');
-        final injections = <w.RenderMetricsInjection>[];
-        final subscription = w.RenderMetricsInjector.instance.stream.listen(
+        final monitor = RenderMetricsProgramMonitor(prefix: 'Monitor');
+        final injections = <RenderMetricsInjection>[];
+        final subscription = RenderMetricsInjector.instance.stream.listen(
           injections.add,
         );
         addTearDown(() async {
@@ -771,7 +767,7 @@ void main() {
         monitor.onRendered(
           renderGeneration: 7,
           view: 'frame',
-          degradationLevel: tui.DegradationLevel.full,
+          degradationLevel: DegradationLevel.full,
           renderDuration: const Duration(milliseconds: 5),
         );
         monitor.onStop();
@@ -799,14 +795,14 @@ void main() {
 
 int _frameCounter = 0;
 
-w.WidgetFrameTiming _makeTiming({
+WidgetFrameTiming _makeTiming({
   required int buildUs,
   required int layoutUs,
   required int paintUs,
   required int totalUs,
 }) {
   _frameCounter++;
-  return w.WidgetFrameTiming(
+  return WidgetFrameTiming(
     frameNumber: _frameCounter,
     buildDuration: Duration(microseconds: buildUs),
     layoutDuration: Duration(microseconds: layoutUs),
@@ -816,19 +812,19 @@ w.WidgetFrameTiming _makeTiming({
   );
 }
 
-class _KeyCounterWidget extends w.StatefulWidget {
+class _KeyCounterWidget extends StatefulWidget {
   _KeyCounterWidget();
 
   @override
-  w.State createState() => _KeyCounterWidgetState();
+  State createState() => _KeyCounterWidgetState();
 }
 
-class _KeyCounterWidgetState extends w.State<_KeyCounterWidget> {
+class _KeyCounterWidgetState extends State<_KeyCounterWidget> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char != null) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char != null) {
       setState(() {
         _count++;
       });
@@ -837,7 +833,7 @@ class _KeyCounterWidgetState extends w.State<_KeyCounterWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('count: $_count');
+  Widget build(BuildContext context) {
+    return Text('count: $_count');
   }
 }

@@ -1,4 +1,5 @@
 // ScrollArea & ScrollView Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates ScrollArea (simple scrollable container with optional
 // scrollbar), ScrollView, and SingleChildScrollView widgets.
@@ -10,7 +11,7 @@ import 'package:artisanal/style.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ScrollAreaShowcase());
+  final app = WidgetApp(ScrollAreaShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

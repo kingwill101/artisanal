@@ -1,4 +1,11 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'ascii_font.dart';
+import 'enums.dart';
+import '../core/framework.dart' show BuildContext, StatelessWidget;
+import '../rendering/render_object.dart';
+import '../rendering/render_layout.dart';
+import '../core/widget.dart';
+import 'text.dart';
 
 /// A widget that renders text using large ASCII art font glyphs.
 ///
@@ -15,7 +22,7 @@ part of 'layout_widgets.dart';
 class AsciiText extends LeafRenderObjectWidget {
   AsciiText({
     required this.data,
-    this.font = const _StandardFont(),
+    this.font = const StandardFont(),
     this.textAlign = TextAlign.left,
     this.maxWidth,
     super.key,
@@ -69,7 +76,7 @@ class AsciiText extends LeafRenderObjectWidget {
 class StyledAsciiText extends StatelessWidget {
   StyledAsciiText({
     required this.data,
-    this.font = const _StandardFont(),
+    this.font = const StandardFont(),
     this.style,
     this.textAlign = TextAlign.left,
     this.maxWidth,

@@ -11,13 +11,13 @@ void main() {
       expect(out, hasLength(5));
     });
 
-    test('blend1D returns stops when steps <= stops', () {
+    test('blend1D samples the full stop range for shorter outputs', () {
       final out = blend1D(2, [
         Colors.red,
         Colors.blue,
         Colors.green,
       ], hasDarkBackground: true);
-      expect(out, equals([Colors.red, Colors.blue]));
+      expect(out, equals([Colors.red, Colors.green]));
     });
 
     test('blend2D returns width*height colors (row-major)', () {

@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
 
 /// A simple alert dialog with a title, message, and OK button.
 ///
@@ -32,27 +37,33 @@ class DialogAlert extends StatefulWidget {
   /// Called when the dialog is dismissed (enter, esc, or button click).
   final CmdCallback? onDismiss;
 
-  /// Show an alert dialog via [DialogStack].
-  static void show(
+  /// Show an alert dialog.
+  ///
+  /// The dialog is pushed via [Navigator.showDialog] and dismissed when
+  /// the user presses Enter, Escape, or clicks the OK button.
+  ///
+  /// Returns a [Future] that completes when the dialog is dismissed.
+  static Future<void> show(
     BuildContext context, {
     required String title,
     String? message,
     String buttonLabel = 'OK',
     CmdCallback? onDismiss,
   }) {
-    final stack = DialogStack.of(context);
-    stack.push(
-      DialogAlert(
-        title: title,
-        message: message,
-        buttonLabel: buttonLabel,
-        onDismiss: () {
-          stack.pop();
-          onDismiss?.call();
-          return null;
-        },
-      ),
-    );
+    return Navigator.of(context)
+        .showDialog<void>(
+          builder: (ctx) => DialogAlert(
+            title: title,
+            message: message,
+            buttonLabel: buttonLabel,
+            onDismiss: () {
+              Navigator.of(ctx).pop();
+              onDismiss?.call();
+              return null;
+            },
+          ),
+        )
+        .then((_) => null);
   }
 
   @override
@@ -82,9 +93,9 @@ class _DialogAlertState extends State<DialogAlert> {
     final hintFg = dTheme?.hintForeground ?? theme.muted;
     final w = dTheme?.width ?? 60;
 
-    final titleStyle = _copyStyle(theme.titleMedium)..foreground(fg);
-    final msgStyle = _copyStyle(theme.bodyMedium)..foreground(hintFg);
-    final escStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final titleStyle = copyStyle(theme.titleMedium)..foreground(fg);
+    final msgStyle = copyStyle(theme.bodyMedium)..foreground(hintFg);
+    final escStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     return SizedBox(
       width: w,

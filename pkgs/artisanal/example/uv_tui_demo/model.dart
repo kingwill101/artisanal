@@ -1,10 +1,161 @@
 library;
 
+import 'package:artisanal/bubbles.dart'
+    as tui
+    hide
+        CodeBlockCommentDelimiters,
+        CodeLanguageProfile,
+        Column,
+        CommonKeyBindings,
+        EditBuffer,
+        EditHistoryCoalescePredicate,
+        EditHistoryController,
+        EditHistoryMarkerBuilder,
+        EditHistoryStateEquals,
+        EditorCoreConfig,
+        EditorState,
+        GraphemePredicate,
+        GraphemeReader,
+        Help,
+        KeyBinding,
+        KeyMap,
+        PasteMsg,
+        Row,
+        Spinner,
+        SpinnerModel,
+        SpinnerTickMsg,
+        Spinners,
+        Text,
+        TextCommandResult,
+        TextCursorCommandResult,
+        TextDecorationLayerKey,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        TextDocument,
+        TextDocumentChange,
+        TextDocumentEditResult,
+        TextEditResult,
+        TextExtmark,
+        TextExtmarkOptions,
+        TextExtmarkPositionRange,
+        TextExtmarksController,
+        TextHighlightRange,
+        TextHitResult,
+        TextLineCommandResult,
+        TextLineDecoration,
+        TextLineStateCommandExtensions,
+        TextLineStateSnapshot,
+        TextOffsetStateCommandExtensions,
+        TextOffsetStateDocumentEditingExtensions,
+        TextOffsetStateSnapshot,
+        TextPasteChunk,
+        TextPasteChunkStep,
+        TextPasteController,
+        TextPasteMode,
+        TextPastePlan,
+        TextPasteReference,
+        TextPasteReferenceStore,
+        TextPasteSession,
+        TextPatternDiagnosticRule,
+        TextPosition,
+        TextPositionDiagnosticRange,
+        TextSelection,
+        TextSyntaxBuildResult,
+        TextSyntaxChangeWindow,
+        TextSyntaxDecorationPatch,
+        TextSyntaxLineWindow,
+        TextSyntaxProvider,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextView,
+        TextViewLine,
+        TextViewport,
+        TextVisualCursorPosition,
+        UndoCommandDecoder,
+        UndoCommandJournalEntry,
+        UndoManager,
+        UndoableCommand;
+import 'package:artisanal/bubbles.dart'
+    hide
+        CodeBlockCommentDelimiters,
+        CodeLanguageProfile,
+        Column,
+        CommonKeyBindings,
+        EditBuffer,
+        EditHistoryCoalescePredicate,
+        EditHistoryController,
+        EditHistoryMarkerBuilder,
+        EditHistoryStateEquals,
+        EditorCoreConfig,
+        EditorState,
+        GraphemePredicate,
+        GraphemeReader,
+        Help,
+        KeyBinding,
+        KeyMap,
+        PasteMsg,
+        Row,
+        Spinner,
+        SpinnerModel,
+        SpinnerTickMsg,
+        Spinners,
+        Text,
+        TextCommandResult,
+        TextCursorCommandResult,
+        TextDecorationLayerKey,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        TextDocument,
+        TextDocumentChange,
+        TextDocumentEditResult,
+        TextEditResult,
+        TextExtmark,
+        TextExtmarkOptions,
+        TextExtmarkPositionRange,
+        TextExtmarksController,
+        TextHighlightRange,
+        TextHitResult,
+        TextLineCommandResult,
+        TextLineDecoration,
+        TextLineStateCommandExtensions,
+        TextLineStateSnapshot,
+        TextOffsetStateCommandExtensions,
+        TextOffsetStateDocumentEditingExtensions,
+        TextOffsetStateSnapshot,
+        TextPasteChunk,
+        TextPasteChunkStep,
+        TextPasteController,
+        TextPasteMode,
+        TextPastePlan,
+        TextPasteReference,
+        TextPasteReferenceStore,
+        TextPasteSession,
+        TextPatternDiagnosticRule,
+        TextPosition,
+        TextPositionDiagnosticRange,
+        TextSelection,
+        TextSyntaxBuildResult,
+        TextSyntaxChangeWindow,
+        TextSyntaxDecorationPatch,
+        TextSyntaxLineWindow,
+        TextSyntaxProvider,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextView,
+        TextViewLine,
+        TextViewport,
+        TextVisualCursorPosition,
+        UndoCommandDecoder,
+        UndoCommandJournalEntry,
+        UndoManager,
+        UndoableCommand;
+
 import 'dart:math' as math;
 
-import 'package:artisanal/bubbles.dart' show TableComponent;
-import 'package:artisanal/charting.dart' as chart;
-import 'package:artisanal/physics.dart';
+import 'package:artisanal/artisanal.dart' as chart;
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show Cell, Rectangle, Screen, UvStyle;
@@ -77,7 +228,7 @@ const _chartPalettes = [
   ),
 ];
 
-final class NexusKeys implements tui.KeyMap {
+final class NexusKeys extends tui.KeyMap {
   NexusKeys()
     : next = tui.KeyBinding.withHelp(['tab'], 'tab', 'next focus'),
       prev = tui.KeyBinding.withHelp(['shift+tab'], 'shift+tab', 'prev focus'),
@@ -96,7 +247,25 @@ final class NexusKeys implements tui.KeyMap {
       physicsGravity = tui.KeyBinding.withHelp(['g'], 'g', 'toggle gravity'),
       chartsPalette = tui.KeyBinding.withHelp(['m'], 'm', 'chart palette'),
       quit = tui.KeyBinding.withHelp(['esc', 'ctrl+c', 'q'], 'esc/q', 'quit'),
-      enter = tui.KeyBinding.withHelp(['enter'], 'enter', 'run cmd');
+      enter = tui.KeyBinding.withHelp(['enter'], 'enter', 'run cmd') {
+    shortHelp = [
+      next,
+      prev,
+      pagePrev,
+      pageNext,
+      toggleHelp,
+      togglePause,
+      toggleFollow,
+      theme,
+      quit,
+    ];
+    fullHelp = [
+      [next, prev, pagePrev, pageNext, toggleHelp, enter],
+      [togglePause, toggleFollow, theme, reseed, clear, debug],
+      [physicsSpawn, physicsGravity, physicsBlast, physicsReset, chartsPalette],
+      [quit],
+    ];
+  }
 
   final tui.KeyBinding next;
   final tui.KeyBinding prev;
@@ -116,27 +285,6 @@ final class NexusKeys implements tui.KeyMap {
   final tui.KeyBinding chartsPalette;
   final tui.KeyBinding quit;
   final tui.KeyBinding enter;
-
-  @override
-  List<tui.KeyBinding> shortHelp() => [
-    next,
-    prev,
-    pagePrev,
-    pageNext,
-    toggleHelp,
-    togglePause,
-    toggleFollow,
-    theme,
-    quit,
-  ];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [next, prev, pagePrev, pageNext, toggleHelp, enter],
-    [togglePause, toggleFollow, theme, reseed, clear, debug],
-    [physicsSpawn, physicsGravity, physicsBlast, physicsReset, chartsPalette],
-    [quit],
-  ];
 }
 
 final class LayoutSpec {
@@ -1144,11 +1292,11 @@ final class NexusModel implements tui.Model {
     );
     final statusLine = switch (page) {
       Page.physics =>
-        'bodies ${physics.bodies.length} · gravity ${physics.gravityEnabled ? 'on' : 'off'} · world ${physics.worldWidth.toStringAsFixed(0)}x${physics.worldHeight.toStringAsFixed(0)}',
+        'bodies ${physics.bodies.length} ${DotChars.middle} gravity ${physics.gravityEnabled ? 'on' : 'off'} ${DotChars.middle} world ${physics.worldWidth.toStringAsFixed(0)}x${physics.worldHeight.toStringAsFixed(0)}',
       Page.charts =>
-        'charts palette ${_chartPalettes[chartPaletteIndex].name} · heatmap ${heatmap.width}x${heatmap.height} · series ${telemetry.cpuSeries.values.length}',
+        'charts palette ${_chartPalettes[chartPaletteIndex].name} ${DotChars.middle} heatmap ${heatmap.width}x${heatmap.height} ${DotChars.middle} series ${telemetry.cpuSeries.values.length}',
       _ =>
-        'telemetry ${telemetry.cpu.toStringAsFixed(1)}% cpu · ${telemetry.netIn.toStringAsFixed(0)} mb/s in · ${telemetry.netOut.toStringAsFixed(0)} mb/s out',
+        'telemetry ${telemetry.cpu.toStringAsFixed(1)}% cpu ${DotChars.middle} ${telemetry.netIn.toStringAsFixed(0)} mb/s in ${DotChars.middle} ${telemetry.netOut.toStringAsFixed(0)} mb/s out',
     };
     final line2 = Layout.pad(dim.render(statusLine), width);
 

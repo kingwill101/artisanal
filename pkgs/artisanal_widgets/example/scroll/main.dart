@@ -1,4 +1,5 @@
 //
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 // Run with: dart run example/scroll/main.dart
 
 import 'package:artisanal/tui.dart' as tui;
@@ -6,7 +7,7 @@ import 'package:artisanal/style.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ScrollDemo());
+  final app = WidgetApp(ScrollDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

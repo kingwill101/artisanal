@@ -2,8 +2,7 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../view.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import 'key_binding.dart';
 import 'textinput.dart';
 import 'paginator.dart';
@@ -97,7 +96,7 @@ List<FilteredSearchItem<T>> defaultSearchFilter<T>(
 }
 
 /// Key bindings for the search component.
-class SearchKeyMap implements KeyMap {
+class SearchKeyMap extends KeyMap {
   SearchKeyMap({
     KeyBinding? up,
     KeyBinding? down,
@@ -111,13 +110,13 @@ class SearchKeyMap implements KeyMap {
            up ??
            KeyBinding(
              keys: ['up', 'ctrl+p'],
-             help: Help(key: '↑', desc: 'up'),
+             help: Help(key: Arrows.up, desc: 'up'),
            ),
        down =
            down ??
            KeyBinding(
              keys: ['down', 'ctrl+n'],
-             help: Help(key: '↓', desc: 'down'),
+             help: Help(key: Arrows.down, desc: 'down'),
            ),
        home =
            home ??
@@ -147,14 +146,20 @@ class SearchKeyMap implements KeyMap {
            select ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'select'),
+             help: Help(key: KeyboardChars.enter, desc: 'select'),
            ),
        cancel =
            cancel ??
            KeyBinding(
              keys: ['esc'],
              help: Help(key: 'esc', desc: 'cancel'),
-           );
+           ) {
+    shortHelp = [this.up, this.down, this.select, this.cancel];
+    fullHelp = [
+      [this.up, this.down, this.home, this.end],
+      [this.pageUp, this.pageDown, this.select, this.cancel],
+    ];
+  }
 
   /// Move cursor up.
   final KeyBinding up;
@@ -179,19 +184,6 @@ class SearchKeyMap implements KeyMap {
 
   /// Cancel search.
   final KeyBinding cancel;
-
-  @override
-  List<KeyBinding> shortHelp() {
-    return [up, down, select, cancel];
-  }
-
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [up, down, home, end],
-      [pageUp, pageDown, select, cancel],
-    ];
-  }
 }
 
 /// Styles for the search component.
@@ -240,8 +232,8 @@ class SearchStyles {
     noResults: noResults ?? Style().foreground(AnsiColor(8)).italic(),
     selectedIcon: selectedIcon ?? Style().foreground(AnsiColor(10)),
     unselectedIcon: unselectedIcon ?? Style().foreground(AnsiColor(8)),
-    selectedIconChar: selectedIconChar ?? '●',
-    unselectedIconChar: unselectedIconChar ?? '○',
+    selectedIconChar: selectedIconChar ?? PaginationDots.active,
+    unselectedIconChar: unselectedIconChar ?? PaginationDots.inactive,
     cursorPrefix: cursorPrefix ?? '❯ ',
     itemPrefix: itemPrefix ?? '  ',
   );
@@ -335,8 +327,14 @@ class MultiSearchKeyMap extends SearchKeyMap {
            confirm ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'confirm'),
-           );
+             help: Help(key: KeyboardChars.enter, desc: 'confirm'),
+           ) {
+    shortHelp = [up, down, this.toggle, this.confirm, cancel];
+    fullHelp = [
+      [up, down, home, end],
+      [pageUp, pageDown, this.toggle, this.toggleAll, this.confirm, cancel],
+    ];
+  }
 
   /// Toggle current item selection.
   final KeyBinding toggle;
@@ -346,19 +344,6 @@ class MultiSearchKeyMap extends SearchKeyMap {
 
   /// Confirm multi-selection.
   final KeyBinding confirm;
-
-  @override
-  List<KeyBinding> shortHelp() {
-    return [up, down, toggle, confirm, cancel];
-  }
-
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [up, down, home, end],
-      [pageUp, pageDown, toggle, toggleAll, confirm, cancel],
-    ];
-  }
 }
 
 /// A search/filter component following the Model architecture.
@@ -407,8 +392,8 @@ class SearchModel<T> extends ViewComponent {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
     _paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
     _runFilter();
     _cursor = initialIndex.clamp(
@@ -580,8 +565,8 @@ class SearchModel<T> extends ViewComponent {
       perPage: pageSize,
       totalPages: totalPages,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
   }
 
@@ -704,7 +689,7 @@ class SearchModel<T> extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
@@ -745,8 +730,8 @@ class MultiSearchModel<T> extends ViewComponent {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
     _paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
     _runFilter();
     _cursor = initialIndex.clamp(
@@ -911,8 +896,8 @@ class MultiSearchModel<T> extends ViewComponent {
       perPage: pageSize,
       totalPages: totalPages,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
   }
 
@@ -1033,7 +1018,7 @@ class MultiSearchModel<T> extends ViewComponent {
     }
 
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')

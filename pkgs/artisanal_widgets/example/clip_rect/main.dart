@@ -1,4 +1,5 @@
 // ClipRect Widget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates using ClipRect to clip child content to a specified
 // width and/or height without ellipsis.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ClipRectExample());
+  final app = WidgetApp(ClipRectExample());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

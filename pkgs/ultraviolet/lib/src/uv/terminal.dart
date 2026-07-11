@@ -83,7 +83,6 @@ export 'halfblock_drawable.dart';
 /// It manages a [Buffer] representing the screen state, handles input event
 /// decoding, and provides methods for drawing text, shapes, and images.
 ///
-/// Upstream: `third_party/ultraviolet/terminal.go` (`Terminal`).
 class Terminal
     implements
         Screen,
@@ -93,21 +92,25 @@ class Terminal
         ClearableScreen,
         CloneableScreen,
         CloneAreaScreen {
-  Terminal(
-      {Stream<List<int>>? input,
-      StringSink? output,
-      List<String>? env,
-      bool? isWindows,
-      bool? isTty})
-    : _input = input ?? defaultInput,
-      _output = output ?? defaultOutput,
-      _env = env ?? defaultEnv,
-      _isWindows = isWindows ?? defaultIsWindows,
-      _isTty = isTty ?? defaultIsTty,
-      _buf = Buffer.create(0, 0),
-      capabilities = TerminalCapabilities(env: env ?? defaultEnv) {
-    _renderer = UvTerminalRenderer(_output,
-        env: _env, isTty: _isTty, isWindows: _isWindows);
+  Terminal({
+    Stream<List<int>>? input,
+    StringSink? output,
+    List<String>? env,
+    bool? isWindows,
+    bool? isTty,
+  }) : _input = input ?? defaultInput,
+       _output = output ?? defaultOutput,
+       _env = env ?? defaultEnv,
+       _isWindows = isWindows ?? defaultIsWindows,
+       _isTty = isTty ?? defaultIsTty,
+       _buf = Buffer.create(0, 0),
+       capabilities = TerminalCapabilities(env: env ?? defaultEnv) {
+    _renderer = UvTerminalRenderer(
+      _output,
+      env: _env,
+      isTty: _isTty,
+      isWindows: _isWindows,
+    );
     _reader = TerminalReader(
       CancelReader(_input),
       term: Environ(_env).getenv('TERM'),
@@ -391,10 +394,12 @@ class Terminal
     _renderer.queryTerminalVersion();
     _renderer.queryKittyGraphics();
     _renderer.queryKeyboardEnhancements();
-    _renderer.queryForegroundColor();
-    _renderer.queryBackgroundColor();
-    _renderer.queryCursorColor();
-    _renderer.queryColorScheme();
+    if (_isTty) {
+      _renderer.queryForegroundColor();
+      _renderer.queryBackgroundColor();
+      _renderer.queryCursorColor();
+      _renderer.queryColorScheme();
+    }
     _renderer.flush();
   }
 
@@ -440,7 +445,6 @@ class Terminal
 
   /// Adds the given string to the top of the terminal screen.
   ///
-  /// Upstream: `third_party/ultraviolet/terminal.go` (`Terminal.PrependString`).
   void prependString(String s) {
     _prepend.add(s);
   }

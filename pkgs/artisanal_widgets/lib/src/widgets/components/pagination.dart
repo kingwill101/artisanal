@@ -1,5 +1,24 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
 
+import 'package:artisanal/widgets.dart';
+
+/// A page navigation control with prev/next buttons.
+///
+/// The [Pagination] widget displays a page indicator with navigation buttons.
+/// The [page] is the current page (1-indexed) and [pageCount] is the total
+/// number of pages. Use [onChanged] to receive page change callbacks.
+///
+/// Set [showEdges] to true to also display First/Last buttons.
+///
+/// Example:
+/// ```dart
+/// Pagination(
+///   page: _currentPage,
+///   pageCount: 10,
+///   showEdges: true,
+///   onChanged: (p) => setState(() => _currentPage = p),
+/// )
+/// ```
 class Pagination extends StatelessWidget {
   Pagination({
     required this.page,
@@ -20,7 +39,7 @@ class Pagination extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final clampedPage = page.clamp(1, math.max(1, pageCount)).toInt();
-    final labelStyle = _copyStyle(theme.labelSmall)..foreground(theme.muted);
+    final labelStyle = copyStyle(theme.labelSmall)..foreground(theme.muted);
 
     final controls = <Widget>[];
     if (showEdges) {

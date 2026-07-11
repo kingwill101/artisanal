@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'dart:io' as io;
 
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 
 void main(List<String> args) {
   if (args.contains('--help') || args.contains('-h')) {

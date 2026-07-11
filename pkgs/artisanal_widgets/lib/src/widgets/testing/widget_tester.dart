@@ -51,13 +51,14 @@ import 'package:artisanal/tui.dart'
         Program,
         ProgramOptions,
         ZoneInfo;
+import 'package:artisanal_widgets/src/widgets/components/debug_overlay.dart';
 import '../app/widget_app.dart';
 import '../animation/animation_tick.dart';
 import '../components/components_widgets.dart' show DebugOverlayPosition;
 import '../core/widget.dart';
 import '../core/key.dart' show Key;
 import '../core/element.dart' show HitTestElementEntry, Element;
-import '../layout/layout_widgets.dart' show ImageAutoMode;
+import '../layout/layout.dart' show ImageAutoMode;
 import '../rendering/render_object.dart' show RenderObject;
 import 'manual_clock.dart';
 

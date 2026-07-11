@@ -84,6 +84,10 @@ abstract class State<T extends StatefulWidget> {
   @mustCallSuper
   void dispose() {}
 
+  /// Called when an inherited widget this state depends on changes.
+  @mustCallSuper
+  void didChangeDependencies() {}
+
   /// Called once when the widget tree is first mounted.
   ///
   /// Return a [Cmd] to schedule initialization work such as starting

@@ -1,0 +1,21 @@
+name: flutter_artisanal
+description: Flutter rendering, input bridge, and app shell for Ultraviolet terminal buffers.
+version: 0.2.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  artisanal: ^0.4.0
+  ultraviolet: ^0.3.0
+  artisanal_widgets: ^0.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

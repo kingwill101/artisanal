@@ -1,6 +1,6 @@
-import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/style.dart' show Border, Style;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/markdown.dart' as markdown;
+import 'package:artisanal/artisanal.dart' as markdown;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../../utils/text_format.dart';
@@ -24,10 +24,6 @@ final class GithubMarkdownBody extends w.StatefulWidget {
 }
 
 final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
-  static const _markdownOptions = markdown.AnsiRendererOptions(
-    syntaxHighlighting: false,
-  );
-
   final Map<int, bool> _expandedDetails = <int, bool>{};
   late List<GithubMarkdownSegment> _segments;
   late String _fallbackMarkdown;
@@ -53,8 +49,9 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
 
   @override
   w.Widget build(w.BuildContext context) {
+    final theme = w.ThemeScope.of(context);
     if (_segments.isEmpty) {
-      return _markdownText(_fallbackMarkdown);
+      return _markdownText(theme, _fallbackMarkdown);
     }
 
     return w.Column(
@@ -62,14 +59,21 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
       gap: 1,
       children: [
         for (var i = 0; i < _segments.length; i++)
-          _segmentWidget(_segments[i], i),
+          _segmentWidget(theme, _segments[i], i),
       ],
     );
   }
 
-  w.Widget _segmentWidget(GithubMarkdownSegment segment, int index) {
+  w.Widget _segmentWidget(
+    w.Theme theme,
+    GithubMarkdownSegment segment,
+    int index,
+  ) {
     return switch (segment) {
-      GithubMarkdownTextSegment(:final markdown) => _markdownText(markdown),
+      GithubMarkdownTextSegment(:final markdown) => _markdownText(
+        theme,
+        markdown,
+      ),
       GithubMarkdownDetailsSegment(
         :final summary,
         :final markdown,
@@ -85,19 +89,24 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
             return null;
           },
           child: _markdownText(
+            theme,
             markdown.trim().isEmpty ? '_No details provided._' : markdown,
           ),
         ),
     };
   }
 
-  w.Widget _markdownText(String markdown) {
+  w.Widget _markdownText(w.Theme theme, String markdown) {
+    final hasDarkBackground = w.hasDarkBackground;
     return w.MarkdownText(
       data: markdown,
-      options: _markdownOptions,
+      options: githubMarkdownOptions(
+        theme,
+        hasDarkBackground: hasDarkBackground,
+      ),
       softWrap: true,
       maxWidth: widget.maxWidth,
-      textStyle: widget.textStyle,
+      textStyle: _bodyTextStyle(theme, hasDarkBackground),
     );
   }
 
@@ -112,4 +121,66 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
     final markdown = githubDisplayMarkdown(widget.data).trim();
     return markdown.isEmpty ? '_No description provided._' : markdown;
   }
+}
+
+Style _bodyTextStyle(w.Theme theme, bool hasDarkBackground) {
+  final style = widgetTextStyleBase(hasDarkBackground);
+  return style..foreground(theme.onBackground);
+}
+
+Style widgetTextStyleBase(bool hasDarkBackground) {
+  return Style()..hasDarkBackground = hasDarkBackground;
+}
+
+markdown.AnsiRendererOptions githubMarkdownOptions(
+  w.Theme theme, {
+  required bool hasDarkBackground,
+}) {
+  final codeSurface = theme.surfaceVariant ?? theme.surface;
+  Style themedStyle() => Style()..hasDarkBackground = hasDarkBackground;
+  return markdown.AnsiRendererOptions(
+    textStyle: themedStyle()..foreground(theme.onBackground),
+    h1Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h2Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h3Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h4Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h5Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h6Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    emphasisStyle: themedStyle()
+      ..italic()
+      ..foreground(theme.warning),
+    strongStyle: themedStyle()
+      ..bold()
+      ..foreground(theme.onBackground),
+    codeStyle: themedStyle()
+      ..foreground(theme.primary)
+      ..background(codeSurface),
+    codeBlockStyle: themedStyle()
+      ..foreground(theme.onBackground)
+      ..background(codeSurface),
+    linkStyle: themedStyle()
+      ..foreground(theme.primary)
+      ..underline(),
+    blockquoteStyle: themedStyle()..foreground(theme.warning),
+    blockquoteBorderColor: theme.warning,
+    tableHeaderStyle: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    tableCellStyle: themedStyle()..foreground(theme.onBackground),
+    tableBorderStyle: themedStyle()..foreground(theme.border),
+    codeBlockBorderStyle: Border.rounded,
+    syntaxHighlighting: false,
+  );
 }

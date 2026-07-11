@@ -1,7 +1,7 @@
 /// Set window title example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 class SetTitleModel implements tui.Model {
   const SetTitleModel();

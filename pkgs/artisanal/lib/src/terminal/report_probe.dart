@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import '../uv/decoder.dart';
 import '../uv/event.dart';
 import 'ansi.dart';
-import 'terminal_base.dart';
+import 'terminal_io_impl.dart';
 
 /// Parsed terminal report values captured via direct `/dev/tty` probing.
 final class TerminalReportSnapshot {

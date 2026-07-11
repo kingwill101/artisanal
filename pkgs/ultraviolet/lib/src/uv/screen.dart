@@ -31,7 +31,6 @@ import '../unicode/width.dart';
 
 /// Screen is a 2D surface of cells.
 ///
-/// Upstream: `third_party/ultraviolet/buffer.go` (`Screen` interface).
 abstract class Screen {
   /// Returns the screen bounds as a [Rectangle].
   Rectangle bounds();
@@ -58,7 +57,6 @@ abstract class OwnedCellScreen implements Screen {
 
 /// Optional fast-path: clear the entire screen.
 ///
-/// Upstream: `third_party/ultraviolet/screen` (Clear).
 abstract class ClearableScreen implements Screen {
   /// Clears the entire screen to empty cells.
   void clear();
@@ -66,7 +64,6 @@ abstract class ClearableScreen implements Screen {
 
 /// Optional fast-path: clear an area of the screen.
 ///
-/// Upstream: `third_party/ultraviolet/screen` (ClearArea).
 abstract class ClearAreaScreen implements Screen {
   /// Clears [area] of the screen to empty cells.
   void clearArea(Rectangle area);
@@ -74,7 +71,6 @@ abstract class ClearAreaScreen implements Screen {
 
 /// Optional fast-path: fill the entire screen.
 ///
-/// Upstream: `third_party/ultraviolet/screen` (Fill).
 abstract class FillableScreen implements Screen {
   /// Fills the entire screen with [cell].
   void fill(Cell? cell);
@@ -82,7 +78,6 @@ abstract class FillableScreen implements Screen {
 
 /// Optional fast-path: fill an area of the screen.
 ///
-/// Upstream: `third_party/ultraviolet/screen` (FillArea).
 abstract class FillAreaScreen implements Screen {
   /// Fills [area] of the screen with [cell].
   void fillArea(Cell? cell, Rectangle area);
@@ -90,7 +85,6 @@ abstract class FillAreaScreen implements Screen {
 
 /// Optional fast-path: clone the entire screen into a buffer.
 ///
-/// Upstream: `third_party/ultraviolet/screen` (Clone).
 abstract class CloneableScreen implements Screen {
   /// Returns a copy of the screen's backing buffer.
   Object clone();
@@ -98,7 +92,6 @@ abstract class CloneableScreen implements Screen {
 
 /// Optional fast-path: clone a screen area into a buffer.
 ///
-/// Upstream: `third_party/ultraviolet/screen` (CloneArea).
 abstract class CloneAreaScreen implements Screen {
   /// Returns a copy of [area] from the screen's backing buffer, or null.
   Object? cloneArea(Rectangle area);

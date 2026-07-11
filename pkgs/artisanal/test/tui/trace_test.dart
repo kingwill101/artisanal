@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -9,15 +9,16 @@ void main() {
       'date-based trace path and header can be driven by an injected clock',
       () async {
         final tempDir = await Directory.systemTemp.createTemp('tui-trace-');
-        final previousCwd = Directory.current;
-        Directory.current = tempDir.path;
         addTearDown(() async {
-          Directory.current = previousCwd.path;
           await tempDir.delete(recursive: true);
         });
 
         final fixedTime = DateTime.utc(2026, 3, 29, 9, 10, 11, 123, 456);
-        TuiTrace.configureForTest(enabled: true, nowProvider: () => fixedTime);
+        TuiTrace.configureForTest(
+          enabled: true,
+          baseDirectory: tempDir.path,
+          nowProvider: () => fixedTime,
+        );
         addTearDown(() {
           TuiTrace.clearTestOverrides();
         });

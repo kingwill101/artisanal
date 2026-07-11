@@ -1,9 +1,7 @@
 import 'package:artisanal/bubbles.dart' show TextAreaModel, TextCommandResult;
-import 'package:artisanal/style.dart' show AnsiColor, Style;
-import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/testing.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {

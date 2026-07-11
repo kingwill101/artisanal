@@ -240,25 +240,23 @@ void main() {
   });
 }
 
-class _TestKeyMap implements KeyMap {
+class _TestKeyMap extends KeyMap {
+  _TestKeyMap() {
+    shortHelp = [up, down, quit];
+    fullHelp = [
+      [up, down],
+      [quit],
+    ];
+  }
+
   final up = KeyBinding.withHelp(['up', 'k'], '↑/k', 'move up');
   final down = KeyBinding.withHelp(['down', 'j'], '↓/j', 'move down');
   final quit = KeyBinding.withHelp(['q'], 'q', 'quit');
-
-  @override
-  List<KeyBinding> shortHelp() => [up, down, quit];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [up, down],
-    [quit],
-  ];
 }
 
-class _EmptyKeyMap implements KeyMap {
-  @override
-  List<KeyBinding> shortHelp() => [];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [];
+class _EmptyKeyMap extends KeyMap {
+  _EmptyKeyMap() {
+    shortHelp = [];
+    fullHelp = [];
+  }
 }

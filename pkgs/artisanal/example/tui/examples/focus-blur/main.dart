@@ -1,7 +1,7 @@
 /// Focus/blur reporting example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 class FocusBlurModel implements tui.Model {
   FocusBlurModel({required this.focused, required this.reporting});

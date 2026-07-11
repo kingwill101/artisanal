@@ -1,7 +1,26 @@
-part of 'components_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
 
+/// Placement side for the sidebar content.
 enum SidebarSide { left, right }
 
+/// A fixed-width sidebar adjacent to the main content.
+///
+/// The [Sidebar] arranges its [child] and [sidebar] in a horizontal [Row]
+/// with a [gap] between them. The sidebar is placed on [side] and has a fixed
+/// [width] in cells.
+///
+/// Example:
+/// ```dart
+/// Sidebar(
+///   sidebar: ListView(
+///     children: [NavigationItem('Home'), NavigationItem('Settings')],
+///   ),
+///   child: ContentArea(),
+///   width: 20,
+/// )
+/// ```
 class Sidebar extends StatelessWidget {
   Sidebar({
     required this.sidebar,

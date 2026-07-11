@@ -1,5 +1,9 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
 
+import 'package:artisanal/style.dart' show Color, Style;
+
+
+// ignore_for_file: unused_shown_name
 /// Trend direction for a [MetricDisplay].
 enum MetricTrend {
   /// Value is increasing (shown with ▲).
@@ -60,9 +64,9 @@ class MetricDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final lStyle = _copyStyle(labelStyle ?? theme.labelMedium)
+    final lStyle = copyStyle(labelStyle ?? theme.labelMedium)
       ..foreground(theme.muted);
-    final vStyle = _copyStyle(valueStyle ?? theme.titleMedium)
+    final vStyle = copyStyle(valueStyle ?? theme.titleMedium)
       ..foreground(theme.onSurface)
       ..bold();
 
@@ -79,8 +83,7 @@ class MetricDisplay extends StatelessWidget {
         MetricTrend.down => ('▼', theme.error),
         MetricTrend.flat => ('─', theme.muted),
       };
-      final tStyle = _copyStyle(Style())
-        ..foreground(trendColor ?? defaultColor);
+      final tStyle = copyStyle(Style())..foreground(trendColor ?? defaultColor);
       children.add(Text(trendChar, style: tStyle));
     }
 

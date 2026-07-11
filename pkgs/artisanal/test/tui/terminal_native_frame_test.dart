@@ -1,4 +1,4 @@
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/src/uv/buffer.dart' as uv_buffer;
 import 'package:artisanal/src/uv/cell.dart';
 import 'package:test/test.dart';

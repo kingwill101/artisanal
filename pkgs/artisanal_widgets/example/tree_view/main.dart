@@ -1,4 +1,5 @@
 // TreeView Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates TreeView with hierarchical data, icons, nested children,
 // and a file-system-like tree structure.
@@ -9,7 +10,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(TreeViewShowcase());
+  final app = WidgetApp(TreeViewShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

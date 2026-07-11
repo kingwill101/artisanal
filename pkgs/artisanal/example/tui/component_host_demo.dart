@@ -1,5 +1,5 @@
-import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/bubbles.dart' as bubbles;
+import 'package:artisanal/tui.dart' as tui;
 
 // #region component_host
 class MyModel with tui.ComponentHost implements tui.Model {

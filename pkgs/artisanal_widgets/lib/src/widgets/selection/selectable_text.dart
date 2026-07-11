@@ -1,4 +1,4 @@
-part of 'selection_widgets.dart';
+part of 'selection.dart';
 
 /// A render object that paints text with optional selection highlighting.
 class RenderSelectableText extends RenderBox {

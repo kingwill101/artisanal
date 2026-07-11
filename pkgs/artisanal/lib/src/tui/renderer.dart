@@ -1,5 +1,7 @@
 import 'dart:async' show unawaited;
-import 'dart:io' as io;
+import 'dart:convert' show base64Encode, utf8;
+
+import '../platform/platform.dart' show environment, isWindows;
 
 import 'program.dart' show ScreenMode, UiAnchor;
 import 'terminal.dart';
@@ -603,8 +605,6 @@ class BufferedTuiRenderer implements TuiRenderer {
 /// surrounding CLI cursor position.
 ///
 /// Upstream references:
-/// - `third_party/ultraviolet/styled.go` (`StyledString.Draw`)
-/// - `third_party/ultraviolet/terminal_renderer.go` (`UvTerminalRenderer.Render`)
 class UltravioletTuiRenderer
     implements TuiRenderer, NativeFrameInspectableRenderer {
   /// Creates a UV renderer targeting the given [terminal].
@@ -630,10 +630,18 @@ class UltravioletTuiRenderer
   bool _initialized = false;
   bool _dirty = false;
   String _pendingView = '';
+
   final List<String> _printLines = <String>[];
   static const int _maxPrintLines = 2000;
 
   uv_buffer.ScreenBuffer? _screen;
+
+  /// The current screen buffer, populated after each render/flush cycle.
+  ///
+  /// Useful for custom renderers (e.g. web canvas) that need direct access
+  /// to the cell buffer without going through ANSI output.
+  uv_buffer.ScreenBuffer? get screenBuffer => _screen;
+
   uv_term.UvTerminalRenderer? _renderer;
   int _nativeFrameRevision = 0;
   int _nativeFrameCacheRevision = -1;
@@ -650,6 +658,10 @@ class UltravioletTuiRenderer
   final StringBuffer _inlineCapture = StringBuffer();
   _CapturingSink? _inlineSink;
   bool _inlineNeedsFullClear = false;
+  bool _inlineNeedsLogReplay = false;
+  int? _inlineTerminalWidth;
+  int? _inlineTerminalHeight;
+  final List<String> _inlineLogHistory = <String>[];
 
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
@@ -669,6 +681,32 @@ class UltravioletTuiRenderer
     final lines = text.replaceAll('\r\n', '\n').split('\n');
     for (final line in lines) {
       if (line.isEmpty) continue;
+      if (_options.isInline && _options.uiAnchor == UiAnchor.bottom) {
+        _inlineLogHistory.add(line);
+        if (_inlineLogHistory.length > _maxPrintLines) {
+          _inlineLogHistory.removeAt(0);
+        }
+        if (TuiTrace.enabled) {
+          TuiTrace.event(
+            'inline.print_line',
+            tag: TraceTag.render,
+            fields: <String, Object?>{
+              'line': line,
+              'historyLength': _inlineLogHistory.length,
+              'terminalWidth': terminal.width,
+              'terminalHeight': terminal.height,
+              'screenHeight': _screen?.height(),
+              'needsLogReplay': _inlineNeedsLogReplay,
+            },
+          );
+        }
+        _ensureSize();
+        if (_replayInlineLogBandIfNeeded()) {
+          continue;
+        }
+        _printInlineLineAboveBottomUi(line);
+        continue;
+      }
       _printLines.add(line);
       if (_printLines.length > _maxPrintLines) {
         _printLines.removeAt(0);
@@ -677,9 +715,126 @@ class UltravioletTuiRenderer
   }
 
   String _composeView(String view) {
+    if (_options.isInline && _options.uiAnchor == UiAnchor.bottom) {
+      return view;
+    }
     if (_printLines.isEmpty) return view;
     if (view.isEmpty) return '${_printLines.join('\n')}\n';
     return '${_printLines.join('\n')}\n$view';
+  }
+
+  void _printInlineLineAboveBottomUi(String text) {
+    final termHeight = terminal.height;
+    if (termHeight <= 1) return;
+
+    final scr = _screen;
+    final uiHeight =
+        scr?.height() ?? _options.inlineHeight.clamp(1, termHeight);
+    final logBottom = termHeight - uiHeight;
+    if (logBottom <= 0) return;
+
+    final width = _inlineSafeTextColumns;
+    final visible = _sanitizeInlineLogLine(text, width);
+    if (visible.isEmpty) return;
+
+    final out = StringBuffer()
+      ..write(Ansi.cursorSaveDec)
+      ..write(UvAnsi.resetModeAutoWrap)
+      ..write(Ansi.setScrollRegion(1, logBottom))
+      ..write(Ansi.cursorTo(logBottom, 1))
+      ..write('\r\n')
+      ..write('\r')
+      ..write(Ansi.clearLine)
+      ..write(visible)
+      ..write(Ansi.resetScrollRegion)
+      ..write(UvAnsi.setModeAutoWrap)
+      ..write(Ansi.cursorRestoreDec);
+    final output = out.toString();
+    _traceInlineAnsi('inline.ansi.print_line', output);
+    terminal.write(output);
+  }
+
+  bool _replayInlineLogBandIfNeeded() {
+    if (!_options.isInline ||
+        _options.uiAnchor != UiAnchor.bottom ||
+        !_inlineNeedsLogReplay) {
+      return false;
+    }
+
+    final termHeight = terminal.height;
+    final scr = _screen;
+    if (scr == null) return false;
+    final logBottom = termHeight - scr.height();
+    if (logBottom <= 0) {
+      _inlineNeedsLogReplay = false;
+      return false;
+    }
+
+    if (TuiTrace.enabled) {
+      TuiTrace.event(
+        'inline.log_replay',
+        tag: TraceTag.render,
+        fields: <String, Object?>{
+          'logBottom': logBottom,
+          'historyLength': _inlineLogHistory.length,
+          'terminalWidth': terminal.width,
+          'terminalHeight': terminal.height,
+          'screenHeight': scr.height(),
+        },
+      );
+    }
+
+    final out = StringBuffer()
+      ..write(Ansi.beginSynchronizedUpdate)
+      ..write(Ansi.cursorSaveDec)
+      ..write(UvAnsi.resetModeAutoWrap);
+    _appendInlineLogReplay(out, logBottom);
+    out
+      ..write(UvAnsi.setModeAutoWrap)
+      ..write(Ansi.cursorRestoreDec)
+      ..write(Ansi.endSynchronizedUpdate);
+    final output = out.toString();
+    _traceInlineAnsi('inline.ansi.log_replay', output);
+    terminal.write(output);
+    _inlineNeedsLogReplay = false;
+    return true;
+  }
+
+  void _traceInlineAnsi(String type, String output) {
+    if (!TuiTrace.captureEnabled || output.isEmpty) return;
+    TuiTrace.event(
+      type,
+      tag: TraceTag.flush,
+      fields: <String, Object?>{
+        'byteLength': utf8.encode(output).length,
+        'charLength': output.length,
+        'terminalWidth': terminal.width,
+        'terminalHeight': terminal.height,
+        'base64': base64Encode(utf8.encode(output)),
+      },
+    );
+  }
+
+  int get _inlineSafeTextColumns {
+    final width = terminal.width;
+    if (width <= 1) return 0;
+    return width - 1;
+  }
+
+  String _sanitizeInlineLogLine(String text, int maxColumns) {
+    if (maxColumns <= 0) return '';
+    final out = StringBuffer();
+    var used = 0;
+    for (final rune in text.runes) {
+      if (rune == 0x0A || rune == 0x0D) break;
+      if (rune == 0x1B) break;
+      final ch = String.fromCharCode(rune);
+      if (rune < 0x20 || rune == 0x7F) continue;
+      if (used + 1 > maxColumns) break;
+      out.write(ch);
+      used++;
+    }
+    return out.toString();
   }
 
   /// Renders [view] immediately, bypassing frame-rate limiting.
@@ -716,10 +871,12 @@ class UltravioletTuiRenderer
     }
 
     final (width: w, height: h) = terminal.size;
+    _inlineTerminalWidth = isInline ? w : null;
+    _inlineTerminalHeight = isInline ? h : null;
     final renderHeight = isInline ? _options.inlineHeight.clamp(1, h) : h;
     _screen = uv_buffer.ScreenBuffer(w, renderHeight);
 
-    final envMap = io.Platform.environment;
+    final envMap = environment;
     final env = envMap.entries.map((e) => '${e.key}=${e.value}').toList();
     if (terminal.isTerminal && !envMap.containsKey('TTY_FORCE')) {
       env.add('TTY_FORCE=1');
@@ -746,7 +903,7 @@ class UltravioletTuiRenderer
       _renderer = uv_term.UvTerminalRenderer(sink, env: env);
       _renderer!.setFullscreen(true);
       _renderer!.setRelativeCursor(false);
-      final mapNewline = !io.Platform.isWindows && terminal.isTerminal;
+      final mapNewline = !isWindows && terminal.isTerminal;
       _renderer!.setMapNewline(mapNewline);
       _renderer!.setScrollOptim(true);
     }
@@ -764,6 +921,9 @@ class UltravioletTuiRenderer
       _renderer!.saveCursor();
       _renderer!.erase();
     } else {
+      if (_options.uiAnchor == UiAnchor.bottom && terminal.isTerminal) {
+        terminal.write(List.filled(renderHeight, '\r\n').join());
+      }
       _inlineNeedsFullClear = true;
     }
 
@@ -780,14 +940,48 @@ class UltravioletTuiRenderer
     final targetHeight = _options.isInline
         ? _options.inlineHeight.clamp(1, h)
         : h;
-    if (scr.width() == w && scr.height() == targetHeight) return;
-    scr.resize(w, targetHeight);
-    _renderer?.resize(w, targetHeight);
-    _invalidateNativeFrameCache(resetPrevious: true);
+    final inlineTerminalSizeChanged =
+        _options.isInline &&
+        (_inlineTerminalWidth != w || _inlineTerminalHeight != h);
+    if (inlineTerminalSizeChanged && TuiTrace.enabled) {
+      TuiTrace.event(
+        'inline.terminal_size_changed',
+        tag: TraceTag.render,
+        fields: <String, Object?>{
+          'previousWidth': _inlineTerminalWidth,
+          'previousHeight': _inlineTerminalHeight,
+          'width': w,
+          'height': h,
+          'screenWidth': scr.width(),
+          'screenHeight': scr.height(),
+          'targetHeight': targetHeight,
+        },
+      );
+    }
+    if (scr.width() == w &&
+        scr.height() == targetHeight &&
+        !inlineTerminalSizeChanged) {
+      return;
+    }
+    if (scr.width() != w || scr.height() != targetHeight) {
+      scr.resize(w, targetHeight);
+      _renderer?.resize(w, targetHeight);
+      _invalidateNativeFrameCache(resetPrevious: true);
+    }
     if (!_options.isInline) {
       _renderer?.erase();
     } else {
+      _renderer?.erase();
+      // Discard the ESC[H ESC[2J that erase() queues into _inlineCapture.
+      // In inline mode we own all screen clearing ourselves: the log band via
+      // _appendInlineLogReplay and the UI rows via clearInlineRegion.  Leaving
+      // stale erase output in the capture buffer would cause it to mix into the
+      // next r.flush() call and destroy log history.
+      _inlineCapture.clear();
       _inlineNeedsFullClear = true;
+      _inlineNeedsLogReplay = _options.uiAnchor == UiAnchor.bottom;
+      _inlineTerminalWidth = w;
+      _inlineTerminalHeight = h;
     }
   }
 
@@ -807,7 +1001,10 @@ class UltravioletTuiRenderer
     final sizeChanged =
         _screen == null ||
         _screen!.width() != terminalWidth ||
-        _screen!.height() != targetHeight;
+        _screen!.height() != targetHeight ||
+        (_options.isInline &&
+            (_inlineTerminalWidth != terminalWidth ||
+                _inlineTerminalHeight != terminalHeight));
 
     // Frame rate limiting using Stopwatch (immune to clock adjustments)
     if (_frameStopwatch.isRunning) {
@@ -845,6 +1042,8 @@ class UltravioletTuiRenderer
     }
     _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
     _renderer?.erase();
+    // Discard any ESC[2J queued by erase() into the inline capture buffer.
+    if (_options.isInline) _inlineCapture.clear();
     _dirty = true;
     _invalidateNativeFrameCache(resetPrevious: true);
     // Stop the stopwatch to force next render to proceed
@@ -857,6 +1056,8 @@ class UltravioletTuiRenderer
   void invalidate() {
     _initialize();
     _renderer?.erase();
+    // Discard any ESC[2J queued by erase() into the inline capture buffer.
+    if (_options.isInline) _inlineCapture.clear();
     _dirty = true;
     _invalidateNativeFrameCache(resetPrevious: true);
     // Stop the stopwatch to force next render to proceed past frame-rate
@@ -967,16 +1168,20 @@ class UltravioletTuiRenderer
 
     final isInline = _options.isInline;
     final graphicsFrame = uv_graphics.TerminalGraphicsFrame.scan(_pendingView);
+    final forceInlineFullRedraw = isInline && _inlineNeedsFullClear;
 
     // Phase 1: ANSI parse → StyledString
     final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
     final ss = uv_styled.newStyledString(
       _options.ansiCompress ? compressAnsi(_pendingView) : _pendingView,
-    )..wrap = true;
+    )..wrap = !isInline;
     parseSw?.stop();
 
     // Phase 2: Draw styled string into screen buffer
     final Stopwatch? drawSw = tracing ? (Stopwatch()..start()) : null;
+    if (forceInlineFullRedraw) {
+      scr.clear();
+    }
     ss.draw(scr, scr.bounds());
     drawSw?.stop();
     if (_captureNativeFrames) {
@@ -1051,25 +1256,62 @@ class UltravioletTuiRenderer
     final uiStartRow = _options.uiAnchor == UiAnchor.bottom
         ? termHeight - uiHeight + 1
         : 1;
+    final logBottom = uiStartRow - 1;
 
     // Clear the capturing buffer and let the UV renderer write into it.
     _inlineCapture.clear();
     r.flush();
-    final raw = _inlineCapture.toString();
-    if (raw.isEmpty) return;
+    var raw = _inlineCapture.toString();
+
+    // The UV renderer emits ESC[<n>J (Erase Display) sequences as part of its
+    // full-screen erase after a resize or explicit erase() call.  In inline
+    // mode these are never correct: we own all clearing ourselves — the log
+    // band via _appendInlineLogReplay and the UI rows via clearInlineRegion.
+    // ESC[2J erases the entire screen and destroys the log history we just
+    // replayed, so strip every ED sequence from the captured output.
+    if (raw.contains('\x1b[')) {
+      raw = raw.replaceAll(RegExp(r'\x1b\[\d*J'), '');
+    }
 
     // Shift all absolute row-addressing sequences into the anchored inline
     // region before replaying UV's diff output onto the real terminal.
     final offset = uiStartRow - 1;
     final shifted = offset > 0 ? _offsetInlineRows(raw, offset) : raw;
 
+    final shouldClearInlineRegion = _inlineNeedsFullClear;
+    final shouldReplayLogBand =
+        _inlineNeedsLogReplay && _options.uiAnchor == UiAnchor.bottom;
+    if (TuiTrace.enabled) {
+      TuiTrace.event(
+        'inline.flush',
+        tag: TraceTag.flush,
+        fields: <String, Object?>{
+          'terminalWidth': terminal.width,
+          'terminalHeight': termHeight,
+          'uiHeight': uiHeight,
+          'uiStartRow': uiStartRow,
+          'logBottom': logBottom,
+          'rawLength': raw.length,
+          'shiftedLength': shifted.length,
+          'clearInlineRegion': shouldClearInlineRegion,
+          'replayLogBand': shouldReplayLogBand,
+        },
+      );
+    }
+
     // Build the output.
     final out = StringBuffer();
     out.write(Ansi.beginSynchronizedUpdate);
     out.write(Ansi.cursorSaveDec);
+    out.write(UvAnsi.resetModeAutoWrap);
+
+    if (shouldReplayLogBand) {
+      _appendInlineLogReplay(out, logBottom);
+      _inlineNeedsLogReplay = false;
+    }
 
     // Clear the entire inline region only on first paint or after resize.
-    if (_inlineNeedsFullClear) {
+    if (shouldClearInlineRegion) {
       for (var row = 0; row < uiHeight; row++) {
         final absRow = uiStartRow + row;
         out.write(Ansi.cursorTo(absRow, 1));
@@ -1080,6 +1322,7 @@ class UltravioletTuiRenderer
 
     // Write the offset UV output.
     out.write(shifted);
+    out.write(UvAnsi.setModeAutoWrap);
     out.write(Ansi.cursorRestoreDec);
 
     if (!_options.hideCursor) {
@@ -1087,7 +1330,38 @@ class UltravioletTuiRenderer
     }
     out.write(Ansi.endSynchronizedUpdate);
 
-    terminal.write(out.toString());
+    if (raw.isNotEmpty || shouldClearInlineRegion || shouldReplayLogBand) {
+      final output = out.toString();
+      _traceInlineAnsi('inline.ansi.flush', output);
+      terminal.write(output);
+    }
+  }
+
+  void _appendInlineLogReplay(StringBuffer out, int logBottom) {
+    if (logBottom <= 0) return;
+    for (var row = 1; row <= logBottom; row++) {
+      out
+        ..write(Ansi.cursorTo(row, 1))
+        ..write(Ansi.clearLine);
+    }
+    if (_inlineLogHistory.isEmpty) return;
+
+    final width = _inlineSafeTextColumns;
+    final count = _inlineLogHistory.length < logBottom
+        ? _inlineLogHistory.length
+        : logBottom;
+    final start = _inlineLogHistory.length - count;
+    final firstRow = logBottom - count + 1;
+    for (var i = 0; i < count; i++) {
+      final visible = _sanitizeInlineLogLine(
+        _inlineLogHistory[start + i],
+        width,
+      );
+      if (visible.isEmpty) continue;
+      out
+        ..write(Ansi.cursorTo(firstRow + i, 1))
+        ..write(visible);
+    }
   }
 
   /// Offsets all absolute row-addressing escape sequences by [rowOffset].
@@ -1128,6 +1402,12 @@ class UltravioletTuiRenderer
     if (!isInline) {
       terminal.write(uv_graphics.deleteAllRetainedGraphics());
       _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
+    } else {
+      terminal.write(Ansi.resetScrollRegion);
+      if (_options.uiAnchor == UiAnchor.bottom && terminal.supportsAnsi) {
+        _clearInlineRegion();
+        terminal.write(Ansi.cursorTo(terminal.height, 1));
+      }
     }
     if (_options.hideCursor) {
       terminal.showCursor();
@@ -1136,6 +1416,27 @@ class UltravioletTuiRenderer
       terminal.exitAltScreen();
     }
     _initialized = false;
+  }
+
+  void _clearInlineRegion() {
+    final scr = _screen;
+    if (scr == null) return;
+    final termHeight = terminal.height;
+    final uiHeight = scr.height().clamp(1, termHeight).toInt();
+    final uiStartRow = _options.uiAnchor == UiAnchor.bottom
+        ? termHeight - uiHeight + 1
+        : 1;
+    final out = StringBuffer()..write(Ansi.cursorSaveDec);
+    for (var row = 0; row < uiHeight; row++) {
+      out
+        ..write(Ansi.cursorTo(uiStartRow + row, 1))
+        ..write(Ansi.clearLine);
+    }
+    out
+      ..write(Ansi.cursorTo(termHeight, 1))
+      ..write(Ansi.clearLine)
+      ..write(Ansi.cursorRestoreDec);
+    terminal.write(out.toString());
   }
 }
 

@@ -16,12 +16,14 @@ class ChatBody extends w.StatelessWidget {
   ChatBody({
     required this.messages,
     this.scrollController,
+    this.showDiffs = true,
     this.showDiffContextBackground = false,
     super.key,
   });
 
   final List<ChatMessage> messages;
   final w.WidgetScrollController? scrollController;
+  final bool showDiffs;
   final bool showDiffContextBackground;
 
   @override
@@ -38,6 +40,7 @@ class ChatBody extends w.StatelessWidget {
           key: w.ValueKey('message-${messages[i].id}'),
           message: messages[i],
           index: i,
+          showDiffs: showDiffs,
           showDiffContextBackground: showDiffContextBackground,
         ),
     ];

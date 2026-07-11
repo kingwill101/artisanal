@@ -6,9 +6,7 @@ Stream<List<int>> get defaultInput => stdin;
 StringSink get defaultOutput => stdout;
 
 List<String> get defaultEnv =>
-    Platform.environment.entries
-        .map((e) => '${e.key}=${e.value}')
-        .toList();
+    Platform.environment.entries.map((e) => '${e.key}=${e.value}').toList();
 
 bool get defaultIsWindows => Platform.isWindows;
 

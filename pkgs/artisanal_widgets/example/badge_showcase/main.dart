@@ -1,4 +1,5 @@
 // Badge Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the Badge widget with per-side padding, width calculation,
 // and various color configurations.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(BadgeShowcase());
+  final app = WidgetApp(BadgeShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

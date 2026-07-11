@@ -1,13 +1,7 @@
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/style.dart' show Layout;
-import 'package:artisanal/bubbles.dart'
-    show
-        TextPositionDiagnosticRange,
-        TextDiagnosticSeverity,
-        textSearchActiveMatchDecorationKey;
-import 'package:artisanal/testing.dart';
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal/artisanal.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {

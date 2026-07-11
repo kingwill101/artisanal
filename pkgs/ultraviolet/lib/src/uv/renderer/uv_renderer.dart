@@ -244,9 +244,6 @@ final class RenderMetrics {
 }
 
 // Upstream references:
-// - `third_party/ultraviolet/terminal_renderer.go`
-// - `third_party/ultraviolet/terminal_renderer_hardscroll.go`
-// - `third_party/ultraviolet/terminal_renderer_hashmap.go`
 
 // Capabilities mask (subset).
 abstract final class _Cap {
@@ -342,12 +339,15 @@ final class UvTerminalRenderer extends TerminalRenderer {
   ///
   /// Optional [env] provides environment variables for capability detection.
   /// Set [isTty] to force TTY mode when the sink is not a real terminal.
-  UvTerminalRenderer(this._writer,
-      {List<String>? env, bool? isTty, bool isWindows = false})
-    : _isWindows = isWindows,
-      _env = env ?? const [],
-      _term = Environ(env ?? const []).getenv('TERM'),
-      _caps = _xtermCaps(Environ(env ?? const []).getenv('TERM')) {
+  UvTerminalRenderer(
+    this._writer, {
+    List<String>? env,
+    bool? isTty,
+    bool isWindows = false,
+  }) : _isWindows = isWindows,
+       _env = env ?? const [],
+       _term = Environ(env ?? const []).getenv('TERM'),
+       _caps = _xtermCaps(Environ(env ?? const []).getenv('TERM')) {
     _cur = _Cursor(x: -1, y: -1);
     _saved = _cur.clone();
     _profile = _detectProfile(_env, isTty, isWindows);
@@ -871,7 +871,6 @@ final class UvTerminalRenderer extends TerminalRenderer {
   /// inserted at the top of the visible area.
   @override
   void prependString(Buffer newbuf, String str) {
-    // Upstream: `third_party/ultraviolet/terminal_renderer.go` (`PrependString`).
     if (str.isEmpty) return;
 
     final w = newbuf.width();
@@ -1103,7 +1102,6 @@ final class UvTerminalRenderer extends TerminalRenderer {
       Cell(content: ' ', width: 1, style: _cur.style, link: _cur.link);
 
   void _updatePen(Cell? cell) {
-    // Upstream: `third_party/ultraviolet/terminal_renderer.go` (`updatePen`),
     // with profile downsampling.
     if (cell == null) {
       if (!_cur.style.isZero) {
@@ -1934,7 +1932,6 @@ final class UvTerminalRenderer extends TerminalRenderer {
   void _scrollOptimize(Buffer newbuf) {
     // Minimal port of UV scroll optimization sufficient for upstream output tests.
     //
-    // Upstream: `third_party/ultraviolet/terminal_renderer_hardscroll.go` and
     // `terminal_renderer_hashmap.go`.
     final height = newbuf.height();
     if (_oldnum.length < height) {
@@ -2351,11 +2348,7 @@ cp.Profile _detectProfile(List<String> env, bool? isTty, bool isWindows) {
   final forceTty = isTty ?? _parseBool(m['TTY_FORCE']);
   // UvTerminalRenderer can be used with arbitrary sinks; default to non-TTY
   // unless explicitly forced.
-  return cp_detect.detect(
-    isTty: forceTty,
-    env: m,
-    isWindows: isWindows,
-  );
+  return cp_detect.detect(isTty: forceTty, env: m, isWindows: isWindows);
 }
 
 bool _parseBool(String? value) {

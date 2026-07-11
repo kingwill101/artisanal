@@ -28,7 +28,6 @@ import '../unicode/width.dart';
 /// Underline style for terminal cells.
 enum UnderlineStyle { none, single, double, curly, dotted, dashed }
 
-/// Upstream: `third_party/ultraviolet/cell.go` (`Link`).
 /// Terminal hyperlink metadata (OSC 8).
 ///
 /// Carries a target [url] and optional [params] for terminals supporting
@@ -52,7 +51,6 @@ final class Link {
 
 /// Color representation sufficient for Ultraviolet parity tests.
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` stores `color.Color` values and
 /// uses `x/ansi` helpers for named/indexed colors.
 /// Unified UV color representation across palettes and true color.
 ///
@@ -118,7 +116,6 @@ final class UvRgb extends UvColor {
 
 /// Text attributes (bitmask).
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` (AttrBold, AttrFaint, ...).
 abstract final class Attr {
   static const int bold = 1 << 0;
   static const int faint = 1 << 1;
@@ -130,7 +127,6 @@ abstract final class Attr {
   static const int strikethrough = 1 << 7;
 }
 
-/// Upstream: `third_party/ultraviolet/cell.go` (`UvStyle`).
 /// Style attributes for a terminal [Cell].
 final class UvStyle {
   const UvStyle({
@@ -236,7 +232,6 @@ final class PackedCell {
 /// packed metadata signature so equality and hashing stay fast for the common
 /// case of plain single-rune cells.
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` (`Cell`, `EmptyCell`).
 final class Cell {
   Cell({
     String content = '',

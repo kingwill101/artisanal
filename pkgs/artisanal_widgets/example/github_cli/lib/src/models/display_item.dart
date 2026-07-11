@@ -148,6 +148,29 @@ final class GithubDisplayItem {
       target == GithubDisplayTarget.pullRequest;
 }
 
+List<GithubDisplayItem> githubDisplayItemsForBucket(
+  GithubOverviewBucket bucket, {
+  String repository = '',
+}) {
+  final items = <GithubDisplayItem>[
+    ...bucket.pullRequests.map(
+      (pullRequest) =>
+          GithubDisplayItem.pullRequest(pullRequest, repository: repository),
+    ),
+    ...bucket.issues.map(
+      (issue) => GithubDisplayItem.issue(issue, repository: repository),
+    ),
+  ];
+  items.sort((left, right) {
+    final leftUpdated =
+        left.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final rightUpdated =
+        right.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return rightUpdated.compareTo(leftUpdated);
+  });
+  return items;
+}
+
 List<GithubDisplayItem> githubDisplayItemsForTab(
   GithubDashboardData dashboard,
   int tabIndex,

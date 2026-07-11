@@ -1,4 +1,5 @@
 // OverflowBox & SizedOverflowBox Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates how OverflowBox overrides child constraints and how
 // SizedOverflowBox provides a fixed size while allowing children to overflow.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(OverflowBoxDemo());
+  final app = WidgetApp(OverflowBoxDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

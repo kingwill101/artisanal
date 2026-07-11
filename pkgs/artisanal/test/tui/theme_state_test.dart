@@ -16,6 +16,11 @@ void main() {
     expect(s.hasDarkBackground, true);
   });
 
+  test('BackgroundColorMsg uses WCAG luminance for dark detection', () {
+    expect(const BackgroundColorMsg(hex: '#282c34').isDark, isTrue);
+    expect(const BackgroundColorMsg(hex: '#f5f5f5').isDark, isFalse);
+  });
+
   test('TerminalThemeState keeps dark flag on unparseable hex', () {
     var s = const TerminalThemeState(
       backgroundHex: '#000000',
@@ -26,31 +31,31 @@ void main() {
     expect(s.hasDarkBackground, true);
   });
 
-  test('TerminalThemeState updates from UV color scheme events', () {
+  test('TerminalThemeState ignores color scheme preference messages', () {
     var s = const TerminalThemeState(
       backgroundHex: '#101010',
       hasDarkBackground: null,
     );
     s = s.update(UvEventMsg(const LightColorSchemeEvent()));
     expect(s.backgroundHex, '#101010');
-    expect(s.hasDarkBackground, false);
+    expect(s.hasDarkBackground, null);
 
     s = s.update(UvEventMsg(const DarkColorSchemeEvent()));
-    expect(s.hasDarkBackground, true);
+    expect(s.backgroundHex, '#101010');
+    expect(s.hasDarkBackground, null);
   });
 
-  test('TerminalThemeState updates from ColorSchemeMsg', () {
-    var s = const TerminalThemeState(
-      backgroundHex: '#101010',
-      hasDarkBackground: null,
-    );
+  test('TerminalColorSchemeState updates from color scheme messages', () {
+    var s = const TerminalColorSchemeState();
 
     s = s.update(const ColorSchemeMsg(dark: false));
-    expect(s.backgroundHex, '#101010');
-    expect(s.hasDarkBackground, false);
+    expect(s.hasDarkColorScheme, false);
 
     s = s.update(const ColorSchemeMsg(dark: true));
-    expect(s.hasDarkBackground, true);
+    expect(s.hasDarkColorScheme, true);
+
+    s = s.update(UvEventMsg(const LightColorSchemeEvent()));
+    expect(s.hasDarkColorScheme, false);
   });
 
   test('TerminalThemeState tracks foreground and cursor colors', () {
@@ -87,12 +92,14 @@ void main() {
 
     host.updateTerminalTheme(const ForegroundColorMsg(hex: '#eeeeee'));
     host.updateTerminalTheme(const BackgroundColorMsg(hex: '#111111'));
+    host.updateTerminalTheme(const ColorSchemeMsg(dark: false));
     host.updateTerminalTheme(const CursorColorMsg(hex: '#ff00ff'));
 
     expect(host.terminalTheme.foregroundHex, '#eeeeee');
     expect(host.terminalTheme.backgroundHex, '#111111');
     expect(host.terminalTheme.cursorHex, '#ff00ff');
     expect(host.terminalTheme.hasDarkBackground, isTrue);
+    expect(host.terminalColorScheme.hasDarkColorScheme, isFalse);
     expect(host.terminalPalette.snapshot.backgroundHex, '#111111');
   });
 

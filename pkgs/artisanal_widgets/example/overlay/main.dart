@@ -1,4 +1,5 @@
 // Overlay Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the Overlay and OverlayEntry widgets for managing layered
 // content. Press 'a' to add an entry, 'r' to remove the last entry,
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(OverlayDemo());
+  final app = WidgetApp(OverlayDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

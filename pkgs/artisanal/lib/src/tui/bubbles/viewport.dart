@@ -1,10 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:artisanal/style.dart';
 import '../../style/ranges.dart' as ranges;
-import '../../style/color.dart';
-import '../../style/style.dart';
 import '../../terminal/ansi.dart';
-import '../../layout/layout.dart';
 import '../../unicode/grapheme.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
@@ -19,7 +17,7 @@ import 'key_binding.dart';
 const undefined = Object();
 
 /// Key bindings for viewport navigation.
-class ViewportKeyMap implements KeyMap {
+class ViewportKeyMap extends KeyMap {
   /// Creates a key mapping configuration for viewport navigation.
   ViewportKeyMap({
     KeyBinding? pageDown,
@@ -41,11 +39,23 @@ class ViewportKeyMap implements KeyMap {
        halfPageDown =
            halfPageDown ??
            KeyBinding.withHelp(['d', 'ctrl+d'], 'd', '½ page down'),
-       down = down ?? KeyBinding.withHelp(['down', 'j'], '↓/j', 'down'),
-       up = up ?? KeyBinding.withHelp(['up', 'k'], '↑/k', 'up'),
-       left = left ?? KeyBinding.withHelp(['left', 'h'], '←/h', 'left'),
-       right = right ?? KeyBinding.withHelp(['right', 'l'], '→/l', 'right'),
-       copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy');
+       down =
+           down ??
+           KeyBinding.withHelp(['down', 'j'], '${Arrows.down}/j', 'down'),
+       up = up ?? KeyBinding.withHelp(['up', 'k'], '${Arrows.up}/k', 'up'),
+       left =
+           left ??
+           KeyBinding.withHelp(['left', 'h'], '${Arrows.left}/h', 'left'),
+       right =
+           right ??
+           KeyBinding.withHelp(['right', 'l'], '${Arrows.right}/l', 'right'),
+       copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy') {
+    shortHelp = [this.up, this.down, this.pageUp, this.pageDown, this.copy];
+    fullHelp = [
+      [this.up, this.down, this.pageUp, this.pageDown],
+      [this.halfPageUp, this.halfPageDown, this.left, this.right, this.copy],
+    ];
+  }
 
   /// Key binding for scrolling one page down.
   final KeyBinding pageDown;
@@ -73,15 +83,6 @@ class ViewportKeyMap implements KeyMap {
 
   /// Key binding for copying selected text.
   final KeyBinding copy;
-
-  @override
-  List<KeyBinding> shortHelp() => [up, down, pageUp, pageDown, copy];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [up, down, pageUp, pageDown],
-    [halfPageUp, halfPageDown, left, right, copy],
-  ];
 }
 
 /// GutterContext provides context to a [GutterFunc].

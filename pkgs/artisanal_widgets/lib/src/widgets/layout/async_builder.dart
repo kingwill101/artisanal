@@ -1,4 +1,22 @@
-part of 'layout_widgets.dart';
+
+// ignore_for_file: unused_shown_name
+import 'dart:async';
+import 'package:artisanal/tui.dart'
+    show
+        Cmd,
+        Msg,
+        KeyType,
+        KeyMsg,
+        MouseMsg,
+        MouseAction,
+        MouseButton,
+        HitTestMouseMsg,
+        View,
+        TuiTrace,
+        TraceTag;
+import '../core/framework.dart'
+    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../core/widget.dart';
 
 enum AsyncConnectionState { none, waiting, active, done }
 

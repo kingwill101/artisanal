@@ -1,5 +1,4 @@
 #!/usr/bin/env dart
-
 // tui:allow-stdout - this example is a one-shot capability report, not a TUI.
 
 import 'dart:io' as io;

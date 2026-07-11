@@ -1,4 +1,34 @@
-part of 'components_widgets.dart';
+
+// ignore_for_file: unused_shown_name
+import 'package:artisanal/bubbles.dart'
+    show
+        CodeLanguageProfile,
+        CursorModel,
+        TextAreaKeyMap,
+        TextAreaModel,
+        TextAreaStyles,
+        TextDecorationRange,
+        TextSyntaxBuildResult,
+        TextSyntaxDecorationPatch,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextSyntaxProvider,
+        TextDocument,
+        TextDocumentChange,
+        keyMatchesSingle,
+        codeHandleClosingDelimiterAlignment,
+        codeHandlePairBackspace,
+        codeHandleAutoPair,
+        codeInsertIndentedNewline,
+        codeToggleBlockComments,
+        resolveCodeLanguageProfile,
+        textSyntaxChangeWindow,
+        textSyntaxDecorationLayerKey,
+        textSyntaxDecorationLayerPriority;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Style;
 
 /// A higher-level Markdown editor with a live rendered preview.
 ///

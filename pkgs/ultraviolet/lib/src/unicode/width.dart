@@ -1,4 +1,3 @@
-/// Upstream: `third_party/ultraviolet/styled.go` uses `ansi.GraphemeWidth` and
 /// `ansi.WcWidth`. For now, this is a minimal wcwidth-like approximation.
 ///
 /// Note: This is intentionally minimal-first. The Ultraviolet parity tests we

@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
 
 /// A simple yes/no confirmation dialog.
 ///
@@ -43,33 +48,28 @@ class DialogConfirm extends StatefulWidget {
   /// Called when cancel is selected or esc is pressed.
   final CmdCallback? onCancel;
 
-  /// Show a confirmation dialog via [DialogStack].
+  /// Show a confirmation dialog.
   ///
-  /// Pushes a [DialogConfirm] onto the nearest [DialogStack] and waits
-  /// for the user's response.
-  static void show(
+  /// Returns `true` if the user confirmed, `false` (or `null`) if cancelled.
+  static Future<bool?> show(
     BuildContext context, {
     required String title,
     String? message,
     String confirmLabel = 'Confirm',
     String cancelLabel = 'Cancel',
-    void Function(bool confirmed)? onResult,
   }) {
-    final stack = DialogStack.of(context);
-    stack.push(
-      DialogConfirm(
+    return Navigator.of(context).showDialog<bool>(
+      builder: (ctx) => DialogConfirm(
         title: title,
         message: message,
         confirmLabel: confirmLabel,
         cancelLabel: cancelLabel,
         onConfirm: () {
-          stack.pop();
-          onResult?.call(true);
+          Navigator.of(ctx).pop(true);
           return null;
         },
         onCancel: () {
-          stack.pop();
-          onResult?.call(false);
+          Navigator.of(ctx).pop(false);
           return null;
         },
       ),
@@ -120,9 +120,9 @@ class _DialogConfirmState extends State<DialogConfirm> {
     final hintFg = dTheme?.hintForeground ?? theme.muted;
     final w = dTheme?.width ?? 60;
 
-    final titleStyle = _copyStyle(theme.titleMedium)..foreground(fg);
-    final msgStyle = _copyStyle(theme.bodyMedium)..foreground(hintFg);
-    final escStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final titleStyle = copyStyle(theme.titleMedium)..foreground(fg);
+    final msgStyle = copyStyle(theme.bodyMedium)..foreground(hintFg);
+    final escStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     return SizedBox(
       width: w,

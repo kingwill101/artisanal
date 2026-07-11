@@ -1,4 +1,10 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/style.dart' hide Padding, Align;
+
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'colored_box.dart';
+import 'container.dart';
+import 'geometry.dart';
 
 /// Where to paint a decoration relative to the child.
 enum DecorationPosition {
@@ -57,7 +63,7 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child != null ? _renderWidget(child!) : '';
+    final content = child != null ? renderWidget(child!) : '';
     return _renderDecoratedContent(content, decoration, position);
   }
 }
@@ -102,13 +108,13 @@ String _renderDecoratedContent(
   // For a simple Decoration (not BoxDecoration), just apply background color.
   if (decoration is! BoxDecoration) {
     if (decoration.color != null) {
-      return _renderColoredContent(content, decoration.color!);
+      return renderColoredContent(content, decoration.color!);
     }
     return content;
   }
 
   // BoxDecoration: delegate to the container renderer for border, radius, etc.
-  return _renderContainerContent(
+  return renderContainerContent(
     contentStr: content,
     decoration: decoration,
     foregroundDecoration: position == DecorationPosition.foreground

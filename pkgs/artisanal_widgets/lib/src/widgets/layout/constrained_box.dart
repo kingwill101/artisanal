@@ -1,4 +1,10 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
 
 class RenderConstrainedBox extends RenderBox {
   RenderConstrainedBox({required this.additionalConstraints});
@@ -24,7 +30,7 @@ class RenderConstrainedBox extends RenderBox {
     );
     super.layout(combined);
     _child?.layout(combined);
-    final rendered = _constrainContent(
+    final rendered = constrainContent(
       _child?.paint() ?? '',
       width: combined.hasBoundedWidth ? combined.maxWidth.toInt() : null,
       height: combined.hasBoundedHeight ? combined.maxHeight.toInt() : null,
@@ -59,13 +65,13 @@ class ConstrainedBox extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child == null ? '' : _renderWidget(child!);
+    final content = child == null ? '' : renderWidget(child!);
     final width = constraints.hasBoundedWidth
         ? constraints.maxWidth.toInt()
         : null;
     final height = constraints.hasBoundedHeight
         ? constraints.maxHeight.toInt()
         : null;
-    return _constrainContent(content, width: width, height: height);
+    return constrainContent(content, width: width, height: height);
   }
 }

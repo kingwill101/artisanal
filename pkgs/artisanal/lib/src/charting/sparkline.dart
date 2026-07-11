@@ -5,9 +5,10 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Block characters for sparkline rendering (9 levels: empty + 8 bars).
-const sparkChars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const sparkChars = SparkBars.levels;
 
 /// Draws a compact sparkline of [values] into [area] on [screen].
 ///
@@ -113,14 +114,20 @@ void drawSparkline(
     for (var r = 0; r < fullRows; r++) {
       final cellY = area.maxY - 1 - r;
       if (cellY < area.minY) break;
-      putCell(screen, area.minX + x, cellY, '█', cellStyle);
+      putSolidChartCell(
+        screen,
+        area.minX + x,
+        cellY,
+        cellStyle,
+        BlockShades.full,
+      );
     }
 
     if (remainder > 0) {
       final cellY = area.maxY - 1 - fullRows;
       if (cellY >= area.minY) {
         final glyph = sparkChars[remainder];
-        putCell(screen, area.minX + x, cellY, glyph, cellStyle);
+        putSolidChartCell(screen, area.minX + x, cellY, cellStyle, glyph);
       }
     }
   }

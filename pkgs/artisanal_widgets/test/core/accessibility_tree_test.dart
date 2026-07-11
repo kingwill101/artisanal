@@ -1,26 +1,26 @@
 /// Tests for deterministic accessibility tree construction and diffs.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('Accessibility tree', () {
     test('builds from widget hierarchy with stable IDs', () {
       final leafA = _AccessibleNode(
-        key: const w.ValueKey('node-a'),
+        key: const ValueKey('node-a'),
         label: 'first node',
         role: 'heading',
         text: 'Node A',
       );
       final leafB = _AccessibleNode(
-        key: const w.ValueKey('node-b'),
+        key: const ValueKey('node-b'),
         label: 'second node',
         role: 'label',
         text: 'Node B',
       );
-      final app = tui.WidgetApp(_StaticA11yTree(children: [leafA, leafB]));
+      final app = WidgetApp(_StaticA11yTree(children: [leafA, leafB]));
       app.view();
 
       final tree = app.buildAccessibilityTree();
@@ -46,12 +46,12 @@ void main() {
 
     test('keeps IDs stable for unchanged keyed nodes across rebuilds', () {
       final leaf = _AccessibleNode(
-        key: const w.ValueKey('leaf'),
+        key: const ValueKey('leaf'),
         label: 'stable',
         role: 'status',
         text: 'value',
       );
-      final app = tui.WidgetApp(_CounterA11yRoot(child: leaf));
+      final app = WidgetApp(_CounterA11yRoot(child: leaf));
       app.view();
 
       final before = app.buildAccessibilityTree();
@@ -66,18 +66,18 @@ void main() {
 
     test('detects node changes and added/removed nodes', () {
       final first = _AccessibleNode(
-        key: const w.ValueKey('first'),
+        key: const ValueKey('first'),
         label: 'first node',
         role: 'item',
         text: 'First',
       );
       final second = _AccessibleNode(
-        key: const w.ValueKey('second'),
+        key: const ValueKey('second'),
         label: 'second node',
         role: 'item',
         text: 'Second',
       );
-      final app = tui.WidgetApp(_ToggleA11yRoot(first: first, second: second));
+      final app = WidgetApp(_ToggleA11yRoot(first: first, second: second));
       app.view();
       final baseline = app.buildAccessibilityTree();
       expect(
@@ -114,7 +114,7 @@ void main() {
   });
 }
 
-class _AccessibleNode extends w.StatelessWidget {
+class _AccessibleNode extends StatelessWidget {
   _AccessibleNode({
     super.key,
     required this.label,
@@ -133,42 +133,42 @@ class _AccessibleNode extends w.StatelessWidget {
   String get accessibilityRole => role;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text(text);
+  Widget build(BuildContext context) {
+    return Text(text);
   }
 }
 
-class _StaticA11yTree extends w.StatelessWidget {
+class _StaticA11yTree extends StatelessWidget {
   _StaticA11yTree({required this.children});
 
   @override
-  final List<w.Widget> children;
+  final List<Widget> children;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(children: children);
+  Widget build(BuildContext context) {
+    return Column(children: children);
   }
 }
 
-class _CounterA11yRoot extends w.StatefulWidget {
+class _CounterA11yRoot extends StatefulWidget {
   _CounterA11yRoot({required this.child});
 
-  final w.Widget child;
+  final Widget child;
 
   @override
-  w.State createState() => _CounterA11yRootState();
+  State createState() => _CounterA11yRootState();
 }
 
-class _CounterA11yRootState extends w.State<_CounterA11yRoot> {
+class _CounterA11yRootState extends State<_CounterA11yRoot> {
   int _count = 0;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(children: [w.Text('count: $_count'), widget.child]);
+  Widget build(BuildContext context) {
+    return Column(children: [Text('count: $_count'), widget.child]);
   }
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _IncrementA11yCounterMsg) {
       setState(() => _count += 1);
     }
@@ -176,26 +176,26 @@ class _CounterA11yRootState extends w.State<_CounterA11yRoot> {
   }
 }
 
-class _ToggleA11yRoot extends w.StatefulWidget {
+class _ToggleA11yRoot extends StatefulWidget {
   _ToggleA11yRoot({required this.first, required this.second});
 
   final _AccessibleNode first;
   final _AccessibleNode second;
 
   @override
-  w.State createState() => _ToggleA11yRootState();
+  State createState() => _ToggleA11yRootState();
 }
 
-class _ToggleA11yRootState extends w.State<_ToggleA11yRoot> {
+class _ToggleA11yRootState extends State<_ToggleA11yRoot> {
   bool _showSecond = false;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(children: [widget.first, if (_showSecond) widget.second]);
+  Widget build(BuildContext context) {
+    return Column(children: [widget.first, if (_showSecond) widget.second]);
   }
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _ToggleA11yNodesMsg) {
       setState(() => _showSecond = !_showSecond);
     }
@@ -203,10 +203,10 @@ class _ToggleA11yRootState extends w.State<_ToggleA11yRoot> {
   }
 }
 
-class _IncrementA11yCounterMsg extends tui.Msg {
+class _IncrementA11yCounterMsg extends Msg {
   _IncrementA11yCounterMsg();
 }
 
-class _ToggleA11yNodesMsg extends tui.Msg {
+class _ToggleA11yNodesMsg extends Msg {
   _ToggleA11yNodesMsg();
 }

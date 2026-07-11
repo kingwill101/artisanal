@@ -1,4 +1,4 @@
-part of 'layout_widgets.dart';
+import 'text.dart';
 
 class Label extends Text {
   Label(super.data, {super.style, super.key});

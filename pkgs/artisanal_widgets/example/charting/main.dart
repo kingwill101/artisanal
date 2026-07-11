@@ -1,4 +1,5 @@
 // Charting Widgets Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates all chart types: Sparkline, Line, Bar, Heatmap, Pie, and
 // Ribbon. Uses tabs to switch between charts. The Line chart tab also
@@ -11,14 +12,14 @@
 
 import 'dart:math' as math;
 
-import 'package:artisanal/charting.dart' show ChartLegendEntry, ChartRamp;
+import 'package:artisanal/artisanal.dart' show ChartLegendEntry, ChartRamp;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show UvStyle, UvColor;
 import 'package:artisanal_widgets/charting.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ChartShowcase());
+  final app = WidgetApp(ChartShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

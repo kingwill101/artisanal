@@ -1,4 +1,27 @@
-part of 'layout_widgets.dart';
+
+// ignore_for_file: unused_shown_name
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/uv.dart'
+    show
+        Canvas,
+        Cell,
+        Drawable,
+        ITerm2ImageDrawable,
+        KittyImageDrawable,
+        SixelImageDrawable,
+        StyledString,
+        TerminalCapabilities,
+        UvStyle,
+        UvBasic16,
+        UvColor,
+        UvIndexed256,
+        UvRgb,
+        UnderlineStyle,
+        HalfBlockImageDrawable,
+        mayContainTerminalGraphics;
+import '_layout_utils.dart';
+import 'geometry.dart';
+import '../rendering/render_object.dart';
 
 /// A widget that fills its area with a single solid color.
 ///
@@ -29,8 +52,8 @@ class ColoredBox extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child != null ? _renderWidget(child!) : '';
-    return _renderColoredContent(content, color);
+    final content = child != null ? renderWidget(child!) : '';
+    return renderColoredContent(content, color);
   }
 }
 
@@ -47,7 +70,7 @@ class _RenderColoredBox extends RenderBox {
     super.layout(constraints);
     _child?.layout(constraints);
     final content = _child?.paint() ?? '';
-    _lastPaint = _renderColoredContent(content, color);
+    _lastPaint = renderColoredContent(content, color);
     size = constraints.constrain(
       Size(
         Layout.getWidth(_lastPaint!).toDouble(),
@@ -61,13 +84,13 @@ class _RenderColoredBox extends RenderBox {
     final cached = _lastPaint;
     if (cached != null) return cached;
     final content = _child?.paint() ?? '';
-    return _renderColoredContent(content, color);
+    return renderColoredContent(content, color);
   }
 }
 
-String _renderColoredContent(String content, Color color) {
+String renderColoredContent(String content, Color color) {
   if (content.isEmpty) return '';
-  final bgColor = _colorToUvColor(color);
+  final bgColor = colorToUvColor(color);
   if (bgColor == null) return content;
 
   final w = Layout.getWidth(content);
@@ -86,7 +109,7 @@ String _renderColoredContent(String content, Color color) {
   }
 
   // Draw content on top.
-  _drawStyledContent(
+  drawStyledContent(
     canvas,
     content,
     0,

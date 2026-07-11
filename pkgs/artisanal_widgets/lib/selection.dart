@@ -10,7 +10,9 @@
 /// The legacy `package:artisanal_widgets/artisanal_widgets.dart` entrypoint
 /// remains available for backward compatibility and still exposes additional
 /// experimental internals and modules.
+///
+/// {@category Selection}
 library;
 
 export 'widgets.dart';
-export 'src/widgets/selection/selection_widgets.dart';
+export 'src/widgets/selection/selection.dart';

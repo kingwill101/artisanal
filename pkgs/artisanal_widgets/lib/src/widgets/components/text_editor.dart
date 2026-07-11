@@ -1,4 +1,66 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
+// ignore_for_file: unused_shown_name
+
+import 'package:artisanal/bubbles.dart'
+    show
+        CursorModel,
+        TextAreaKeyMap,
+        TextAreaModel,
+        TextAreaStyles,
+        TextDecorationRange,
+        TextSyntaxBuildResult,
+        TextSyntaxDecorationPatch,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextSyntaxProvider,
+        TextDocument,
+        TextDocumentChange,
+        keyMatchesSingle,
+        codeHandleClosingDelimiterAlignment,
+        codeHandlePairBackspace,
+        codeHandleAutoPair,
+        codeInsertIndentedNewline,
+        codeToggleBlockComments,
+        resolveCodeLanguageProfile,
+        textSyntaxChangeWindow,
+        textSyntaxDecorationLayerKey,
+        textSyntaxDecorationLayerPriority,
+        TextHighlightRange,
+        TextDiagnosticSeverity,
+        TextOffsetStateSnapshot,
+        TextCommandResult,
+        TextLineStateSnapshot,
+        textSearchDecorationLayerKey,
+        textSearchDecorationLayerPriority,
+        textSearchDecorations,
+        findTextQueryHighlights,
+        textOutdentLinesDocument,
+        textIndentLinesDocument,
+        textJoinLinesDocument,
+        textDeleteLinesDocument,
+        textDuplicateSelectedLinesBelowDocument,
+        textDuplicateSelectedLinesAboveDocument,
+        textMoveSelectedLinesDocument,
+        textSplitLine,
+        textTransformSelectionOrLine,
+        textCapitalizeWords,
+        textSortSelectedLinesDocument,
+        textToggleLinePrefixDocument,
+        textToggleNumberedListDocument,
+        textToggleChecklistStateDocument,
+        textRenumberNumberedListDocument,
+        textToggleHeadingPrefixDocument,
+        textCleanupWhitespaceDocument,
+        textWrapSelection,
+        textUnwrapSelection,
+        textDiagnosticSummaryLabel;
+import 'package:artisanal/style.dart' show Color, Border;
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/tui.dart' show Cmd, KeyBinding, KeyMap, KeyMsg;
+import 'package:artisanal/widgets.dart';
+
+import 'text_area_controller_core_bridge.dart'
+    show TextAreaControllerCoreBridge;
 
 /// A higher-level editor surface built on top of [TextArea].
 ///
@@ -340,8 +402,8 @@ class _TextEditorState extends State<TextEditor> {
   String get _focusId => widget.focusId ?? '${widget.id}.editor';
   String get _searchFocusId => '$_focusId.search';
   String get _gotoFocusId => '$_focusId.goto';
-  _TextAreaControllerCoreBridge get _coreBridge =>
-      _TextAreaControllerCoreBridge(_controller);
+  TextAreaControllerCoreBridge get _coreBridge =>
+      TextAreaControllerCoreBridge(_controller);
 
   @override
   void initState() {
@@ -1135,13 +1197,13 @@ class _TextEditorState extends State<TextEditor> {
         ...widget.extraHelpBindings,
       ],
     );
-    final statsStyle = _copyStyle(theme.labelSmall)
+    final statsStyle = copyStyle(theme.labelSmall)
       ..foreground(
         isEditorActive
             ? (editorTheme?.metaForeground ?? theme.resolvedOnSurfaceVariant)
             : (editorTheme?.inactiveMetaForeground ?? theme.muted),
       );
-    final statusStyle = _copyStyle(theme.labelSmall)
+    final statusStyle = copyStyle(theme.labelSmall)
       ..foreground(
         _isDirty
             ? theme.warning
@@ -1153,9 +1215,9 @@ class _TextEditorState extends State<TextEditor> {
     final activeDiagnostic = bodyController.activeDiagnostic;
     final diagnosticStyle = activeDiagnostic == null
         ? null
-        : (_copyStyle(theme.labelSmall)
+        : (copyStyle(theme.labelSmall)
             ..foreground(_diagnosticColor(theme, activeDiagnostic.severity)));
-    final titleStyle = _copyStyle(theme.titleMedium)
+    final titleStyle = copyStyle(theme.titleMedium)
       ..foreground(
         isEditorActive
             ? (editorTheme?.titleForeground ?? theme.onSurface)
@@ -1301,7 +1363,7 @@ class _TextEditorState extends State<TextEditor> {
   }
 }
 
-class _TextEditorHelpKeyMap implements KeyMap {
+class _TextEditorHelpKeyMap extends KeyMap {
   _TextEditorHelpKeyMap(
     this.base, {
     this.saveBinding,
@@ -1321,7 +1383,10 @@ class _TextEditorHelpKeyMap implements KeyMap {
     this.joinLinesBinding,
     this.splitLineBinding,
     this.extraBindings = const [],
-  });
+  }) {
+    shortHelp = _buildShortHelp();
+    fullHelp = _buildFullHelp();
+  }
 
   final KeyMap base;
   final KeyBinding? saveBinding;
@@ -1342,10 +1407,9 @@ class _TextEditorHelpKeyMap implements KeyMap {
   final KeyBinding? splitLineBinding;
   final List<KeyBinding> extraBindings;
 
-  @override
-  List<KeyBinding> shortHelp() {
+  List<KeyBinding> _buildShortHelp() {
     if (base is! TextAreaKeyMap) {
-      final bindings = base.shortHelp();
+      final bindings = base.shortHelp;
       return [
         ?saveBinding,
         ?searchBinding,
@@ -1396,9 +1460,8 @@ class _TextEditorHelpKeyMap implements KeyMap {
     ];
   }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    final groups = [...base.fullHelp()];
+  List<List<KeyBinding>> _buildFullHelp() {
+    final groups = [...base.fullHelp];
     final editorBindings = <KeyBinding>[
       ?saveBinding,
       ?searchBinding,

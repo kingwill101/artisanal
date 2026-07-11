@@ -14,11 +14,13 @@ import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/key.dart' show Key, UniqueKey;
 import '../core/widget.dart';
 import '../focus/focus.dart' show FocusScope;
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 import 'navigator_observer.dart';
 import 'pop_behavior.dart';
 import 'route.dart';
 import 'route_settings.dart';
+import 'dialog_route.dart' show DialogRoute;
+import 'animation_style.dart' show AnimationStyle;
 
 /// A widget that manages a stack of [Route] objects.
 ///
@@ -279,6 +281,9 @@ class NavigatorState extends State<Navigator> {
   Future<T?> pushNamed<T>(String routeName, {Object? arguments}) {
     final settings = RouteSettings(name: routeName, arguments: arguments);
     final route = _createRoute(settings);
+    if (route == null && widget.onUnknownRoute != null) {
+      return push<T>(widget.onUnknownRoute!(settings) as Route<T>);
+    }
     if (route == null) {
       throw StateError(
         'Navigator.pushNamed called with a route name that could not be '
@@ -385,10 +390,10 @@ class NavigatorState extends State<Navigator> {
     }
   }
 
-  /// Shows a modal dialog by pushing a [ModalRoute].
+  /// Shows a modal dialog by pushing a [DialogRoute].
   ///
   /// Returns a [Future] that completes with the dialog's result when
-  /// the modal is dismissed.
+  /// the dialog is dismissed.
   ///
   /// ```dart
   /// final result = await Navigator.of(context).showDialog<bool>(
@@ -399,23 +404,25 @@ class NavigatorState extends State<Navigator> {
     required RouteWidgetBuilder builder,
     bool barrierDismissible = true,
     Color? barrierColor,
-    bool animateBarrier = true,
-    Duration barrierAnimationDuration = const Duration(milliseconds: 200),
+    String? barrierLabel,
+    bool useSafeArea = true,
     Alignment alignment = Alignment.center,
     num? width,
     num? height,
-    String? name,
+    RouteSettings? routeSettings,
+    AnimationStyle? animationStyle,
   }) {
-    final route = ModalRoute<T>(
+    final route = DialogRoute<T>(
       builder: builder,
       barrierDismissible: barrierDismissible,
       barrierColor: barrierColor,
-      animateBarrier: animateBarrier,
-      barrierAnimationDuration: barrierAnimationDuration,
+      barrierLabel: barrierLabel,
+      useSafeArea: useSafeArea,
       alignment: alignment,
       width: width,
       height: height,
-      settings: RouteSettings(name: name ?? '/dialog'),
+      animationStyle: animationStyle,
+      settings: routeSettings ?? RouteSettings(name: DialogRoute.routeName),
     );
     return push<T>(route);
   }
@@ -451,17 +458,29 @@ class NavigatorState extends State<Navigator> {
     }
   }
 
-  Cmd? _handleKeyPress(KeyMsg msg) {
-    if (!canPop()) return null;
+  Cmd? _popFor(KeyMsg msg) {
+    if (!canPop()) {
+      return null;
+    }
 
     if (widget.popBehavior.shouldPop(msg)) {
       final currentRoute = _routes.last;
 
-      // Check async pop confirmation.
+      if (currentRoute.willHandlePopInternally) {
+        return null;
+      }
+
+      final popCanPop = widget.popBehavior.canPop;
+      if (popCanPop != null && !popCanPop(currentRoute)) {
+        return null;
+      }
+
+      if (currentRoute.popDisposition == RoutePopDisposition.doNotPop) {
+        return null;
+      }
+
       final onPopInvoked = widget.popBehavior.onPopInvoked;
       if (onPopInvoked != null) {
-        // Schedule the async confirmation. We can't await in handleIntercept,
-        // so we fire-and-forget and pop in the callback.
         onPopInvoked(currentRoute).then((shouldPop) {
           if (shouldPop && _routes.contains(currentRoute)) {
             pop();
@@ -479,8 +498,13 @@ class NavigatorState extends State<Navigator> {
 
   @override
   Cmd? handleIntercept(Msg msg) {
+    return null;
+  }
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
     if (msg is KeyMsg) {
-      return _handleKeyPress(msg);
+      return _popFor(msg);
     }
     return null;
   }
@@ -531,7 +555,7 @@ class NavigatorState extends State<Navigator> {
           _RouteEntry(
             key: key,
             offstage: true,
-            child: entries[i].builder(context),
+            child: Builder(builder: (ctx) => entries[i].builder(ctx)),
           ),
         );
       }
@@ -540,7 +564,12 @@ class NavigatorState extends State<Navigator> {
     // Active entries last (from opaqueIndex onward).
     for (var i = opaqueIndex; i < entries.length; i++) {
       final key = _entryKeys[entries[i]];
-      children.add(_RouteEntry(key: key, child: entries[i].builder(context)));
+      children.add(
+        _RouteEntry(
+          key: key,
+          child: Builder(builder: (ctx) => entries[i].builder(ctx)),
+        ),
+      );
     }
 
     // Always use a Stack — even for a single child — so the element tree
@@ -594,11 +623,8 @@ class _RouteEntryState extends State<_RouteEntry> {
     );
   }
 
-  /// Intercepts ALL messages when offstage to prevent the child subtree
-  /// from processing input events or executing side effects.
   @override
   Cmd? handleIntercept(Msg msg) {
-    if (widget.offstage) return Cmd.none();
     return null;
   }
 }

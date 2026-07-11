@@ -1,4 +1,14 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/uv.dart' show StyledString, Canvas, UvStyle;
+
+import '../core/widget.dart';
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'enums.dart';
+import 'geometry.dart';
+import 'positioned.dart';
+import 'spacing.dart';
 
 class StackParentData {
   const StackParentData({
@@ -52,10 +62,10 @@ class RenderStack extends RenderBox {
     final childHeight = child.size.height.toInt();
 
     if (data != null && data.isPositioned) {
-      final left = _resolveDimension(data.left);
-      final right = _resolveDimension(data.right);
-      final top = _resolveDimension(data.top);
-      final bottom = _resolveDimension(data.bottom);
+      final left = resolveDimension(data.left);
+      final right = resolveDimension(data.right);
+      final top = resolveDimension(data.top);
+      final bottom = resolveDimension(data.bottom);
 
       final x =
           left ??
@@ -109,7 +119,7 @@ class RenderStack extends RenderBox {
     }
 
     var resolvedWidth =
-        _resolveDimensionDouble(width) ??
+        resolveDimensionDouble(width) ??
         (expandWidth ??
             (hasNonPositionedChild
                 ? maxWidth
@@ -117,7 +127,7 @@ class RenderStack extends RenderBox {
                 ? constraints.maxWidth
                 : 0.0));
     var resolvedHeight =
-        _resolveDimensionDouble(height) ??
+        resolveDimensionDouble(height) ??
         (expandHeight ??
             (hasNonPositionedChild
                 ? maxHeight
@@ -138,17 +148,17 @@ class RenderStack extends RenderBox {
       final child = children[i];
       final data = child.parentData as StackParentData?;
       if (data != null && data.isPositioned) {
-        final left = _resolveDimensionDouble(data.left);
-        final right = _resolveDimensionDouble(data.right);
-        final top = _resolveDimensionDouble(data.top);
-        final bottom = _resolveDimensionDouble(data.bottom);
+        final left = resolveDimensionDouble(data.left);
+        final right = resolveDimensionDouble(data.right);
+        final top = resolveDimensionDouble(data.top);
+        final bottom = resolveDimensionDouble(data.bottom);
         final childWidth =
-            _resolveDimensionDouble(data.width) ??
+            resolveDimensionDouble(data.width) ??
             (left != null && right != null
                 ? math.max(0, resolvedWidth - left - right)
                 : null);
         final childHeight =
-            _resolveDimensionDouble(data.height) ??
+            resolveDimensionDouble(data.height) ??
             (top != null && bottom != null
                 ? math.max(0, resolvedHeight - top - bottom)
                 : null);
@@ -204,7 +214,7 @@ class RenderStack extends RenderBox {
         // onto the main canvas, skipping the temp canvas + cell-by-cell copy.
         StyledString(content).draw(canvas, canvas.bounds());
       } else {
-        _drawStyledContent(
+        drawStyledContent(
           canvas,
           content,
           x,
@@ -219,7 +229,7 @@ class RenderStack extends RenderBox {
     }
 
     var result = canvas.render();
-    result = _padToStackSize(result, targetWidth, targetHeight);
+    result = padToStackSize(result, targetWidth, targetHeight);
     return result;
   }
 }
@@ -273,7 +283,7 @@ class Stack extends MultiChildRenderObjectWidget {
       clipBehavior: clipBehavior,
     );
     for (final child in children) {
-      final renderChild = RenderDelegateBox(() => _renderWidget(child));
+      final renderChild = RenderDelegateBox(() => renderWidget(child));
       final info = _stackInfoFor(child);
       if (info != null) {
         renderChild.parentData = info;

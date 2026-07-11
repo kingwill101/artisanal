@@ -1,8 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity (scoped):
-// - `third_party/ultraviolet/key_test.go` (TestReadLongInput)
 void main() {
   group('UV TerminalReader parity (long input)', () {
     test('streams 1000 printable runes', () {

@@ -26,6 +26,14 @@ final class GithubQueueNotifier extends ChangeNotifier {
   int _cachedTabIndex = -1;
   GithubOverviewFilter? _cachedOverviewFilter;
 
+  String? _searchQuery;
+  GithubOverviewBucket? _searchResults;
+  bool _searchLoading = false;
+  String? _searchError;
+  int _searchPage = 1;
+  bool _searchHasMore = false;
+  bool _searchPageLoading = false;
+
   int get tabIndex => _tabIndex;
   GithubOverviewFilter get overviewFilter => _overviewFilter;
   int get selectedIndex => _selectedIndex;
@@ -35,7 +43,20 @@ final class GithubQueueNotifier extends ChangeNotifier {
   /// a cheap placeholder instead of the full rendered content.
   bool get navigating => _navigating;
 
+  String? get searchQuery => _searchQuery;
+  GithubOverviewBucket? get searchResults => _searchResults;
+  bool get searchLoading => _searchLoading;
+  String? get searchError => _searchError;
+  int get searchPage => _searchPage;
+  bool get searchHasMore => _searchHasMore;
+  bool get searchPageLoading => _searchPageLoading;
+
   List<GithubDisplayItem> get visibleItems {
+    if (_searchQuery != null) {
+      final results = _searchResults;
+      if (results == null) return const <GithubDisplayItem>[];
+      return githubDisplayItemsForBucket(results);
+    }
     final data = _dashboard;
     if (data == null) return const <GithubDisplayItem>[];
     if (identical(data, _cachedDashboard) &&
@@ -54,6 +75,78 @@ final class GithubQueueNotifier extends ChangeNotifier {
     );
   }
 
+  bool get isSearchActive => _searchQuery != null;
+
+  void openSearch(String query) {
+    _searchQuery = query;
+    _searchResults = null;
+    _searchLoading = true;
+    _searchPage = 1;
+    _searchHasMore = false;
+    _searchPageLoading = false;
+    _searchError = null;
+    _selectedIndex = 0;
+    _navigating = false;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  void applySearchResults(
+    String query,
+    GithubOverviewBucket results,
+    bool hasMore,
+  ) {
+    if (_searchQuery != query) return;
+    if (_searchPage == 1) {
+      _searchResults = results;
+    } else {
+      final existing = _searchResults;
+      if (existing != null) {
+        _searchResults = GithubOverviewBucket(
+          issues: [...existing.issues, ...results.issues],
+          pullRequests: [...existing.pullRequests, ...results.pullRequests],
+        );
+      } else {
+        _searchResults = results;
+      }
+    }
+    _searchHasMore = hasMore;
+    _searchLoading = false;
+    _searchPageLoading = false;
+    _searchError = null;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  void startSearchNextPage() {
+    _searchPage++;
+    _searchPageLoading = true;
+    notifyListeners();
+  }
+
+  void applySearchError(String query, String message) {
+    if (_searchQuery != query) return;
+    _searchError = message;
+    _searchLoading = false;
+    _invalidateCache();
+    notifyListeners();
+  }
+
+  void clearSearch() {
+    if (_searchQuery == null) return;
+    _searchQuery = null;
+    _searchResults = null;
+    _searchLoading = false;
+    _searchPage = 1;
+    _searchHasMore = false;
+    _searchPageLoading = false;
+    _searchError = null;
+    _selectedIndex = 0;
+    _navigating = false;
+    _invalidateCache();
+    notifyListeners();
+  }
+
   GithubDisplayItem? get selectedItem {
     final items = visibleItems;
     if (items.isEmpty || _selectedIndex >= items.length) return null;
@@ -61,6 +154,7 @@ final class GithubQueueNotifier extends ChangeNotifier {
   }
 
   bool get canLoadCurrentPage {
+    if (isSearchActive) return _searchHasMore && !_searchPageLoading;
     return _tabIndex != 0 && _pageStatus.hasNextPage && !_pageStatus.loading;
   }
 
@@ -107,6 +201,13 @@ final class GithubQueueNotifier extends ChangeNotifier {
     _tabIndex = index.clamp(0, githubDashboardTabCount - 1).toInt();
     _selectedIndex = 0;
     _navigating = false;
+    _searchQuery = null;
+    _searchResults = null;
+    _searchLoading = false;
+    _searchPage = 1;
+    _searchHasMore = false;
+    _searchPageLoading = false;
+    _searchError = null;
     _invalidateCache();
     notifyListeners();
   }
@@ -116,6 +217,13 @@ final class GithubQueueNotifier extends ChangeNotifier {
     _overviewFilter = filter;
     _selectedIndex = 0;
     _navigating = false;
+    _searchQuery = null;
+    _searchResults = null;
+    _searchLoading = false;
+    _searchPage = 1;
+    _searchHasMore = false;
+    _searchPageLoading = false;
+    _searchError = null;
     _invalidateCache();
     notifyListeners();
   }

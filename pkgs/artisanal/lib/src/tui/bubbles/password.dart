@@ -1,8 +1,7 @@
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import '../../unicode/grapheme.dart' as uni;
 import 'key_binding.dart';
 import 'cursor.dart';
@@ -39,7 +38,7 @@ enum PasswordEchoMode {
 }
 
 /// Key bindings for the password component.
-class PasswordKeyMap implements KeyMap {
+class PasswordKeyMap extends KeyMap {
   PasswordKeyMap({
     KeyBinding? submit,
     KeyBinding? cancel,
@@ -54,7 +53,7 @@ class PasswordKeyMap implements KeyMap {
            submit ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'submit'),
+             help: Help(key: KeyboardChars.enter, desc: 'submit'),
            ),
        cancel =
            cancel ??
@@ -66,7 +65,7 @@ class PasswordKeyMap implements KeyMap {
            deleteBackward ??
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
-             help: Help(key: '⌫', desc: 'delete'),
+             help: Help(key: KeyboardChars.backspace, desc: 'delete'),
            ),
        deleteForward =
            deleteForward ??
@@ -84,13 +83,13 @@ class PasswordKeyMap implements KeyMap {
            cursorLeft ??
            KeyBinding(
              keys: ['left', 'ctrl+b'],
-             help: Help(key: '←', desc: 'left'),
+             help: Help(key: Arrows.left, desc: 'left'),
            ),
        cursorRight =
            cursorRight ??
            KeyBinding(
              keys: ['right', 'ctrl+f'],
-             help: Help(key: '→', desc: 'right'),
+             help: Help(key: Arrows.right, desc: 'right'),
            ),
        cursorStart =
            cursorStart ??
@@ -103,7 +102,13 @@ class PasswordKeyMap implements KeyMap {
            KeyBinding(
              keys: ['end', 'ctrl+e'],
              help: Help(key: 'end', desc: 'end'),
-           );
+           ) {
+    shortHelp = [this.submit, this.cancel];
+    fullHelp = [
+      [this.submit, this.cancel],
+      [this.deleteBackward, this.deleteAll],
+    ];
+  }
 
   /// Submit the password.
   final KeyBinding submit;
@@ -131,19 +136,6 @@ class PasswordKeyMap implements KeyMap {
 
   /// Move cursor to end.
   final KeyBinding cursorEnd;
-
-  @override
-  List<KeyBinding> shortHelp() {
-    return [submit, cancel];
-  }
-
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [submit, cancel],
-      [deleteBackward, deleteAll],
-    ];
-  }
 }
 
 /// Styles for the password component.
@@ -464,7 +456,7 @@ class PasswordModel extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')

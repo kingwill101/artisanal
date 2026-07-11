@@ -35,7 +35,6 @@ import '../unicode/grapheme.dart' as uni;
 /// StyledString is a string that can be decomposed into a series of styled
 /// lines and cells.
 ///
-/// Upstream: `third_party/ultraviolet/styled.go` (`StyledString`).
 final class StyledString implements Drawable {
   /// Creates a styled string from [text] with optional [wrap] and [tail].
   StyledString(this.text, {this.wrap = false, this.tail = ''});
@@ -147,7 +146,6 @@ List<SgrParam> _parseSgrParams(String raw) {
 
 /// Parses an OSC 8 hyperlink sequence from [data] into [out].
 void readLink(String data, LinkState out) {
-  // Upstream: `third_party/ultraviolet/styled.go` (`ReadLink`).
   // OSC 8 format: ESC ] 8 ; params ; url ST
   // Here `data` is the portion after "8;" in our parser.
   final firstSep = data.indexOf(';');
@@ -168,7 +166,6 @@ final class LinkState {
 
 /// Parses SGR [params] and applies them to the style in [out].
 void readStyle(List<SgrParam> params, StyleState out) {
-  // Upstream: `third_party/ultraviolet/styled.go` (`ReadStyle`).
   if (params.isEmpty) {
     out.style = const UvStyle();
     return;

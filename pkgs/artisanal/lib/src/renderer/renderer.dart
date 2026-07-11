@@ -1,13 +1,8 @@
 /// Renderer abstraction for terminal output.
 ///
-/// Provides an interface for rendering styled content to different outputs,
-/// with color profile detection and background detection.
+/// Provides an interface for rendering styled content to different outputs.
 ///
 /// ```dart
-/// // Use the default terminal renderer
-/// final renderer = TerminalRenderer();
-/// print(renderer.colorProfile); // ColorProfile.trueColor
-///
 /// // Use a string renderer for testing
 /// final testRenderer = StringRenderer();
 /// style.render('Hello', renderer: testRenderer);
@@ -15,15 +10,14 @@
 /// ```
 library;
 
-import 'dart:io';
-
-import '../colorprofile/detect.dart' as cp_detect;
-import '../colorprofile/downsample.dart' as cp_downsample;
-import '../colorprofile/profile.dart' as cp;
 import '../style/color.dart';
-import '../terminal/ansi.dart' show Ansi;
+import 'renderer_default_io.dart'
+    if (dart.library.html) 'renderer_default_stub.dart'
+    as renderer_default;
 
 export '../style/color.dart' show ColorProfile;
+
+export 'renderer_impl.dart' if (dart.library.html) 'renderer_stub.dart';
 
 /// Abstract interface for rendering styled output.
 ///
@@ -50,181 +44,8 @@ abstract class Renderer {
   /// Writes text to the output followed by a newline.
   void writeln([String text = '']);
 
-  /// Gets the output sink/writer for this renderer.
-  ///
-  /// Returns the underlying output destination.
-  /// For [TerminalRenderer], this is the IOSink.
-  /// For [StringRenderer], this returns null (use [output] getter instead).
-  IOSink? get output;
-}
-
-/// A renderer that outputs to a terminal.
-///
-/// Automatically detects the terminal's color capabilities from
-/// environment variables.
-class TerminalRenderer implements Renderer {
-  /// Creates a terminal renderer.
-  ///
-  /// If [output] is not provided, defaults to [stdout].
-  /// If [forceProfile] is provided, uses that instead of auto-detection.
-  /// If [forceDarkBackground] is provided, uses that instead of auto-detection.
-  /// If [forceNoAnsi] is true, strips all ANSI escape sequences when writing.
-  /// If [forceIsTty] is provided, it overrides TTY detection.
-  TerminalRenderer({
-    IOSink? output,
-    ColorProfile? forceProfile,
-    bool? forceDarkBackground,
-    bool? forceNoAnsi,
-    bool? forceIsTty,
-  }) : _output = output ?? stdout,
-       _overrideProfile = forceProfile,
-       _overrideDarkBackground = forceDarkBackground,
-       _overrideNoAnsi = forceNoAnsi,
-       _overrideIsTty = forceIsTty;
-
-  IOSink _output;
-  ColorProfile? _overrideProfile;
-  bool? _overrideDarkBackground;
-  final bool? _overrideNoAnsi;
-  final bool? _overrideIsTty;
-
-  ColorProfile? _cachedProfile;
-  bool? _cachedDarkBackground;
-  cp.Profile? _cachedInternalProfile;
-
-  @override
-  ColorProfile get colorProfile {
-    if (_overrideProfile != null) return _overrideProfile!;
-    return _cachedProfile ??= _mapProfile(
-      _cachedInternalProfile ??= _detectInternalProfile(),
-    );
-  }
-
-  @override
-  set colorProfile(ColorProfile profile) {
-    _overrideProfile = profile;
-  }
-
-  @override
-  bool get hasDarkBackground {
-    if (_overrideDarkBackground != null) return _overrideDarkBackground!;
-    return _cachedDarkBackground ??= _detectDarkBackground();
-  }
-
-  @override
-  set hasDarkBackground(bool value) {
-    _overrideDarkBackground = value;
-  }
-
-  @override
-  IOSink get output => _output;
-
-  /// Sets the output sink for this renderer.
-  set output(IOSink sink) {
-    _output = sink;
-    _cachedProfile = null;
-    _cachedInternalProfile = null;
-  }
-
-  @override
-  void write(String text) {
-    _output.write(_process(text));
-  }
-
-  @override
-  void writeln([String text = '']) {
-    _output.writeln(_process(text));
-  }
-
-  cp.Profile _detectInternalProfile() {
-    return cp_detect.detectForSink(
-      _output,
-      env: Platform.environment,
-      forceIsTty: _overrideIsTty,
-    );
-  }
-
-  String _process(String text) {
-    final p = _effectiveInternalProfile();
-
-    if (p == cp.Profile.noTty) {
-      return Ansi.stripAnsi(text);
-    }
-
-    if (p == cp.Profile.trueColor) {
-      return text;
-    }
-
-    return cp_downsample.downsampleSgr(text, p);
-  }
-
-  cp.Profile _effectiveInternalProfile() {
-    if (_overrideNoAnsi == true) return cp.Profile.noTty;
-
-    if (_overrideProfile != null) {
-      return _internalFromColorProfile(_overrideProfile!);
-    }
-
-    return _cachedInternalProfile ??= _detectInternalProfile();
-  }
-
-  static cp.Profile _internalFromColorProfile(ColorProfile profile) {
-    return switch (profile) {
-      ColorProfile.trueColor => cp.Profile.trueColor,
-      ColorProfile.ansi256 => cp.Profile.ansi256,
-      ColorProfile.ansi => cp.Profile.ansi,
-      ColorProfile.noColor => cp.Profile.ascii,
-      ColorProfile.ascii => cp.Profile.noTty,
-    };
-  }
-
-  static ColorProfile _mapProfile(cp.Profile profile) {
-    return switch (profile) {
-      cp.Profile.trueColor => ColorProfile.trueColor,
-      cp.Profile.ansi256 => ColorProfile.ansi256,
-      cp.Profile.ansi => ColorProfile.ansi,
-      cp.Profile.ascii => ColorProfile.noColor,
-      cp.Profile.noTty => ColorProfile.ascii,
-      cp.Profile.unknown => ColorProfile.ascii,
-    };
-  }
-
-  /// Detects whether the terminal has a dark background.
-  ///
-  /// This is a heuristic based on common terminal configurations.
-  /// Most terminals default to dark backgrounds, so we default to true.
-  static bool _detectDarkBackground() {
-    final env = Platform.environment;
-
-    // Check for explicit COLORFGBG variable (format: "fg;bg")
-    final colorFgBg = env['COLORFGBG'];
-    if (colorFgBg != null) {
-      final parts = colorFgBg.split(';');
-      if (parts.length >= 2) {
-        final bg = int.tryParse(parts.last);
-        if (bg != null) {
-          // ANSI colors 0-6 and 8 are typically dark
-          // Colors 7 and 15 are light (white)
-          return bg != 7 && bg != 15;
-        }
-      }
-    }
-
-    // Check for macOS Terminal.app with light theme
-    final termProgram = env['TERM_PROGRAM'];
-    if (termProgram == 'Apple_Terminal') {
-      // Apple Terminal defaults to light, but many users change it
-      // Default to dark as it's more common in developer setups
-      return true;
-    }
-
-    // Most terminals default to dark backgrounds
-    return true;
-  }
-
-  @override
-  String toString() =>
-      'TerminalRenderer(colorProfile: $colorProfile, darkBackground: $hasDarkBackground)';
+  /// Gets the underlying output sink/writer for this renderer, if available.
+  Object? get output;
 }
 
 /// A renderer that captures output to a string buffer.
@@ -270,7 +91,7 @@ class StringRenderer implements Renderer {
   }
 
   @override
-  IOSink? get output => null;
+  Object? get output => null;
 
   @override
   void write(String text) => _buffer.write(text);
@@ -336,7 +157,7 @@ class NullRenderer implements Renderer {
   }
 
   @override
-  IOSink? get output => null;
+  Object? get output => null;
 
   @override
   void write(String text) {}
@@ -354,23 +175,26 @@ class NullRenderer implements Renderer {
 
 /// The default renderer used when none is specified.
 ///
-/// This is lazily initialized to a [TerminalRenderer] on first access.
+/// This is lazily initialized to a [NullRenderer] on first access
+/// (or [TerminalRenderer] when `dart:io` is available).
 /// You can replace it with a custom renderer for testing or other purposes.
 Renderer? _defaultRenderer;
 
 /// Gets the default renderer.
 ///
-/// Returns a [TerminalRenderer] if not explicitly set.
-Renderer get defaultRenderer => _defaultRenderer ??= TerminalRenderer();
+/// Returns a [NullRenderer] if not explicitly set
+/// (or [TerminalRenderer] when `dart:io` is available).
+Renderer get defaultRenderer =>
+    _defaultRenderer ??= renderer_default.createDefaultRenderer();
 
 /// Sets the default renderer.
 ///
-/// Pass `null` to reset to the default [TerminalRenderer].
+/// Pass `null` to reset to the default.
 set defaultRenderer(Renderer? renderer) {
   _defaultRenderer = renderer;
 }
 
-/// Resets the default renderer to a new [TerminalRenderer].
+/// Resets the default renderer to a new default.
 void resetDefaultRenderer() {
   _defaultRenderer = null;
 }

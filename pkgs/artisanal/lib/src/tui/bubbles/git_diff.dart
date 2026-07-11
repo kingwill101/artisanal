@@ -66,22 +66,19 @@ enum DiffViewMode {
 ///
 /// Provides a [cycleViewMode] binding (default: `v`) to cycle between
 /// [DiffViewMode] values (unified → sideBySide → pretty → unified…).
-class GitDiffKeyMap implements KeyMap {
+class GitDiffKeyMap extends KeyMap {
   /// Creates a git diff key map with optional overrides.
   GitDiffKeyMap({KeyBinding? cycleViewMode})
     : cycleViewMode =
-          cycleViewMode ?? KeyBinding.withHelp(['v'], 'v', 'cycle view mode');
+          cycleViewMode ?? KeyBinding.withHelp(['v'], 'v', 'cycle view mode') {
+    shortHelp = [this.cycleViewMode];
+    fullHelp = [
+      [this.cycleViewMode],
+    ];
+  }
 
   /// Key to cycle through view modes.
   final KeyBinding cycleViewMode;
-
-  @override
-  List<KeyBinding> shortHelp() => [cycleViewMode];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [cycleViewMode],
-  ];
 }
 
 /// Configuration for diff styling.
@@ -212,10 +209,10 @@ class DiffStyles {
            commentRangeGutter ??
            Style().background(const BasicColor('#3f6374')),
        commentThreadLine =
-           commentThreadLine ?? Style().background(const BasicColor('#3b3320')),
+           commentThreadLine ?? Style().background(const BasicColor('#5d4037')),
        commentThreadGutter =
            commentThreadGutter ??
-           Style().background(const BasicColor('#6f5b26'));
+           Style().background(const BasicColor('#8d6e63'));
 
   /// Creates a dark-theme diff style preset (identical to the defaults).
   ///
@@ -304,10 +301,10 @@ class DiffStyles {
           .background(const BasicColor('#b8d7ff')),
       commentThreadLine: Style()
           .foreground(darkText)
-          .background(const BasicColor('#fff0c2')),
+          .background(const BasicColor('#ffeb3b')),
       commentThreadGutter: Style()
           .foreground(darkText)
-          .background(const BasicColor('#ffd166')),
+          .background(const BasicColor('#fbc02d')),
     );
   }
 
@@ -335,6 +332,7 @@ class DiffStyles {
     required Color onSurface,
     required Color onBackground,
     required Color border,
+    bool hasDarkBackground = true,
     Color? successBg,
     Color? errorBg,
     Color? inlineAddedBg,
@@ -345,47 +343,160 @@ class DiffStyles {
 
     return DiffStyles(
       // Unified mode
-      addedLine: Style().foreground(success),
-      removedLine: Style().foreground(error),
-      contextLine: Style().foreground(onBackground),
-      fileHeader: Style().bold().foreground(onSurface),
-      hunkHeader: Style().foreground(muted),
-      addedGutter: Style().foreground(success).bold(),
-      removedGutter: Style().foreground(error).bold(),
-      contextGutter: Style().foreground(muted),
-      lineNumber: Style().foreground(muted),
+      addedLine: _bgAware(Style().foreground(success), hasDarkBackground),
+      removedLine: _bgAware(Style().foreground(error), hasDarkBackground),
+      contextLine: _bgAware(
+        Style().foreground(onBackground),
+        hasDarkBackground,
+      ),
+      fileHeader: _bgAware(
+        Style().bold().foreground(onSurface),
+        hasDarkBackground,
+      ),
+      hunkHeader: _bgAware(Style().foreground(muted), hasDarkBackground),
+      addedGutter: _bgAware(
+        Style().foreground(success).bold(),
+        hasDarkBackground,
+      ),
+      removedGutter: _bgAware(
+        Style().foreground(error).bold(),
+        hasDarkBackground,
+      ),
+      contextGutter: _bgAware(Style().foreground(muted), hasDarkBackground),
+      lineNumber: _bgAware(Style().foreground(muted), hasDarkBackground),
       // Pretty mode
-      prettyAddedLine: Style().foreground(success).background(addedBg),
-      prettyRemovedLine: Style().foreground(error).background(removedBg),
-      prettyContextLine: Style().foreground(onBackground),
-      prettyFileHeader: Style().foreground(muted),
-      prettyAddedLineNumber: Style().foreground(success).background(addedBg),
-      prettyRemovedLineNumber: Style().foreground(error).background(removedBg),
-      prettyContextLineNumber: Style().foreground(muted),
+      prettyAddedLine: _bgAware(
+        Style().foreground(success).background(addedBg),
+        hasDarkBackground,
+      ),
+      prettyRemovedLine: _bgAware(
+        Style().foreground(error).background(removedBg),
+        hasDarkBackground,
+      ),
+      prettyContextLine: _bgAware(
+        Style().foreground(onBackground),
+        hasDarkBackground,
+      ),
+      prettyFileHeader: _bgAware(Style().foreground(muted), hasDarkBackground),
+      prettyAddedLineNumber: _bgAware(
+        Style().foreground(success).background(addedBg),
+        hasDarkBackground,
+      ),
+      prettyRemovedLineNumber: _bgAware(
+        Style().foreground(error).background(removedBg),
+        hasDarkBackground,
+      ),
+      prettyContextLineNumber: _bgAware(
+        Style().foreground(muted),
+        hasDarkBackground,
+      ),
       // Side-by-side mode
-      sideBySideSeparator: Style().foreground(border),
-      sideBySideAddedLine: Style().foreground(success).background(addedBg),
-      sideBySideRemovedLine: Style().foreground(error).background(removedBg),
-      sideBySideContextLine: Style().foreground(onBackground),
-      sideBySideLineNumber: Style().foreground(muted),
-      sideBySideEmptyCell: Style().foreground(surface),
-      sideBySideAddedMarker: Style().foreground(success),
-      sideBySideRemovedMarker: Style().foreground(error),
-      sideBySideContextMarker: Style().foreground(muted),
+      sideBySideSeparator: _bgAware(
+        Style().foreground(border),
+        hasDarkBackground,
+      ),
+      sideBySideAddedLine: _bgAware(
+        Style().foreground(success).background(addedBg),
+        hasDarkBackground,
+      ),
+      sideBySideRemovedLine: _bgAware(
+        Style().foreground(error).background(removedBg),
+        hasDarkBackground,
+      ),
+      sideBySideContextLine: _bgAware(
+        Style().foreground(onBackground),
+        hasDarkBackground,
+      ),
+      sideBySideLineNumber: _bgAware(
+        Style().foreground(muted),
+        hasDarkBackground,
+      ),
+      sideBySideEmptyCell: _bgAware(
+        Style().foreground(surface),
+        hasDarkBackground,
+      ),
+      sideBySideAddedMarker: _bgAware(
+        Style().foreground(success),
+        hasDarkBackground,
+      ),
+      sideBySideRemovedMarker: _bgAware(
+        Style().foreground(error),
+        hasDarkBackground,
+      ),
+      sideBySideContextMarker: _bgAware(
+        Style().foreground(muted),
+        hasDarkBackground,
+      ),
       // Inline diff highlighting
-      inlineAddedHighlight: Style().background(
-        inlineAddedBg ?? const BasicColor('#2a4a2a'),
+      inlineAddedHighlight: _bgAware(
+        Style().background(inlineAddedBg ?? const BasicColor('#2a4a2a')),
+        hasDarkBackground,
       ),
-      inlineRemovedHighlight: Style().background(
-        inlineRemovedBg ?? const BasicColor('#4a2a2a'),
+      inlineRemovedHighlight: _bgAware(
+        Style().background(inlineRemovedBg ?? const BasicColor('#4a2a2a')),
+        hasDarkBackground,
       ),
-      selectedCommentLine: Style().background(const BasicColor('#2f3f5f')),
-      selectedCommentGutter: Style().background(const BasicColor('#50668f')),
-      commentRangeLine: Style().background(const BasicColor('#263847')),
-      commentRangeGutter: Style().background(const BasicColor('#3f6374')),
-      commentThreadLine: Style().background(const BasicColor('#3b3320')),
-      commentThreadGutter: Style().background(const BasicColor('#6f5b26')),
+      selectedCommentLine: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#2f3f5f'),
+            light: const BasicColor('#bfd7ff'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      selectedCommentGutter: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#50668f'),
+            light: const BasicColor('#9dbcf8'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentRangeLine: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#263847'),
+            light: const BasicColor('#d6e8ff'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentRangeGutter: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#3f6374'),
+            light: const BasicColor('#b8d7ff'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentThreadLine: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#5d4037'),
+            light: const BasicColor('#ffeb3b'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentThreadGutter: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#8d6e63'),
+            light: const BasicColor('#fbc02d'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
     );
+  }
+
+  static Style _bgAware(Style style, bool hasDarkBackground) {
+    final copy = style.copy();
+    copy.hasDarkBackground = hasDarkBackground;
+    return copy;
   }
 
   /// Style for added (+) lines.
@@ -495,6 +606,82 @@ class DiffStyles {
   /// Gutter style layered onto lines that already have review threads.
   final Style commentThreadGutter;
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! DiffStyles) return false;
+    return addedLine == other.addedLine &&
+        removedLine == other.removedLine &&
+        contextLine == other.contextLine &&
+        fileHeader == other.fileHeader &&
+        hunkHeader == other.hunkHeader &&
+        addedGutter == other.addedGutter &&
+        removedGutter == other.removedGutter &&
+        contextGutter == other.contextGutter &&
+        lineNumber == other.lineNumber &&
+        prettyAddedLine == other.prettyAddedLine &&
+        prettyRemovedLine == other.prettyRemovedLine &&
+        prettyContextLine == other.prettyContextLine &&
+        prettyFileHeader == other.prettyFileHeader &&
+        prettyAddedLineNumber == other.prettyAddedLineNumber &&
+        prettyRemovedLineNumber == other.prettyRemovedLineNumber &&
+        prettyContextLineNumber == other.prettyContextLineNumber &&
+        sideBySideSeparator == other.sideBySideSeparator &&
+        sideBySideAddedLine == other.sideBySideAddedLine &&
+        sideBySideRemovedLine == other.sideBySideRemovedLine &&
+        sideBySideContextLine == other.sideBySideContextLine &&
+        sideBySideLineNumber == other.sideBySideLineNumber &&
+        sideBySideEmptyCell == other.sideBySideEmptyCell &&
+        sideBySideAddedMarker == other.sideBySideAddedMarker &&
+        sideBySideRemovedMarker == other.sideBySideRemovedMarker &&
+        sideBySideContextMarker == other.sideBySideContextMarker &&
+        inlineAddedHighlight == other.inlineAddedHighlight &&
+        inlineRemovedHighlight == other.inlineRemovedHighlight &&
+        selectedCommentLine == other.selectedCommentLine &&
+        selectedCommentGutter == other.selectedCommentGutter &&
+        commentRangeLine == other.commentRangeLine &&
+        commentRangeGutter == other.commentRangeGutter &&
+        commentThreadLine == other.commentThreadLine &&
+        commentThreadGutter == other.commentThreadGutter;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    addedLine,
+    removedLine,
+    contextLine,
+    fileHeader,
+    hunkHeader,
+    addedGutter,
+    removedGutter,
+    contextGutter,
+    lineNumber,
+    prettyAddedLine,
+    prettyRemovedLine,
+    prettyContextLine,
+    prettyFileHeader,
+    prettyAddedLineNumber,
+    prettyRemovedLineNumber,
+    prettyContextLineNumber,
+    sideBySideSeparator,
+    sideBySideAddedLine,
+    sideBySideRemovedLine,
+    sideBySideContextLine,
+    sideBySideLineNumber,
+    sideBySideEmptyCell,
+    sideBySideAddedMarker,
+    sideBySideRemovedMarker,
+    sideBySideContextMarker,
+    inlineAddedHighlight,
+    inlineRemovedHighlight,
+    selectedCommentLine,
+    selectedCommentGutter,
+    commentRangeLine,
+    commentRangeGutter,
+    commentThreadLine,
+    commentThreadGutter,
+  ]);
+
   /// Creates a copy with the given fields replaced.
   DiffStyles copyWith({
     Style? addedLine,
@@ -575,6 +762,51 @@ class DiffStyles {
       commentRangeGutter: commentRangeGutter ?? this.commentRangeGutter,
       commentThreadLine: commentThreadLine ?? this.commentThreadLine,
       commentThreadGutter: commentThreadGutter ?? this.commentThreadGutter,
+    );
+  }
+
+  /// Returns a copy whose adaptive colors resolve against [hasDarkBackground].
+  DiffStyles withHasDarkBackground(bool hasDarkBackground) {
+    Style bgAware(Style style) {
+      final copy = style.copy();
+      copy.hasDarkBackground = hasDarkBackground;
+      return copy;
+    }
+
+    return DiffStyles(
+      addedLine: bgAware(addedLine),
+      removedLine: bgAware(removedLine),
+      contextLine: bgAware(contextLine),
+      fileHeader: bgAware(fileHeader),
+      hunkHeader: bgAware(hunkHeader),
+      addedGutter: bgAware(addedGutter),
+      removedGutter: bgAware(removedGutter),
+      contextGutter: bgAware(contextGutter),
+      lineNumber: bgAware(lineNumber),
+      prettyAddedLine: bgAware(prettyAddedLine),
+      prettyRemovedLine: bgAware(prettyRemovedLine),
+      prettyContextLine: bgAware(prettyContextLine),
+      prettyFileHeader: bgAware(prettyFileHeader),
+      prettyAddedLineNumber: bgAware(prettyAddedLineNumber),
+      prettyRemovedLineNumber: bgAware(prettyRemovedLineNumber),
+      prettyContextLineNumber: bgAware(prettyContextLineNumber),
+      sideBySideSeparator: bgAware(sideBySideSeparator),
+      sideBySideAddedLine: bgAware(sideBySideAddedLine),
+      sideBySideRemovedLine: bgAware(sideBySideRemovedLine),
+      sideBySideContextLine: bgAware(sideBySideContextLine),
+      sideBySideLineNumber: bgAware(sideBySideLineNumber),
+      sideBySideEmptyCell: bgAware(sideBySideEmptyCell),
+      sideBySideAddedMarker: bgAware(sideBySideAddedMarker),
+      sideBySideRemovedMarker: bgAware(sideBySideRemovedMarker),
+      sideBySideContextMarker: bgAware(sideBySideContextMarker),
+      inlineAddedHighlight: bgAware(inlineAddedHighlight),
+      inlineRemovedHighlight: bgAware(inlineRemovedHighlight),
+      selectedCommentLine: bgAware(selectedCommentLine),
+      selectedCommentGutter: bgAware(selectedCommentGutter),
+      commentRangeLine: bgAware(commentRangeLine),
+      commentRangeGutter: bgAware(commentRangeGutter),
+      commentThreadLine: bgAware(commentThreadLine),
+      commentThreadGutter: bgAware(commentThreadGutter),
     );
   }
 }
@@ -894,6 +1126,10 @@ class GitDiffModel extends ViewComponent {
 
   /// Pre-rendered styled lines fed into the viewport.
   final List<String> _renderedLines;
+
+  /// The full list of rendered diff text lines (all view modes, before
+  /// viewport clipping). Each line is an ANSI-formatted string.
+  List<String> get renderedLines => _renderedLines;
 
   /// The underlying viewport for scrolling.
   final ViewportModel _viewport;

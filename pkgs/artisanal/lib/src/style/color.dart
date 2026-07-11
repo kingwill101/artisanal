@@ -23,7 +23,7 @@
 library;
 
 import '../colorprofile/convert.dart' as cp;
-import '../colorprofile/profile.dart' as cp;
+import '../colorprofile/profile.dart' as cp_profile;
 
 /// Color profile indicating terminal color capabilities.
 enum ColorProfile {
@@ -49,13 +49,14 @@ enum ColorProfile {
 /// Extension to convert from internal [cp.Profile] to [ColorProfile].
 extension ColorProfileConverter on ColorProfile {
   /// Converts an internal [cp.Profile] to a [ColorProfile].
-  static ColorProfile fromProfile(cp.Profile profile) {
+  static ColorProfile fromProfile(cp_profile.Profile profile) {
     return switch (profile) {
-      cp.Profile.unknown || cp.Profile.noTty => ColorProfile.ascii,
-      cp.Profile.ascii => ColorProfile.ascii,
-      cp.Profile.ansi => ColorProfile.ansi,
-      cp.Profile.ansi256 => ColorProfile.ansi256,
-      cp.Profile.trueColor => ColorProfile.trueColor,
+      cp_profile.Profile.unknown ||
+      cp_profile.Profile.noTty => ColorProfile.ascii,
+      cp_profile.Profile.ascii => ColorProfile.ascii,
+      cp_profile.Profile.ansi => ColorProfile.ansi,
+      cp_profile.Profile.ansi256 => ColorProfile.ansi256,
+      cp_profile.Profile.trueColor => ColorProfile.trueColor,
     };
   }
 }
@@ -83,6 +84,35 @@ abstract class Color {
     bool hasDarkBackground = true,
   });
 
+  /// Creates a basic color from a hex string or ANSI code string.
+  factory Color.basic(String value) => BasicColor(value);
+
+  /// Creates an ANSI color from a code (0-255).
+  factory Color.ansi(int code) => AnsiColor(code);
+
+  /// Creates an adaptive color that switches based on terminal background.
+  factory Color.adaptive({required Color light, required Color dark}) =>
+      AdaptiveColor(light: light, dark: dark);
+
+  /// Creates a complete color with explicit values for each color profile.
+  factory Color.complete({
+    required String trueColor,
+    String? ansi256,
+    String? ansi,
+  }) => CompleteColor(trueColor: trueColor, ansi256: ansi256, ansi: ansi);
+
+  /// Creates a complete adaptive color with light and dark variants.
+  factory Color.completeAdaptive({
+    required CompleteColor light,
+    required CompleteColor dark,
+  }) => CompleteAdaptiveColor(light: light, dark: dark);
+
+  /// Creates a default color using the terminal's default color.
+  factory Color.defaultColor() => DefaultColor();
+
+  /// Creates a color with no color styling.
+  factory Color.noColor() => NoColor();
+
   /// Returns a dimmed version of this color (if applicable).
   Color get dim => this;
 
@@ -108,7 +138,8 @@ class BasicColor extends Color {
   final String value;
 
   /// Whether this is a hex color.
-  bool get isHex => value.startsWith('#') || _isHexString(value);
+  bool get isHex =>
+      _isHexString(value.startsWith('#') ? value.substring(1) : value);
 
   static bool _isHexString(String s) {
     if (s.length != 6 && s.length != 3) return false;
@@ -139,6 +170,10 @@ class BasicColor extends Color {
     bool underline = false,
     bool hasDarkBackground = true,
   }) {
+    if (value.startsWith('#') && !isHex) {
+      throw FormatException('Invalid hex color: $value');
+    }
+
     if (isHex) {
       if (profile == ColorProfile.ascii || profile == ColorProfile.noColor) {
         return '';
@@ -157,7 +192,10 @@ class BasicColor extends Color {
         return '';
       }
 
-      final code = (int.tryParse(value) ?? 0).clamp(0, 255);
+      final code = int.tryParse(value);
+      if (code == null || code < 0 || code > 255) {
+        throw FormatException('Invalid ANSI color: $value');
+      }
 
       // lipgloss v2 parity: prefer 16-color SGR codes when possible.
       // Note: Underline color (SGR 58) does not have 16-color variants.
@@ -210,6 +248,38 @@ class BasicColor extends Color {
   String toString() => 'BasicColor($value)';
 }
 
+/// The terminal default color.
+class DefaultColor extends Color {
+  const DefaultColor();
+
+  @override
+  String toAnsi(
+    ColorProfile profile, {
+    bool background = false,
+    bool underline = false,
+    bool hasDarkBackground = true,
+  }) {
+    if (profile == ColorProfile.ascii || profile == ColorProfile.noColor) {
+      return '';
+    }
+
+    if (underline) return '\x1b[59m';
+    return background ? '\x1b[49m' : '\x1b[39m';
+  }
+
+  @override
+  String toHex() => '';
+
+  @override
+  bool operator ==(Object other) => other is DefaultColor;
+
+  @override
+  int get hashCode => 1;
+
+  @override
+  String toString() => 'DefaultColor()';
+}
+
 /// An explicit ANSI color code (0-255).
 ///
 /// Use this when you want to specify an exact ANSI-256 color code.
@@ -239,7 +309,7 @@ class AnsiColor extends Color {
     if (profile == ColorProfile.ansi && code >= 16) {
       // Degrade to ANSI-16.
       return cp.sgrColor(
-        profile: cp.Profile.ansi,
+        profile: cp_profile.Profile.ansi,
         background: background,
         underline: underline,
         ansi16: cp.ansi256ToAnsi16(code),
@@ -694,6 +764,10 @@ class Colors {
 
   /// Creates a color from RGB values.
   static BasicColor rgb(int r, int g, int b) {
+    r = r.clamp(0, 255).toInt();
+    g = g.clamp(0, 255).toInt();
+    b = b.clamp(0, 255).toInt();
+
     final hex =
         '#${r.toRadixString(16).padLeft(2, '0')}'
         '${g.toRadixString(16).padLeft(2, '0')}'
@@ -706,13 +780,13 @@ class Colors {
 // Helper Functions
 // ─────────────────────────────────────────────────────────────────────────────
 
-cp.Profile _toInternalProfile(ColorProfile profile) {
+cp_profile.Profile _toInternalProfile(ColorProfile profile) {
   return switch (profile) {
-    ColorProfile.trueColor => cp.Profile.trueColor,
-    ColorProfile.ansi256 => cp.Profile.ansi256,
-    ColorProfile.ansi => cp.Profile.ansi,
-    ColorProfile.noColor => cp.Profile.ascii,
-    ColorProfile.ascii => cp.Profile.noTty,
+    ColorProfile.trueColor => cp_profile.Profile.trueColor,
+    ColorProfile.ansi256 => cp_profile.Profile.ansi256,
+    ColorProfile.ansi => cp_profile.Profile.ansi,
+    ColorProfile.noColor => cp_profile.Profile.ascii,
+    ColorProfile.ascii => cp_profile.Profile.noTty,
   };
 }
 

@@ -1,5 +1,28 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
 
+import 'package:artisanal/style.dart' show Color;
+
+/// A slide-out panel that overlays content from the left or right.
+///
+/// The [Drawer] displays its [child] with an optional dimmed backdrop and
+/// reveals the [drawer] widget from [side] when [open] is `true`.
+///
+/// The drawer is dismissible by clicking the backdrop when [dismissible] is true.
+/// Use [width] to control the drawer's width in cells.
+///
+/// Example:
+/// ```dart
+/// Drawer(
+///   open: _showSidebar,
+///   side: SidebarSide.left,
+///   drawer: ListView(
+///     children: [Text('Menu Item 1'), Text('Menu Item 2')],
+///   ),
+///   child: MainContent(),
+/// )
+
+// ignore_for_file: unused_shown_name
+/// ```
 class Drawer extends StatelessWidget {
   Drawer({
     required this.child,

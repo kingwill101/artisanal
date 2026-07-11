@@ -80,7 +80,7 @@ import 'msg.dart';
 ///   String view() {
 ///     if (loading) return 'Loading...';
 ///     if (error != null) return 'Error: $error\n\nPress r to retry';
-///     return items.map((i) => '• $i').join('\n');
+///     return items.map((i) => '${DotChars.bullet} $i').join('\n');
 ///   }
 /// }
 /// ```

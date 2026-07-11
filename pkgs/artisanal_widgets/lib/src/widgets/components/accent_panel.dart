@@ -1,4 +1,12 @@
-part of 'components_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/style.dart' hide Padding;
+import 'package:artisanal_widgets/src/widgets/theme/theme.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
+
+import 'frame.dart';
 
 /// The side on which the accent stripe is drawn.
 enum AccentSide {
@@ -94,7 +102,7 @@ class AccentPanel extends StatelessWidget {
     final pad = padding ?? apTheme?.padding ?? const EdgeInsets.only(left: 1);
 
     // Build the accent stripe
-    final accentStyle = _copyStyle(null)..foreground(color);
+    final accentStyle = copyStyle(null)..foreground(color);
     final accentText = List.filled(width, char).join();
     final accent = Text(accentText, style: accentStyle);
 
@@ -103,13 +111,13 @@ class AccentPanel extends StatelessWidget {
     final isCollapsible = expanded != null;
 
     if (title != null) {
-      final tStyle = _copyStyle(titleStyle ?? theme.titleSmall)
+      final tStyle = copyStyle(titleStyle ?? theme.titleSmall)
         ..foreground(fg)
         ..bold();
 
       Widget header;
       if (isCollapsible) {
-        final chevronStyle = _copyStyle(theme.labelMedium)
+        final chevronStyle = copyStyle(theme.labelMedium)
           ..foreground(theme.muted);
         header = GestureDetector(
           onTap: () => onExpandChanged?.call(!expanded!),

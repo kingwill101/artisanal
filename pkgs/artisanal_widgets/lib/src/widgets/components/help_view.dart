@@ -1,4 +1,7 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/widgets.dart';
 
 /// A widget-side help view for rendering [KeyMap] bindings.
 ///
@@ -6,18 +9,16 @@ part of 'components_widgets.dart';
 /// a compact inline summary and a full grouped view.
 ///
 /// ```dart
-/// class DemoKeyMap implements KeyMap {
-///   final quit = KeyBinding.withHelp(['q'], 'q', 'quit');
-///   final help = KeyBinding.withHelp(['?'], '?', 'toggle help');
-///
-///   @override
-///   List<KeyBinding> shortHelp() => [help, quit];
-///
-///   @override
-///   List<List<KeyBinding>> fullHelp() => [
-///     [help],
-///     [quit],
-///   ];
+/// class DemoKeyMap extends KeyMap {
+///   DemoKeyMap() {
+///     final help = KeyBinding.withHelp(['?'], '?', 'toggle help');
+///     final quit = KeyBinding.withHelp(['q'], 'q', 'quit');
+///     shortHelp = [help, quit];
+///     fullHelp = [
+///       [help],
+///       [quit],
+///     ];
+///   }
 /// }
 ///
 /// HelpView(keyMap: DemoKeyMap())
@@ -74,7 +75,7 @@ class HelpView extends StatelessWidget {
             : (MediaQuery.maybeOf(context)?.size.width.toInt() ?? 80);
 
         if (showAll) {
-          final groups = keyMap.fullHelp().map(_visibleBindings).where((group) {
+          final groups = keyMap.fullHelp.map(_visibleBindings).where((group) {
             return group.isNotEmpty;
           }).toList();
           if (groups.isEmpty) return SizedBox.shrink();
@@ -118,7 +119,7 @@ class HelpView extends StatelessWidget {
           );
         }
 
-        final bindings = _visibleBindings(keyMap.shortHelp());
+        final bindings = _visibleBindings(keyMap.shortHelp);
         if (bindings.isEmpty) return SizedBox.shrink();
 
         if (_shouldStackBindings(bindings, maxWidth)) {

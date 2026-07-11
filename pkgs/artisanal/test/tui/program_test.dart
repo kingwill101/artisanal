@@ -3,10 +3,11 @@ import 'dart:io' as io;
 
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/tui/cmd.dart';
-import 'package:artisanal/src/tui/key.dart' show Key, KeyType;
 import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
+import 'package:artisanal/src/tui/program_host_io.dart'
+    show jsonChannelHost, webSocketHost, socketHost;
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/view.dart';
 import 'package:artisanal/src/uv/terminal_renderer.dart' show RenderMetrics;
@@ -466,14 +467,10 @@ class MockTerminal implements TuiTerminal {
   }
 
   @override
-  void restoreCursor() {
-    // TODO: implement restoreCursor
-  }
+  void restoreCursor() {}
 
   @override
-  void saveCursor() {
-    // TODO: implement saveCursor
-  }
+  void saveCursor() {}
 }
 
 final class _NonTerminalMockTerminal extends MockTerminal {
@@ -682,7 +679,7 @@ void main() {
 
     test('jsonChannel host resolves to a BackendTerminal', () async {
       final inbound = StreamController<Object?>();
-      final binding = ProgramHost.jsonChannel(
+      final binding = jsonChannelHost(
         sendMessage: (_) {},
         inboundMessages: inbound.stream,
       ).resolve(const ProgramOptions());
@@ -705,7 +702,7 @@ void main() {
       );
       final serverSocket = await acceptedSocket;
 
-      final binding = ProgramHost.webSocket(
+      final binding = webSocketHost(
         serverSocket,
       ).resolve(const ProgramOptions());
 
@@ -729,9 +726,7 @@ void main() {
       );
       final serverSocket = await accepted;
 
-      final binding = ProgramHost.socket(
-        serverSocket,
-      ).resolve(const ProgramOptions());
+      final binding = socketHost(serverSocket).resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -3653,8 +3648,8 @@ void main() {
       );
 
       final msg = await cmd.execute() as ExecProcessMsg;
-      // Command varies by platform
-      expect(msg.executable, isNotEmpty);
+      expect(msg.arguments.last, 'https://example.com');
+      expect(['open', 'xdg-open', 'cmd'], contains(msg.executable));
     });
 
     test('ExecProcessMsg releases and restores terminal', () async {

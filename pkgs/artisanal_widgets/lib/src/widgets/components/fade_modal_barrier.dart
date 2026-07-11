@@ -1,4 +1,8 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color;
 
 /// A modal barrier that fades in/out with an animated opacity.
 ///
@@ -20,7 +24,13 @@ part of 'components_widgets.dart';
 ///   onDismiss: () => setState(() => _showBarrier = false),
 ///   child: myContent,
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class FadeModalBarrier extends StatefulWidget {
   FadeModalBarrier({
     required this.child,

@@ -1,3 +1,5 @@
+
+// ignore_for_file: unused_shown_name
 /// WidgetApp integrates widgets with the TUI program loop.
 library;
 
@@ -7,28 +9,32 @@ import 'dart:developer' as dev;
 import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
+        CapabilityMsg,
         CellSizeMsg,
         Cmd,
-        DegradationLevel,
         ColorProfileMsg,
-        PrimaryDeviceAttributesMsg,
-        DebugOverlayModel,
+        ColorSchemeMsg,
+        DegradationLevel,
         EveryCmd,
+        KeyboardEnhancementsMsg,
         RenderBudgetMsg,
         FrameTickModel,
         FrameTickMsg,
         HitTestMouseMsg,
         KeyMsg,
         Model,
+        ModeReportMsg,
         MouseAction,
         MouseButton,
         MouseMsg,
         Msg,
         ParallelCmd,
+        PrimaryDeviceAttributesMsg,
         ReassemblableModel,
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
+        SecondaryDeviceAttributesMsg,
         TerminalVersionMsg,
         TraceTag,
         StreamCmd,
@@ -36,28 +42,36 @@ import 'package:artisanal/tui.dart'
         View,
         WindowPixelSizeMsg,
         WindowSizeMsg;
+import 'package:artisanal/bubbles.dart' show DebugOverlayModel;
 import 'package:artisanal/uv.dart'
     show
         PrimaryDeviceAttributesEvent,
         TerminalCapabilities,
         TerminalVersionEvent;
 import 'package:artisanal/style.dart'
-    show Color, AdaptiveColor, CompleteAdaptiveColor;
+    show AdaptiveColor, Color, Colors, CompleteAdaptiveColor, Style;
 import 'package:artisanal/terminal.dart' show KeyType;
 import '../core/element.dart'
     show BuildOwner, Element, ElementTree, HitTestElementEntry, StatefulElement;
-import '../core/framework.dart' show BuildContext, StatelessWidget;
+import '../core/framework.dart'
+    show BuildContext, State, StatefulWidget, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
-import '../layout/layout_widgets.dart'
-    show ImageAutoMode, withImageAutoConfiguration;
+import '../layout/layout.dart'
+    show Column, Expanded, ImageAutoMode, Text, withImageAutoConfiguration;
+import '../scroll/scroll_widgets.dart' show SingleChildScrollView;
 import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
 import '../core/accessibility.dart';
 import '../components/components_widgets.dart'
-    show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
-import '../theme/theme.dart' show hasDarkBackground;
+    show
+        Button,
+        CmdCallback,
+        DebugOverlay,
+        DebugOverlayPosition,
+        PerformanceOverlay;
+import '../theme/theme.dart' show hasDarkBackground, setHasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';
 
@@ -90,7 +104,7 @@ class WidgetApp
     this.enableRenderMetrics = true,
     this.enableRenderMetricsInjection = true,
     this.debugOverlay = false,
-    this.debugOverlayPosition = DebugOverlayPosition.topRight,
+    this.debugOverlayPosition = .topRight,
     bool debugRebuilds = false,
   }) : _mediaQueryData = MediaQueryData.zero,
        _sessionImageCapabilities =
@@ -118,6 +132,9 @@ class WidgetApp
   }
 
   Widget root;
+
+  Object? _lastError;
+  Widget? _savedRootBeforeError;
 
   /// Optional terminal background color.
   ///
@@ -369,279 +386,311 @@ class WidgetApp
       _recordKeyTimestamp();
     }
 
-    if (msg is FrameTickMsg) {
-      if (_debugOverlayEnabled) {
-        _overlayDirty = true;
+    try {
+      if (msg is FrameTickMsg) {
+        if (_debugOverlayEnabled) {
+          _overlayDirty = true;
+        }
+        if (!handleFrameTick) {
+          return (this, null);
+        }
       }
-      if (!handleFrameTick) {
+
+      // --- F12 toggles the built-in debug overlay ---
+      if (msg is KeyMsg && msg.key.type == KeyType.f12) {
+        _debugOverlayEnabled = !_debugOverlayEnabled;
+        _runtimeDebugOverlay = _runtimeDebugOverlay.setEnabled(
+          _debugOverlayEnabled,
+        );
+        _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+        _overlayDirty = true;
         return (this, null);
       }
-    }
 
-    // --- F12 toggles the built-in debug overlay ---
-    if (msg is KeyMsg && msg.key.type == KeyType.f12) {
-      _debugOverlayEnabled = !_debugOverlayEnabled;
-      _runtimeDebugOverlay = _runtimeDebugOverlay.setEnabled(
-        _debugOverlayEnabled,
-      );
-      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-      _overlayDirty = true;
-      return (this, null);
-    }
-
-    if (msg is _RenderMetricsInjectionMsg) {
-      _applyRenderMetricsInjection(msg.injection);
-      return (this, null);
-    }
-
-    // Store runtime render metrics but avoid forcing full-tree rebuilds for
-    // WidgetApp's built-in overlay. We compose that overlay outside the tree
-    // from a cached base view (split-dashboard style).
-    if (msg is RenderMetricsMsg) {
-      _applyRenderMetricsInjection(
-        RenderMetricsInjection(metrics: msg.metrics),
-      );
-      return (this, null);
-    }
-
-    if (msg is RenderBudgetMsg) {
-      _degradationLevel = msg.state.level;
-      _tree.setDegradationLevel(_degradationLevel);
-      _dirty = true;
-      return (this, null);
-    }
-
-    if (msg is WindowSizeMsg) {
-      _updateWindowCellSize(msg.width, msg.height);
-      _tree.setRootConstraints(
-        BoxConstraints.tight(Size(msg.width.toDouble(), msg.height.toDouble())),
-      );
-      _mediaQueryData = MediaQueryData(
-        size: Size(msg.width.toDouble(), msg.height.toDouble()),
-      );
-      _tree.update(
-        _MediaQueryHost(
-          key: _mediaQueryKey,
-          data: _mediaQueryData,
-          metricsHolder: _metricsHolder,
-          child: _currentRoot(),
-        ),
-      );
-      _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
-        terminalWidth: msg.width,
-        terminalHeight: msg.height,
-      );
-      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-      if (_debugOverlayEnabled) {
-        _overlayDirty = true;
+      if (msg is _RenderMetricsInjectionMsg) {
+        _applyRenderMetricsInjection(msg.injection);
+        return (this, null);
       }
-      _dirty = true;
-      return (this, _coalesceCommands(cmds));
-    }
 
-    if (msg is ColorProfileMsg) {
-      // Color profile updates affect renderer strategy outside the widget tree.
-      // Skipping dispatch avoids an O(N) widget-tree traversal during startup.
-      return (this, _coalesceCommands(cmds));
-    }
-
-    if (msg is MouseMsg) {
-      if (_debugOverlayEnabled) {
-        _overlayDirty = true;
-      }
-      if (msg.action != MouseAction.motion) {
-        _lastMouseMotionTargets.removeWhere(
-          (element) => !element.state.mounted,
+      // Store runtime render metrics but avoid forcing full-tree rebuilds for
+      // WidgetApp's built-in overlay. We compose that overlay outside the tree
+      // from a cached base view (split-dashboard style).
+      if (msg is RenderMetricsMsg) {
+        _applyRenderMetricsInjection(
+          RenderMetricsInjection(metrics: msg.metrics),
         );
+        return (this, null);
       }
-      // --- Mouse capture: active drag/press owner gets the event first ---
-      final capture = _tree.mouseCapture;
-      if (capture != null) {
-        final Stopwatch? dispatchSw = TuiTrace.enabled ? Stopwatch() : null;
-        dispatchSw?.start();
-        final cmd = _tree.dispatchTo(capture, msg);
-        dispatchSw?.stop();
-        if (TuiTrace.captureDispatchEnabled) {
-          TuiTrace.log(
-            'widget_app.capture_dispatch ${capture.widget.runtimeType} '
-            'dt=${dispatchSw?.elapsedMicroseconds ?? -1}us',
-          );
-        }
-        if (cmd != null) cmds.add(cmd);
 
-        root = _currentRoot();
-        _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
-        if (TuiTrace.captureDispatchEnabled) {
-          TuiTrace.log('widget_app.update end (capture) dirty=$_dirty');
+      if (msg is RenderBudgetMsg) {
+        _degradationLevel = msg.state.level;
+        _tree.setDegradationLevel(_degradationLevel);
+        _dirty = true;
+        return (this, null);
+      }
+
+      if (msg is WindowSizeMsg) {
+        _updateWindowCellSize(msg.width, msg.height);
+        _tree.setRootConstraints(
+          BoxConstraints.tight(
+            Size(msg.width.toDouble(), msg.height.toDouble()),
+          ),
+        );
+        _mediaQueryData = MediaQueryData(
+          size: Size(msg.width.toDouble(), msg.height.toDouble()),
+        );
+        _tree.update(
+          _MediaQueryHost(
+            key: _mediaQueryKey,
+            data: _mediaQueryData,
+            metricsHolder: _metricsHolder,
+            child: _currentRoot(),
+          ),
+        );
+        _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
+          terminalWidth: msg.width,
+          terminalHeight: msg.height,
+        );
+        _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+        if (_debugOverlayEnabled) {
+          _overlayDirty = true;
+        }
+        _dirty = true;
+        return (this, _coalesceCommands(cmds));
+      }
+
+      if (msg is ColorProfileMsg) {
+        // Color profile updates affect renderer strategy outside the widget tree.
+        // Skipping dispatch avoids an O(N) widget-tree traversal during startup.
+        return (this, _coalesceCommands(cmds));
+      }
+
+      if (msg is ColorSchemeMsg) {
+        if (msg.dark != hasDarkBackground) {
+          setHasDarkBackground(msg.dark);
+          _markElementTreeDirty(_tree.root);
+          _dirty = true;
         }
         return (this, _coalesceCommands(cmds));
       }
 
-      // --- Render-tree hit-testing (default for widget apps) ---
-      if (useHitTesting) {
-        final Stopwatch? hitSw = TuiTrace.enabled ? Stopwatch() : null;
-        hitSw?.start();
-        final hits = _tree.hitTestAt(msg.x.toDouble(), msg.y.toDouble());
-        hitSw?.stop();
-        if (TuiTrace.captureDispatchEnabled) {
-          TuiTrace.log(
-            'widget_app.hitTest count=${hits.length} '
-            'mouse=(${msg.x},${msg.y}) '
-            'dt=${hitSw?.elapsedMicroseconds ?? -1}us',
+      if (msg is ModeReportMsg) {
+        return (this, _coalesceCommands(cmds));
+      }
+
+      if (msg is CapabilityMsg) {
+        return (this, _coalesceCommands(cmds));
+      }
+
+      if (msg is KeyboardEnhancementsMsg) {
+        return (this, _coalesceCommands(cmds));
+      }
+
+      if (msg is MouseMsg) {
+        if (_debugOverlayEnabled) {
+          _overlayDirty = true;
+        }
+        if (msg.action != MouseAction.motion) {
+          _lastMouseMotionTargets.removeWhere(
+            (element) => !element.state.mounted,
           );
         }
-        if (hits.isNotEmpty) {
-          // Dispatch a HitTestMouseMsg starting from the deepest hit element,
-          // bubbling UP to ancestors.  This ensures StatefulWidgets like
-          // GestureDetector (which have no render object of their own)
-          // receive the event when their child's render object is hit.
-          //
-          // Track which StatefulElements have already been visited so that
-          // when multiple hit entries (child render objects) bubble up to
-          // the same GestureDetector, it only processes the event once.
-          final visited = <Element>{};
-          for (final hit in hits) {
-            final hitMsg = HitTestMouseMsg(
-              event: msg,
-              localX: hit.localX,
-              localY: hit.localY,
+        // --- Mouse capture: active drag/press owner gets the event first ---
+        final capture = _tree.mouseCapture;
+        if (capture != null) {
+          final Stopwatch? dispatchSw = TuiTrace.enabled ? Stopwatch() : null;
+          dispatchSw?.start();
+          final cmd = _tree.dispatchTo(capture, msg);
+          dispatchSw?.stop();
+          if (TuiTrace.captureDispatchEnabled) {
+            TuiTrace.log(
+              'widget_app.capture_dispatch ${capture.widget.runtimeType} '
+              'dt=${dispatchSw?.elapsedMicroseconds ?? -1}us',
             );
-            final cmd = _tree.dispatchBubbleUp(
-              hit.element,
-              hitMsg,
-              visited: visited,
-            );
-            if (cmd != null) {
-              cmds.add(cmd);
-              break;
-            }
           }
-          final currentMotionTargets = msg.action == MouseAction.motion
-              ? visited.whereType<StatefulElement>().toSet()
-              : const <StatefulElement>{};
-          // Capture dirty state BEFORE broadcasting the raw MouseMsg.
-          // The hit-test dispatch above may have triggered setState() calls
-          // (e.g., onWheel, onEnter) that marked elements dirty.  If we
-          // broadcast the raw MouseMsg first, _tree.dispatch() rebuilds
-          // those dirty elements, clearing hasDirty/hasPaintDirty before we
-          // can propagate it to `_dirty`.
+          if (cmd != null) cmds.add(cmd);
+
           root = _currentRoot();
           _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+          if (TuiTrace.captureDispatchEnabled) {
+            TuiTrace.log('widget_app.update end (capture) dirty=$_dirty');
+          }
+          return (this, _coalesceCommands(cmds));
+        }
 
-          // Broadcast raw mouse only when needed for out-of-hit housekeeping
-          // (hover-exit and selection-finalize outside bounds). Avoid doing
-          // this for wheel/press to prevent whole-tree traversals during
-          // scroll bursts.
-          final isWheelLike =
-              msg.action == MouseAction.wheel ||
-              msg.button == MouseButton.wheelUp ||
-              msg.button == MouseButton.wheelDown ||
-              msg.button == MouseButton.wheelLeft ||
-              msg.button == MouseButton.wheelRight;
-          // Press events are already delivered through hit-test bubbling.
-          // Re-broadcasting press globally can let unrelated widgets react to
-          // the same click (and potentially steal mouse capture), which breaks
-          // controls like draggable scroll thumbs.
-          final shouldBroadcastRawMouse =
-              !isWheelLike && msg.action != MouseAction.press;
-          if (msg.action == MouseAction.motion) {
-            final rawMotionTargets = <StatefulElement>{
-              ...currentMotionTargets.where((element) => element.state.mounted),
-              ..._lastMouseMotionTargets.where(
-                (element) =>
-                    element.state.mounted &&
-                    !currentMotionTargets.contains(element),
-              ),
-            };
-            if (rawMotionTargets.isNotEmpty) {
-              final motionCmd = _tree.dispatchToStatefulElements(
-                rawMotionTargets,
+        // --- Render-tree hit-testing (default for widget apps) ---
+        if (useHitTesting) {
+          final Stopwatch? hitSw = TuiTrace.enabled ? Stopwatch() : null;
+          hitSw?.start();
+          final hits = _tree.hitTestAt(msg.x.toDouble(), msg.y.toDouble());
+          hitSw?.stop();
+          if (TuiTrace.captureDispatchEnabled) {
+            TuiTrace.log(
+              'widget_app.hitTest count=${hits.length} '
+              'mouse=(${msg.x},${msg.y}) '
+              'dt=${hitSw?.elapsedMicroseconds ?? -1}us',
+            );
+          }
+          if (hits.isNotEmpty) {
+            // Dispatch a HitTestMouseMsg starting from the deepest hit element,
+            // bubbling UP to ancestors.  This ensures StatefulWidgets like
+            // GestureDetector (which have no render object of their own)
+            // receive the event when their child's render object is hit.
+            //
+            // Track which StatefulElements have already been visited so that
+            // when multiple hit entries (child render objects) bubble up to
+            // the same GestureDetector, it only processes the event once.
+            final visited = <Element>{};
+            for (final hit in hits) {
+              final hitMsg = HitTestMouseMsg(
+                event: msg,
+                localX: hit.localX,
+                localY: hit.localY,
+              );
+              final cmd = _tree.dispatchBubbleUp(
+                hit.element,
+                hitMsg,
+                visited: visited,
+              );
+              if (cmd != null) {
+                cmds.add(cmd);
+                break;
+              }
+            }
+            final currentMotionTargets = msg.action == MouseAction.motion
+                ? visited.whereType<StatefulElement>().toSet()
+                : const <StatefulElement>{};
+            // Capture dirty state BEFORE broadcasting the raw MouseMsg.
+            // The hit-test dispatch above may have triggered setState() calls
+            // (e.g., onWheel, onEnter) that marked elements dirty.  If we
+            // broadcast the raw MouseMsg first, _tree.dispatch() rebuilds
+            // those dirty elements, clearing hasDirty/hasPaintDirty before we
+            // can propagate it to `_dirty`.
+            root = _currentRoot();
+            _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+
+            // Broadcast raw mouse only when needed for out-of-hit housekeeping
+            // (hover-exit and selection-finalize outside bounds). Avoid doing
+            // this for wheel/press to prevent whole-tree traversals during
+            // scroll bursts.
+            final isWheelLike =
+                msg.action == MouseAction.wheel ||
+                msg.button == MouseButton.wheelUp ||
+                msg.button == MouseButton.wheelDown ||
+                msg.button == MouseButton.wheelLeft ||
+                msg.button == MouseButton.wheelRight;
+            // Press events are already delivered through hit-test bubbling.
+            // Re-broadcasting press globally can let unrelated widgets react to
+            // the same click (and potentially steal mouse capture), which breaks
+            // controls like draggable scroll thumbs.
+            final shouldBroadcastRawMouse =
+                !isWheelLike && msg.action != MouseAction.press;
+            if (msg.action == MouseAction.motion) {
+              final rawMotionTargets = <StatefulElement>{
+                ...currentMotionTargets.where(
+                  (element) => element.state.mounted,
+                ),
+                ..._lastMouseMotionTargets.where(
+                  (element) =>
+                      element.state.mounted &&
+                      !currentMotionTargets.contains(element),
+                ),
+              };
+              if (rawMotionTargets.isNotEmpty) {
+                final motionCmd = _tree.dispatchToStatefulElements(
+                  rawMotionTargets,
+                  msg,
+                );
+                if (motionCmd != null) cmds.add(motionCmd);
+              }
+              _lastMouseMotionTargets
+                ..clear()
+                ..addAll(
+                  currentMotionTargets.where(
+                    (element) => element.state.mounted,
+                  ),
+                );
+            } else if (shouldBroadcastRawMouse) {
+              final broadcastCmd = _tree.dispatch(msg);
+              if (broadcastCmd != null) cmds.add(broadcastCmd);
+            }
+
+            // Pick up any additional dirty flags from the broadcast.
+            root = _currentRoot();
+            _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+            if (TuiTrace.captureDispatchEnabled) {
+              TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
+            }
+            return (this, _coalesceCommands(cmds));
+          }
+          if (msg.action == MouseAction.motion &&
+              _lastMouseMotionTargets.isNotEmpty) {
+            final exitedTargets = _lastMouseMotionTargets
+                .where((element) => element.state.mounted)
+                .toSet();
+            if (exitedTargets.isNotEmpty) {
+              final exitCmd = _tree.dispatchToStatefulElements(
+                exitedTargets,
                 msg,
               );
-              if (motionCmd != null) cmds.add(motionCmd);
+              if (exitCmd != null) cmds.add(exitCmd);
             }
-            _lastMouseMotionTargets
-              ..clear()
-              ..addAll(
-                currentMotionTargets.where((element) => element.state.mounted),
-              );
-          } else if (shouldBroadcastRawMouse) {
-            final broadcastCmd = _tree.dispatch(msg);
-            if (broadcastCmd != null) cmds.add(broadcastCmd);
+            _lastMouseMotionTargets.clear();
+            root = _currentRoot();
+            _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+            if (TuiTrace.captureDispatchEnabled) {
+              TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
+            }
+            return (this, _coalesceCommands(cmds));
           }
-
-          // Pick up any additional dirty flags from the broadcast.
-          root = _currentRoot();
-          _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
-          if (TuiTrace.captureDispatchEnabled) {
-            TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
-          }
-          return (this, _coalesceCommands(cmds));
-        }
-        if (msg.action == MouseAction.motion &&
-            _lastMouseMotionTargets.isNotEmpty) {
-          final exitedTargets = _lastMouseMotionTargets
-              .where((element) => element.state.mounted)
-              .toSet();
-          if (exitedTargets.isNotEmpty) {
-            final exitCmd = _tree.dispatchToStatefulElements(
-              exitedTargets,
-              msg,
-            );
-            if (exitCmd != null) cmds.add(exitCmd);
-          }
-          _lastMouseMotionTargets.clear();
-          root = _currentRoot();
-          _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
-          if (TuiTrace.captureDispatchEnabled) {
-            TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
-          }
-          return (this, _coalesceCommands(cmds));
         }
       }
-    }
 
-    // Capture dirty state before dispatch — external setState() calls
-    // (e.g., from OverlayEntry.markNeedsBuild) mark elements dirty between
-    // frames.  dispatch() rebuilds them, clearing hasDirty, so we must
-    // record the flag beforehand to ensure view() invalidates the cache.
-    final hadDirtyBeforeDispatch = _tree.hasDirty || _tree.hasPaintDirty;
+      // Capture dirty state before dispatch — external setState() calls
+      // (e.g., from OverlayEntry.markNeedsBuild) mark elements dirty between
+      // frames.  dispatch() rebuilds them, clearing hasDirty, so we must
+      // record the flag beforehand to ensure view() invalidates the cache.
+      final hadDirtyBeforeDispatch = _tree.hasDirty || _tree.hasPaintDirty;
 
-    final Stopwatch? dispatchSw = TuiTrace.enabled ? Stopwatch() : null;
-    dispatchSw?.start();
-    final cmd = _tree.dispatch(msg);
-    dispatchSw?.stop();
-    if (TuiTrace.captureDispatchEnabled) {
-      TuiTrace.log(
-        'widget_app.dispatch ${msg.runtimeType} '
-        'dt=${dispatchSw?.elapsedMicroseconds ?? -1}us',
-      );
-    }
-    if (cmd != null) cmds.add(cmd);
+      final Stopwatch? dispatchSw = TuiTrace.enabled ? Stopwatch() : null;
+      dispatchSw?.start();
+      final cmd = _tree.dispatch(msg);
+      dispatchSw?.stop();
+      if (TuiTrace.captureDispatchEnabled) {
+        TuiTrace.log(
+          'widget_app.dispatch ${msg.runtimeType} '
+          'dt=${dispatchSw?.elapsedMicroseconds ?? -1}us',
+        );
+      }
+      if (cmd != null) cmds.add(cmd);
 
-    final imageCapabilitiesChanged =
-        _imageAutoMode == ImageAutoMode.sessionCapabilities &&
-        _updateSessionImageCapabilities(msg);
-    final imageCellPixelsChanged = _updateSessionImageCellPixels(msg);
+      final imageCapabilitiesChanged =
+          _imageAutoMode == ImageAutoMode.sessionCapabilities &&
+          _updateSessionImageCapabilities(msg);
+      final imageCellPixelsChanged = _updateSessionImageCellPixels(msg);
 
-    root = _currentRoot();
-    if (msg is BackgroundColorMsg) {
-      // Adaptive theme state lives outside the element tree. When the terminal
-      // reports a new background color, rebuild the full tree so widgets that
-      // read ThemeScope/current theme in build() update immediately without
-      // waiting for an unrelated resize or input event.
-      _markElementTreeDirty(_tree.root);
-      _dirty = true;
-    } else if (msg is WindowSizeMsg) {
-      _dirty = true;
-    } else {
-      _dirty =
-          _dirty ||
-          imageCapabilitiesChanged ||
-          imageCellPixelsChanged ||
-          hadDirtyBeforeDispatch ||
-          _tree.hasDirty ||
-          _tree.hasPaintDirty;
+      root = _currentRoot();
+      if (msg is BackgroundColorMsg) {
+        // Adaptive theme state lives outside the element tree. When the terminal
+        // reports a new background color, rebuild the full tree so widgets that
+        // read ThemeScope/current theme in build() update immediately without
+        // waiting for an unrelated resize or input event.
+        _markElementTreeDirty(_tree.root);
+        _dirty = true;
+      } else if (msg is WindowSizeMsg) {
+        _dirty = true;
+      } else {
+        _dirty =
+            _dirty ||
+            imageCapabilitiesChanged ||
+            imageCellPixelsChanged ||
+            hadDirtyBeforeDispatch ||
+            _tree.hasDirty ||
+            _tree.hasPaintDirty;
+      }
+    } catch (error, stackTrace) {
+      _showErrorScreen(error, stackTrace);
+      return (this, null);
     }
 
     if (TuiTrace.captureDispatchEnabled) {
@@ -649,6 +698,37 @@ class WidgetApp
     }
 
     return (this, _coalesceCommands(cmds));
+  }
+
+  void _showErrorScreen(Object error, StackTrace stackTrace) {
+    if (_lastError != null) return;
+    _savedRootBeforeError = _currentRoot();
+    _lastError = error;
+    _tree.update(
+      _ErrorScreen(
+        error: error.toString(),
+        stackTrace: stackTrace.toString(),
+        onDismiss: _clearError,
+      ),
+    );
+    _dirty = true;
+  }
+
+  Cmd? _clearError() {
+    _lastError = null;
+    if (_savedRootBeforeError != null) {
+      _tree.update(
+        _MediaQueryHost(
+          key: _mediaQueryKey,
+          data: _mediaQueryData,
+          metricsHolder: _metricsHolder,
+          child: _savedRootBeforeError!,
+        ),
+      );
+      _savedRootBeforeError = null;
+    }
+    _dirty = true;
+    return null;
   }
 
   @override
@@ -952,6 +1032,61 @@ class _MediaQueryHost extends StatelessWidget {
         child: FocusScope(child: child),
       ),
     );
+  }
+}
+
+class _ErrorScreen extends StatefulWidget {
+  _ErrorScreen({
+    required this.error,
+    required this.stackTrace,
+    required CmdCallback onDismiss,
+  }) : _onDismiss = onDismiss;
+
+  final String error;
+  final String stackTrace;
+  final CmdCallback _onDismiss;
+
+  @override
+  State<_ErrorScreen> createState() => _ErrorScreenState();
+}
+
+class _ErrorScreenState extends State<_ErrorScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final errorStyle = Style()
+      ..foreground(Colors.red)
+      ..bold(true);
+    final detailStyle = Style()..foreground(Colors.red);
+
+    return Column(
+      children: [
+        Text('Unhandled exception', style: errorStyle),
+        Text(widget.error, style: detailStyle),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Text(widget.stackTrace, style: detailStyle),
+          ),
+        ),
+        Button(
+          label: 'Copy',
+          onPressed: () =>
+              Cmd.setClipboard('${widget.error}\n${widget.stackTrace}'),
+        ),
+        Button(label: 'Dismiss', onPressed: widget._onDismiss),
+      ],
+    );
+  }
+
+  @override
+  Cmd? handleIntercept(Msg msg) {
+    if (msg is KeyMsg) {
+      final key = msg.key;
+      if (key.type == KeyType.escape) {
+        widget._onDismiss();
+        return Cmd.none();
+      }
+    }
+    return null;
   }
 }
 

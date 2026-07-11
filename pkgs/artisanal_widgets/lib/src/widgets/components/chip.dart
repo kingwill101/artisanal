@@ -1,6 +1,31 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style;
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal_widgets/src/widgets/components/button.dart';
+import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/focus.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
 
-/// Flutter-style non-interactive chip.
+import '../theme/theme.dart' show Theme;
+
+/// A non-interactive chip with optional delete affordance.
+///
+/// The [Chip] widget displays a label in a bordered rounded frame with an
+/// optional [avatar] and delete button. Use [onDeleted] to handle delete.
+///
+/// Example:
+/// ```dart
+/// Wrap(
+///   children: [
+///     Chip(label: Text('Dart')),
+///     Chip(label: Text('Flutter'), onDeleted: () => removeTag('Flutter')),
+///   ],
+/// )
+/// ```
 class Chip extends StatelessWidget {
   Chip({
     required this.label,
@@ -53,7 +78,7 @@ class Chip extends StatelessWidget {
       final text = label as Text;
       final data = text.data;
       if (data != null) {
-        final style = _copyStyle(text.style ?? theme.labelMedium);
+        final style = copyStyle(text.style ?? theme.labelMedium);
         if (!enabled) {
           style.dim();
         }
@@ -64,14 +89,14 @@ class Chip extends StatelessWidget {
   }
 }
 
-/// Flutter-style action chip.
+/// An actionable chip that invokes [onPressed] when activated.
 class ActionChip extends StatelessWidget {
   ActionChip({
     required this.label,
     this.avatar,
     this.onPressed,
     this.enabled = true,
-    this.size = ButtonSize.small,
+    this.size = .small,
     super.key,
   });
 
@@ -93,7 +118,7 @@ class ActionChip extends StatelessWidget {
   }
 }
 
-/// Flutter-style single-select chip.
+/// A selectable chip that displays selected state via [ButtonVariant.primary].
 class ChoiceChip extends StatelessWidget {
   ChoiceChip({
     required this.label,
@@ -128,7 +153,10 @@ class ChoiceChip extends StatelessWidget {
   }
 }
 
-/// Flutter-style multi-select chip.
+/// A multi-select chip with optional checkmark indicator.
+///
+/// When [selected], displays with a filled background and optionally the
+/// checkmark ('+') when [showCheckmark] is true.
 class FilterChip extends StatelessWidget {
   FilterChip({
     required this.label,
@@ -276,7 +304,7 @@ class _InputChipState extends State<InputChip> {
         ? theme.resolvedOnHighlight
         : theme.onSurface;
 
-    final labelStyle = _copyStyle(theme.labelMedium)..foreground(foreground);
+    final labelStyle = copyStyle(theme.labelMedium)..foreground(foreground);
     if (_hovered || _focused) {
       labelStyle.bold();
     }
@@ -287,7 +315,7 @@ class _InputChipState extends State<InputChip> {
     final children = <Widget>[
       if (widget.avatar != null) widget.avatar!,
       if (widget.showCheckmark && widget.selected)
-        Text('+', style: _copyStyle(theme.labelSmall)..foreground(foreground)),
+        Text('+', style: copyStyle(theme.labelSmall)..foreground(foreground)),
       _styledLabel(widget.label, labelStyle),
       if (widget.onDeleted != null)
         GestureDetector(
@@ -351,7 +379,7 @@ class _InputChipState extends State<InputChip> {
     if (icon is! Text) return icon;
     final data = icon.data;
     if (data == null) return icon;
-    final style = _copyStyle(icon.style ?? theme.labelSmall)
+    final style = copyStyle(icon.style ?? theme.labelSmall)
       ..foreground(foreground);
     if (!widget.enabled) style.dim();
     return Text(data, style: style);

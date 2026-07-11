@@ -1,4 +1,5 @@
 // DecoratedBox Widget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates using DecoratedBox to apply Decoration and BoxDecoration
 // to child widgets, including borders, backgrounds, and foreground positioning.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(DecoratedBoxExample());
+  final app = WidgetApp(DecoratedBoxExample());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

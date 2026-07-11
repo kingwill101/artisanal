@@ -7,33 +7,33 @@
 // Run with: dart run example/animated_tint/main.dart
 
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 void main() async {
-  final app = tui.WidgetApp(AnimatedTintDemo());
-  await tui.runProgram(
+  final app = WidgetApp(AnimatedTintDemo());
+  await runProgram(
     app,
-    options: const tui.ProgramOptions(
+    options: const ProgramOptions(
       altScreen: true,
-      mouseMode: tui.MouseMode.allMotion,
+      mouseMode: MouseMode.allMotion,
     ),
   );
 }
 
-class AnimatedTintDemo extends w.StatefulWidget {
+class AnimatedTintDemo extends StatefulWidget {
   AnimatedTintDemo({super.key});
 
   @override
-  w.State createState() => _AnimatedTintDemoState();
+  State createState() => _AnimatedTintDemoState();
 }
 
-class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
-  final w.WidgetScrollController _scrollController = w.WidgetScrollController();
-  late final List<w.AnimationController> _timelineControllers;
-  late final w.AnimationTimeline _timeline;
-  late final w.AnimationController _pulseController;
-  late final w.AnimationTimeline _pulseTimeline;
+class _AnimatedTintDemoState extends State<AnimatedTintDemo> {
+  final WidgetScrollController _scrollController = WidgetScrollController();
+  late final List<AnimationController> _timelineControllers;
+  late final AnimationTimeline _timeline;
+  late final AnimationController _pulseController;
+  late final AnimationTimeline _pulseTimeline;
   int _animColorIndex = 0;
   bool _fadeIn = true;
   int _fadeKey = 0;
@@ -51,9 +51,9 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
   @override
   void initState() {
     super.initState();
-    _timelineControllers = List<w.AnimationController>.generate(
+    _timelineControllers = List<AnimationController>.generate(
       3,
-      (index) => w.AnimationController(
+      (index) => AnimationController(
         value: 0.0,
         duration: Duration(milliseconds: 420 + (index * 120)),
       ),
@@ -62,11 +62,11 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
     for (final controller in _timelineControllers) {
       controller.addListener(() => setState(() {}));
     }
-    _pulseController = w.AnimationController(
+    _pulseController = AnimationController(
       value: 0.0,
       duration: const Duration(milliseconds: 280),
     )..addListener(() => setState(() {}));
-    _timeline = w.AnimationTimeline.cascade(
+    _timeline = AnimationTimeline.cascade(
       controllers: _timelineControllers,
       hold: const Duration(milliseconds: 90),
       gap: const Duration(milliseconds: 120),
@@ -85,7 +85,7 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
         });
       },
     );
-    _pulseTimeline = w.AnimationTimeline.pulse(
+    _pulseTimeline = AnimationTimeline.pulse(
       controller: _pulseController,
       hold: const Duration(milliseconds: 120),
       rest: const Duration(milliseconds: 180),
@@ -104,16 +104,15 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
   }
 
   @override
-  tui.Cmd? handleInit() =>
-      _mergeCmds([_timeline.start(), _pulseTimeline.start()]);
+  Cmd? handleInit() => _mergeCmds([_timeline.start(), _pulseTimeline.start()]);
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     final timelineCmd = _timeline.handleMessage(msg);
     final pulseCmd = _pulseTimeline.handleMessage(msg);
-    if (msg is tui.KeyMsg) {
+    if (msg is KeyMsg) {
       if (msg.key.char == 'q') {
-        return _mergeCmds([timelineCmd, pulseCmd, tui.Cmd.quit()]);
+        return _mergeCmds([timelineCmd, pulseCmd, Cmd.quit()]);
       }
       if (msg.key.char == 'a') {
         setState(() {
@@ -133,8 +132,8 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
         return _mergeCmds([
           timelineCmd,
           pulseCmd,
-          _timeline.start(direction: tui.TimelineDirection.forward),
-          _pulseTimeline.start(direction: tui.TimelineDirection.forward),
+          _timeline.start(direction: TimelineDirection.forward),
+          _pulseTimeline.start(direction: TimelineDirection.forward),
         ]);
       }
     }
@@ -151,15 +150,15 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
+  Widget build(BuildContext context) {
     final theme = widget.theme;
     final label = theme.labelSmall.copy()..foreground(theme.onBackground);
     final onSurface = Style()..foreground(theme.onSurface);
 
     final pair = _colorPairs[_animColorIndex];
 
-    return w.Container(
-      child: w.Scrollbar(
+    return Container(
+      child: Scrollbar(
         controller: _scrollController,
         thickness: 1,
         gap: 1,
@@ -168,114 +167,111 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
         thumbChar: ' ',
         trackUsesBackground: true,
         thumbUsesBackground: true,
-        trackGradient: w.ScrollbarGradient.background(
-          start: w.hasDarkBackground
+        trackGradient: ScrollbarGradient.background(
+          start: hasDarkBackground
               ? const BasicColor('#2f363d')
               : const BasicColor('#e3e7eb'),
-          end: w.hasDarkBackground
+          end: hasDarkBackground
               ? const BasicColor('#1f252a')
               : const BasicColor('#d3d9e0'),
         ),
-        thumbGradient: w.ScrollbarGradient.background(
-          start: w.hasDarkBackground
+        thumbGradient: ScrollbarGradient.background(
+          start: hasDarkBackground
               ? const BasicColor('#3fb2ff')
               : const BasicColor('#2f7df6'),
-          end: w.hasDarkBackground
+          end: hasDarkBackground
               ? const BasicColor('#7c5cff')
               : const BasicColor('#6e55f5'),
         ),
-        hoverThumbGradient: w.ScrollbarGradient.background(
-          start: w.hasDarkBackground
+        hoverThumbGradient: ScrollbarGradient.background(
+          start: hasDarkBackground
               ? const BasicColor('#79ddff')
               : const BasicColor('#4f93ff'),
-          end: w.hasDarkBackground
+          end: hasDarkBackground
               ? const BasicColor('#b18bff')
               : const BasicColor('#836bff'),
         ),
         hoverThumbChar: ' ',
-        child: w.ScrollView(
+        child: ScrollView(
           controller: _scrollController,
           handleKeys: true,
-          child: w.Container(
-            padding: const w.EdgeInsets.all(1),
+          child: Container(
+            padding: const EdgeInsets.all(1),
             color: theme.background,
-            child: w.Column(
+            child: Column(
               gap: 1,
               children: [
-                w.Text('AnimatedTint & FadeTint Demo', style: theme.titleLarge),
-                w.Text(
+                Text('AnimatedTint & FadeTint Demo', style: theme.titleLarge),
+                Text(
                   'a = cycle AnimatedTint colors | f = toggle FadeTint | t = restart timeline | q = quit',
                   style: label,
                 ),
-                w.Divider(width: 65),
+                Divider(width: 65),
 
                 // AnimatedTint section
-                w.Text('AnimatedTint (${pair.$3}):', style: theme.titleMedium),
-                w.AnimatedTint(
-                  key: w.ValueKey('anim-$_animKey'),
+                Text('AnimatedTint (${pair.$3}):', style: theme.titleMedium),
+                AnimatedTint(
+                  key: ValueKey('anim-$_animKey'),
                   begin: pair.$1,
                   end: pair.$2,
                   duration: const Duration(milliseconds: 1500),
-                  child: w.Container(
+                  child: Container(
                     width: 50,
                     height: 3,
                     color: theme.surface,
-                    alignment: w.Alignment.center,
-                    child: w.Text(
-                      'Animated color transition',
-                      style: onSurface,
-                    ),
+                    alignment: Alignment.center,
+                    child: Text('Animated color transition', style: onSurface),
                   ),
                 ),
-                w.Divider(width: 65),
+                Divider(width: 65),
 
                 // FadeTint section
-                w.Text(
+                Text(
                   'FadeTint (${_fadeIn ? "Fade In" : "Fade Out"}):',
                   style: theme.titleMedium,
                 ),
-                w.FadeTint(
-                  key: w.ValueKey('fade-$_fadeKey'),
+                FadeTint(
+                  key: ValueKey('fade-$_fadeKey'),
                   color: Colors.blue,
                   duration: const Duration(milliseconds: 1000),
                   fadeIn: _fadeIn,
-                  child: w.Container(
+                  child: Container(
                     width: 50,
                     height: 3,
                     color: theme.surface,
-                    alignment: w.Alignment.center,
-                    child: w.Text('Blue fade tint overlay', style: onSurface),
+                    alignment: Alignment.center,
+                    child: Text('Blue fade tint overlay', style: onSurface),
                   ),
                 ),
-                w.Divider(width: 65),
+                Divider(width: 65),
 
-                w.Text(
+                Text(
                   'AnimationTimeline choreography:',
                   style: theme.titleMedium,
                 ),
-                w.Text('Timeline: $_timelineStatus', style: label),
+                Text('Timeline: $_timelineStatus', style: label),
                 for (
                   var index = 0;
                   index < _timelineControllers.length;
                   index++
                 )
-                  w.Text(
+                  Text(
                     'lane ${index + 1} ${_timelineBar(_timelineControllers[index].value)}',
                     style: label,
                   ),
-                w.Text('Pulse preset: $_pulseStatus', style: label),
-                w.Text(
+                Text('Pulse preset: $_pulseStatus', style: label),
+                Text(
                   'pulse ${_timelineBar(_pulseController.value)}',
                   style: label,
                 ),
-                w.Text(
+                Text(
                   'These lanes are driven by AnimationTimeline.staggered(...) plus AnimationTimeline.pulse(...) for the repeating emphasis lane.',
                   style: label,
                 ),
-                w.Divider(width: 65),
+                Divider(width: 65),
 
                 // Info
-                w.Text(
+                Text(
                   'AnimatedTint interpolates between two colors over time.\n'
                   'FadeTint fades a single color opacity from 0 to 1 (or reverse).\n'
                   'The timeline section below is controller choreography rather than implicit animation.',
@@ -289,11 +285,11 @@ class _AnimatedTintDemoState extends w.State<AnimatedTintDemo> {
     );
   }
 
-  static tui.Cmd? _mergeCmds(List<tui.Cmd?> cmds) {
-    final concrete = cmds.whereType<tui.Cmd>().toList(growable: false);
+  static Cmd? _mergeCmds(List<Cmd?> cmds) {
+    final concrete = cmds.whereType<Cmd>().toList(growable: false);
     if (concrete.isEmpty) return null;
     if (concrete.length == 1) return concrete.first;
-    return tui.Cmd.batch(concrete);
+    return Cmd.batch(concrete);
   }
 
   static String _timelineBar(double value) {

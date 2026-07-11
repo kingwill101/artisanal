@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import '../run/transport.dart' show WidgetAppHostServer;
+import '../style/accessibility.dart' show isDarkColorRgb;
 import '../tui/model.dart';
 import '../tui/program.dart';
+import '../tui/program_host_io.dart' show webSocketHost;
 
 /// Session handler invoked for each accepted browser websocket connection.
 typedef BrowserTerminalSessionHandler =
@@ -13,7 +16,7 @@ typedef BrowserTerminalSessionHandler =
 /// This helper serves a default xterm.js client page and upgrades websocket
 /// connections for terminal sessions. Use [bind] for custom session handling
 /// or [serveProgram] to host a [Model] directly.
-final class BrowserTerminalHostServer {
+final class BrowserTerminalHostServer implements WidgetAppHostServer {
   BrowserTerminalHostServer._({
     required this.server,
     required this.pagePath,
@@ -98,7 +101,7 @@ final class BrowserTerminalHostServer {
         await runProgram(
           modelBuilder(),
           options: options,
-          host: ProgramHost.webSocket(socket),
+          host: webSocketHost(socket),
         );
       },
     );
@@ -190,7 +193,7 @@ final class BrowserTerminalHostServer {
     }
   }
 
-  /// Closes the underlying HTTP server.
+  @override
   Future<void> close({bool force = false}) async {
     if (_closed) return;
     _closed = true;
@@ -508,9 +511,17 @@ final class BrowserTerminalHostServer {
         if ([red, green, blue].some((value) => Number.isNaN(value))) {
           return true;
         }
+        function linearize(channel) {
+          const value = channel / 255.0;
+          return value <= 0.04045
+            ? value / 12.92
+            : Math.pow((value + 0.055) / 1.055, 2.4);
+        }
         const luminance =
-          ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
-        return luminance < 0.5;
+          (0.2126 * linearize(red)) +
+          (0.7152 * linearize(green)) +
+          (0.0722 * linearize(blue));
+        return luminance < 0.179128784747792;
       }
 
       function normalizeOscColor(value) {
@@ -1602,8 +1613,7 @@ bool _prefersDarkColorScheme(String background) {
   final red = int.parse(hex.substring(0, 2), radix: 16);
   final green = int.parse(hex.substring(2, 4), radix: 16);
   final blue = int.parse(hex.substring(4, 6), radix: 16);
-  final luminance = ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
-  return luminance < 0.5;
+  return isDarkColorRgb(red: red, green: green, blue: blue);
 }
 
 String? _normalizedHexColor(String color) {

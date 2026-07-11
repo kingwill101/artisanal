@@ -8,7 +8,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ActionChipShowcase());
+  final app = w.WidgetApp(ActionChipShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

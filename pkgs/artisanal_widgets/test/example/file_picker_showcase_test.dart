@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:artisanal/testing.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 import '../../example/file_picker/main.dart' as example;

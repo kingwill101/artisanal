@@ -2,9 +2,6 @@ import 'package:ultraviolet/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/event_test.go`
-// - `third_party/ultraviolet/event.go`
 
 void main() {
   group('UV events parity', () {

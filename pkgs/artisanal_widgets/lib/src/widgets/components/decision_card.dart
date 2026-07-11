@@ -1,10 +1,14 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Color, Border;
 
 /// Signal level for a [DecisionCard].
 ///
 /// Maps to a traffic-light color scheme:
 /// - [green]: safe / proceed
 /// - [yellow]: caution / review
+
+// ignore_for_file: unused_shown_name
 /// - [red]: stop / alert
 enum DecisionSignal {
   green,
@@ -187,18 +191,18 @@ class DecisionCard extends StatelessWidget {
     final bg = background ?? theme.surface;
     final accent = _accentColor(theme);
 
-    final badgeStyle = _copyStyle(theme.labelMedium)
+    final badgeStyle = copyStyle(theme.labelMedium)
       ..foreground(_badgeFgColor(theme))
       ..background(_badgeBgColor(theme))
       ..bold();
-    final titleStyle = _copyStyle(theme.titleSmall)
+    final titleStyle = copyStyle(theme.titleSmall)
       ..foreground(theme.onSurface)
       ..bold();
-    final dimStyle = _copyStyle(theme.bodySmall)..foreground(theme.muted);
-    final headerStyle = _copyStyle(theme.labelSmall)
+    final dimStyle = copyStyle(theme.bodySmall)..foreground(theme.muted);
+    final headerStyle = copyStyle(theme.labelSmall)
       ..foreground(theme.border)
       ..bold();
-    final detailStyle = _copyStyle(theme.bodySmall)..foreground(theme.border);
+    final detailStyle = copyStyle(theme.bodySmall)..foreground(theme.border);
 
     final children = <Widget>[];
 
@@ -230,7 +234,7 @@ class DecisionCard extends StatelessWidget {
           EvidenceDirection.opposing => '-',
           EvidenceDirection.neutral => '~',
         };
-        final dirStyle = _copyStyle(theme.bodySmall)
+        final dirStyle = copyStyle(theme.bodySmall)
           ..foreground(_evidenceFgColor(theme, term.direction));
         children.add(
           Text(

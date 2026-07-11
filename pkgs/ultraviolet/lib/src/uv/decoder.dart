@@ -43,7 +43,6 @@ const int _flagCtrlJ = 1 << 8;
 
 /// Legacy key encoding behavior flags.
 ///
-/// Upstream: `third_party/ultraviolet/decoder.go` (`LegacyKeyEncoding`).
 final class LegacyKeyEncoding {
   const LegacyKeyEncoding([this.bits = 0]);
 
@@ -104,7 +103,6 @@ final class LegacyKeyEncoding {
 /// It decodes raw byte sequences from the terminal into structured [Event]s,
 /// including key presses, mouse movements, and terminal responses.
 ///
-/// Upstream: `third_party/ultraviolet/decoder.go` (`Decoder`).
 final class EventDecoder {
   EventDecoder({LegacyKeyEncoding? legacy, this.useTerminfo = false})
     : legacy = legacy ?? const LegacyKeyEncoding() {
@@ -355,7 +353,6 @@ final class EventDecoder {
 
   (int, Event?) _parseSs3(List<int> buf, {required bool allowIncompleteEsc}) {
     // Port of `parseSs3`:
-    // `third_party/ultraviolet/decoder.go` (parseSs3)
     if (buf.length == 2 && buf[0] == 0x1b /* ESC */ ) {
       // Shortcut if this is an alt+O key.
       final lower = String.fromCharCode(buf[1]).toLowerCase();
@@ -620,7 +617,6 @@ final class EventDecoder {
         return (i + 1, ModeReportEvent(mode: mode.value, value: setting));
       case 't':
         // Window operation reports (xterm):
-        // `third_party/ultraviolet/decoder.go` (parseCsi: case 't')
         final op = params.param(0, 0);
         if (!op.ok) break;
 
@@ -772,7 +768,6 @@ final class EventDecoder {
       if (p == 201) return const PasteEndEvent();
       // XTerm modifyOtherKeys:
       // CSI 27 ; <modifier> ; <code> ~
-      // Upstream: `third_party/ultraviolet/decoder.go` (parseXTermModifyOtherKeys)
       if (p == 27 && params.length >= 3) {
         final xmod = params.param(1, 1);
         final xr = params.param(2, 1);
@@ -1367,7 +1362,6 @@ final class EventDecoder {
 
   Event _parseKittyKeyboard(_AnsiParams params) {
     // Port of `parseKittyKeyboard`:
-    // `third_party/ultraviolet/decoder.go` (parseKittyKeyboard/fromKittyMod)
     var isRelease = false;
 
     Key key = const Key(code: 0);
@@ -1585,7 +1579,6 @@ int _validRuneOrReplacement(int r) {
 }
 
 int _fromKittyMod(int bits) {
-  // `third_party/ultraviolet/decoder.go` (fromKittyMod)
   const kittyShift = 1 << 0;
   const kittyAlt = 1 << 1;
   const kittyCtrl = 1 << 2;
@@ -2116,7 +2109,6 @@ Event? parseWin32InputKeyEvent(
 ) {
   // Partial port of `parseWin32InputKeyEvent` for VT input mode sequences.
   //
-  // Upstream: `third_party/ultraviolet/decoder.go` (parseWin32InputKeyEvent)
   final mod = translateControlKeyState(cks);
 
   bool isControl(int r) => r <= 0x1f || (r >= 0x7f && r <= 0x9f);

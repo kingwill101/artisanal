@@ -85,260 +85,9 @@
 /// - [Cmd.perform] - Wrap async operations
 library;
 
-// Terminal abstraction
-export 'terminal.dart'
-    show
-        TerminalBackend,
-        TerminalDimensions,
-        BackendTerminal,
-        StdioTerminalBackend,
-        EmbeddedTerminalBackend,
-        TerminalBridge,
-        SocketTerminalBackend,
-        TerminalBridgeMessageType,
-        TerminalBridgeMessage,
-        TerminalBridgeJsonChannel,
-        JsonTerminalBackend,
-        WebSocketTerminalBackend,
-        BrowserTerminalSessionHandler,
-        BrowserTerminalHostServer,
-        SocketTerminalSessionHandler,
-        SocketTerminalHostServer,
-        TuiTerminal,
-        SplitTerminal,
-        StdioTerminal,
-        TtyTerminal,
-        StringTerminal,
-        RawModeGuard,
-        TerminalState,
-        sharedStdinStream,
-        isSharedStdinStreamStarted,
-        shutdownSharedStdinStream;
-
-// Components
-export 'component.dart' show ViewComponent, StaticComponent, ComponentHost;
-
-// Key input
-export 'key.dart' show Key, KeyType, KeyParser, Keys;
-
-// Message types
-export 'msg.dart'
-    show
-        Msg,
-        KeyMsg,
-        ClipboardMsg,
-        ClipboardSelection,
-        BackgroundColorMsg,
-        ForegroundColorMsg,
-        CursorColorMsg,
-        ColorPaletteMsg,
-        MouseMsg,
-        MouseButton,
-        MouseAction,
-        MouseMode,
-        HitTestMouseMsg,
-        WindowSizeMsg,
-        CursorPositionMsg,
-        WindowPixelSizeMsg,
-        CellSizeMsg,
-        TickMsg,
-        FrameTickMsg,
-        QuitMsg,
-        BatchMsg,
-        FocusMsg,
-        PasteMsg,
-        CustomMsg,
-        CapabilityMsg,
-        TerminalVersionMsg,
-        ModifyOtherKeysMsg,
-        PrimaryDeviceAttributesMsg,
-        SecondaryDeviceAttributesMsg,
-        TertiaryDeviceAttributesMsg,
-        KeyboardEnhancementsMsg,
-        ModeReportValue,
-        ModeReportMsg,
-        ColorProfileMsg,
-        ColorSchemeMsg,
-        InterruptMsg,
-        RepaintMsg,
-        RenderMetricsMsg,
-        RenderBudgetMsg,
-        HotReloadStatus,
-        HotReloadStatusMsg,
-        OutputSource,
-        CapturedOutputMsg,
-        UvEventMsg;
-
-// Terminal theme helper (background/dark-mode)
-export 'theme.dart' show TerminalThemeState, TerminalThemeHost;
-export 'terminal_palette.dart'
-    show TerminalPaletteSnapshot, TerminalPaletteService;
-export 'terminal_native_frame.dart'
-    show
-        TerminalNativeCell,
-        TerminalNativeCellDelta,
-        TerminalNativeCellDeltaFrame,
-        TerminalNativeColor,
-        TerminalNativeDeltaFrame,
-        TerminalNativeFrame,
-        TerminalNativeLineDelta,
-        TerminalNativeLine,
-        TerminalNativeLink,
-        TerminalNativeSpan,
-        TerminalNativeSpanDelta,
-        TerminalNativeStyle,
-        TerminalDirtySpan;
-export 'render_feed.dart'
-    show
-        ProgramRenderChangeSummary,
-        ProgramRenderEvent,
-        ProgramRenderFeed,
-        ProgramRenderMonitor,
-        ProgramRenderStats;
-export 'render_recorder.dart'
-    show
-        ProgramRenderCapture,
-        ProgramRenderCapturePayload,
-        ProgramRenderCaptureReport,
-        ProgramRenderRecorder,
-        ProgramRenderSnapshotSummary,
-        ProgramRenderSnapshot;
-export 'terminal_render_inspector.dart'
-    show TerminalRenderFrame, TerminalRenderLine;
-
-// Command system
-export 'cmd.dart'
-    show
-        Cmd,
-        StreamCmd,
-        EveryCmd,
-        ParallelCmd,
-        CmdExtension,
-        every,
-        CmdFunc,
-        CmdFunc1,
-        // Control messages
-        SetWindowTitleMsg,
-        ClearScreenMsg,
-        EnterAltScreenMsg,
-        ExitAltScreenMsg,
-        ShowCursorMsg,
-        HideCursorMsg,
-        EnableMouseCellMotionMsg,
-        EnableMouseAllMotionMsg,
-        DisableMouseMsg,
-        EnableBracketedPasteMsg,
-        DisableBracketedPasteMsg,
-        EnableReportFocusMsg,
-        DisableReportFocusMsg,
-        RequestWindowSizeMsg,
-        SuspendMsg,
-        ResumeMsg,
-        PrintLineMsg,
-        RepaintRequestMsg,
-        ClipboardSetMethod,
-        ClipboardSetMsg,
-        ExecProcessMsg,
-        ExecResult;
-
-// Model interface
-export 'model.dart'
-    show
-        Model,
-        CopyWithModel,
-        CompositeModel,
-        UpdateResult,
-        FrameTickModel,
-        RenderMetricsModel,
-        ReassemblableModel,
-        CapturedOutputModel,
-        OutputLog,
-        OutputLogEntry,
-        noCmd,
-        quit;
-export 'degradation.dart'
-    show
-        DegradationLevel,
-        RenderBudgetOptions,
-        RenderBudgetController,
-        RenderBudgetState,
-        ViewDegradation;
-export 'pane_manager.dart'
-    show
-        PaneSplitDirection,
-        PaneNavigationDirection,
-        PaneSnapAlignment,
-        PaneSnapTarget,
-        PaneRect,
-        SplitHandle,
-        PaneLayout,
-        PaneTreeNode,
-        PaneLeaf,
-        PaneSplit,
-        TilingPaneManager;
-export 'view.dart'
-    show
-        View,
-        TerminalProgressBar,
-        TerminalProgressBarState,
-        KeyboardEnhancements;
-export 'component.dart' show ViewComponent, ComponentHost;
-
-// TuiRenderer
-export 'renderer.dart'
-    show
-        TuiRenderer,
-        TuiRendererOptions,
-        FullScreenTuiRenderer,
-        InlineTuiRenderer,
-        UltravioletTuiRenderer,
-        SimpleTuiRenderer,
-        BufferedTuiRenderer,
-        NullTuiRenderer,
-        StringSinkTuiRenderer,
-        TuiTerminalRendererExtension,
-        RenderMetrics,
-        compressAnsi;
-
-// Program runtime
-export 'program.dart'
-    show
-        ScreenMode,
-        UiAnchor,
-        ProgramHostResolver,
-        ProgramHostBinding,
-        ProgramHost,
-        ProgramInterceptor,
-        ProgramMacro,
-        ProgramReplay,
-        ProgramReplayStep,
-        Program,
-        ProgramOptions,
-        MessageFilter,
-        ProgramCancelledError,
-        runProgram,
-        runProgramWithResult,
-        runProgramDebug;
-
-// Replay scenario protocol + trace conversion.
-export 'replay_protocol.dart'
-    show
-        ReplayScreen,
-        ReplayCustomEvent,
-        ReplayEventPresentation,
-        ReplayRenderCaptureEvent,
-        ReplayEventControl,
-        ReplayEventDirective,
-        ReplayEventHook,
-        ReplayAction,
-        ReplayScenario,
-        ReplayMouseMsg,
-        ReplayEventMsg,
-        ReplayCoordinateInterceptor,
-        ReplayTraceConversionOptions,
-        ReplayTraceConversionResult,
-        ReplayTraceConverter,
-        replayScenarioStream;
+export 'runtime.dart';
+export 'rendering.dart';
+export 'automation.dart';
 
 // Harmonica helpers (spring, projectile) used by progress and demos
 export 'harmonica.dart'
@@ -363,20 +112,26 @@ export 'zone/zone.dart'
         hasGlobalZone,
         initGlobalZone,
         closeGlobalZone;
+export 'zone/zone_info.dart';
+export 'zone/zone_manager.dart';
+export 'zone/zone_scanner.dart';
 
-// Trace / debug logging
-export 'trace.dart'
-    show TuiTrace, TraceTag, TraceSpan, TraceEventType, TraceEventRecord;
+// Low-level text editing primitives
+export 'editor_core/editor_core.dart' hide TextSelection;
 
-// Structured runtime evidence logging
-export 'evidence.dart' show TuiEvidence, TuiEvidenceRecord;
+// Markdown to ANSI rendering
+export 'markdown/markdown.dart';
 
-// DevTools integration
-export 'devtools.dart'
-    show ArtisanalDevTools, DevToolsMessageEntry, DevToolsRenderStats;
+// Capability / startup probes
+export 'background_color_probe.dart';
+export 'emoji_width_probe.dart';
+export 'startup_probe.dart';
+export 'uv_capability_probe.dart';
 
-// Stable high-level widget system for composable components.
-//
-// This keeps `package:artisanal/tui.dart` backward-compatible while routing
-// consumers through the package-level stabilized widget entrypoint.
-export '../../widgets.dart' hide Key, LocalKey, UniqueKey, ValueKey;
+// Hot reload (conditional per-platform stub on web)
+export 'hot_reload_mixin.dart';
+
+// Misc runtime helpers
+export 'replay_harness_mixin.dart';
+export 'resize_coalescer.dart';
+export 'program_host_io.dart';

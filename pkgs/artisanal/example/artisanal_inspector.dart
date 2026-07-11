@@ -32,6 +32,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+// ignore_for_file: use_null_aware_elements
 void main(List<String> args) async {
   if (args.isEmpty) {
     stderr.writeln('Usage: dart run example/artisanal_inspector.dart <ws-uri>');

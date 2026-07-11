@@ -1,5 +1,12 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/style.dart';
+import 'package:artisanal_widgets/src/widgets/components/button.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
 
+/// An item in a breadcrumb navigation trail.
 class BreadcrumbItem {
   const BreadcrumbItem(this.label, {this.onTap, this.enabled = true});
 
@@ -8,6 +15,23 @@ class BreadcrumbItem {
   final bool enabled;
 }
 
+/// A horizontal breadcrumb trail showing navigation hierarchy.
+///
+/// The [Breadcrumbs] widget displays a list of [items] separated by [separator].
+/// Clicking a breadcrumb invokes its [BreadcrumbItem.onTap] callback.
+///
+/// Set [interactiveLast] to `true` to make the last item clickable as well.
+///
+/// Example:
+/// ```dart
+/// Breadcrumbs(
+///   items: [
+///     BreadcrumbItem('Home', onTap: () => navigate('/')),
+///     BreadcrumbItem('Settings', onTap: () => navigate('/settings')),
+///     BreadcrumbItem('Theme', onTap: () => navigate('/settings/theme')),
+///   ],
+/// )
+/// ```
 class Breadcrumbs extends StatelessWidget {
   Breadcrumbs({
     required this.items,
@@ -25,11 +49,10 @@ class Breadcrumbs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final activeStyle = _copyStyle(theme.labelMedium)
+    final activeStyle = copyStyle(theme.labelMedium)
       ..foreground(theme.onSurface)
       ..bold();
-    final inactiveStyle = _copyStyle(theme.labelMedium)
-      ..foreground(theme.muted);
+    final inactiveStyle = copyStyle(theme.labelMedium)..foreground(theme.muted);
 
     return Row(
       gap: gap,

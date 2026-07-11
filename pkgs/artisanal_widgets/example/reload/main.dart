@@ -1,38 +1,38 @@
+import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/app.dart' as app;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/widgets.dart' as w;
 
 void main(List<String> args) async {
   final config = _parseArgs(args);
   final controller = app.ReloadController();
+  app.ReloadFileWatcher? watcher;
 
   try {
-    if (config.watchRoots.isEmpty) {
-      await app.runReloadableArtisanalApp(
-        title: 'Reload Host Showcase',
+    if (config.watchRoots.isNotEmpty) {
+      watcher = await app.ReloadFileWatcher.watch(
         controller: controller,
-        homeBuilder: (context, revision) => ReloadShowcaseScreen(
-          revision: revision,
-          watchRoots: config.watchRoots,
-          watchMode: config.watchMode,
-        ),
-      );
-    } else {
-      await app.runWatchedArtisanalApp(
-        title: 'Reload Host Showcase',
-        controller: controller,
-        watchRoots: config.watchRoots,
-        watchMode: config.watchMode,
-        homeBuilder: (context, revision) => ReloadShowcaseScreen(
-          revision: revision,
-          watchRoots: config.watchRoots,
-          watchMode: config.watchMode,
-        ),
+        roots: config.watchRoots,
+        mode: config.watchMode,
       );
     }
+    await artisanal.runWidgetApp(
+      app.ArtisanalApp(
+        title: 'Reload Host Showcase',
+        child: app.ReloadHost(
+          controller: controller,
+          builder: (context, revision) => ReloadShowcaseScreen(
+            revision: revision,
+            watchRoots: config.watchRoots,
+            watchMode: config.watchMode,
+          ),
+        ),
+      ),
+    );
   } finally {
     await controller.dispose();
+    await watcher?.dispose();
   }
 }
 

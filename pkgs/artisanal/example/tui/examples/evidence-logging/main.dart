@@ -3,7 +3,7 @@ library;
 
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 const _evidencePath = 'build/evidence-logging.jsonl';
 const _maxTicks = 5;

@@ -1,4 +1,5 @@
 // Image Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the Image widget with MemoryImage, UV-backed auto protocol
 // selection, and various BoxFit modes.
@@ -14,7 +15,7 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:image/image.dart' as img;
 
 void main() async {
-  final app = tui.WidgetApp(ImageDemo());
+  final app = WidgetApp(ImageDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

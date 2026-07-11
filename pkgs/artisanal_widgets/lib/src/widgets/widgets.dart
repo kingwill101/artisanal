@@ -1,75 +1,31 @@
-/// Widget system for composable TUI components.
-///
-/// This library provides a widget abstraction built on top of the Model pattern
-/// with automatic message forwarding, theming, and layout primitives.
-///
-/// ## Quick Start
-///
-/// ```dart
-/// import 'package:artisanal_widgets/widgets.dart';
-///
-/// class MyApp extends Widget {
-///   @override
-///   Object view() {
-///     return Column(
-///       gap: 1,
-///       children: [
-///         Text('Hello', style: theme.titleLarge),
-///         Row(
-///           gap: 2,
-///           children: [
-///             Text('Left'),
-///             Text('Right'),
-///           ],
-///         ),
-///       ],
-///     );
-///   }
-/// }
-/// ```
-///
-/// ## Key Concepts
-///
-/// - **Widget**: Base class that implements Model with auto child forwarding
-/// - **Theme**: Global theme with semantic colors and text styles
-/// - **Layout Widgets**: Row, Column, Container, Text, Divider, Spacer
-///
-/// {@category TUI}
-@experimental
-library;
-
-import 'package:meta/meta.dart' show experimental;
-
-export 'core/key.dart';
-export 'core/accessibility.dart';
-export 'core/widget.dart';
-export 'core/framework.dart';
-export 'core/element.dart';
-export 'focus/focus.dart';
-export 'app/widget_app.dart';
-export 'app/artisanal_app.dart';
-export 'app/run_app.dart';
-export 'app/reload.dart';
-export 'app/reload_watcher.dart';
-export 'app/performance.dart';
-export 'app/render_metrics_provider.dart';
-export 'rendering/render_object.dart';
-export 'rendering/render_layout.dart';
-export 'layout/geometry.dart';
-export 'media/media_query.dart';
-export 'theme/theme.dart';
-export 'theme/theme_scope.dart';
-export 'theme/opencode_themes.dart';
-export 'gestures/gestures.dart';
-export 'plugins/slots.dart';
-export 'layout/layout_widgets.dart';
-export 'layout/keyboard_listener.dart';
-export 'layout/block_focus.dart';
-export 'components/components_widgets.dart';
-export 'input/input_widgets.dart';
-export 'scroll/scroll_widgets.dart';
 export 'animation/animations.dart';
-export 'components/overlay.dart';
+export 'app/app.dart';
+export 'charting/charting.dart';
+export 'components/components.dart';
+export 'core/core.dart';
+export 'element.dart';
+export 'focus.dart';
+export 'framework.dart';
+export 'geometry.dart';
+export 'gestures/gestures.dart';
+export 'input/input.dart';
+export 'input_widgets.dart';
+export 'key.dart';
+export 'layout/layout.dart';
+export 'layout_widgets.dart';
+export 'media/media.dart';
+export 'media_query.dart';
 export 'navigation/navigation.dart';
-export 'selection/selection_widgets.dart';
-export 'charting/chart_widgets.dart';
+export 'plugins/plugins.dart';
+export 'render_layout.dart';
+export 'render_object.dart';
+export 'rendering/rendering.dart';
+export 'scroll/scroll.dart';
+export 'scroll_widgets.dart';
+export 'selection/selection.dart';
+export 'testing/testing.dart';
+export 'theme.dart';
+export 'theme/theme.dart';
+export 'theme_scope.dart';
+export 'widget.dart';
+export 'widget_app.dart';

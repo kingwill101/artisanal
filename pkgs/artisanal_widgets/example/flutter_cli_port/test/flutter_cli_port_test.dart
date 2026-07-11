@@ -1,0 +1,52 @@
+import 'package:artisanal_widgets/testing.dart';
+import 'package:flutter_cli_port/flutter_cli_port.dart';
+import 'package:test/test.dart';
+
+void main() {
+  testWidgets('renders Ratatui dashboard header panels and ready footer', (
+    tester,
+  ) async {
+    await tester.pumpWidget(FlutterCliDashboard(), width: 120, height: 24);
+
+    expect(tester.find.text('flutter-cli'), isTrue);
+    expect(tester.find.text('Performance'), isTrue);
+    expect(tester.find.text('Devices'), isTrue);
+    expect(tester.find.text('[r] reload'), isTrue);
+    expect(tester.find.text('[P] perf'), isTrue);
+    expect(tester.find.text('FPS'), isTrue);
+    expect(tester.find.text('Memory'), isTrue);
+  });
+
+  testWidgets('network key swaps left panel like Ratatui n binding', (
+    tester,
+  ) async {
+    await tester.pumpWidget(FlutterCliDashboard(), width: 120, height: 24);
+
+    expect(tester.find.text('Performance'), isTrue);
+    tester.sendKey('n');
+
+    expect(tester.find.text('Network'), isTrue);
+    expect(tester.find.text('method'), isTrue);
+    expect(tester.find.text('code'), isTrue);
+  });
+
+  testWidgets('pre-ready footer shows weighted progress bar', (tester) async {
+    await tester.pumpWidget(
+      FlutterCliDashboard(initialState: FlutterCliState.demo(ready: false)),
+      width: 100,
+      height: 20,
+    );
+
+    expect(tester.find.text('%'), isTrue);
+    expect(tester.find.text('█'), isTrue);
+    expect(tester.find.text('[e] error'), isTrue);
+    expect(tester.find.text('[r] reload'), isFalse);
+  });
+
+  testWidgets('small terminal renders same too-small fallback', (tester) async {
+    await tester.pumpWidget(FlutterCliDashboard(), width: 30, height: 8);
+
+    expect(tester.find.text('Terminal too small'), isTrue);
+    expect(tester.find.text('50x8'), isTrue);
+  });
+}

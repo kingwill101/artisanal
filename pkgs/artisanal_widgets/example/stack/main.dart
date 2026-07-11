@@ -1,4 +1,5 @@
 // Stack & Overlay Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Stack, Positioned, Visibility, and Opacity widgets.
 //
@@ -9,7 +10,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(StackShowcase());
+  final app = WidgetApp(StackShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
 
 /// A dialog with a text input field.
 ///
@@ -45,28 +50,27 @@ class DialogPrompt extends StatefulWidget {
   /// Called when the user cancels (esc).
   final CmdCallback? onCancel;
 
-  /// Show a text prompt dialog via [DialogStack].
-  static void show(
+  /// Show a text prompt dialog.
+  ///
+  /// Returns the submitted text, or `null` if cancelled.
+  static Future<String?> show(
     BuildContext context, {
     required String title,
     Widget? description,
     String? placeholder,
     String? initialValue,
-    void Function(String value)? onSubmit,
   }) {
-    final stack = DialogStack.of(context);
-    stack.push(
-      DialogPrompt(
+    return Navigator.of(context).showDialog<String>(
+      builder: (ctx) => DialogPrompt(
         title: title,
         description: description,
         placeholder: placeholder,
         initialValue: initialValue,
         onSubmit: (value) {
-          stack.pop();
-          onSubmit?.call(value);
+          Navigator.of(ctx).pop(value);
         },
         onCancel: () {
-          stack.pop();
+          Navigator.of(ctx).pop();
           return null;
         },
       ),
@@ -120,9 +124,9 @@ class _DialogPromptState extends State<DialogPrompt> {
         theme.commandPaletteTheme?.searchBackground ?? theme.background;
     final w = dTheme?.width ?? 60;
 
-    final titleStyle = _copyStyle(theme.titleMedium)..foreground(fg);
-    final escStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
-    final hintStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final titleStyle = copyStyle(theme.titleMedium)..foreground(fg);
+    final escStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
+    final hintStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     return SizedBox(
       width: w,

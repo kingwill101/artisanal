@@ -73,5 +73,15 @@ void main() {
         expect(out, contains('\x1b[90m'));
       },
     );
+
+    test('rejects overlapping ranges', () {
+      expect(
+        () => styleRanges('hello world', [
+          StyleRange(0, 5, Style().bold()),
+          StyleRange(4, 8, Style().italic()),
+        ]),
+        throwsArgumentError,
+      );
+    });
   });
 }

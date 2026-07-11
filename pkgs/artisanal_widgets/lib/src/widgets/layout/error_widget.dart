@@ -1,4 +1,8 @@
-part of 'layout_widgets.dart';
+import '../core/widget.dart';
+import '../framework.dart';
+import 'column.dart';
+import 'text.dart';
+import '../style.dart';
 
 /// A widget that displays an error message with red styling.
 ///
@@ -41,10 +45,7 @@ class TUIErrorWidget extends StatelessWidget {
       children.add(Text(details!, style: detailStyle));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
-    );
+    return Column(crossAxisAlignment: .start, children: children);
   }
 }
 

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'cmd.dart';
-import 'key.dart';
 import 'msg.dart';
 import 'terminal.dart';
 

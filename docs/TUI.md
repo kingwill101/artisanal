@@ -244,6 +244,9 @@ print(compressed);
 Inline mode renders a bounded TUI region on the terminal's primary screen
 instead of switching to the alternate screen buffer.
 
+For a complete guide to scrollback-preserving command dashboards, child-process
+logs, and widget-based inline panels, see [INLINE_TUI.md](INLINE_TUI.md).
+
 ```dart
 await runProgram(
   const StatusModel(),
@@ -1265,6 +1268,65 @@ Lifecycle hooks:
 - `onSend(msg)` runs before queueing; return `null` to drop.
 - `onProcessed(msg, elapsed)` runs after each message is processed.
 - `onStop()` runs during cleanup.
+
+### Key Chord Interceptor
+
+`KeyChordInterceptor` is a built-in `ProgramInterceptor` that turns prefix key
+sequences (chords) into structured messages. It is engine-level and works with
+any TUI model.
+
+```dart
+import 'package:artisanal/tui.dart' as tui;
+
+final interceptor = tui.KeyChordInterceptor(
+  bindings: [
+    tui.KeyChordBinding(
+      id: 'open-themes',
+      prefix: tui.KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
+      key: tui.KeyBinding.withHelp(['t'], 't', 'themes'),
+    ),
+    tui.KeyChordBinding(
+      id: 'switch-model',
+      prefix: tui.KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
+      key: tui.KeyBinding.withHelp(['m'], 'm', 'model'),
+    ),
+  ],
+  timeout: null, // wait indefinitely (opencode-style)
+);
+
+await tui.runProgram(
+  MyModel(),
+  options: tui.ProgramOptions(interceptor: interceptor),
+);
+```
+
+Chord messages your model can handle:
+
+| Message | When |
+|---------|------|
+| `KeyChordPrefixMsg` | A chord prefix key was pressed and the interceptor is waiting for the continuation key. |
+| `KeyChordResolvedMsg` | A full chord sequence matched a binding. Includes the binding `id`, `prefix`, and `key`. |
+| `KeyChordCancelledMsg` | The pending chord was cancelled (unmatched key or timeout). Check `timedOut`. |
+
+When an unmatched key cancels a pending chord, the interceptor emits a
+`BatchMsg` containing both `KeyChordCancelledMsg` and the original `KeyMsg`,
+so the model receives both the cancellation notice and the key that caused it.
+
+Configuration:
+
+- `timeout` — `null` (default) waits indefinitely for the continuation key
+  (opencode-style). Set a `Duration` to auto-cancel after inactivity
+  (e.g., `const Duration(milliseconds: 900)`).
+- `inner` — an optional `ProgramInterceptor` to compose underneath the chord
+  layer. The inner interceptor runs first; the chord interceptor processes the
+  result.
+
+Annotated example:
+
+<a href="../examples/key-chord/main.dart">
+  Key Chord Demo
+</a>
+(Run with `dart run example/tui/examples/key-chord/main.dart`)
 
 ## Replay Automation
 

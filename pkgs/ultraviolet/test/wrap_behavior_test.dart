@@ -1,9 +1,6 @@
 import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Behavior parity reference:
-// - `third_party/lipgloss/wrap.go` (`WrapWriter`: reset/reapply style/link around newlines)
-
 void main() {
   group('wrapAnsiPreserving', () {
     test('wraps and preserves SGR pen state across inserted newlines', () {

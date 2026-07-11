@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:artisanal/hosts.dart';
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 /// Demonstrates driving a TUI through [TerminalBridge] instead of stdio.
 ///

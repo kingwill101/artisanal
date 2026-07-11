@@ -1,11 +1,23 @@
 import 'dart:io' as io;
 
+import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
 import 'package:path/path.dart' as p;
 
-final class CompiledPluginFixtures {
-  CompiledPluginFixtures._(this._tempDirectory, this._compiledPaths);
+final String _artisanalRootDirectory = io.Directory.current.path;
+final _kernelCache = RemotePluginKernelCache(
+  packageRoot: _artisanalRootDirectory,
+);
+final String _precompiledFixturesDirectory = p.join(
+  _artisanalRootDirectory,
+  '.dart_tool',
+  'artisanal',
+  'precompiled-plugins',
+  'test-fixtures',
+);
 
-  final io.Directory _tempDirectory;
+final class CompiledPluginFixtures {
+  CompiledPluginFixtures._(this._compiledPaths);
+
   final Map<String, String> _compiledPaths;
 
   String path(String fixtureFileName) {
@@ -20,54 +32,36 @@ final class CompiledPluginFixtures {
     return compiledPath;
   }
 
-  Future<void> dispose() => _tempDirectory.delete(recursive: true);
+  Future<void> dispose() async {}
 }
 
 Future<CompiledPluginFixtures> compilePluginFixtures(
   Iterable<String> fixtureFileNames,
 ) async {
-  final tempDirectory = await io.Directory.systemTemp.createTemp(
-    'artisanal-plugin-fixtures-',
-  );
   final compiledPaths = <String, String>{};
-  try {
-    for (final fixtureFileName in fixtureFileNames.toSet()) {
-      final sourcePath = _resolveArtisanalPath(<String>[
-        'test',
-        'plugins',
-        'fixtures',
-        fixtureFileName,
-      ]);
-      final outputPath = p.join(
-        tempDirectory.path,
+  for (final fixtureFileName in fixtureFileNames.toSet()) {
+    final sourcePath = _resolveArtisanalPath(<String>[
+      'test',
+      'plugins',
+      'fixtures',
+      fixtureFileName,
+    ]);
+    compiledPaths[fixtureFileName] = await _kernelCache.ensureKernelSnapshot(
+      entrypointPath: sourcePath,
+      outputPath: p.join(
+        _precompiledFixturesDirectory,
         '${p.basenameWithoutExtension(fixtureFileName)}.dill',
-      );
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>['compile', 'kernel', sourcePath, '-o', outputPath],
-        workingDirectory: io.Directory.current.path,
-      );
-      if (result.exitCode != 0) {
-        throw StateError(
-          'Failed to compile fixture $fixtureFileName:\n'
-          '${result.stdout}\n${result.stderr}',
-        );
-      }
-      compiledPaths[fixtureFileName] = outputPath;
-    }
-    return CompiledPluginFixtures._(tempDirectory, compiledPaths);
-  } catch (_) {
-    await tempDirectory.delete(recursive: true);
-    rethrow;
+      ),
+    );
   }
+  return CompiledPluginFixtures._(compiledPaths);
 }
 
 String _resolveArtisanalPath(List<String> relativeSegments) {
-  final currentDirectory = io.Directory.current.path;
   final candidates = <String>[
-    p.joinAll(<String>[currentDirectory, ...relativeSegments]),
+    p.joinAll(<String>[_artisanalRootDirectory, ...relativeSegments]),
     p.joinAll(<String>[
-      currentDirectory,
+      _artisanalRootDirectory,
       'pkgs',
       'artisanal',
       ...relativeSegments,

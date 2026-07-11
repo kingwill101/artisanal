@@ -19,8 +19,6 @@ import '../unicode/grapheme.dart' as uni;
 /// Wraps a string to [width] while preserving ANSI pen state (SGR + OSC 8)
 /// across inserted and existing newlines.
 ///
-/// This is a minimal-first port of Lip Gloss v2’s WrapWriter behavior:
-/// `third_party/lipgloss/wrap.go`.
 String wrapAnsiPreserving(String input, int width, {String breakpoints = ''}) {
   if (width <= 0) return input;
 

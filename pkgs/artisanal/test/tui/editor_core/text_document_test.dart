@@ -1,5 +1,5 @@
 import 'package:characters/characters.dart';
-import 'package:artisanal/editor_core.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -7,9 +7,10 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Fractional top glyphs used by FTUI-style grouped vertical bars.
-const _barChars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const _barChars = SparkBars.levels;
 
 // ---------------------------------------------------------------------------
 // Single-series vertical histogram (backward-compatible)
@@ -35,7 +36,7 @@ void drawHistogram(
   int gridCols = 0,
   List<String>? xLabels,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int? barWidth,
   bool drawAxisLine = true,
@@ -94,7 +95,7 @@ void drawGroupedHistogram(
   int gridCols = 0,
   List<String>? xLabels,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int groupGap = 1,
   int? barWidth,
@@ -178,7 +179,7 @@ void drawGroupedHistogram(
         final cellY = baseY - r;
         if (cellY < area.minY) break;
         for (var bx = barStartX; bx < barEndX; bx++) {
-          putCell(screen, bx, cellY, barChar, style);
+          putSolidChartCell(screen, bx, cellY, style, barChar);
         }
       }
 
@@ -186,7 +187,7 @@ void drawGroupedHistogram(
         final cellY = baseY - fullRows;
         if (cellY >= area.minY) {
           for (var bx = barStartX; bx < barEndX; bx++) {
-            putCell(screen, bx, cellY, _barChars[fracIdx], style);
+            putSolidChartCell(screen, bx, cellY, style, _barChars[fracIdx]);
           }
         }
       }
@@ -246,7 +247,7 @@ void drawStackedHistogram(
   int gridCols = 0,
   List<String>? xLabels,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int groupGap = 1,
   int? barWidth,
@@ -322,7 +323,7 @@ void drawStackedHistogram(
         final cellY = baseY - prevRows - r;
         if (cellY < area.minY) break;
         for (var bx = barStartX; bx < barEndX; bx++) {
-          putCell(screen, bx, cellY, barChar, style);
+          putSolidChartCell(screen, bx, cellY, style, barChar);
         }
       }
     }
@@ -375,7 +376,7 @@ void drawHorizontalGroupedHistogram(
   int gridRows = 0,
   int gridCols = 3,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int groupGap = 1,
   int? barWidth,
@@ -455,7 +456,7 @@ void drawHorizontalGroupedHistogram(
         for (var c = 0; c < barLen; c++) {
           final cellX = area.minX + labelWidth + c;
           if (cellX >= area.maxX) break;
-          putCell(screen, cellX, by, barChar, style);
+          putSolidChartCell(screen, cellX, by, style, barChar);
         }
       }
     }
@@ -487,7 +488,7 @@ void drawHorizontalStackedHistogram(
   int gridRows = 0,
   int gridCols = 3,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int groupGap = 1,
   int? barWidth,
@@ -558,7 +559,7 @@ void drawHorizontalStackedHistogram(
         for (var c = 0; c < segmentCols; c++) {
           final cellX = area.minX + labelWidth + prevCols + c;
           if (cellX >= area.maxX) break;
-          putCell(screen, cellX, by, barChar, style);
+          putSolidChartCell(screen, cellX, by, style, barChar);
         }
       }
     }

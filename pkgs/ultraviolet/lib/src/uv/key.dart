@@ -15,7 +15,6 @@ import '../unicode/grapheme.dart' as uni;
 
 /// Modifier keys.
 ///
-/// Upstream: `third_party/ultraviolet/key.go` (`KeyMod`).
 abstract final class KeyMod {
   static const int shift = 1 << 0;
   static const int alt = 1 << 1;
@@ -34,12 +33,10 @@ abstract final class KeyMod {
   static bool contains(int mods, int subset) => (mods & subset) == subset;
 }
 
-/// Upstream: `third_party/ultraviolet/key.go` (`KeyExtended`).
 const int keyExtended = 0x110000; // unicode.MaxRune + 1
 
 // Special key symbols.
 //
-// Upstream: `third_party/ultraviolet/key.go` (special key constants).
 const int keyUp = keyExtended + 1;
 const int keyDown = keyExtended + 2;
 const int keyRight = keyExtended + 3;
@@ -505,7 +502,6 @@ final Map<String, int> _stringKeyType = <String, int>{
 
 /// UV-style key event.
 ///
-/// Upstream: `third_party/ultraviolet/key.go` (`Key`).
 final class Key {
   const Key({
     this.text = '',
@@ -682,7 +678,6 @@ bool _isPrintable(int codePoint) {
 
 /// Converts a 1-based XTerm modifier value to a UV `KeyMod` bitmask.
 ///
-/// Upstream: `third_party/ultraviolet/decoder.go` (`KeyMod(mod-1)`).
 int keyModFromXTerm(int xtermModMinus1) {
   // XTerm modifier bits: 1=shift, 2=alt, 4=ctrl, 8=meta, 16=... etc.
   var m = 0;

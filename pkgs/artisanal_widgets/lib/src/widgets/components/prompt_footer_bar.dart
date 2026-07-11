@@ -1,4 +1,6 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Color;
 
 /// A footer bar for inline prompt panels and dialog bottoms.
 ///
@@ -20,6 +22,8 @@ part of 'components_widgets.dart';
 ///     (key: 'enter', description: 'confirm'),
 ///   ],
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class PromptFooterBar extends StatelessWidget {
   PromptFooterBar({
@@ -104,8 +108,8 @@ class _FooterHint extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final fg = foreground ?? theme.muted;
 
-    final keyStyle = _copyStyle(theme.labelSmall)..foreground(fg);
-    final descStyle = _copyStyle(theme.bodySmall)..foreground(fg);
+    final keyStyle = copyStyle(theme.labelSmall)..foreground(fg);
+    final descStyle = copyStyle(theme.bodySmall)..foreground(fg);
 
     return Row(
       gap: 1,

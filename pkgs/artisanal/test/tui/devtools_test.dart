@@ -9,7 +9,6 @@ import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/terminal_native_frame.dart';
-import 'package:artisanal/src/terminal/keys.dart' show Key, KeyType;
 import 'package:test/test.dart';
 
 void main() {

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal/testing.dart' show WidgetTester;
+import 'package:artisanal/artisanal.dart' show WidgetTester;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 

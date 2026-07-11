@@ -1,15 +1,22 @@
+import 'dart:async';
 import 'dart:io' as dartio;
 
 import 'package:args/command_runner.dart' as args_pkg;
 export 'package:args/command_runner.dart' show UsageException;
 export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
+export 'shell_completion.dart' show ShellCompleter;
+
+import 'package:completion/completion.dart' as completion;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
+import '../style/color.dart';
+import '../style/style.dart';
 import '../style/verbosity.dart';
 import '../terminal/stdin_stream.dart';
 import 'command_listing.dart';
 import 'help_color_scheme.dart';
+import 'shell_completion.dart';
 
 /// Callback for writing a line to output.
 typedef Write = void Function(String line);
@@ -22,6 +29,9 @@ typedef ReadLine = String? Function();
 
 /// Callback for setting the process exit code.
 typedef ExitCodeSetter = void Function(int code);
+
+/// Callback for handling arguments that do not match any top-level command.
+typedef UnknownCommandFallback<T> = FutureOr<T> Function(List<String> args);
 
 /// An Artisanal-inspired wrapper around `package:args` [CommandRunner].
 ///
@@ -36,13 +46,66 @@ typedef ExitCodeSetter = void Function(int code);
 /// {@macro artisanal_args_overview}
 ///
 /// ```dart
-/// final runner = CommandRunner('myapp', 'My application')
+/// final runner = CommandRunner(
+///   CommandRunner.detectExecutableName(),
+///   'My application',
+/// )
 ///   ..addCommand(ServeCommand())
 ///   ..addCommand(DbMigrateCommand());
 ///
 /// await runner.run(args);
 /// ```
 class CommandRunner<T> extends args_pkg.CommandRunner<T> {
+  /// Auto-detects the executable name from [Platform.script].
+  ///
+  /// For a compiled binary, returns the binary's file name (e.g. `artisan`).
+  /// For a script run via `dart run` or `dart file.dart`, returns a string
+  /// like `dart run path/to/script.dart` so the usage help shows the correct
+  /// invocation.
+  ///
+  /// ```dart
+  /// final runner = CommandRunner(
+  ///   CommandRunner.detectExecutableName(),
+  ///   'My application',
+  /// );
+  /// ```
+  static String detectExecutableName() {
+    final script = dartio.Platform.script;
+    final scriptPath = script.toFilePath();
+    final basename = script.pathSegments.last;
+
+    try {
+      final cwd = dartio.Directory.current.path;
+      if (scriptPath.startsWith(cwd)) {
+        var relative = scriptPath.substring(cwd.length);
+        final sep = dartio.Platform.pathSeparator;
+        if (relative.startsWith(sep) || relative.startsWith('/') ||
+            relative.startsWith('\\')) {
+          relative = relative.substring(1);
+        }
+        if (relative.endsWith('.dart')) {
+          final execName = _executableName();
+          return '$execName run $relative';
+        }
+        return relative.split(sep).last;
+      }
+    } catch (_) {}
+    // Fallback: just use basename
+    if (basename.endsWith('.dart')) {
+      final execName = _executableName();
+      return '$execName run $basename';
+    }
+    return basename;
+  }
+
+  /// Returns the platform's Dart/Flutter executable name (e.g. `dart`).
+  static String _executableName() {
+    final path = dartio.Platform.executable;
+    final name = path.split(dartio.Platform.pathSeparator).last;
+    // Strip .exe on Windows for cleaner output.
+    return name.endsWith('.exe') ? name.substring(0, name.length - 4) : name;
+  }
+
   /// Creates a new command runner.
   ///
   /// - [executableName]: The name of the executable (shown in usage).
@@ -51,11 +114,15 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// - [usageExitCode]: Exit code for usage errors (default: 64).
   /// - [ansi]: Force ANSI output on/off (auto-detected by default).
   /// - [helpColorScheme]: Color scheme for help output (default: [HelpColorScheme.default_]).
+  /// - [enableShellCompletion]: Enable automatic shell tab-completion (default: true).
+  /// - [unknownCommandFallback]: Optional fallback for shim-style CLIs that
+  ///   delegate unknown commands to another executable.
   CommandRunner(
     super.executableName,
     super.description, {
     this.namespaceSeparator = ':',
     this.usageExitCode = 64,
+    this.enableShellCompletion = true,
     bool? ansi,
     Renderer? renderer,
     Write? out,
@@ -66,6 +133,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     ExitCodeSetter? setExitCode,
     super.usageLineLength,
     HelpColorScheme? helpColorScheme,
+    this.unknownCommandFallback,
   }) : _out = out ?? ((line) => dartio.stdout.writeln(line)),
        _err = err ?? ((line) => dartio.stderr.writeln(line)),
        _outRaw = outRaw ?? ((text) => dartio.stdout.write(text)),
@@ -91,6 +159,19 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
 
   /// Exit code set when a [UsageException] occurs.
   final int usageExitCode;
+
+  /// Whether automatic shell tab-completion is enabled.
+  ///
+  /// Defaults to `true`. Set to `false` to disable the built-in completion
+  /// handler that responds to `completion --` invocations from the shell.
+  final bool enableShellCompletion;
+
+  /// Optional handler for unknown top-level commands.
+  ///
+  /// This is useful for shim-style CLIs that wrap another executable. The
+  /// fallback runs only after built-in completion handling has had a chance to
+  /// respond, so completion remains automatic for the Artisanal command tree.
+  final UnknownCommandFallback<T>? unknownCommandFallback;
 
   final Write _out;
   final Write _err;
@@ -127,6 +208,15 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// The I/O helper for console output.
   Console get io => _io ??= _buildIo();
 
+  ShellCompleter? _shellCompleter;
+
+  /// The shell completion helper for this runner.
+  ShellCompleter get shellCompleter =>
+      _shellCompleter ??= ShellCompleter(argParser);
+
+  /// A generated shell completion script for this executable.
+  String get shellCompletionScript => ShellCompleter.generate(executableName);
+
   @override
   String get usage => formatGlobalUsage();
 
@@ -147,7 +237,27 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
 
   @override
   Future<T?> run(Iterable<String> args) async {
-    final ansi = _resolveAnsiForArgs(args);
+    final argsList = args.toList();
+
+    if (argsList.contains('--completion-script')) {
+      writeOut(shellCompletionScript);
+      _setExitCode(0);
+      return null;
+    }
+
+    if (enableShellCompletion) {
+      completion.tryCompletion(
+        argsList,
+        (compArgs, compLine, compPoint) =>
+            shellCompleter.complete(compArgs, compLine, compPoint),
+      );
+    }
+
+    if (_shouldRunUnknownCommandFallback(argsList)) {
+      return await unknownCommandFallback!(List.unmodifiable(argsList));
+    }
+
+    final ansi = _resolveAnsiForArgs(argsList);
     if (_rendererInjected) {
       // Deterministic behavior for tests: respect explicit --ansi/--no-ansi but
       // do not auto-detect terminal capabilities.
@@ -167,15 +277,17 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       }
     }
 
-    _verbosity = _resolveVerbosityForArgs(args);
-    _interactive = _resolveInteractiveForArgs(args);
+    _verbosity = _resolveVerbosityForArgs(argsList);
+    _interactive = _resolveInteractiveForArgs(argsList);
     _io = null;
 
     try {
-      return await super.run(args);
+      return await super.run(argsList);
     } on args_pkg.UsageException catch (e) {
-      _printUsageError(e);
-      _setExitCode(usageExitCode);
+      if (!_handleMissingCommandAsNamespace(e)) {
+        _printUsageError(e);
+        _setExitCode(usageExitCode);
+      }
       return null;
     } finally {
       _io?.dispose();
@@ -251,6 +363,11 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       help:
           'Increase verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug.',
     );
+    argParser.addFlag(
+      'completion-script',
+      negatable: false,
+      help: 'Print a shell completion script to stdout.',
+    );
   }
 
   List<CommandListingEntry> _uniqueTopLevelEntries() {
@@ -265,13 +382,159 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     return unique;
   }
 
+  bool _shouldRunUnknownCommandFallback(List<String> args) {
+    if (unknownCommandFallback == null || args.isEmpty) return false;
+
+    final first = args.first;
+    if (first.startsWith('-')) return false;
+    if (commands.containsKey(first)) return false;
+
+    // Don't delegate namespace commands (e.g. "flutter" when commands like
+    // "flutter:debug-dump" exist) to the fallback.
+    if (_hasNamespaceCommands(first)) return false;
+
+    return true;
+  }
+
+  /// Returns `true` if there are commands in the given namespace.
+  bool _hasNamespaceCommands(String prefix) {
+    return allCommandsInNamespace(prefix).isNotEmpty;
+  }
+
+  /// Returns all unique namespace prefixes from registered commands.
+  ///
+  /// For a command named `cache:clear`, this produces `['cache']`.
+  /// For nested namespaces like `cache:foo:bar`, this produces
+  /// `['cache', 'cache:foo']`.
+  ///
+  /// This is equivalent to Symfony Console's `Application::getNamespaces()`.
+  List<String> getNamespaces() {
+    final namespaces = <String>{};
+    for (final command in commands.values) {
+      if (command.hidden) continue;
+      for (final ns in _extractAllNamespaces(command.name)) {
+        namespaces.add(ns);
+      }
+    }
+    final sorted = namespaces.toList()..sort();
+    return sorted;
+  }
+
+  /// Returns all commands whose full name starts with [namespace] followed by
+  /// [namespaceSeparator].
+  ///
+  /// For example, `allCommandsInNamespace('cache')` returns `cache:clear`,
+  /// `cache:forget`, etc.
+  ///
+  /// This is equivalent to Symfony Console's `Application::all($namespace)`.
+  Map<String, args_pkg.Command<T>> allCommandsInNamespace(String namespace) {
+    final prefix = '$namespace$namespaceSeparator';
+    return {
+      for (final entry in commands.entries)
+        if (entry.key.startsWith(prefix)) entry.key: entry.value,
+    };
+  }
+
+  /// Attempts to handle a "command not found" error as a namespace reference.
+  ///
+  /// When a user types a grouped command namespace (e.g. `flutter` where
+  /// commands like `flutter:debug-dump`, `flutter:frame-profile` exist),
+  /// this displays the subcommands in that namespace instead of showing
+  /// an error, matching Symfony Console's behavior when an unknown command
+  /// matches a namespace.
+  ///
+  /// Returns `true` if the error was handled as a namespace, `false` otherwise.
+  bool _handleMissingCommandAsNamespace(args_pkg.UsageException e) {
+    final message = e.message.trim();
+    // Match "Could not find a command named "X"."
+    final match = RegExp(
+      r'^Could not find a command named "(.+)"',
+    ).firstMatch(message);
+    if (match == null) return false;
+
+    final name = match.group(1)!;
+
+    // Check if this is a namespace with subcommands.
+    final namespaceCommands = allCommandsInNamespace(name);
+    if (namespaceCommands.isEmpty) return false;
+
+    // Display a Symfony-style header.
+    writeOut(_heading('Available commands for the "$name" namespace:'));
+
+    // Build command listing entries.
+    final entries = namespaceCommands.entries.map(
+      (e) => CommandListingEntry(name: e.key, description: e.value.summary),
+    );
+    final listing = formatCommandListing(
+      entries,
+      namespaceSeparator: namespaceSeparator,
+      styleNamespace: _heading,
+      styleCommand: _command,
+    );
+    writeOut(listing);
+    writeOut('');
+    writeOut(
+      'Run ${_emphasize('"$executableName $name:<subcommand> --help"')} '
+      'for more information about a command.',
+    );
+
+    // Exit code 1 because no command was actually executed (matches Symfony).
+    _setExitCode(1);
+    return true;
+  }
+
+  /// Extracts all parent namespace parts from a command name.
+  ///
+  /// For `cache:clear` returns `['cache']`.
+  /// For `cache:foo:bar` returns `['cache', 'cache:foo']`.
+  /// For a command with no separator like `serve`, returns `[]`.
+  ///
+  /// This is equivalent to Symfony Console's `extractAllNamespaces()`.
+  List<String> _extractAllNamespaces(String commandName) {
+    final parts = commandName.split(namespaceSeparator);
+    if (parts.length <= 1) return [];
+
+    final namespaces = <String>[];
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (i == 0) {
+        namespaces.add(parts[0]);
+      } else {
+        namespaces.add('${namespaces.last}$namespaceSeparator${parts[i]}');
+      }
+    }
+    return namespaces;
+  }
+
+  /// Formats and prints a Symfony-style error block to stderr.
+  ///
+  /// Output matches Laravel Artisan's `formatBlock($message, 'error', large: true)`:
+  /// a blank line, the styled message with padding, then a trailing blank line.
   void _printUsageError(args_pkg.UsageException e) {
     final message = e.message.trim();
-    if (message.isNotEmpty) {
-      writeErr(_error('Error: $message'));
-      writeErr('');
+    if (message.isEmpty) return;
+
+    writeErr('');
+    writeErr(_styleErrorBlock(message));
+    writeErr('');
+  }
+
+  /// Applies Symfony-style `<error>` block styling.
+  ///
+  /// In ANSI mode, the text is rendered with white foreground on red background.
+  /// In ASCII mode, the text is returned with extra leading spaces (matching the
+  /// visual effect of Symfony's non-decorated error output).
+  String _styleErrorBlock(String message) {
+    // Symfony's formatBlock with large=true adds 2 spaces padding on each side.
+    final padded = '  $message  ';
+    if (_renderer.colorProfile == ColorProfile.ascii) {
+      return padded;
     }
-    writeOut(e.usage.trimRight());
+    return (Style()
+          ..colorProfile = _renderer.colorProfile
+          ..hasDarkBackground = _renderer.hasDarkBackground
+          ..foreground(Colors.white)
+          ..background(Colors.red))
+        .render(padded);
   }
 
   bool _resolveAnsiForArgs(Iterable<String> args) {
@@ -341,8 +604,6 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   String _option(String text) => helpColorScheme.optionStyle(_renderer)(text);
   String _emphasize(String text) =>
       helpColorScheme.emphasisStyle(_renderer)(text);
-  String _error(String text) => helpColorScheme.errorStyle(_renderer)(text);
-
   String _formatOptionsUsage(String usage) {
     if (_renderer.colorProfile == ColorProfile.ascii) return usage;
 

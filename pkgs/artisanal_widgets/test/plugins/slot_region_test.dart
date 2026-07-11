@@ -1,9 +1,9 @@
 library;
 
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 import 'package:artisanal/tui.dart' show Key, KeyMsg, KeyType;
 import 'package:artisanal_widgets/testing.dart';
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 
 enum _DemoSlot { main }

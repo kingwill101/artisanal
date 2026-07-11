@@ -27,6 +27,8 @@
 /// ```
 library;
 
+import '../style/chars.dart';
+
 import 'dart:collection';
 import 'dart:math' as math;
 
@@ -176,7 +178,11 @@ class WhitespaceOptions {
     // Cycle through grapheme clusters to fill the width
     while (currentWidth < width) {
       final glyph = glyphs[j];
-      final glyphWidth = Layout.visibleLength(glyph);
+      var glyphWidth = Layout.visibleLength(glyph);
+
+      // Treat zero-width graphemes as having minimum width 1 so we always
+      // make progress and avoid infinite loops (e.g. with combining marks).
+      if (glyphWidth == 0) glyphWidth = 1;
 
       // Don't exceed width
       if (currentWidth + glyphWidth > width) break;
@@ -917,7 +923,11 @@ class Layout {
   /// truncation). Uses grapheme-cluster iteration and proper display-width
   /// accounting so that CJK, emoji, and variation-selector characters are
   /// measured correctly.
-  static String truncate(String text, int maxWidth, {String ellipsis = '…'}) {
+  static String truncate(
+    String text,
+    int maxWidth, {
+    String ellipsis = EllipsisChars.horizontal,
+  }) {
     final visible = visibleLength(text);
     if (visible <= maxWidth) return text;
 

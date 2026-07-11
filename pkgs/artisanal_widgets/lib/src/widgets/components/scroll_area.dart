@@ -1,4 +1,7 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
 
 /// A convenience widget that wraps [SingleChildScrollView] with optional
 /// sizing and an optional [Scrollbar].
@@ -8,6 +11,8 @@ part of 'components_widgets.dart';
 /// right of the scrollable content.
 ///
 /// You may supply an external [ScrollController] to programmatically
+
+// ignore_for_file: unused_shown_name
 /// control the scroll position or to share it with other widgets.
 class ScrollArea extends StatefulWidget {
   ScrollArea({

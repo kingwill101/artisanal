@@ -1,10 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/tabstop_test.go`
-// - `third_party/ultraviolet/tabstop.go`
-
 void main() {
   group('TabStops parity', () {
     test('default interval of 8', () {

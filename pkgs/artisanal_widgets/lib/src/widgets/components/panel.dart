@@ -1,5 +1,21 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/widgets.dart';
 
+import 'package:artisanal/style.dart' show Color, Border, Style;
+
+/// A panel with an optional title bar and action buttons.
+///
+/// A simplified wrapper combining [Frame], [Container], and common layout
+/// patterns for grouping content with a header. Often used as the base for
+/// list items, dropdowns, and configuration panels.
+///
+/// ```dart
+/// PanelBox(
+///   title: 'Settings',
+///   child: Column(children: [Toggle('Auto-save'), Toggle('Dark mode')]),
+/// )
+
+// ignore_for_file: unused_shown_name
+/// ```
 class PanelBox extends StatelessWidget {
   PanelBox({
     required this.child,
@@ -31,9 +47,9 @@ class PanelBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final headerStyle = _copyStyle(titleStyle ?? theme.titleSmall)
+    final headerStyle = copyStyle(titleStyle ?? theme.titleSmall)
       ..foreground(foreground ?? theme.onSurface);
-    final contentStyle = _copyStyle(bodyStyle ?? theme.bodyMedium)
+    final contentStyle = copyStyle(bodyStyle ?? theme.bodyMedium)
       ..foreground(foreground ?? theme.onSurface);
 
     final hasHeader = title != null || actions.isNotEmpty;

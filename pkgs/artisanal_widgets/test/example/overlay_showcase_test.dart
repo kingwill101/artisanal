@@ -1,5 +1,4 @@
-import 'package:artisanal/testing.dart';
-import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 import '../../example/overlay/main.dart' as example;

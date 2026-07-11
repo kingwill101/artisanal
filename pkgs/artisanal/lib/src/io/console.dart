@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import '../terminal/ansi.dart' show Ansi;
+import '../style/chars.dart';
 import '../tui/bubbles/components/base.dart';
 import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
@@ -16,7 +17,7 @@ import 'components.dart';
 import 'inline_animation.dart';
 import 'output_theme.dart';
 import 'validators.dart';
-import '../tui/terminal.dart' show StdioTerminal;
+import '../terminal/terminal_io_impl.dart' show StdioTerminal;
 import '../tui/bubbles/password.dart' show PasswordModel;
 import '../tui/bubbles/select.dart'
     show MultiSelectModel, SelectModel, SelectStyles, MultiSelectStyles;
@@ -1030,7 +1031,7 @@ class Console {
       if (hadError && !continueOnError) {
         skipped.add(description);
         writeln(
-          '  ${_style.dim().render('○')} $description ${_style.dim().render('(skipped)')}',
+          '  ${_style.dim().render(PaginationDots.inactive)} $description ${_style.dim().render('(skipped)')}',
         );
         continue;
       }
@@ -1151,7 +1152,7 @@ class Console {
       if (hadError && !continueOnError) {
         skipped.add(name);
         writeln(
-          '  ${_style.dim().render(prefix)} ${_style.dim().render(name)} ${_style.dim().render('○ skipped')}',
+          '  ${_style.dim().render(prefix)} ${_style.dim().render(name)} ${_style.dim().render('${PaginationDots.inactive} skipped')}',
         );
         continue;
       }
@@ -1186,7 +1187,7 @@ class Console {
           stepWatch.stop();
           terminal.clearLine();
           terminal.writeln(
-            '  ${(getStyle('success') ?? _style.foreground(Colors.success)).render(prefix)} $name ${(getStyle('success') ?? _style.foreground(Colors.success)).render('✓')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
+            '  ${(getStyle('success') ?? _style.foreground(Colors.success)).render(prefix)} $name ${(getStyle('success') ?? _style.foreground(Colors.success)).render(StatusChars.check)} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
           );
           completed.add(name);
         } catch (e) {
@@ -1194,7 +1195,7 @@ class Console {
           stepWatch.stop();
           terminal.clearLine();
           terminal.writeln(
-            '  ${(getStyle('error') ?? _style.foreground(Colors.error)).render(prefix)} $name ${(getStyle('error') ?? _style.foreground(Colors.error)).render('✗')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
+            '  ${(getStyle('error') ?? _style.foreground(Colors.error)).render(prefix)} $name ${(getStyle('error') ?? _style.foreground(Colors.error)).render(StatusChars.cross)} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
           );
           failed.add((name, e));
           hadError = true;
@@ -1204,7 +1205,7 @@ class Console {
               skipped.add(steps[j].$1);
               final skipNum = (j + 1).toString().padLeft(stepWidth);
               writeln(
-                '  ${_style.dim().render('[$skipNum/$totalSteps]')} ${_style.dim().render(steps[j].$1)} ${_style.dim().render('○ skipped')}',
+                '  ${_style.dim().render('[$skipNum/$totalSteps]')} ${_style.dim().render(steps[j].$1)} ${_style.dim().render('${PaginationDots.inactive} skipped')}',
               );
             }
             break;

@@ -1,4 +1,7 @@
-part of 'layout_widgets.dart';
+import '../core/framework.dart';
+import '../core/widget.dart';
+import '../gestures/gestures.dart';
+import 'gesture_detector.dart';
 
 class MouseRegion extends StatelessWidget {
   MouseRegion({

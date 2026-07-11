@@ -43,7 +43,7 @@ class _SidebarTapHarness extends w.StatefulWidget {
 }
 
 class _SidebarTapHarnessState extends w.State<_SidebarTapHarness> {
-  final SidebarState _state = SidebarState();
+  SidebarState _state = SidebarState();
 
   static final ChatModel _model = ChatModel(
     route: AppRoute.session,
@@ -78,7 +78,7 @@ class _SidebarTapHarnessState extends w.State<_SidebarTapHarness> {
         sidebarState: _state,
         onToggleMcp: () {
           setState(() {
-            _state.mcpExpanded = !_state.mcpExpanded;
+            _state = _state.copyWith(mcpExpanded: !_state.mcpExpanded);
           });
           widget.onToggleMcp();
         },

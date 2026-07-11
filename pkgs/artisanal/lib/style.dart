@@ -75,74 +75,19 @@
 library;
 
 export 'src/style/style.dart';
+export 'src/style/style_model.dart'
+    show BoxSizing, BoxMetrics, RenderContext, StyleData;
 export 'src/layout/layout.dart'
     show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
-export 'src/style/properties.dart'
-    show
-        UnderlineStyle,
-        VerticalAlign,
-        HorizontalAlign,
-        Padding,
-        Margin,
-        Align,
-        HorizontalAlignPosition,
-        VerticalAlignPosition;
-export 'src/style/color.dart'
-    show
-        Color,
-        AnsiColor,
-        BasicColor,
-        AdaptiveColor,
-        CompleteColor,
-        CompleteAdaptiveColor,
-        NoColor,
-        Colors,
-        ColorProfile;
-export 'src/style/border.dart' show Border, BorderSides;
-export 'src/style/list.dart'
-    show
-        LipList,
-        ListEnumerators,
-        ListIndenters,
-        ListItem,
-        ListItems,
-        ListStyleFunc,
-        ListEnumeratorFunc,
-        ListIndenterFunc;
-export 'src/style/ranges.dart'
-    show
-        StyleRange,
-        styleRanges,
-        overlayBackgroundRangesPreservingAnsi,
-        Ranges,
-        cutAnsiByCells;
-export 'src/style/blending.dart' show blend1D, blend2D, blendColor;
+export 'src/style/primitives.dart';
+export 'src/style/rendering_helpers.dart';
+export 'src/style/chars.dart';
 export 'src/style/accessibility.dart'
     show
-        relativeLuminance,
+        bestTextColor,
         contrastRatio,
+        isDarkColorRgb,
         meetsWcagAa,
         meetsWcagAaa,
-        bestTextColor;
-export 'src/style/writer.dart'
-    show
-        Writer,
-        resetWriter,
-        Print,
-        PrintAll,
-        Println,
-        PrintlnAll,
-        Printf,
-        Sprint,
-        SprintAll,
-        Sprintln,
-        SprintlnAll,
-        Sprintf,
-        SprintfAll,
-        Fprint,
-        Fprintln,
-        Fprintf,
-        stringForProfile;
-export 'src/style/theme.dart' show ThemePalette;
-export 'src/style/tag_parser.dart'
-    show ConsoleTagParser, TagSegment, TextSegment, StyledSegment;
+        relativeLuminance,
+        relativeLuminanceRgb;
