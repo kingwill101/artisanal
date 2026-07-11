@@ -746,13 +746,21 @@ class RenderColumn extends RenderBox {
     _pruneChildPaintCache();
     final blocks = children.map(_paintChild).toList(growable: false);
     final flexData = children.map(_flexDataFor).toList(growable: false);
-    final maxMain = size.height.toInt();
-    final maxCross = size.width.toInt();
+    final maxMain = size.height.isNaN || size.height.isInfinite
+        ? 0
+        : size.height.toInt();
+    final maxCross = size.width.isNaN || size.width.isInfinite
+        ? 0
+        : size.width.toInt();
     final childHeights = children
-        .map((c) => c.size.height.toInt())
+        .map((c) => c.size.height.isNaN || c.size.height.isInfinite
+            ? 0
+            : c.size.height.toInt())
         .toList(growable: false);
     final childWidths = children
-        .map((c) => c.size.width.toInt())
+        .map((c) => c.size.width.isNaN || c.size.width.isInfinite
+            ? 0
+            : c.size.width.toInt())
         .toList(growable: false);
 
     final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
