@@ -12,7 +12,7 @@ void renderHeading(MarkdownRenderContext ctx, String tag) {
 }
 
 void endHeading(MarkdownRenderContext ctx) {
-  ctx.buffer.write(ctx.ansiReset);
+  ctx.buffer.write(MarkdownRenderContext.ansiReset);
 }
 
 Style headingStyle(MarkdownRenderContext ctx, String tag) {

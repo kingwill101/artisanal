@@ -79,7 +79,7 @@ String renderIndentContinuationLines(String text, int indent) {
 
   final prefix = ' ' * indent;
   final lines = text.split('\n');
-  return lines.map((line, i) => i == 0 ? line : '$prefix$line').join('\n');
+  return lines.asMap().entries.map((e) => e.key == 0 ? e.value : '$prefix${e.value}').join('\n');
 }
 
 void renderWriteBlockquotePrefix(MarkdownRenderContext ctx) {
@@ -89,7 +89,7 @@ void renderWriteBlockquotePrefix(MarkdownRenderContext ctx) {
     return;
   }
   final seq = color.toAnsi(ColorProfile.trueColor);
-  ctx.buffer.write('$seq│ ${ctx.ansiReset}');
+  ctx.buffer.write('$seq│ ${MarkdownRenderContext.ansiReset}');
 }
 
 String renderApplyBlockquotePrefix(MarkdownRenderContext ctx, String text) {
@@ -97,7 +97,7 @@ String renderApplyBlockquotePrefix(MarkdownRenderContext ctx, String text) {
 
   final color = ctx.options.blockquoteBorderColor;
   final prefix = color != null
-      ? '${color.toAnsi(ColorProfile.trueColor)}│ ${ctx.ansiReset}'
+      ? '${color.toAnsi(ColorProfile.trueColor)}│ ${MarkdownRenderContext.ansiReset}'
       : '│ ';
   final lines = text.split('\n');
   return lines.map((line) => '$prefix$line').join('\n');

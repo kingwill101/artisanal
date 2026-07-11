@@ -5,6 +5,7 @@ import '../../style/style.dart';
 import '../../tui/bubbles/components/table.dart' as table_component;
 import 'options.dart';
 import 'html_context.dart';
+import 'syntax_highlighter.dart' show SyntaxHighlighter;
 
 /// Mutable rendering context passed through all markdown render functions.
 ///
@@ -41,7 +42,7 @@ class MarkdownRenderContext {
 
   int listDepth = 0;
   final List<int> listCounters = [];
-  final List<_ListItemContext> listItemStack = [];
+  final List<ListItemContext> listItemStack = [];
 
   // ─── Blockquote state ─────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ class MarkdownRenderContext {
   // ─── Link state ───────────────────────────────────────────────────
 
   String? pendingLinkUrl;
+  String? imageAltText;
 
   // ─── Details state ────────────────────────────────────────────────
 
@@ -73,6 +75,8 @@ class MarkdownRenderContext {
   // ─── Code block state ─────────────────────────────────────────────
 
   bool inCodeBlock = false;
+  String? codeBlockLanguage;
+  SyntaxHighlighter? syntaxHighlighter;
 
   // ─── Paragraph state ──────────────────────────────────────────────
 
@@ -94,7 +98,11 @@ class MarkdownRenderContext {
 
 /// Context for tracking list item rendering state.
 class ListItemContext {
-  _ListItemContext({required this.trimLeadingWhitespace});
+  ListItemContext({
+    this.continuationIndent = 0,
+    this.taskCheckboxRendered = false,
+    this.trimLeadingWhitespace = true,
+  });
 
   final int continuationIndent;
   final bool taskCheckboxRendered;
