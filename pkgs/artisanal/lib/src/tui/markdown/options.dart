@@ -1,6 +1,7 @@
 import '../../style/border.dart' as style_border;
 import '../../style/color.dart';
 import '../../style/style.dart';
+import 'image_renderer.dart' show ImageProtocol;
 import 'syntax_highlighter.dart' show ChromaTheme;
 import 'styles.dart' show MarkdownElementStyle;
 
@@ -60,6 +61,7 @@ class AnsiRendererOptions {
     this.tableBorderStyle,
     this.renderImages = false,
     this.imageMaxWidth,
+    this.imageProtocol,
     this.syntaxHighlighting = true,
     this.maxSyntaxHighlightCodeUnits = 8000,
     this.syntaxTheme,
@@ -104,6 +106,7 @@ class AnsiRendererOptions {
     MarkdownElementStyle? tableBorderStyle,
     bool renderImages = false,
     int? imageMaxWidth,
+    ImageProtocol? imageProtocol,
     bool syntaxHighlighting = true,
     int? maxSyntaxHighlightCodeUnits,
     ChromaTheme? syntaxTheme,
@@ -141,6 +144,7 @@ class AnsiRendererOptions {
       tableBorderStyle: tableBorderStyle?.resolveStyle(),
       renderImages: renderImages,
       imageMaxWidth: imageMaxWidth,
+      imageProtocol: imageProtocol,
       syntaxHighlighting: syntaxHighlighting,
       maxSyntaxHighlightCodeUnits: maxSyntaxHighlightCodeUnits,
       syntaxTheme: syntaxTheme,
@@ -251,12 +255,24 @@ class AnsiRendererOptions {
   /// terminal's supported image protocol (Kitty, iTerm2, Sixel).
   /// Currently only synchronous placeholder rendering is supported;
   /// full async rendering requires TUI event-loop integration.
+  /// Whether to render images inline using terminal graphics protocols.
+  ///
+  /// When `true`, images in markdown are downloaded and displayed using the
+  /// terminal's supported image protocol (Kitty, iTerm2, Sixel).
+  /// Currently only synchronous placeholder rendering is supported;
+  /// full async rendering requires TUI event-loop integration.
   final bool renderImages;
 
   /// Maximum width in terminal columns for inline images.
   ///
   /// When null, the image is rendered at its natural cell size.
   final int? imageMaxWidth;
+
+  /// Force a specific terminal image protocol.
+  ///
+  /// When set, overrides auto-detection. Useful when auto-detection
+  /// doesn't recognize your terminal but you know it supports a protocol.
+  final ImageProtocol? imageProtocol;
 
   final style_border.Border? codeBlockBorderStyle;
 
@@ -293,6 +309,7 @@ class AnsiRendererOptions {
     Style? tableBorderStyle,
     bool? renderImages,
     int? imageMaxWidth,
+    ImageProtocol? imageProtocol,
     bool? syntaxHighlighting,
     int? maxSyntaxHighlightCodeUnits,
     ChromaTheme? syntaxTheme,
@@ -330,6 +347,7 @@ class AnsiRendererOptions {
       tableBorderStyle: tableBorderStyle ?? this.tableBorderStyle,
       renderImages: renderImages ?? this.renderImages,
       imageMaxWidth: imageMaxWidth ?? this.imageMaxWidth,
+      imageProtocol: imageProtocol ?? this.imageProtocol,
       syntaxHighlighting: syntaxHighlighting ?? this.syntaxHighlighting,
       maxSyntaxHighlightCodeUnits:
           maxSyntaxHighlightCodeUnits ?? this.maxSyntaxHighlightCodeUnits,

@@ -28,6 +28,7 @@ enum ImageProtocol {
 ImageProtocol detectImageProtocol() {
   final termProgram = Platform.environment['TERM_PROGRAM'] ?? '';
   final term = Platform.environment['TERM'] ?? '';
+  final termEmulator = Platform.environment['TERMINAL_EMULATOR'] ?? '';
   final kittyWindowId = Platform.environment['KITTY_WINDOW_ID'] ?? '';
 
   if (kittyWindowId.isNotEmpty || termProgram == 'Kitty') {
@@ -47,6 +48,14 @@ ImageProtocol detectImageProtocol() {
   if (termProgram == 'ghostty') {
     return ImageProtocol.sixel;
   }
+  if (termProgram == 'vscode' || termEmulator == 'vscode') {
+    return ImageProtocol.sixel;
+  }
+  if (termProgram == 'Windows Terminal' ||
+      Platform.environment.containsKey('WT_SESSION')) {
+    return ImageProtocol.sixel;
+  }
+  // Fall back to none — _renderTerminalImage will try Kitty anyway.
   return ImageProtocol.none;
 }
 
