@@ -1250,8 +1250,12 @@ class RenderSingleChildViewport extends RenderBox {
     );
 
     // Update controller metrics.
-    final viewportHeight = size.height.round();
-    final contentHeight = child.size.height.round();
+    final viewportHeight = size.height.isNaN || size.height.isInfinite
+        ? 0
+        : size.height.round();
+    final contentHeight = child.size.height.isNaN || child.size.height.isInfinite
+        ? 0
+        : child.size.height.round();
     if (_controller is WidgetScrollController) {
       (_controller as WidgetScrollController).updateMetrics(
         viewportExtent: viewportHeight,
