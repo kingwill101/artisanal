@@ -199,9 +199,9 @@ class StatusLine extends StatelessWidget {
       return Row(
         gap: 0,
         children: [
-          if (leftWidget != null) leftWidget,
+          ?leftWidget,
           Spacer(),
-          if (rightWidget != null) rightWidget,
+          ?rightWidget,
         ],
       );
     }
@@ -209,11 +209,11 @@ class StatusLine extends StatelessWidget {
     return Row(
       gap: 0,
       children: [
-        if (leftWidget != null) leftWidget,
+        ?leftWidget,
         Spacer(),
-        if (centerWidget != null) centerWidget,
+        ?centerWidget,
         Spacer(),
-        if (rightWidget != null) rightWidget,
+        ?rightWidget,
       ],
     );
   }
