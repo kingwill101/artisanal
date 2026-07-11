@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:pure_svg/svg.dart' show SvgStringLoader, renderSvgToPng;
 
+import '../../style/color.dart';
+import '../../style/style.dart';
 import '../../terminal/kitty.dart';
 import '../../terminal/iterm2.dart';
 import '../../terminal/sixel.dart';
@@ -172,7 +174,7 @@ String? renderImageToAnsi(img.Image image, ImageProtocol protocol,
 }
 
 /// Renders an image using Unicode half-block characters (▀) with true-color
-/// ANSI escapes. Works in any terminal that supports 24-bit color — no
+/// ANSI styles. Works in any terminal that supports 24-bit color — no
 /// special graphics protocol required.
 ///
 /// Each character cell represents two vertical pixels:
@@ -185,15 +187,23 @@ String _renderHalfBlock(img.Image image, {int columns = 40, int rows = 20}) {
     interpolation: img.Interpolation.average,
   );
 
+  String rgb(int r, int g, int b) =>
+      '#${r.toRadixString(16).padLeft(2, '0')}'
+      '${g.toRadixString(16).padLeft(2, '0')}'
+      '${b.toRadixString(16).padLeft(2, '0')}';
+
   final buffer = StringBuffer();
   for (var y = 0; y < rows; y++) {
     for (var x = 0; x < columns; x++) {
       final top = resized.getPixel(x, y * 2);
       final bot = resized.getPixel(x, y * 2 + 1);
-      buffer.write('\x1b[38;2;${top.r};${top.g};${top.b}m'
-          '\x1b[48;2;${bot.r};${bot.g};${bot.b}m▀');
+      final cell = Style()
+          .foreground(Color.complete(trueColor: rgb(top.r.toInt(), top.g.toInt(), top.b.toInt())))
+          .background(Color.complete(trueColor: rgb(bot.r.toInt(), bot.g.toInt(), bot.b.toInt())))
+          .render('▀');
+      buffer.write(cell);
     }
-    buffer.write('\x1b[0m\n');
+    buffer.write('\n');
   }
   return buffer.toString();
 }
