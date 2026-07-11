@@ -8,7 +8,7 @@ import 'options.dart';
 import 'render_context.dart';
 import 'headings.dart';
 import 'lists.dart';
-import 'code_block.dart' show startCodeBlock, endCodeBlock;
+import 'code_block.dart' show startCodeBlock, endCodeBlock, applyCodeBlockPrefix;
 import 'hr.dart' show renderHorizontalRule;
 import 'tables.dart' show renderTable;
 import 'images.dart' show renderImage;
@@ -90,6 +90,21 @@ class MarkdownRenderer implements NodeVisitor {
 
     // Decode HTML entities
     content = _ctx.htmlUnescape.convert(content);
+
+    // Apply blockquote prefix if inside a blockquote with multi-line content
+    if (_ctx.inBlockquote && content.contains('\n')) {
+      content = renderApplyBlockquotePrefix(_ctx, content);
+    }
+
+    // Apply syntax highlighting and code block border for code blocks
+    if (_ctx.inCodeBlock) {
+      // Apply code block border prefix for continuation lines
+      if (_ctx.options.codeBlockBorder && content.contains('\n')) {
+        content = applyCodeBlockPrefix(_ctx, content);
+      }
+      _ctx.activeBuffer.write(content);
+      return;
+    }
 
     if (_ctx.inParagraph) {
       _ctx.paragraphBuffer.write(content);
@@ -261,21 +276,26 @@ class MarkdownRenderer implements NodeVisitor {
 
       case 'p':
         _endTextStyle();
-        if (_ctx.inParagraph && _ctx.options.width != null) {
-          final content = _ctx.paragraphBuffer.toString();
+        if (_ctx.inParagraph) {
+          var content = _ctx.paragraphBuffer.toString();
           _ctx.paragraphBuffer.clear();
           _ctx.inParagraph = false;
           if (content.isNotEmpty) {
-            var effectiveWidth = _ctx.options.width!;
+            // Apply blockquote prefix
             if (_ctx.inBlockquote) {
-              effectiveWidth -= _ctx.blockquoteDepth * 2;
+              content = renderApplyBlockquotePrefix(_ctx, content);
             }
-            if (effectiveWidth > 0) {
-              final wrapped = _wrapText(content, effectiveWidth);
-              _ctx.activeBuffer.write(wrapped);
-            } else {
-              _ctx.activeBuffer.write(content);
+            // Apply text wrapping
+            if (_ctx.options.width != null) {
+              var effectiveWidth = _ctx.options.width!;
+              if (_ctx.inBlockquote) {
+                effectiveWidth -= _ctx.blockquoteDepth * 2;
+              }
+              if (effectiveWidth > 0) {
+                content = _wrapText(content, effectiveWidth);
+              }
             }
+            _ctx.activeBuffer.write(content);
           }
         }
         _ctx.buffer.write('\n');
