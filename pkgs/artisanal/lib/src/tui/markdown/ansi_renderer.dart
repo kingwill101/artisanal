@@ -1067,11 +1067,10 @@ class AnsiRenderer implements NodeVisitor {
     // Use forced protocol if set.
     var protocol = options.imageProtocol ?? detectImageProtocol();
     if (protocol == ImageProtocol.none) {
-      // Fall back to Sixel — it's the most widely supported protocol
-      // across terminals (xterm, VTE/GNOME, foot, WezTerm, VSCode,
-      // Windows Terminal, Konsole, mlterm, etc.) and is silently
-      // ignored by terminals that don't support it.
-      protocol = ImageProtocol.sixel;
+      // Fall back to half-block rendering (▀ with true-color ANSI).
+      // Works in any terminal that supports 24-bit color — no special
+      // graphics protocol required.
+      protocol = ImageProtocol.halfblock;
     }
 
     final escaped = renderImageToAnsi(image, protocol,

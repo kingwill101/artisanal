@@ -9,9 +9,9 @@ import '../../terminal/kitty.dart';
 import '../../terminal/iterm2.dart';
 import '../../terminal/sixel.dart';
 
-/// Terminal image protocol auto-detected from environment variables.
+/// Terminal image protocol for rendering images inline.
 enum ImageProtocol {
-  /// Kitty Graphics Protocol — fastest, used by Kitty terminal.
+  /// Kitty Graphics Protocol — fastest, PNG-compressed native protocol.
   kitty,
 
   /// iTerm2 Image Protocol — used by iTerm2 on macOS.
@@ -20,7 +20,14 @@ enum ImageProtocol {
   /// Sixel graphics — used by xterm, mlterm, foot, WezTerm, etc.
   sixel,
 
-  /// No supported image protocol detected.
+  /// Half-block characters (▀) with true-color ANSI escapes.
+  ///
+  /// Works in any terminal that supports 24-bit color — no special
+  /// graphics protocol required. Each cell renders two vertical pixels
+  /// using foreground (top) and background (bottom) colors.
+  halfblock,
+
+  /// No image protocol — fall back to text placeholder.
   none,
 }
 
@@ -157,9 +164,38 @@ String? renderImageToAnsi(img.Image image, ImageProtocol protocol,
       return ITerm2Image.encode(image, columns: columns, rows: rows);
     case ImageProtocol.sixel:
       return SixelImage.encode(image);
+    case ImageProtocol.halfblock:
+      return _renderHalfBlock(image, columns: columns ?? 40, rows: rows ?? 20);
     case ImageProtocol.none:
       return null;
   }
+}
+
+/// Renders an image using Unicode half-block characters (▀) with true-color
+/// ANSI escapes. Works in any terminal that supports 24-bit color — no
+/// special graphics protocol required.
+///
+/// Each character cell represents two vertical pixels:
+///   foreground = top pixel, background = bottom pixel
+String _renderHalfBlock(img.Image image, {int columns = 40, int rows = 20}) {
+  final resized = img.copyResize(
+    image,
+    width: columns,
+    height: rows * 2,
+    interpolation: img.Interpolation.average,
+  );
+
+  final buffer = StringBuffer();
+  for (var y = 0; y < rows; y++) {
+    for (var x = 0; x < columns; x++) {
+      final top = resized.getPixel(x, y * 2);
+      final bot = resized.getPixel(x, y * 2 + 1);
+      buffer.write('\x1b[38;2;${top.r};${top.g};${top.b}m'
+          '\x1b[48;2;${bot.r};${bot.g};${bot.b}m▀');
+    }
+    buffer.write('\x1b[0m\n');
+  }
+  return buffer.toString();
 }
 
 /// Downloads and renders an image from a URL, returning escape sequences or null.
