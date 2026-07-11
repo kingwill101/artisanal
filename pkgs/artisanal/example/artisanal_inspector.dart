@@ -107,7 +107,7 @@ class _Inspector {
       'jsonrpc': '2.0',
       'id': id,
       'method': method,
-      if (params != null) 'params': params,
+      ?'params': params,
     };
     _ws.add(jsonEncode(request));
     return completer.future.timeout(
