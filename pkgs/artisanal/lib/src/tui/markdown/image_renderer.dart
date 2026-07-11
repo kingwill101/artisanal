@@ -46,7 +46,9 @@ ImageProtocol detectImageProtocol() {
     return ImageProtocol.sixel;
   }
   if (termProgram == 'ghostty') {
-    return ImageProtocol.sixel;
+    // Ghostty natively supports the Kitty graphics protocol (AOT,
+    // PNG-compressed). Sixel support is limited/experimental.
+    return ImageProtocol.kitty;
   }
   if (termProgram == 'vscode' || termEmulator == 'vscode') {
     return ImageProtocol.sixel;
