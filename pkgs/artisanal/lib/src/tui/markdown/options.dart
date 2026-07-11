@@ -2,6 +2,7 @@ import '../../style/border.dart' as style_border;
 import '../../style/color.dart';
 import '../../style/style.dart';
 import 'syntax_highlighter.dart' show ChromaTheme;
+import 'styles.dart' show MarkdownElementStyle;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Renderer Options
@@ -21,10 +22,16 @@ class AnsiRendererOptions {
   /// This is the original API that uses [Style] objects directly.
   /// For the new [MarkdownElementStyle]-based API, use
   /// [AnsiRendererOptions.fromElementStyles].
+  /// Creates renderer options with legacy [Style] fields.
+  ///
+  /// This is the original API that uses [Style] objects directly.
+  /// For the new [MarkdownElementStyle]-based API, use
+  /// [AnsiRendererOptions.fromElementStyles].
   const AnsiRendererOptions({
     this.width,
     this.hasDarkBackground = true,
     this.textStyle,
+
     this.h1Style,
     this.h2Style,
     this.h3Style,
@@ -56,6 +63,84 @@ class AnsiRendererOptions {
     this.syntaxTheme,
     this.codeBlockBorderStyle,
   });
+
+  /// Creates options from [MarkdownElementStyle]s, resolving each to [Style].
+  ///
+  /// This is the preferred way to create options with fine-grained control
+  /// over structural properties (prefix, suffix, margin, indent, format).
+  /// Falls back to legacy [Style]-based fields for custom styles not
+  /// covered by the element style API.
+  factory AnsiRendererOptions.fromElementStyles({
+    int? width,
+    bool hasDarkBackground = true,
+    MarkdownElementStyle? textStyle,
+    MarkdownElementStyle? h1Style,
+    MarkdownElementStyle? h2Style,
+    MarkdownElementStyle? h3Style,
+    MarkdownElementStyle? h4Style,
+    MarkdownElementStyle? h5Style,
+    MarkdownElementStyle? h6Style,
+    MarkdownElementStyle? emphasisStyle,
+    MarkdownElementStyle? strongStyle,
+    MarkdownElementStyle? codeStyle,
+    MarkdownElementStyle? codeBlockStyle,
+    MarkdownElementStyle? linkStyle,
+    MarkdownElementStyle? blockquoteStyle,
+    Color? blockquoteBorderColor,
+    MarkdownElementStyle? strikethroughStyle,
+    String bulletChar = '•',
+    bool hyperlinks = true,
+    String hrChar = '─',
+    int? hrWidth,
+    String checkboxChecked = '[x]',
+    String checkboxUnchecked = '[ ]',
+    int listIndent = 2,
+    bool codeBlockBorder = true,
+    style_border.Border? tableBorder,
+    MarkdownElementStyle? tableHeaderStyle,
+    MarkdownElementStyle? tableCellStyle,
+    MarkdownElementStyle? tableBorderStyle,
+    bool syntaxHighlighting = true,
+    int? maxSyntaxHighlightCodeUnits,
+    ChromaTheme? syntaxTheme,
+    style_border.Border? codeBlockBorderStyle,
+  }) {
+    return AnsiRendererOptions(
+      width: width,
+      hasDarkBackground: hasDarkBackground,
+      textStyle: textStyle?.resolveStyle(),
+      h1Style: h1Style?.resolveStyle(),
+      h2Style: h2Style?.resolveStyle(),
+      h3Style: h3Style?.resolveStyle(),
+      h4Style: h4Style?.resolveStyle(),
+      h5Style: h5Style?.resolveStyle(),
+      h6Style: h6Style?.resolveStyle(),
+      emphasisStyle: emphasisStyle?.resolveStyle(),
+      strongStyle: strongStyle?.resolveStyle(),
+      codeStyle: codeStyle?.resolveStyle(),
+      codeBlockStyle: codeBlockStyle?.resolveStyle(),
+      linkStyle: linkStyle?.resolveStyle(),
+      blockquoteStyle: blockquoteStyle?.resolveStyle(),
+      blockquoteBorderColor: blockquoteBorderColor,
+      strikethroughStyle: strikethroughStyle?.resolveStyle(),
+      bulletChar: bulletChar,
+      hyperlinks: hyperlinks,
+      hrChar: hrChar,
+      hrWidth: hrWidth,
+      checkboxChecked: checkboxChecked,
+      checkboxUnchecked: checkboxUnchecked,
+      listIndent: listIndent,
+      codeBlockBorder: codeBlockBorder,
+      tableBorder: tableBorder,
+      tableHeaderStyle: tableHeaderStyle?.resolveStyle(),
+      tableCellStyle: tableCellStyle?.resolveStyle(),
+      tableBorderStyle: tableBorderStyle?.resolveStyle(),
+      syntaxHighlighting: syntaxHighlighting,
+      maxSyntaxHighlightCodeUnits: maxSyntaxHighlightCodeUnits,
+      syntaxTheme: syntaxTheme,
+      codeBlockBorderStyle: codeBlockBorderStyle,
+    );
+  }
 
   /// Terminal width for text wrapping. If null, no wrapping is applied.
   final int? width;

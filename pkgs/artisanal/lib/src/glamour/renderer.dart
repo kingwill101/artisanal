@@ -11,6 +11,17 @@ import '../uv/wrap.dart' as uv_wrap;
 /// The markdown package creates separate blockquote elements for each `>` line,
 /// so `renderStyle` normalizes the AST to merge adjacent blockquotes and
 /// promote nested `>` markers into nested blockquote nodes before rendering.
+///
+/// {@template glamour_renderer_deprecated}
+/// This class is **deprecated**. Use [AnsiRenderer] with options created from
+/// `GlamourTheme.toAnsiRendererOptions()` instead:
+///
+/// ```dart
+/// final options = myTheme.toAnsiRendererOptions();
+/// final result = AnsiRenderer(options: options).render(nodes);
+/// ```
+/// {@endtemplate}
+@Deprecated('Use AnsiRenderer with GlamourTheme.toAnsiRendererOptions() instead')
 class GlamourRenderer implements md.NodeVisitor {
   /// Creates a renderer with a theme and optional line width.
   GlamourRenderer({required this.theme, this.width = 80});

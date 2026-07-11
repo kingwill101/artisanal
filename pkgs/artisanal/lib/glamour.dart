@@ -18,6 +18,10 @@ export 'src/glamour/renderer.dart';
 ///
 /// If [width] is provided, text will be wrapped to that width.
 /// Defaults to 80 columns.
+///
+/// This function is **deprecated**. Use [markdownToAnsi] with
+/// `GlamourTheme.toAnsiRendererOptions()` instead.
+@Deprecated('Use markdownToAnsi with GlamourTheme.toAnsiRendererOptions() instead')
 String renderStyle(
   String markdown, {
   required GlamourTheme theme,
