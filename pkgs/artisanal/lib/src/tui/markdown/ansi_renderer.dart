@@ -30,6 +30,7 @@ import '../../uv/wrap.dart' as uv_wrap;
 import 'backend.dart' as markdown_backend;
 import 'syntax_highlighter.dart';
 import 'options.dart';
+import 'html_context.dart';
 export 'options.dart';
 export 'styles.dart' show MarkdownElementStyle;
 
@@ -129,7 +130,7 @@ class AnsiRenderer implements NodeVisitor {
   String? _pendingLinkUrl;
 
   /// Render state for HTML `<details>` elements normalized by the backend.
-  final List<_DetailsContext> _detailsStack = [];
+  final List<DetailsContext> _detailsStack = [];
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Table State
@@ -377,7 +378,7 @@ class AnsiRenderer implements NodeVisitor {
       case 'details':
         _ensureNewline();
         _detailsStack.add(
-          _DetailsContext(
+          DetailsContext(
             expanded:
                 element.attributes.containsKey('open') ||
                 element.attributes['open'] == 'true',
@@ -1046,7 +1047,7 @@ class AnsiRenderer implements NodeVisitor {
   String _renderHtmlFragment(String source) {
     final fragment = html_parser.parseFragment(source);
     final buffer = StringBuffer();
-    final context = _HtmlRenderContext();
+    final context = HtmlRenderContext();
 
     for (final node in fragment.nodes) {
       _renderHtmlNode(node, buffer, context);
@@ -1058,7 +1059,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlNode(
     dom.Node node,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     if (node is dom.Text) {
       _writeHtmlText(node.text, buffer);
@@ -1253,7 +1254,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlChildren(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     for (final child in element.nodes) {
       _renderHtmlNode(child, buffer, context);
@@ -1263,7 +1264,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderStyledHtmlChildren(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
     Style style,
   ) {
     buffer.write(_styleToAnsiOpen(style));
@@ -1274,7 +1275,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlBlock(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     _ensureHtmlBlockStart(buffer);
     _renderHtmlChildren(element, buffer, context);
@@ -1284,7 +1285,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlHeading(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
     String tag,
   ) {
     _ensureHtmlBlockStart(buffer);
@@ -1297,7 +1298,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlLink(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     final href = _htmlAttributeValue(element, 'href');
     buffer.write(_styleToAnsiOpen(options.linkStyle ?? _defaultLinkStyle()));
@@ -1336,12 +1337,12 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlList(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context, {
+    HtmlRenderContext context, {
     required bool ordered,
   }) {
     _ensureHtmlBlockStart(buffer);
     context.lists.add(
-      _HtmlListContext(
+      HtmlListContext(
         ordered: ordered,
         next: int.tryParse(_htmlAttributeValue(element, 'start')) ?? 1,
       ),
@@ -1360,7 +1361,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlListItem(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     final list = context.lists.isEmpty ? null : context.lists.last;
     final depth = context.lists.isEmpty ? 0 : context.lists.length - 1;
@@ -1389,7 +1390,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlBlockquote(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     final inner = StringBuffer();
     _renderHtmlChildren(element, inner, context);
@@ -1425,7 +1426,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlTable(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     final headers = <String>[];
     final rows = <List<String>>[];
@@ -1491,7 +1492,7 @@ class AnsiRenderer implements NodeVisitor {
   void _renderHtmlDetails(
     dom.Element element,
     StringBuffer buffer,
-    _HtmlRenderContext context,
+    HtmlRenderContext context,
   ) {
     final summary = element.children.firstWhere(
       (child) => child.localName?.toLowerCase() == 'summary',
@@ -1859,23 +1860,7 @@ class _ListItemContext {
   bool trimLeadingWhitespace;
 }
 
-class _DetailsContext {
-  _DetailsContext({required this.expanded});
 
-  final bool expanded;
-  bool inSummary = false;
-}
-
-class _HtmlRenderContext {
-  final List<_HtmlListContext> lists = [];
-}
-
-class _HtmlListContext {
-  _HtmlListContext({required this.ordered, required this.next});
-
-  final bool ordered;
-  int next;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Convenience Function
