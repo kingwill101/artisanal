@@ -4,6 +4,7 @@
 /// ANSI-styled text via `renderMarkdown`, and displays it inside a viewport.
 library;
 
+import 'package:artisanal/artisanal.dart' show MarkdownRenderer;
 import 'package:artisanal/bubbles.dart'
     as tui
     hide
@@ -81,7 +82,6 @@ import 'package:artisanal/bubbles.dart'
         UndoManager,
         UndoableCommand;
 
-import 'package:artisanal/tui.dart' as markdown;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
@@ -134,7 +134,7 @@ class MarkdownExample implements tui.Model {
 
   factory MarkdownExample.initial() {
     const width = 78;
-    final content = markdown.markdownToAnsi(_md);
+    final content = MarkdownRenderer().renderToAnsi(_md);
     final vp = tui.ViewportModel(width: width, height: 22)..setContent(content);
     return MarkdownExample(viewport: vp, width: width, height: 22);
   }
@@ -157,7 +157,7 @@ class MarkdownExample implements tui.Model {
           return (this, tui.Cmd.quit());
         }
       case tui.WindowSizeMsg(width: final w, height: final h):
-        final content = markdown.markdownToAnsi(_md);
+        final content = MarkdownRenderer().renderToAnsi(_md);
         final vp = viewport.copyWith(width: w, height: h - 2)
           ..setContent(content);
         return (copyWith(viewport: vp, width: w, height: h), null);

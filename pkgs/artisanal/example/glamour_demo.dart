@@ -1,86 +1,56 @@
-import 'package:artisanal/glamour.dart';
+/// Demonstrates Glamour themes through the unified MarkdownRenderer.
+///
+/// Instead of using the deprecated GlamourRenderer directly, this example
+/// converts GlamourTheme to AnsiRendererOptions via the bridge and renders
+/// through the unified MarkdownRenderer.
+///
+/// Run with: dart run example/glamour_demo.dart
+library;
 
-void main() {
-  const markdown = '''
-# Glamour Demo
+import 'package:artisanal/artisanal.dart';
 
-This is a **bold** statement.
-This is an *italic* statement.
+const _sample = '''
+# Glamour Themes
 
-## Headings
+This demo shows **Glamour themes** rendered through the unified
+`MarkdownRenderer` using `toAnsiRendererOptions()`.
 
-### Subheading
+## Available Themes
 
-#### Sub-subheading
+- **Dark** — default dark terminal theme
+- **Light** — light terminal theme
+- **Pink** — pink accent theme
+- **ASCII** — plain ASCII compatible
 
-## Lists
+## Features
 
-* Item 1
-* Item 2
-    * Nested Item 2.1
-    * Nested Item 2.2
+> Blockquotes with styled borders and *italic* text.
 
-## Code
-
-Inline `code` is cool.
-
-## Blockquotes
-
-> This is a blockquote.
-> It can span multiple lines.
->
-> > And can be nested!
-
-## Links
-
-Check out [Google](https://google.com).
-
-# Today’s Menu
-
-## Appetizers
-
-| Name        | Price | Notes                           |
-| ---         | ---   | ---                             |
-| Tsukemono   | \$2    | Just an appetizer               |
-| Tomato Soup | \$4    | Made with San Marzano tomatoes  |
-| Okonomiyaki | \$4    | Takes a few minutes to make     |
-| Curry       | \$3    | We can add squash if you’d like |
-
-## Seasonal Dishes
-
-| Name                 | Price | Notes              |
-| ---                  | ---   | ---                |
-| Steamed bitter melon | \$2    | Not so bitter      |
-| Takoyaki             | \$3    | Fun to eat         |
-| Winter squash        | \$3    | Today it's pumpkin |
-
-## Desserts
-
-| Name         | Price | Notes                 |
-| ---          | ---   | ---                   |
-| Dorayaki     | \$4    | Looks good on rabbits |
-| Banana Split | \$5    | A classic             |
-| Cream Puff   | \$3    | Pretty creamy!        |
-
-All our dishes are made in-house by Karen, our chef. Most of our ingredients
-are from our garden or the fish market down the street.
-
-Some famous people that have eaten here lately:
-
-* [x] René Redzepi
-* [x] David Chang
-* [ ] Jiro Ono (maybe some day)
-
-Bon appétit!
+- [x] Theme conversion via bridge
+- [x] Syntax highlighting support
+- [x] Custom width control
 ''';
 
-  print('\n=== Dark Theme ===\n');
-  print(renderStyle(markdown, theme: GlamourTheme.dark));
-  print("-" * 10);
-  print('\n=== Pink Theme ===\n');
-  print(renderStyle(markdown, theme: GlamourTheme.pink));
-  print("-" * 10);
+void main() {
+  print('');
+  print('\x1b[1m\x1b[96m═ Glamour Theme Demo (via MarkdownRenderer) ═══════════\x1b[0m');
+  print('');
 
-  print('\n=== Light Theme ===\n');
-  print(renderStyle(markdown, theme: GlamourTheme.light));
+  _renderTheme('Dark Theme', GlamourTheme.dark);
+  _renderTheme('Light Theme', GlamourTheme.light);
+  _renderTheme('Pink Theme', GlamourTheme.pink);
+  _renderTheme('ASCII Theme', GlamourTheme.ascii);
+}
+
+void _renderTheme(String label, GlamourTheme theme) {
+  print('\x1b[1m\x1b[93m$label\x1b[0m');
+  print('\x1b[90m   theme.toAnsiRendererOptions()\x1b[0m');
+  print('');
+
+  // Convert theme to options and render through the unified pipeline
+  final options = theme.toAnsiRendererOptions(width: 72);
+  final result = MarkdownRenderer(options: options).renderToAnsi(_sample);
+
+  print(result);
+  print('');
 }
