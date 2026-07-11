@@ -17,6 +17,7 @@
 library;
 
 export 'ansi_renderer.dart';
+export 'renderer.dart' show MarkdownRenderer;
 export 'fence_language_resolver.dart' show FenceLanguageResolver;
 export 'syntax_highlighter.dart'
     show

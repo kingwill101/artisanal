@@ -16,7 +16,7 @@ import 'render_context.dart';
 
 /// Parses a markdown alignment string to [TableAlign].
 
-table_component.TableAlign _parseTableAlign(String align) {
+table_component.TableAlign parseTableAlign(String align) {
 
   return switch (align.toLowerCase()) {
 
@@ -36,7 +36,7 @@ table_component.TableAlign _parseTableAlign(String align) {
 
 /// Renders the collected table using artisanal's Table component.
 
-void _renderTable(MarkdownRenderContext ctx) {
+void renderTable(MarkdownRenderContext ctx) {
 
   if (ctx.tableHeaders.isEmpty && ctx.tableRows.isEmpty) return;
 

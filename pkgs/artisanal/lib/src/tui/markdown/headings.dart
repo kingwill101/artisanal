@@ -17,19 +17,19 @@ void endHeading(MarkdownRenderContext ctx) {
 
 Style headingStyle(MarkdownRenderContext ctx, String tag) {
   return switch (tag) {
-    'h1' => ctx.options.h1Style ?? _defaultH1Style(),
-    'h2' => ctx.options.h2Style ?? _defaultH2Style(),
-    'h3' => ctx.options.h3Style ?? _defaultH3Style(),
-    'h4' => ctx.options.h4Style ?? _defaultH4Style(),
-    'h5' => ctx.options.h5Style ?? _defaultH5Style(),
-    'h6' => ctx.options.h6Style ?? _defaultH6Style(),
+    'h1' => ctx.options.h1Style ?? defaultH1Style(),
+    'h2' => ctx.options.h2Style ?? defaultH2Style(),
+    'h3' => ctx.options.h3Style ?? defaultH3Style(),
+    'h4' => ctx.options.h4Style ?? defaultH4Style(),
+    'h5' => ctx.options.h5Style ?? defaultH5Style(),
+    'h6' => ctx.options.h6Style ?? defaultH6Style(),
     _ => Style(),
   };
 }
 
-Style _defaultH1Style() => Style().bold().foreground(Colors.brightCyan);
-Style _defaultH2Style() => Style().bold().foreground(Colors.cyan);
-Style _defaultH3Style() => Style().bold().foreground(Colors.blue);
-Style _defaultH4Style() => Style().bold();
-Style _defaultH5Style() => Style().bold().dim();
-Style _defaultH6Style() => Style().dim();
+Style defaultH1Style() => Style().bold().foreground(Colors.brightCyan);
+Style defaultH2Style() => Style().bold().foreground(Colors.cyan);
+Style defaultH3Style() => Style().bold().foreground(Colors.blue);
+Style defaultH4Style() => Style().bold();
+Style defaultH5Style() => Style().bold().dim();
+Style defaultH6Style() => Style().dim();

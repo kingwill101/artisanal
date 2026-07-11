@@ -11,7 +11,7 @@ import 'render_context.dart';
 
 
 
-void _renderImage(MarkdownRenderContext ctx, Element element) {
+void renderImage(MarkdownRenderContext ctx, Element element) {
 
   final alt = element.attributes['alt'] ?? 'image';
 

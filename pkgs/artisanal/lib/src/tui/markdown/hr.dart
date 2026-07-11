@@ -11,7 +11,7 @@ import 'render_context.dart';
 
 
 
-void _renderHorizontalRule(MarkdownRenderContext ctx) {
+void renderHorizontalRule(MarkdownRenderContext ctx) {
 
   final width = ctx.options.hrWidth ?? ctx.options.width ?? 40;
 

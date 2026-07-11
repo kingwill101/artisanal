@@ -5,7 +5,7 @@ import '../../style/color.dart';
 import 'render_context.dart';
 
 
-Style _defaultCodeBlockStyle() => Style().foreground(Colors.brightYellow);
+Style defaultCodeBlockStyle() => Style().foreground(Colors.brightYellow);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ Style _defaultCodeBlockStyle() => Style().foreground(Colors.brightYellow);
 
 
 
-void _startCodeBlock(MarkdownRenderContext ctx, Element element) {
+void startCodeBlock(MarkdownRenderContext ctx, Element element) {
 
   ctx.inCodeBlock = true;
 
@@ -97,7 +97,7 @@ void _startCodeBlock(MarkdownRenderContext ctx, Element element) {
 
   if (!ctx.options.syntaxHighlighting || ctx.codeBlockLanguage == null) {
 
-    final style = ctx.options.codeBlockStyle ?? _defaultCodeBlockStyle();
+    final style = ctx.options.codeBlockStyle ?? defaultCodeBlockStyle();
 
     ctx.buffer.write(ctx.styleToAnsi(style));
 
@@ -107,7 +107,7 @@ void _startCodeBlock(MarkdownRenderContext ctx, Element element) {
 
 
 
-void _endCodeBlock(MarkdownRenderContext ctx) {
+void endCodeBlock(MarkdownRenderContext ctx) {
 
   // Only close style if we opened it (no syntax highlighting)
 
@@ -153,7 +153,7 @@ void _endCodeBlock(MarkdownRenderContext ctx) {
 
 /// Applies the code block border prefix to each line of content.
 
-String _applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {
+String applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {
 
   final border = ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
 
@@ -175,7 +175,7 @@ String _applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {
 
       ? ''
 
-      : ctx.styleToAnsi(ctx.options.codeBlockStyle ?? _defaultCodeBlockStyle());
+      : ctx.styleToAnsi(ctx.options.codeBlockStyle ?? defaultCodeBlockStyle());
 
 
 
