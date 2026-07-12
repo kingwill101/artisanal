@@ -593,6 +593,10 @@ final class Cell {
     );
   }
 
+  /// The pre-computed style identifier for this cell, used by the renderer
+  /// for fast style comparison without going through [UvStyle.==].
+  int get styleId => _styleId;
+
   /// Returns the printable ASCII code unit for this cell, if it has one.
   int? get asciiCodeUnit => switch (_contentKind) {
     _CellContentKind.space when _width == 1 => 0x20,
