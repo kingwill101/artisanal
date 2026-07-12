@@ -41,14 +41,13 @@ void main() {
       fg: i % 3 == 0
           ? UvColor.basic16(rng.nextInt(8), bright: rng.nextBool())
           : i % 3 == 1
-              ? UvColor.indexed256(rng.nextInt(256))
-              : UvColor.rgb(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)),
+          ? UvColor.indexed256(rng.nextInt(256))
+          : UvColor.rgb(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)),
       bg: rng.nextBool()
           ? UvColor.rgb(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256))
           : null,
       attrs: attrValues[rng.nextInt(attrValues.length)],
-      underline: underlineValues[
-          rng.nextInt(underlineValues.length)],
+      underline: underlineValues[rng.nextInt(underlineValues.length)],
     );
   });
 
@@ -128,10 +127,16 @@ void main() {
   // ---- Phase 5: Style equality + hashing ----
   // Create many identical/similar style pairs for comparison
   final eqPairs = List.generate(5000, (_) {
-    final fg =
-        UvColor.rgb(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
-    final bg =
-        UvColor.rgb(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
+    final fg = UvColor.rgb(
+      rng.nextInt(256),
+      rng.nextInt(256),
+      rng.nextInt(256),
+    );
+    final bg = UvColor.rgb(
+      rng.nextInt(256),
+      rng.nextInt(256),
+      rng.nextInt(256),
+    );
     return (
       UvStyle(fg: fg, bg: bg, attrs: Attr.bold),
       UvStyle(fg: fg, bg: bg, attrs: Attr.bold),
@@ -147,9 +152,7 @@ void main() {
   }
   final phase5Elapsed = phase5Start.elapsed;
   final phase5OpsPerSec =
-      (phase5Iterations * eqPairs.length) /
-      phase5Elapsed.inMicroseconds *
-      1e6;
+      (phase5Iterations * eqPairs.length) / phase5Elapsed.inMicroseconds * 1e6;
 
   final totalCheck =
       phase1Length + phase2Length + phase3Result + phase4Result + phase5Result;

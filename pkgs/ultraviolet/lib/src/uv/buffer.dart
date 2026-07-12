@@ -468,6 +468,7 @@ final class Buffer {
         ? _compositeCell(current, opacityNext)
         : opacityNext;
     if (current == next) return;
+
     final w = next.width > 0 ? next.width : 1;
     touchLine(x, y, w);
     final shouldTakeOwnership =

@@ -395,20 +395,28 @@ final class ColorMatrix {
     for (; i + 3 < count; i += 4) {
       // Load 4 pixels in SoA layout.
       final rr = Float32x4(
-        rIn[i].toDouble(), rIn[i + 1].toDouble(),
-        rIn[i + 2].toDouble(), rIn[i + 3].toDouble(),
+        rIn[i].toDouble(),
+        rIn[i + 1].toDouble(),
+        rIn[i + 2].toDouble(),
+        rIn[i + 3].toDouble(),
       );
       final gg = Float32x4(
-        gIn[i].toDouble(), gIn[i + 1].toDouble(),
-        gIn[i + 2].toDouble(), gIn[i + 3].toDouble(),
+        gIn[i].toDouble(),
+        gIn[i + 1].toDouble(),
+        gIn[i + 2].toDouble(),
+        gIn[i + 3].toDouble(),
       );
       final bb = Float32x4(
-        bIn[i].toDouble(), bIn[i + 1].toDouble(),
-        bIn[i + 2].toDouble(), bIn[i + 3].toDouble(),
+        bIn[i].toDouble(),
+        bIn[i + 1].toDouble(),
+        bIn[i + 2].toDouble(),
+        bIn[i + 3].toDouble(),
       );
       final aa = Float32x4(
-        aIn[i].toDouble(), aIn[i + 1].toDouble(),
-        aIn[i + 2].toDouble(), aIn[i + 3].toDouble(),
+        aIn[i].toDouble(),
+        aIn[i + 1].toDouble(),
+        aIn[i + 2].toDouble(),
+        aIn[i + 3].toDouble(),
       );
 
       // Out = row · (r, g, b, a)^T + bias  (all lanes in parallel).
@@ -444,8 +452,10 @@ final class ColorMatrix {
     // Scalar tail for remaining <4 pixels.
     for (; i < count; i++) {
       final pixel = _transformRgbaF64(
-        rIn[i].toDouble(), gIn[i].toDouble(),
-        bIn[i].toDouble(), aIn[i].toDouble(),
+        rIn[i].toDouble(),
+        gIn[i].toDouble(),
+        bIn[i].toDouble(),
+        aIn[i].toDouble(),
       );
       rOut[i] = pixel.r;
       gOut[i] = pixel.g;

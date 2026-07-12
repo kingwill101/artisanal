@@ -119,7 +119,11 @@ void main() {
     }
     // Some cursor keys
     for (var i = 0; i < 10; i++) {
-      input.addAll([0x1B, 0x5B, [0x41, 0x42, 0x43, 0x44][rng.nextInt(4)]]);
+      input.addAll([
+        0x1B,
+        0x5B,
+        [0x41, 0x42, 0x43, 0x44][rng.nextInt(4)],
+      ]);
     }
     // Some mouse events
     for (var i = 0; i < 5; i++) {
@@ -168,9 +172,7 @@ void main() {
     // Simulate text wrapping (stresses layout)
     if (w > 80) {
       // Long lines trigger the grapheme-fallback path
-      final longLine = line +
-          ' \u{4E00}' * 5 +
-          ' \u{1F600}' * 3;
+      final longLine = line + ' \u{4E00}' * 5 + ' \u{1F600}' * 3;
       phase4Width += stringWidth(longLine);
     }
   }

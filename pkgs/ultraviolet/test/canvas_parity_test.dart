@@ -1,7 +1,6 @@
 import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-
 void main() {
   group('Canvas parity', () {
     test('TestCanvasRender', () {

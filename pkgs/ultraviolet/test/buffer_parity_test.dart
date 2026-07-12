@@ -5,7 +5,6 @@ import 'package:ultraviolet/src/unicode/grapheme.dart' as uni;
 import 'package:test/test.dart';
 import 'dart:typed_data';
 
-
 void main() {
   group('Buffer parity (subset)', () {
     test('TestBufferUniseg (ASCII subset)', () {

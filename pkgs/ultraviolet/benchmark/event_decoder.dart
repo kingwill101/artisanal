@@ -55,7 +55,8 @@ List<int> sgrMouseReports(Random rng, int count) {
     final cx = rng.nextInt(200); // column
     final cy = rng.nextInt(80); // row
     // SGR: ESC [ < Cb ; Cx ; Cy M
-    final seq = '${String.fromCharCode(csi)}'
+    final seq =
+        '${String.fromCharCode(csi)}'
         '${String.fromCharCode(lb)}'
         '${String.fromCharCode(lt)}'
         '$cb;${cx + 1};${cy + 1}'
@@ -91,7 +92,8 @@ List<int> kittyKeys(Random rng, int count) {
   for (var i = 0; i < count; i++) {
     final key = 10 + rng.nextInt(20); // f-keys and others
     final modifiers = rng.nextInt(8); // 0-7 (ctrl, alt, shift combos)
-    final seq = '${String.fromCharCode(csi)}'
+    final seq =
+        '${String.fromCharCode(csi)}'
         '${String.fromCharCode(lb)}'
         '$key;${modifiers + 1}'
         '${String.fromCharCode(tilde)}';
@@ -142,9 +144,7 @@ void main() {
   }
   final phase2Elapsed = phase2Start.elapsed;
   final phase2EventsPerSec =
-      (phase2Iterations * csiData.length) /
-      phase2Elapsed.inMicroseconds *
-      1e6;
+      (phase2Iterations * csiData.length) / phase2Elapsed.inMicroseconds * 1e6;
 
   // ---- Phase 3: SGR mouse reports ----
   final mouseData = sgrMouseReports(rng, 2_000);
@@ -170,9 +170,7 @@ void main() {
   }
   final phase4Elapsed = phase4Start.elapsed;
   final phase4EventsPerSec =
-      (phase4Iterations * oscData.length) /
-      phase4Elapsed.inMicroseconds *
-      1e6;
+      (phase4Iterations * oscData.length) / phase4Elapsed.inMicroseconds * 1e6;
 
   // ---- Phase 5: Kitty keyboard ----
   final kittyData = kittyKeys(rng, 2_000);
@@ -205,8 +203,13 @@ void main() {
   }
   final phase6Elapsed = phase6Start.elapsed;
 
-  final totalCheck = phase1Count + phase2Count + phase3Count +
-      phase4Count + phase5Count + phase6Count;
+  final totalCheck =
+      phase1Count +
+      phase2Count +
+      phase3Count +
+      phase4Count +
+      phase5Count +
+      phase6Count;
 
   print('=== Event Decoder Benchmark ===');
   print('');

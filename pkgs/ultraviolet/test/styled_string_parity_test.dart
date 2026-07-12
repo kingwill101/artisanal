@@ -2,7 +2,6 @@ import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:ultraviolet/src/unicode/width.dart';
 import 'package:test/test.dart';
 
-
 Cell _newWcCell(String s, UvStyle? style, Link? link) {
   final c = Cell.newCell(WidthMethod.wcwidth, s);
   if (style != null) c.style = style;

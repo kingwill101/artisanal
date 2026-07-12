@@ -4,7 +4,6 @@ import 'package:ultraviolet/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-
 void main() {
   group('Cell parity', () {
     test('equivalent styles and links compare equally across cells', () {

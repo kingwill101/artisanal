@@ -3,7 +3,6 @@ import 'dart:io' show Platform;
 import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-
 final class _TestSink implements StringSink {
   final StringBuffer _b = StringBuffer();
 

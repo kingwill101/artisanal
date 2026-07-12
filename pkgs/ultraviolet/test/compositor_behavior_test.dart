@@ -2,7 +2,6 @@ import 'package:ultraviolet/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-
 void main() {
   group('Compositor behavior', () {
     test('renders layers in z-index order (top-most wins)', () {

@@ -1,7 +1,6 @@
 import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-
 void main() {
   group('TabStops parity', () {
     test('default interval of 8', () {

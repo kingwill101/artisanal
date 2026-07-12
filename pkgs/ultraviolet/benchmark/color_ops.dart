@@ -24,21 +24,25 @@ void main() {
   // Generate many RGBA pairs
   final srcColors = List.generate(
     10_000,
-    (_) => UvColor.rgb(
-      rng.nextInt(256),
-      rng.nextInt(256),
-      rng.nextInt(256),
-      a: rng.nextInt(256),
-    ) as UvRgb,
+    (_) =>
+        UvColor.rgb(
+              rng.nextInt(256),
+              rng.nextInt(256),
+              rng.nextInt(256),
+              a: rng.nextInt(256),
+            )
+            as UvRgb,
   );
   final dstColors = List.generate(
     10_000,
-    (_) => UvColor.rgb(
-      rng.nextInt(256),
-      rng.nextInt(256),
-      rng.nextInt(256),
-      a: rng.nextInt(256),
-    ) as UvRgb,
+    (_) =>
+        UvColor.rgb(
+              rng.nextInt(256),
+              rng.nextInt(256),
+              rng.nextInt(256),
+              a: rng.nextInt(256),
+            )
+            as UvRgb,
   );
   final phase1Start = Stopwatch()..start();
   const phase1Iterations = 2000;
@@ -124,8 +128,7 @@ void main() {
     if (styleA == styleB) phase5Result++;
   }
   final phase5Elapsed = phase5Start.elapsed;
-  final phase5OpsPerSec =
-      phase5Iterations / phase5Elapsed.inMicroseconds * 1e6;
+  final phase5OpsPerSec = phase5Iterations / phase5Elapsed.inMicroseconds * 1e6;
 
   // ---- Phase 6: Color matrix application ----
   final grayMatrix = ColorMatrix([
@@ -143,15 +146,18 @@ void main() {
   var phase6Result = 0.0;
   for (var i = 0; i < phase6Iterations; i++) {
     for (final c in phase6Colors) {
-      final r = c.r * grayMatrix.values[0] +
+      final r =
+          c.r * grayMatrix.values[0] +
           c.g * grayMatrix.values[1] +
           c.b * grayMatrix.values[2] +
           grayMatrix.values[4];
-      final g = c.r * grayMatrix.values[5] +
+      final g =
+          c.r * grayMatrix.values[5] +
           c.g * grayMatrix.values[6] +
           c.b * grayMatrix.values[7] +
           grayMatrix.values[9];
-      final b = c.r * grayMatrix.values[10] +
+      final b =
+          c.r * grayMatrix.values[10] +
           c.g * grayMatrix.values[11] +
           c.b * grayMatrix.values[12] +
           grayMatrix.values[14];
@@ -160,8 +166,13 @@ void main() {
   }
   final phase6Elapsed = phase6Start.elapsed;
 
-  final totalCheck = phase1Result + phase2Result.round() + phase3Result +
-      phase4Result + phase5Result + phase6Result.round();
+  final totalCheck =
+      phase1Result +
+      phase2Result.round() +
+      phase3Result +
+      phase4Result +
+      phase5Result +
+      phase6Result.round();
 
   print('=== Color Operations Benchmark ===');
   print('');

@@ -275,7 +275,10 @@ bool mayContainTerminalGraphics(String value) {
     var hasControlOrHigh = false;
     for (var i = 0; i < value.length; i++) {
       final cu = value.codeUnitAt(i);
-      if (cu < 0x20 || cu >= 0x80) { hasControlOrHigh = true; break; }
+      if (cu < 0x20 || cu >= 0x80) {
+        hasControlOrHigh = true;
+        break;
+      }
     }
     if (!hasControlOrHigh) return false;
   }

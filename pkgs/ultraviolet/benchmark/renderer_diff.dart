@@ -89,10 +89,10 @@ void main() {
       attrs: i % 4 == 0
           ? Attr.bold
           : i % 4 == 1
-              ? Attr.italic
-              : i % 4 == 2
-                  ? Attr.reverse
-                  : 0,
+          ? Attr.italic
+          : i % 4 == 2
+          ? Attr.reverse
+          : 0,
     ),
   );
   for (var f = 0; f < phase3Frames; f++) {
@@ -131,9 +131,7 @@ void main() {
   );
   print('');
   print('Total rendered: ${sink.bytesWritten} bytes');
-  print(
-    'Metrics: ${renderer.metrics.summary()}',
-  );
+  print('Metrics: ${renderer.metrics.summary()}');
 }
 
 String _fmt(double n) {

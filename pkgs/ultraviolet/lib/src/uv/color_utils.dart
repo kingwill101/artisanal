@@ -127,14 +127,11 @@ UvColor? _sourceOverRgb(UvRgb src, UvColor? dst) {
     if (outA <= 0) return const UvRgb(0, 0, 0, a: 0);
     final outDenom = outA * 255;
     final outR =
-        ((src.r * sa * 255) + (r * da * (255 - sa)) + (outA ~/ 2)) ~/
-        outDenom;
+        ((src.r * sa * 255) + (r * da * (255 - sa)) + (outA ~/ 2)) ~/ outDenom;
     final outG =
-        ((src.g * sa * 255) + (g * da * (255 - sa)) + (outA ~/ 2)) ~/
-        outDenom;
+        ((src.g * sa * 255) + (g * da * (255 - sa)) + (outA ~/ 2)) ~/ outDenom;
     final outB =
-        ((src.b * sa * 255) + (b * da * (255 - sa)) + (outA ~/ 2)) ~/
-        outDenom;
+        ((src.b * sa * 255) + (b * da * (255 - sa)) + (outA ~/ 2)) ~/ outDenom;
     return UvRgb(outR, outG, outB, a: outA);
   }
   return UvRgb(src.r, src.g, src.b);

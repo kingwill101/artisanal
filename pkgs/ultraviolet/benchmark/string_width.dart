@@ -141,10 +141,7 @@ void main() {
       1e6;
 
   // ---- Phase 5: Long strings (uncached, > 4096 chars) ----
-  final longStrings = List.generate(
-    200,
-    (_) => randomAscii(rng, 5000),
-  );
+  final longStrings = List.generate(200, (_) => randomAscii(rng, 5000));
   final phase5Start = Stopwatch()..start();
   const phase5Iterations = 1000;
   var phase5Result = 0;
@@ -162,7 +159,9 @@ void main() {
   // ---- Phase 6: Cache thrash — many unique strings ----
   final uniqueStrings = List.generate(
     10_000,
-    (i) => randomAscii(rng, 20) + String.fromCharCode(0x4E00 + i % 0x1000), // make unique
+    (i) =>
+        randomAscii(rng, 20) +
+        String.fromCharCode(0x4E00 + i % 0x1000), // make unique
   );
   final phase6Start = Stopwatch()..start();
   const phase6Iterations = 100;
@@ -176,8 +175,12 @@ void main() {
 
   // Drain results to prevent DCE
   final totalCheck =
-      phase1Result + phase2Result + phase3Result +
-      phase4Result + phase5Result + phase6Result;
+      phase1Result +
+      phase2Result +
+      phase3Result +
+      phase4Result +
+      phase5Result +
+      phase6Result;
 
   print('=== String Width Benchmark ===');
   print('');
