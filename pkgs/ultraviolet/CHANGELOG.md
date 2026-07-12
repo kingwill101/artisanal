@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.4.0
+
+### Performance
+
+- **Renderer hot path**: added per-buffer sixel display cache to avoid
+  re-scanning every cell for terminal graphics on every frame. Added
+  ASCII-only fast-path to `mayContainTerminalGraphics` for short cell
+  content (≤3 chars). Combined improvement: **23.9% → 5.4% self time**
+  (4.4× reduction on this hotspot). Overall renderer throughput up
+  **2.1×** for full-buffer writes.
+- **styleToSgr / styleDiff**: replaced `List<String>` + `join()` with
+  `StringBuffer` to eliminate intermediate list allocations. Added
+  64-entry LRU cache keyed by `style.packedKey` for repeated style
+  emission.
+- **Event decoder**: replaced `buf.sublist()` allocations with index-based
+  access via `parseUtf8At()` and `decodeOneRuneAt()`. Optimized `_to7Bit`
+  with pre-allocated output list. Event throughput improved **33-57%**
+  across all input types.
+- **Alpha compositing** (`sourceOver`): replaced `(x + 127) ~/ 255` with
+  `(x + 127) * 257 >> 16` to eliminate slow integer division.
+  `sourceOver` throughput improved **+61%**.
+- **Float32x4 SIMD color ops**: added `batchTransformRgba()` that processes
+  4 RGBA pixels in parallel using SoA (Structure of Arrays) Float32x4
+  layout with pre-splatted matrix coefficients. Single-pixel path
+  `_transformRgbaF64` uses shuffle-based horizontal sum for dot products.
+  Color matrix ops improved **+37%**, `rgbToHsl` **+100%**.
+- `consumeEscapeSequence` converted from linear if/else cascade to
+  switch-on-int (Dart VM jump table dispatch).
+- String width cache refactored into `_cachedStringWidth` / `_cacheStringWidth`
+  helpers with same eviction strategy (no regression).
+
+### Added
+
+- Comprehensive benchmark suite (`benchmark/`) with 6 focused benchmarks
+  stress-testing renderer diff, string width, style ops, event decoder,
+  color ops, and full-stack end-to-end scenarios.
+- Profiler baseline and optimized session artifacts in `benchmark/profiles/`.
+
+### Changed
+
+- All optimizations are internal refactors with zero public API changes.
+
 ## 0.3.0
 
 ### Added
