@@ -68,8 +68,16 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     );
   }
 
-  void _sendMouse(int x, int y, int button, bool press,
-      {bool motion = false, bool shift = false, bool alt = false, bool ctrl = false}) {
+  void _sendMouse(
+    int x,
+    int y,
+    int button,
+    bool press, {
+    bool motion = false,
+    bool shift = false,
+    bool alt = false,
+    bool ctrl = false,
+  }) {
     final bytes = _encodeSgrMouse(
       x: x,
       y: y,
@@ -195,12 +203,12 @@ class _TerminalWidgetState extends State<TerminalWidget> {
               onTap: () {
                 _focusNode.requestFocus();
               },
-                child: Focus(
-                  focusNode: _focusNode,
-                  autofocus: true,
-                  skipTraversal: true,
-                  onKeyEvent: _handleKey,
-                  child: CustomPaint(
+              child: Focus(
+                focusNode: _focusNode,
+                autofocus: true,
+                skipTraversal: true,
+                onKeyEvent: _handleKey,
+                child: CustomPaint(
                   size: Size(paintWidth, paintHeight),
                   painter: TerminalPainter(
                     screen: buf,
@@ -210,7 +218,8 @@ class _TerminalWidgetState extends State<TerminalWidget> {
                     fontSize: widget.fontSize,
                     defaultFg: widget.defaultFg ?? const ui.Color(0xFFE5E5E5),
                     defaultBg: widget.defaultBg ?? const ui.Color(0xFF000000),
-                    cursorColor: widget.cursorColor ?? const ui.Color(0xFF00FF00),
+                    cursorColor:
+                        widget.cursorColor ?? const ui.Color(0xFF00FF00),
                     devicePixelRatio: MediaQuery.of(context).devicePixelRatio,
                     repaint: widget.repaint,
                   ),

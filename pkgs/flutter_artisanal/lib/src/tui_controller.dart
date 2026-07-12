@@ -1,9 +1,15 @@
 import 'dart:async';
 
 import 'package:artisanal/artisanal.dart'
-    show BackendTerminal, EmbeddedTerminalBackend, ProgramHost, ProgramOptions, TerminalDimensions;
+    show
+        BackendTerminal,
+        EmbeddedTerminalBackend,
+        ProgramHost,
+        ProgramOptions,
+        TerminalDimensions;
 import 'package:artisanal/tui.dart' show Model, runProgram;
-import 'package:artisanal/tui.dart' show Msg, ProgramInterceptor, TuiRendererOptions;
+import 'package:artisanal/tui.dart'
+    show Msg, ProgramInterceptor, TuiRendererOptions;
 import 'package:flutter/widgets.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 
@@ -38,7 +44,7 @@ class TuiController<M extends Model> {
   final StreamController<TerminalDimensions> _resizeController =
       StreamController<TerminalDimensions>.broadcast();
   final StreamController<void> _shutdownController =
-       StreamController<void>.broadcast();
+      StreamController<void>.broadcast();
 
   final ValueNotifier<int> _repaintNotifier = ValueNotifier<int>(0);
 

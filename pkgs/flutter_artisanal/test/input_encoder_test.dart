@@ -131,7 +131,10 @@ void main() {
           button: 0,
           press: true,
         );
-        expect(bytes, equals(const [0x1b, 0x5b, 0x3c, 0x30, 0x3b, 0x31, 0x3b, 0x31, 0x4d]));
+        expect(
+          bytes,
+          equals(const [0x1b, 0x5b, 0x3c, 0x30, 0x3b, 0x31, 0x3b, 0x31, 0x4d]),
+        );
       });
 
       test('encodes release with m terminator', () {
@@ -141,7 +144,21 @@ void main() {
           button: 0,
           press: false,
         );
-        expect(bytes, equals(const [0x1b, 0x5b, 0x3c, 0x30, 0x3b, 0x36, 0x3b, 0x31, 0x31, 0x6d]));
+        expect(
+          bytes,
+          equals(const [
+            0x1b,
+            0x5b,
+            0x3c,
+            0x30,
+            0x3b,
+            0x36,
+            0x3b,
+            0x31,
+            0x31,
+            0x6d,
+          ]),
+        );
       });
 
       test('adds motion bit', () {
@@ -152,7 +169,21 @@ void main() {
           press: false,
           motion: true,
         );
-        expect(bytes, equals(const [0x1b, 0x5b, 0x3c, 0x33, 0x32, 0x3b, 0x32, 0x3b, 0x32, 0x6d]));
+        expect(
+          bytes,
+          equals(const [
+            0x1b,
+            0x5b,
+            0x3c,
+            0x33,
+            0x32,
+            0x3b,
+            0x32,
+            0x3b,
+            0x32,
+            0x6d,
+          ]),
+        );
       });
 
       test('adds modifier bits', () {
@@ -165,7 +196,21 @@ void main() {
           alt: true,
           ctrl: true,
         );
-        expect(bytes, equals(const [0x1b, 0x5b, 0x3c, 0x32, 0x39, 0x3b, 0x33, 0x3b, 0x34, 0x4d]));
+        expect(
+          bytes,
+          equals(const [
+            0x1b,
+            0x5b,
+            0x3c,
+            0x32,
+            0x39,
+            0x3b,
+            0x33,
+            0x3b,
+            0x34,
+            0x4d,
+          ]),
+        );
       });
     });
 
@@ -193,7 +238,10 @@ void main() {
       });
 
       test('encodes multi-byte UTF-8', () {
-        expect(InputEncoder.encodePrintable('\u00e9'), equals(const [0xc3, 0xa9]));
+        expect(
+          InputEncoder.encodePrintable('\u00e9'),
+          equals(const [0xc3, 0xa9]),
+        );
       });
     });
   });

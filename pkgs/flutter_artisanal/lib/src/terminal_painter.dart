@@ -167,11 +167,7 @@ class TerminalPainter extends CustomPainter {
         }
 
         if (runColor != defaultBg) {
-          final rect = _snapCellRect(
-            x,
-            y,
-            width: (runEnd - x).toDouble(),
-          );
+          final rect = _snapCellRect(x, y, width: (runEnd - x).toDouble());
           bgPaint.color = runColor;
           canvas.drawRect(rect, bgPaint);
         }
@@ -316,22 +312,13 @@ class TerminalPainter extends CustomPainter {
     final midY = _snap((rect.top + rect.bottom) / 2.0);
 
     if ((mask & 0x1) != 0) {
-      canvas.drawRect(
-        Rect.fromLTRB(rect.left, rect.top, midX, midY),
-        paint,
-      );
+      canvas.drawRect(Rect.fromLTRB(rect.left, rect.top, midX, midY), paint);
     }
     if ((mask & 0x2) != 0) {
-      canvas.drawRect(
-        Rect.fromLTRB(midX, rect.top, rect.right, midY),
-        paint,
-      );
+      canvas.drawRect(Rect.fromLTRB(midX, rect.top, rect.right, midY), paint);
     }
     if ((mask & 0x4) != 0) {
-      canvas.drawRect(
-        Rect.fromLTRB(rect.left, midY, midX, rect.bottom),
-        paint,
-      );
+      canvas.drawRect(Rect.fromLTRB(rect.left, midY, midX, rect.bottom), paint);
     }
     if ((mask & 0x8) != 0) {
       canvas.drawRect(
@@ -373,11 +360,7 @@ class TerminalPainter extends CustomPainter {
 
     void dot(int bit, int column, int row) {
       if ((bits & bit) == 0) return;
-      canvas.drawCircle(
-        Offset(xCenters[column], yCenters[row]),
-        radius,
-        paint,
-      );
+      canvas.drawCircle(Offset(xCenters[column], yCenters[row]), radius, paint);
     }
 
     dot(0x01, 0, 0); // dot 1
@@ -404,14 +387,12 @@ class TerminalPainter extends CustomPainter {
       height: 1.0,
     );
 
-    final builder = ui.ParagraphBuilder(
-      ui.ParagraphStyle(
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-      ),
-    )
-      ..pushStyle(textStyle)
-      ..addText(info.content);
+    final builder =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(textDirection: TextDirection.ltr, maxLines: 1),
+          )
+          ..pushStyle(textStyle)
+          ..addText(info.content);
 
     final width = cellWidth * info.cell.width;
     final paragraph = builder.build()
@@ -442,11 +423,7 @@ class TerminalPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..isAntiAlias = false;
       final ulY = _snap(rect.bottom - 1.5);
-      canvas.drawLine(
-        Offset(rect.left, ulY),
-        Offset(rect.right, ulY),
-        ulPaint,
-      );
+      canvas.drawLine(Offset(rect.left, ulY), Offset(rect.right, ulY), ulPaint);
     }
 
     if ((style.attrs & uv.Attr.strikethrough) != 0) {
@@ -456,11 +433,7 @@ class TerminalPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..isAntiAlias = false;
       final stY = _snap((rect.top + rect.bottom) / 2.0);
-      canvas.drawLine(
-        Offset(rect.left, stY),
-        Offset(rect.right, stY),
-        stPaint,
-      );
+      canvas.drawLine(Offset(rect.left, stY), Offset(rect.right, stY), stPaint);
     }
   }
 

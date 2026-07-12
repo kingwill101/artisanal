@@ -7,9 +7,7 @@ import 'package:ultraviolet/ultraviolet.dart' as uv;
 void main() {
   group('TerminalWidget', () {
     testWidgets('renders null buffer as SizedBox.shrink', (tester) async {
-      await tester.pumpWidget(
-        const TerminalWidget(buffer: null),
-      );
+      await tester.pumpWidget(const TerminalWidget(buffer: null));
 
       expect(find.byType(SizedBox), findsOneWidget);
     });
@@ -18,10 +16,7 @@ void main() {
       final buffer = uv.Buffer.create(80, 24);
 
       await tester.pumpWidget(
-        TerminalWidget(
-          buffer: buffer,
-          repaint: ValueNotifier(0),
-        ),
+        TerminalWidget(buffer: buffer, repaint: ValueNotifier(0)),
       );
 
       expect(find.byType(CustomPaint), findsOneWidget);
@@ -49,12 +44,7 @@ void main() {
       final buffer = uv.Buffer.create(80, 24);
       final repaint = ValueNotifier<int>(0);
 
-      await tester.pumpWidget(
-        TerminalWidget(
-          buffer: buffer,
-          repaint: repaint,
-        ),
-      );
+      await tester.pumpWidget(TerminalWidget(buffer: buffer, repaint: repaint));
 
       repaint.value++;
       await tester.pump();
@@ -95,7 +85,12 @@ void main() {
       await tester.sendKeyDownEvent(LogicalKeyboardKey.tab);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.tab);
 
-      expect(received, equals([[0x09]]));
+      expect(
+        received,
+        equals([
+          [0x09],
+        ]),
+      );
     });
   });
 }

@@ -2,8 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:artisanal/artisanal.dart' show ProgramOptions;
 import 'package:artisanal/tui.dart' show Model;
 import 'package:artisanal/tui.dart' show TuiRendererOptions;
-import 'package:flutter_artisanal/src/tui_controller.dart'
-    show TuiController;
+import 'package:flutter_artisanal/src/tui_controller.dart' show TuiController;
 
 Future<void> runFlutterApp(Widget app) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +11,7 @@ Future<void> runFlutterApp(Widget app) async {
 
 Future<TuiController<M>> runFlutterProgram<M extends Model>({
   required M model,
-  ProgramOptions options = const ProgramOptions(hotReload: false, ),
+  ProgramOptions options = const ProgramOptions(hotReload: false),
   TuiRendererOptions? rendererOptions,
 }) async {
   final controller = TuiController<M>(

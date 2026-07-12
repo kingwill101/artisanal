@@ -1,8 +1,5 @@
 import 'dart:math' as math;
 
-
-
-
 // ignore_for_file: avoid_print
 
 import 'package:artisanal/style.dart' hide Padding, Align;
@@ -39,10 +36,7 @@ class _ArtisanalAppExampleState extends ui.State<ArtisanalAppExample> {
   void initState() {
     super.initState();
     _binding = ArtisanalAppBinding(
-      app: ArtisanalApp(
-        title: 'WidgetApp Demo',
-        home: HomeScreen(),
-      ),
+      app: ArtisanalApp(title: 'WidgetApp Demo', home: HomeScreen()),
     );
     _binding.start();
     _binding.repaint.addListener(_onRepaint);
@@ -69,7 +63,6 @@ class _ArtisanalAppExampleState extends ui.State<ArtisanalAppExample> {
     );
   }
 }
-
 
 /// A stateful wrapper that tracks the mouse position within its bounds and
 /// passes local coordinates to a builder callback.
@@ -133,7 +126,6 @@ class _HoverTrackerState extends w.State<_HoverTracker> {
     return null;
   }
 }
-
 
 class ChartShowcase extends w.StatefulWidget {
   ChartShowcase({super.key});
@@ -569,7 +561,9 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
   tui.Cmd? handleUpdate(tui.Msg msg) {
     if (msg is tui.KeyMsg) {
       final key = msg.key;
-      print('[key] char=${key.char ?? 'null'} type=${key.type} bytes=${key.char?.codeUnits ?? []}');
+      print(
+        '[key] char=${key.char ?? 'null'} type=${key.type} bytes=${key.char?.codeUnits ?? []}',
+      );
       if (key.char == 'q' || key.char == 'Q') {
         return tui.Cmd.quit();
       }

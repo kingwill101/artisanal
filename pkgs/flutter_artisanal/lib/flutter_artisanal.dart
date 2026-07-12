@@ -23,7 +23,15 @@ export 'package:artisanal/artisanal.dart'
         Transport,
         WidgetAppHostServer;
 export 'package:artisanal/tui.dart'
-    show TuiRendererOptions, Model, Cmd, Msg, KeyMsg, Key, KeyType, ColorSchemeMsg;
+    show
+        TuiRendererOptions,
+        Model,
+        Cmd,
+        Msg,
+        KeyMsg,
+        Key,
+        KeyType,
+        ColorSchemeMsg;
 export 'package:artisanal_widgets/app.dart'
     show
         ArtisanalApp,
