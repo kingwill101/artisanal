@@ -1517,15 +1517,6 @@ final class UvTerminalRenderer extends TerminalRenderer {
     if (newbuf.width() < 32 || nonEmpty < 8) return null;
     if (touchedLines < 4) return null;
     final maxY = nonEmpty < newbuf.height() ? nonEmpty : newbuf.height();
-    final totalCells = newbuf.width() * maxY;
-
-    // Pre-check: if all rows are dirty, tile traversal never helps (it
-    // requires <25% density).  Skip building the density map entirely.
-    if (newbuf.dirtyRows.length >= maxY &&
-        !newbuf.dirtyRows.take(maxY).contains(false)) {
-      return null;
-    }
-
     final density = DirtyDensityMap.fromBuffer(
       newbuf,
       scratch: _arena.acquireInt32List(
@@ -1533,7 +1524,8 @@ final class UvTerminalRenderer extends TerminalRenderer {
       ),
     );
     final dirtyCells = density.count(rect(0, 0, newbuf.width(), maxY));
-    if (dirtyCells <= 0) return null;
+    final totalCells = newbuf.width() * maxY;
+    if (dirtyCells <= 0 || totalCells <= 0) return null;
     // Tile traversal only helps when the dirty surface is sparse.
     if (dirtyCells * 4 >= totalCells) return null;
     return density;
