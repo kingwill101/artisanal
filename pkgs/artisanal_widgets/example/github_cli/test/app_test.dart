@@ -704,24 +704,28 @@ void main() {
     expect(tester.view, contains('Pull request body from gh.'));
   });
 
-  test('detail pane renders GitHub HTML bodies through MarkdownText', skip: true, () async {
-    final tester = WidgetTester(screenWidth: 120, screenHeight: 36);
-    addTearDown(() => tester.dispose());
+  test(
+    'detail pane renders GitHub HTML bodies through MarkdownText',
+    skip: true,
+    () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 36);
+      addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
-      GithubCliDashboard(
-        client: _FakeGithubClient(_sampleDashboard()),
-        repository: 'kingwill101/artisanal',
-      ),
-    );
+      await tester.pumpWidget(
+        GithubCliDashboard(
+          client: _FakeGithubClient(_sampleDashboard()),
+          repository: 'kingwill101/artisanal',
+        ),
+      );
 
-    await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
+      await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
 
-    expect(tester.view, contains('Upcoming change'));
-    expect(tester.view, contains('First item'));
-    expect(tester.view, isNot(contains('<p>')));
-    expect(tester.view, isNot(contains('<li>')));
-  });
+      expect(tester.view, contains('Upcoming change'));
+      expect(tester.view, contains('First item'));
+      expect(tester.view, isNot(contains('<p>')));
+      expect(tester.view, isNot(contains('<li>')));
+    },
+  );
 
   test(
     'detail pane renders GitHub task lists without bullet checkboxes',
@@ -1098,44 +1102,48 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.body, 'Please tighten this line.');
   });
 
-  test('inline review comments render between diff lines', skip: true, () async {
-    final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
-    addTearDown(() => tester.dispose());
-    final client = _FakeGithubClient(
-      _sampleDashboard('dart-lang/sdk'),
-      diff: _sampleDiff,
-      reviewComments: const [
-        GithubPullRequestReviewComment(
-          id: 'r1',
-          path: 'lib/main.dart',
-          line: 2,
-          side: 'RIGHT',
-          author: 'reviewer',
-          body: 'INLINE_REVIEW_BODY_SHOULD_APPEAR',
-          url: 'https://example.test/r1',
-          createdAt: null,
-        ),
-      ],
-    );
+  test(
+    'inline review comments render between diff lines',
+    skip: true,
+    () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+      addTearDown(() => tester.dispose());
+      final client = _FakeGithubClient(
+        _sampleDashboard('dart-lang/sdk'),
+        diff: _sampleDiff,
+        reviewComments: const [
+          GithubPullRequestReviewComment(
+            id: 'r1',
+            path: 'lib/main.dart',
+            line: 2,
+            side: 'RIGHT',
+            author: 'reviewer',
+            body: 'INLINE_REVIEW_BODY_SHOULD_APPEAR',
+            url: 'https://example.test/r1',
+            createdAt: null,
+          ),
+        ],
+      );
 
-    await tester.pumpWidget(
-      GithubPullRequestView(
-        client: client,
-        target: const GithubPullRequestTarget(
-          repository: 'dart-lang/sdk',
-          number: 9,
+      await tester.pumpWidget(
+        GithubPullRequestView(
+          client: client,
+          target: const GithubPullRequestTarget(
+            repository: 'dart-lang/sdk',
+            number: 9,
+          ),
         ),
-      ),
-    );
+      );
 
-    await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
-    tester.sendKey('d');
-    await _pumpUntil(
-      tester,
-      () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
-      timeout: const Duration(seconds: 5),
-    );
-  });
+      await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
+      tester.sendKey('d');
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+        timeout: const Duration(seconds: 5),
+      );
+    },
+  );
 
   test('mapReviewCommentsToRenderLines tolerates side/line mismatches', () {
     final anchors = [
@@ -1696,36 +1704,43 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     },
   );
 
-  test('v, m, and b load PR review comments, merge info, and labels', skip: true, () async {
-    final tester = WidgetTester(screenWidth: 120, screenHeight: 38);
-    addTearDown(() => tester.dispose());
+  test(
+    'v, m, and b load PR review comments, merge info, and labels',
+    skip: true,
+    () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 38);
+      addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
-      GithubCliDashboard(
-        client: _FakeGithubClient(_sampleDashboard()),
-        repository: 'kingwill101/artisanal',
-      ),
-    );
+      await tester.pumpWidget(
+        GithubCliDashboard(
+          client: _FakeGithubClient(_sampleDashboard()),
+          repository: 'kingwill101/artisanal',
+        ),
+      );
 
-    await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
+      await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
 
-    tester.sendKey('v');
-    await _pumpUntil(tester, () => tester.view.contains('Inline review note.'));
-    expect(tester.view, contains('Review comments PR #9'));
-    expect(tester.view, contains('lib/main.dart:2'));
+      tester.sendKey('v');
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('Inline review note.'),
+      );
+      expect(tester.view, contains('Review comments PR #9'));
+      expect(tester.view, contains('lib/main.dart:2'));
 
-    tester.sendKey('m');
-    await _pumpUntil(tester, () => tester.view.contains('Squash and merge'));
-    expect(tester.view, contains('Merge  #9'));
-    expect(tester.view, contains('manual'));
+      tester.sendKey('m');
+      await _pumpUntil(tester, () => tester.view.contains('Squash and merge'));
+      expect(tester.view, contains('Merge  #9'));
+      expect(tester.view, contains('manual'));
 
-    tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.escape)));
-    tester.sendKey('b');
-    await _pumpUntil(tester, () => tester.view.contains('enhancement'));
-    expect(tester.view, contains('Labels  PR #9'));
-    expect(tester.view, contains('bug'));
-    expect(tester.view, contains('enhancement'));
-  });
+      tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.escape)));
+      tester.sendKey('b');
+      await _pumpUntil(tester, () => tester.view.contains('enhancement'));
+      expect(tester.view, contains('Labels  PR #9'));
+      expect(tester.view, contains('bug'));
+      expect(tester.view, contains('enhancement'));
+    },
+  );
 
   test('initial load is lazy and n pages through large PR lists', () async {
     final tester = WidgetTester(screenWidth: 120, screenHeight: 34);

@@ -6,7 +6,6 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Style;
 
-
 // ignore_for_file: unused_shown_name
 /// Predefined fill/track character sets for [ProgressIndicator].
 enum ProgressStyle {

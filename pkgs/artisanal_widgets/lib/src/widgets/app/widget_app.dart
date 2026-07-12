@@ -1,4 +1,3 @@
-
 // ignore_for_file: unused_shown_name
 /// WidgetApp integrates widgets with the TUI program loop.
 library;

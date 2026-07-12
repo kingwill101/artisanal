@@ -1253,7 +1253,8 @@ class RenderSingleChildViewport extends RenderBox {
     final viewportHeight = size.height.isNaN || size.height.isInfinite
         ? 0
         : size.height.round();
-    final contentHeight = child.size.height.isNaN || child.size.height.isInfinite
+    final contentHeight =
+        child.size.height.isNaN || child.size.height.isInfinite
         ? 0
         : child.size.height.round();
     if (_controller is WidgetScrollController) {

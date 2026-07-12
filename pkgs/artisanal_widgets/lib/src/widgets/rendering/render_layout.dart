@@ -753,14 +753,18 @@ class RenderColumn extends RenderBox {
         ? 0
         : size.width.toInt();
     final childHeights = children
-        .map((c) => c.size.height.isNaN || c.size.height.isInfinite
-            ? 0
-            : c.size.height.toInt())
+        .map(
+          (c) => c.size.height.isNaN || c.size.height.isInfinite
+              ? 0
+              : c.size.height.toInt(),
+        )
         .toList(growable: false);
     final childWidths = children
-        .map((c) => c.size.width.isNaN || c.size.width.isInfinite
-            ? 0
-            : c.size.width.toInt())
+        .map(
+          (c) => c.size.width.isNaN || c.size.width.isInfinite
+              ? 0
+              : c.size.width.toInt(),
+        )
         .toList(growable: false);
 
     final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);

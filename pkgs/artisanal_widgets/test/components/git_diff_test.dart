@@ -860,8 +860,9 @@ index 3333333..4444444 100644
           if (anchor.path == comment.path &&
               anchor.line == comment.line &&
               anchor.side == commentSide) {
-            commentsByLine.putIfAbsent(anchor.renderLine, () => [])
-              .add(comment);
+            commentsByLine
+                .putIfAbsent(anchor.renderLine, () => [])
+                .add(comment);
             break;
           }
         }

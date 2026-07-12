@@ -6,8 +6,8 @@ import 'dart:typed_data' show BytesBuilder, Uint8List;
 
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart'
-// ignore_for_file: use_null_aware_elements
-    show
+        // ignore_for_file: use_null_aware_elements
+        show
         Canvas,
         Drawable,
         TerminalCapabilities,
@@ -1116,7 +1116,8 @@ T withImageAutoConfiguration<T>({
       _imageAutoModeZoneKey: mode,
       _imageCapabilitiesZoneKey: ?capabilities,
       if (cellPixelWidth != null) _imageCellPixelWidthZoneKey: cellPixelWidth,
-      if (cellPixelHeight != null) _imageCellPixelHeightZoneKey: cellPixelHeight,
+      if (cellPixelHeight != null)
+        _imageCellPixelHeightZoneKey: cellPixelHeight,
     },
   );
 }
