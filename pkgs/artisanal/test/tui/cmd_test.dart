@@ -130,18 +130,17 @@ void main() {
       expect((msg as TestMsg).value, 'single');
     });
 
-    test('multiple commands return BatchMsg', () async {
+    test('multiple commands run concurrently, returns first message', () async {
       final cmd = Cmd.batch([
         Cmd.message(const TestMsg('first')),
         Cmd.message(const TestMsg('second')),
       ]);
 
+      // batch uses ParallelCmd which returns the first non-null message.
+      // Individual messages are forwarded via the runtime's send() as they
+      // complete (tested through the program, not cmd.execute()).
       final msg = await cmd.execute();
-      expect(msg, isA<BatchMsg>());
-      final batch = msg as BatchMsg;
-      expect(batch.messages, hasLength(2));
-      expect((batch.messages[0] as TestMsg).value, 'first');
-      expect((batch.messages[1] as TestMsg).value, 'second');
+      expect(msg, isA<TestMsg>());
     });
 
     test('runs commands concurrently', () async {
