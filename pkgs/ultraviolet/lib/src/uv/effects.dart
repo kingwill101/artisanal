@@ -9,6 +9,8 @@
 /// preserving glyph content, width, links, and drawables.
 library;
 
+import 'dart:typed_data' show Float32x4;
+
 import '../colorprofile/convert.dart' as cp;
 import 'buffer.dart';
 import 'cell.dart';
@@ -316,22 +318,140 @@ final class ColorMatrix {
     final g = color.g.toDouble();
     final b = color.b.toDouble();
     final a = color.a.toDouble();
+    return _transformRgbaF64(r, g, b, a);
+  }
+
+  /// SIMD-accelerated single-pixel RGBA transform using Float32x4.
+  UvRgb _transformRgbaF64(double r, double g, double b, double a) {
+    // Pack RGBA into one Float32x4 for lane-wise dot products.
+    final rgba = Float32x4(r, g, b, a);
+
+    // Each row of the 4×4 linear transform (skip bias terms).
+    final row0 = Float32x4(_values[0], _values[1], _values[2], _values[3]);
+    final row1 = Float32x4(_values[5], _values[6], _values[7], _values[8]);
+    final row2 = Float32x4(_values[10], _values[11], _values[12], _values[13]);
+    final row3 = Float32x4(_values[15], _values[16], _values[17], _values[18]);
+
+    // Lane-wise multiply: rgba * row → (r×m0, g×m1, b×m2, a×m3)
+    // Horizontal sum via shuffle: (x+y+z+w) = (x+z) + (y+w)
+    int dot(Float32x4 row, double bias) {
+      final p = rgba * row;
+      // Shuffle: (x, y, z, w) ↔ (z, w, x, y) → sum pairs
+      final s = p + p.shuffle(Float32x4.zwxy);
+      // Now s = (x+z, y+w, z+x, w+y). Shuffle again for (x+z)+(y+w).
+      final t = s + s.shuffle(Float32x4.yzwx);
+      return (t.x + bias).round().clamp(0, 255);
+    }
+
     return UvRgb(
-      _transformRow(0, r, g, b, a),
-      _transformRow(5, r, g, b, a),
-      _transformRow(10, r, g, b, a),
-      a: _transformRow(15, r, g, b, a),
+      dot(row0, _values[4]),
+      dot(row1, _values[9]),
+      dot(row2, _values[14]),
+      a: dot(row3, _values[19]),
     );
   }
 
-  int _transformRow(int offset, double r, double g, double b, double a) {
-    final result =
-        (_values[offset] * r) +
-        (_values[offset + 1] * g) +
-        (_values[offset + 2] * b) +
-        (_values[offset + 3] * a) +
-        _values[offset + 4];
-    return result.round().clamp(0, 255);
+  /// Batch-transform RGBA values using Float32x4 SIMD.
+  ///
+  /// Processes [count] RGBA pixels from the parallel input lists and writes
+  /// to the parallel output lists.  Uses Float32x4 to process 4 pixels at
+  /// once (SoA layout: one Float32x4 holds a single channel across 4 pixels).
+  ///
+  /// All lists must have at least [count] elements.
+  void batchTransformRgba(
+    covariant List<int> rIn,
+    covariant List<int> gIn,
+    covariant List<int> bIn,
+    covariant List<int> aIn,
+    covariant List<int> rOut,
+    covariant List<int> gOut,
+    covariant List<int> bOut,
+    covariant List<int> aOut,
+    int count,
+  ) {
+    // Pre-load matrix rows as splatted vectors for the 4×4 linear part.
+    final mCol0 = Float32x4.splat(_values[0]);
+    final mCol1 = Float32x4.splat(_values[1]);
+    final mCol2 = Float32x4.splat(_values[2]);
+    final mCol3 = Float32x4.splat(_values[3]);
+    final biasR = Float32x4.splat(_values[4]);
+    final mCol5 = Float32x4.splat(_values[5]);
+    final mCol6 = Float32x4.splat(_values[6]);
+    final mCol7 = Float32x4.splat(_values[7]);
+    final mCol8 = Float32x4.splat(_values[8]);
+    final biasG = Float32x4.splat(_values[9]);
+    final mCol10 = Float32x4.splat(_values[10]);
+    final mCol11 = Float32x4.splat(_values[11]);
+    final mCol12 = Float32x4.splat(_values[12]);
+    final mCol13 = Float32x4.splat(_values[13]);
+    final biasB = Float32x4.splat(_values[14]);
+    final mCol15 = Float32x4.splat(_values[15]);
+    final mCol16 = Float32x4.splat(_values[16]);
+    final mCol17 = Float32x4.splat(_values[17]);
+    final mCol18 = Float32x4.splat(_values[18]);
+    final biasA = Float32x4.splat(_values[19]);
+
+    var i = 0;
+    for (; i + 3 < count; i += 4) {
+      // Load 4 pixels in SoA layout.
+      final rr = Float32x4(
+        rIn[i].toDouble(), rIn[i + 1].toDouble(),
+        rIn[i + 2].toDouble(), rIn[i + 3].toDouble(),
+      );
+      final gg = Float32x4(
+        gIn[i].toDouble(), gIn[i + 1].toDouble(),
+        gIn[i + 2].toDouble(), gIn[i + 3].toDouble(),
+      );
+      final bb = Float32x4(
+        bIn[i].toDouble(), bIn[i + 1].toDouble(),
+        bIn[i + 2].toDouble(), bIn[i + 3].toDouble(),
+      );
+      final aa = Float32x4(
+        aIn[i].toDouble(), aIn[i + 1].toDouble(),
+        aIn[i + 2].toDouble(), aIn[i + 3].toDouble(),
+      );
+
+      // Out = row · (r, g, b, a)^T + bias  (all lanes in parallel).
+      final outR = rr * mCol0 + gg * mCol1 + bb * mCol2 + aa * mCol3 + biasR;
+      final outG = rr * mCol5 + gg * mCol6 + bb * mCol7 + aa * mCol8 + biasG;
+      final outB =
+          rr * mCol10 + gg * mCol11 + bb * mCol12 + aa * mCol13 + biasB;
+      final outA =
+          rr * mCol15 + gg * mCol16 + bb * mCol17 + aa * mCol18 + biasA;
+
+      // Extract lanes back to integers.
+      rOut[i] = outR.x.round().clamp(0, 255);
+      rOut[i + 1] = outR.y.round().clamp(0, 255);
+      rOut[i + 2] = outR.z.round().clamp(0, 255);
+      rOut[i + 3] = outR.w.round().clamp(0, 255);
+
+      gOut[i] = outG.x.round().clamp(0, 255);
+      gOut[i + 1] = outG.y.round().clamp(0, 255);
+      gOut[i + 2] = outG.z.round().clamp(0, 255);
+      gOut[i + 3] = outG.w.round().clamp(0, 255);
+
+      bOut[i] = outB.x.round().clamp(0, 255);
+      bOut[i + 1] = outB.y.round().clamp(0, 255);
+      bOut[i + 2] = outB.z.round().clamp(0, 255);
+      bOut[i + 3] = outB.w.round().clamp(0, 255);
+
+      aOut[i] = outA.x.round().clamp(0, 255);
+      aOut[i + 1] = outA.y.round().clamp(0, 255);
+      aOut[i + 2] = outA.z.round().clamp(0, 255);
+      aOut[i + 3] = outA.w.round().clamp(0, 255);
+    }
+
+    // Scalar tail for remaining <4 pixels.
+    for (; i < count; i++) {
+      final pixel = _transformRgbaF64(
+        rIn[i].toDouble(), gIn[i].toDouble(),
+        bIn[i].toDouble(), aIn[i].toDouble(),
+      );
+      rOut[i] = pixel.r;
+      gOut[i] = pixel.g;
+      bOut[i] = pixel.b;
+      aOut[i] = pixel.a;
+    }
   }
 }
 
