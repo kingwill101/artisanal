@@ -1,0 +1,10 @@
+=== String Width Benchmark ===
+
+Phase 1 (short ASCII):      26.9M ops/s  (check: 500000000)
+Phase 2 (mixed Unicode):    15.9M ops/s  (check: 240255000)
+Phase 3 (CJK):              20.9M ops/s  (check: 400000000)
+Phase 4 (emoji):            22.9M ops/s  (check: 100000000)
+Phase 5 (long ASCII):       57.5K ops/s  (check: 1000000000)
+Phase 6 (cache thrash):     1000000 calls in 737ms  (check: 22000000)
+
+Total check value: 2262255000

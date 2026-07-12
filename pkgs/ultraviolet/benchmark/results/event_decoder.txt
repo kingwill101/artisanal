@@ -1,0 +1,10 @@
+=== Event Decoder Benchmark ===
+
+Phase 1 (ASCII keys):     59.9K bytes/s  (200000 events)
+Phase 2 (CSI cursor):     115.7K bytes/s  (200000 events)
+Phase 3 (SGR mouse):      265.1K bytes/s  (40000 events)
+Phase 4 (OSC):            479.2K bytes/s  (10000 events)
+Phase 5 (Kitty keyboard): 253.4K bytes/s  (40000 events)
+Phase 6 (mixed):          81560 bytes in 1039ms  (70130 events)
+
+Total check value: 560130

@@ -1,0 +1,9 @@
+=== Style Operations Benchmark ===
+
+Phase 1 (styleToSgr):      1.5M ops/s  (total len: 60155000)
+Phase 2 (styleDiff):       1.3M ops/s  (total len: 67005000)
+Phase 3 (convertStyle):    11.1M ops/s  (check: 711579411257000)
+Phase 4 (copyWith):        5.9M ops/s  (check: 5893390763032776296)
+Phase 5 (eq + hash):       7.2M ops/s  (check: 7837144207629146752)
+
+Total check value: -4715497523509211568

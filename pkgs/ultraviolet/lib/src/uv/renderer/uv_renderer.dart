@@ -2749,7 +2749,19 @@ String debugDirectRelativeMoveSeq(
   return (seq: seq, scrollHeight: scrollHeight);
 }
 
+/// Cache: the same buffer object is reused across frames and its graphics
+/// content rarely changes.  Avoids re-scanning every cell on every frame.
+Buffer? _lastSixelCheckBuffer;
+bool _lastSixelCheckResult = false;
+
 bool _bufferContainsSixelDisplay(Buffer buffer) {
+  if (_lastSixelCheckBuffer == buffer) return _lastSixelCheckResult;
+  _lastSixelCheckBuffer = buffer;
+  _lastSixelCheckResult = _scanBufferForSixel(buffer);
+  return _lastSixelCheckResult;
+}
+
+bool _scanBufferForSixel(Buffer buffer) {
   for (var y = 0; y < buffer.height(); y++) {
     final line = buffer.line(y);
     if (line == null) continue;

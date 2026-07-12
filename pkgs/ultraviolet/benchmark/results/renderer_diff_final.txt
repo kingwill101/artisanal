@@ -1,0 +1,9 @@
+=== Renderer Diff Benchmark ===
+Buffer size: 200x80 (16000 cells)
+
+Phase 1 (full-buffer): 500 frames in 1475ms — 5.4M cells/s
+Phase 2 (patch 10%):   2000 frames in 9679ms — 330.6K cells/s
+Phase 3 (style-heavy): 500 frames in 2147ms
+
+Total rendered: 0 bytes
+Metrics: FPS: 259.2 (150.4-315.9) | Frame: 3ms | Render: 3229µs (83.7%) | Frames: 3001 (skipped: 501)

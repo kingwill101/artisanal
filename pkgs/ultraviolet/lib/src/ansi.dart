@@ -58,50 +58,51 @@ abstract final class Ansi {
 
     final next = text.codeUnitAt(index + 1);
 
-    // CSI: ESC [
-    if (next == 0x5b) {
-      var j = index + 2;
-      while (j < text.length) {
-        final cu = text.codeUnitAt(j);
-        if (cu >= 0x40 && cu <= 0x7e) return j + 1;
-        j++;
-      }
-      return text.length;
-    }
-
-    // OSC: ESC ] ... (BEL or ST terminator)
-    if (next == 0x5d) {
-      var j = index + 2;
-      while (j < text.length) {
-        final cu = text.codeUnitAt(j);
-        if (cu == 0x07) return j + 1; // BEL
-        if (cu == 0x1b &&
-            j + 1 < text.length &&
-            text.codeUnitAt(j + 1) == 0x5c) {
-          return j + 2; // ST (ESC \)
+    // Dispatch on the byte after ESC — the VM compiles switch-on-int to a
+    // jump table, which is faster than linear if/else cascades.
+    switch (next) {
+      case 0x5b: // CSI: ESC [
+        var j = index + 2;
+        while (j < text.length) {
+          final cu = text.codeUnitAt(j);
+          if (cu >= 0x40 && cu <= 0x7e) return j + 1;
+          j++;
         }
-        j++;
-      }
-      return text.length;
-    }
+        return text.length;
 
-    // DCS/APC/PM/SOS: ESC P / ESC _ / ESC ^ / ESC X ... ST
-    if (next == 0x50 || next == 0x5f || next == 0x5e || next == 0x58) {
-      var j = index + 2;
-      while (j < text.length) {
-        final cu = text.codeUnitAt(j);
-        if (cu == 0x1b &&
-            j + 1 < text.length &&
-            text.codeUnitAt(j + 1) == 0x5c) {
-          return j + 2; // ST
+      case 0x5d: // OSC: ESC ] ... (BEL or ST terminator)
+        var j = index + 2;
+        while (j < text.length) {
+          final cu = text.codeUnitAt(j);
+          if (cu == 0x07) return j + 1; // BEL
+          if (cu == 0x1b &&
+              j + 1 < text.length &&
+              text.codeUnitAt(j + 1) == 0x5c) {
+            return j + 2; // ST (ESC \)
+          }
+          j++;
         }
-        j++;
-      }
-      return text.length;
-    }
+        return text.length;
 
-    // Simple 2-byte ESC sequences.
-    return (index + 2).clamp(0, text.length);
+      case 0x50: // DCS: ESC P ... ST
+      case 0x5f: // APC: ESC _ ... ST
+      case 0x5e: // PM:  ESC ^ ... ST
+      case 0x58: // SOS: ESC X ... ST
+        var j = index + 2;
+        while (j < text.length) {
+          final cu = text.codeUnitAt(j);
+          if (cu == 0x1b &&
+              j + 1 < text.length &&
+              text.codeUnitAt(j + 1) == 0x5c) {
+            return j + 2; // ST
+          }
+          j++;
+        }
+        return text.length;
+
+      default: // Simple 2-byte ESC sequences
+        return (index + 2).clamp(0, text.length);
+    }
   }
 
   /// Request primary device attributes (DA1).

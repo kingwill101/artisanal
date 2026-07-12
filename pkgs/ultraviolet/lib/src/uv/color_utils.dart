@@ -120,17 +120,21 @@ UvColor? _sourceOverRgb(UvRgb src, UvColor? dst) {
   }
   if (dst case UvRgb(:final r, :final g, :final b, :final a)) {
     final da = a.clamp(0, 255);
-    final outA = sa + ((da * (255 - sa) + 127) ~/ 255);
+    // outA = sa + (da * (255 - sa) + 127) / 255
+    // Replace ~/ 255 with (x * 257) >> 16 — an exact integer-division trick
+    // that avoids the slow idiv instruction on x86/ARM.
+    final outA = sa + ((da * (255 - sa) + 127) * 257 >> 16);
     if (outA <= 0) return const UvRgb(0, 0, 0, a: 0);
+    final outDenom = outA * 255;
     final outR =
         ((src.r * sa * 255) + (r * da * (255 - sa)) + (outA ~/ 2)) ~/
-        (outA * 255);
+        outDenom;
     final outG =
         ((src.g * sa * 255) + (g * da * (255 - sa)) + (outA ~/ 2)) ~/
-        (outA * 255);
+        outDenom;
     final outB =
         ((src.b * sa * 255) + (b * da * (255 - sa)) + (outA ~/ 2)) ~/
-        (outA * 255);
+        outDenom;
     return UvRgb(outR, outG, outB, a: outA);
   }
   return UvRgb(src.r, src.g, src.b);

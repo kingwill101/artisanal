@@ -269,6 +269,17 @@ bool terminalGraphicsControlsDisplayImage(String controls) {
 /// return true for malformed payloads, but it must not return false for any
 /// sequence recognized by the parsing helpers in this library.
 bool mayContainTerminalGraphics(String value) {
+  if (value.length <= 3) {
+    // Short strings (most common cell content).  Terminal graphics introducers
+    // are 0x1B (ESC), 0x90 (DCS), or 0x9F (APC) — none are printable ASCII.
+    var hasControlOrHigh = false;
+    for (var i = 0; i < value.length; i++) {
+      final cu = value.codeUnitAt(i);
+      if (cu < 0x20 || cu >= 0x80) { hasControlOrHigh = true; break; }
+    }
+    if (!hasControlOrHigh) return false;
+  }
+
   var escIndex = value.indexOf('\x1b');
   while (escIndex != -1) {
     if (escIndex + 2 < value.length) {

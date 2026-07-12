@@ -1,0 +1,414 @@
+{
+  "sessionId": "0712071003-9a348",
+  "command": [
+    "dart",
+    "run",
+    "benchmark/renderer_diff.dart"
+  ],
+  "workingDirectory": "/run/media/kingwill101/disk2/code/code/dart_packages/artisanal/pkgs/ultraviolet",
+  "exitCode": -15,
+  "terminatedByProfiler": true,
+  "processIoMode": "pipe",
+  "artifactDirectory": "/run/media/kingwill101/disk2/code/code/dart_packages/artisanal/pkgs/ultraviolet/benchmark/profiles/renderer_diff",
+  "vmServiceUri": "http://127.0.0.1:43295/lWjbGvhMvY0=/",
+  "supportedCaptureKinds": [
+    "cpu",
+    "memory"
+  ],
+  "supportedIsolateScopes": [
+    "current",
+    "all"
+  ],
+  "overallProfile": {
+    "regionId": "overall",
+    "name": "whole-session",
+    "attributes": {
+      "scope": "session"
+    },
+    "isolateId": "isolates/7952764417475647",
+    "isolateIds": [
+      "isolates/7952764417475647"
+    ],
+    "captureKinds": [
+      "cpu",
+      "memory"
+    ],
+    "isolateScope": "all",
+    "parentRegionId": null,
+    "startTimestampMicros": 28031818492,
+    "endTimestampMicros": 28050160386,
+    "durationMicros": 18341894,
+    "sampleCount": 16900,
+    "samplePeriodMicros": 1000,
+    "topSelfFrames": [
+      {
+        "name": "[Native] /usr/lib/libc.so.6+0xa0a50",
+        "kind": "Native",
+        "location": null,
+        "selfSamples": 3537,
+        "totalSamples": 3537,
+        "selfPercent": 0.20928994082840235,
+        "totalPercent": 0.20928994082840235
+      },
+      {
+        "name": "_OneByteString.indexOf",
+        "kind": "Dart",
+        "location": "dart:core-patch/string_patch.dart",
+        "selfSamples": 2061,
+        "totalSamples": 3491,
+        "selfPercent": 0.12195266272189349,
+        "totalPercent": 0.2065680473372781
+      },
+      {
+        "name": "_StringBase.indexOf",
+        "kind": "Dart",
+        "location": "dart:core-patch/string_patch.dart",
+        "selfSamples": 1430,
+        "totalSamples": 1430,
+        "selfPercent": 0.08461538461538462,
+        "totalPercent": 0.08461538461538462
+      },
+      {
+        "name": "mayContainTerminalGraphics",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/terminal_graphics.dart",
+        "selfSamples": 877,
+        "totalSamples": 4547,
+        "selfPercent": 0.05189349112426035,
+        "totalPercent": 0.2690532544378698
+      },
+      {
+        "name": "Cell.content",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/cell.dart",
+        "selfSamples": 651,
+        "totalSamples": 651,
+        "selfPercent": 0.0385207100591716,
+        "totalPercent": 0.0385207100591716
+      },
+      {
+        "name": "_packColorExact",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/cell.dart",
+        "selfSamples": 555,
+        "totalSamples": 555,
+        "selfPercent": 0.03284023668639053,
+        "totalPercent": 0.03284023668639053
+      },
+      {
+        "name": "Cell.==",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/cell.dart",
+        "selfSamples": 436,
+        "totalSamples": 436,
+        "selfPercent": 0.025798816568047337,
+        "totalPercent": 0.025798816568047337
+      },
+      {
+        "name": "UvTerminalRenderer._markStaleCells",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/renderer/uv_renderer.dart",
+        "selfSamples": 382,
+        "totalSamples": 1071,
+        "selfPercent": 0.022603550295857987,
+        "totalPercent": 0.06337278106508876
+      },
+      {
+        "name": "_Random._nextState",
+        "kind": "Dart",
+        "location": "dart:math-patch/math_patch.dart",
+        "selfSamples": 368,
+        "totalSamples": 377,
+        "selfPercent": 0.02177514792899408,
+        "totalPercent": 0.022307692307692306
+      },
+      {
+        "name": "Buffer.isCellDirty",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/buffer.dart",
+        "selfSamples": 350,
+        "totalSamples": 368,
+        "selfPercent": 0.020710059171597635,
+        "totalPercent": 0.02177514792899408
+      }
+    ],
+    "topTotalFrames": [
+      {
+        "name": "_delayEntrypointInvocation.<closure>",
+        "kind": "Dart",
+        "location": "dart:isolate-patch/isolate_patch.dart",
+        "selfSamples": 14,
+        "totalSamples": 13347,
+        "selfPercent": 0.0008284023668639054,
+        "totalPercent": 0.7897633136094675
+      },
+      {
+        "name": "_RawReceivePort._handleMessage",
+        "kind": "Dart",
+        "location": "dart:isolate-patch/isolate_patch.dart",
+        "selfSamples": 0,
+        "totalSamples": 13347,
+        "selfPercent": 0.0,
+        "totalPercent": 0.7897633136094675
+      },
+      {
+        "name": "main",
+        "kind": "Dart",
+        "location": "file:///run/media/kingwill101/disk2/code/code/dart_packages/artisanal/pkgs/ultraviolet/benchmark/renderer_diff.dart",
+        "selfSamples": 214,
+        "totalSamples": 13333,
+        "selfPercent": 0.012662721893491125,
+        "totalPercent": 0.7889349112426035
+      },
+      {
+        "name": "UvTerminalRenderer.render",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/renderer/uv_renderer.dart",
+        "selfSamples": 8,
+        "totalSamples": 11454,
+        "selfPercent": 0.00047337278106508875,
+        "totalPercent": 0.6777514792899408
+      },
+      {
+        "name": "_bufferContainsSixelDisplay",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/renderer/uv_renderer.dart",
+        "selfSamples": 282,
+        "totalSamples": 4744,
+        "selfPercent": 0.01668639053254438,
+        "totalPercent": 0.28071005917159764
+      },
+      {
+        "name": "mayContainTerminalGraphics",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/terminal_graphics.dart",
+        "selfSamples": 877,
+        "totalSamples": 4547,
+        "selfPercent": 0.05189349112426035,
+        "totalPercent": 0.2690532544378698
+      },
+      {
+        "name": "UvTerminalRenderer._transformDirtyTiles",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/renderer/uv_renderer.dart",
+        "selfSamples": 7,
+        "totalSamples": 4144,
+        "selfPercent": 0.0004142011834319527,
+        "totalPercent": 0.24520710059171597
+      },
+      {
+        "name": "UvTerminalRenderer._transformLine",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/renderer/uv_renderer.dart",
+        "selfSamples": 6,
+        "totalSamples": 4083,
+        "selfPercent": 0.00035502958579881655,
+        "totalPercent": 0.24159763313609467
+      },
+      {
+        "name": "UvTerminalRenderer._transformWholeLine",
+        "kind": "Dart",
+        "location": "package:ultraviolet/src/uv/renderer/uv_renderer.dart",
+        "selfSamples": 125,
+        "totalSamples": 4075,
+        "selfPercent": 0.0073964497041420114,
+        "totalPercent": 0.2411242603550296
+      },
+      {
+        "name": "[Native] /usr/lib/libc.so.6+0xa0a50",
+        "kind": "Native",
+        "location": null,
+        "selfSamples": 3537,
+        "totalSamples": 3537,
+        "selfPercent": 0.20928994082840235,
+        "totalPercent": 0.20928994082840235
+      }
+    ],
+    "memory": {
+      "start": {
+        "timestamp": 1783858207576909,
+        "rss": 0,
+        "capacity": 25243648,
+        "used": 24463216,
+        "external": 0,
+        "gc": false,
+        "adb_memoryInfo": {
+          "Realtime": 0,
+          "Java Heap": 0,
+          "Native Heap": 0,
+          "Code": 0,
+          "Stack": 0,
+          "Graphics": 0,
+          "Private Other": 0,
+          "System": 0,
+          "Total": 0
+        },
+        "memory_eventInfo": {
+          "timestamp": -1,
+          "gcEvent": false,
+          "snapshotEvent": false,
+          "snapshotAutoEvent": false,
+          "allocationAccumulatorEvent": {
+            "start": false,
+            "continues": false,
+            "reset": false
+          },
+          "extensionEvents": null
+        },
+        "rasterCache": {
+          "layerBytes": 0,
+          "pictureBytes": 0
+        }
+      },
+      "end": {
+        "timestamp": 1783858222433012,
+        "rss": 0,
+        "capacity": 101318656,
+        "used": 95161968,
+        "external": 0,
+        "gc": false,
+        "adb_memoryInfo": {
+          "Realtime": 0,
+          "Java Heap": 0,
+          "Native Heap": 0,
+          "Code": 0,
+          "Stack": 0,
+          "Graphics": 0,
+          "Private Other": 0,
+          "System": 0,
+          "Total": 0
+        },
+        "memory_eventInfo": {
+          "timestamp": -1,
+          "gcEvent": false,
+          "snapshotEvent": false,
+          "snapshotAutoEvent": false,
+          "allocationAccumulatorEvent": {
+            "start": false,
+            "continues": false,
+            "reset": false
+          },
+          "extensionEvents": null
+        },
+        "rasterCache": {
+          "layerBytes": 0,
+          "pictureBytes": 0
+        }
+      },
+      "deltaHeapBytes": 70698752,
+      "deltaExternalBytes": 0,
+      "deltaCapacityBytes": 76075008,
+      "classCount": 2191,
+      "topClasses": [
+        {
+          "className": "_OneByteString",
+          "libraryUri": "dart:core",
+          "allocationBytesDelta": 47104000,
+          "allocationInstancesDelta": 753061,
+          "liveBytes": 50935584,
+          "liveBytesDelta": 47104000,
+          "liveInstances": 769978,
+          "liveInstancesDelta": 753061
+        },
+        {
+          "className": "_List",
+          "libraryUri": "dart:core",
+          "allocationBytesDelta": 12595424,
+          "allocationInstancesDelta": 6820,
+          "liveBytes": 15762832,
+          "liveBytesDelta": 12595424,
+          "liveInstances": 32991,
+          "liveInstancesDelta": 6820
+        },
+        {
+          "className": "Cell",
+          "libraryUri": "package:ultraviolet/src/uv/cell.dart",
+          "allocationBytesDelta": 7818528,
+          "allocationInstancesDelta": 81443,
+          "liveBytes": 10905216,
+          "liveBytesDelta": 7818528,
+          "liveInstances": 113596,
+          "liveInstancesDelta": 81443
+        },
+        {
+          "className": "RuneIterator",
+          "libraryUri": "dart:core",
+          "allocationBytesDelta": 3909840,
+          "allocationInstancesDelta": 81455,
+          "liveBytes": 3909840,
+          "liveBytesDelta": 3909840,
+          "liveInstances": 81455,
+          "liveInstancesDelta": 81455
+        },
+        {
+          "className": "LineData",
+          "libraryUri": "package:ultraviolet/src/uv/buffer.dart",
+          "allocationBytesDelta": 3842880,
+          "allocationInstancesDelta": 80060,
+          "liveBytes": 3842880,
+          "liveBytesDelta": 3842880,
+          "liveInstances": 80060,
+          "liveInstancesDelta": 80060
+        },
+        {
+          "className": "Object",
+          "libraryUri": "dart:core",
+          "allocationBytesDelta": 2606176,
+          "allocationInstancesDelta": 162886,
+          "liveBytes": 3635072,
+          "liveBytesDelta": 2606176,
+          "liveInstances": 227192,
+          "liveInstancesDelta": 162886
+        },
+        {
+          "className": "DirtySpan",
+          "libraryUri": "package:ultraviolet/src/uv/buffer.dart",
+          "allocationBytesDelta": 2577504,
+          "allocationInstancesDelta": 80547,
+          "liveBytes": 2577504,
+          "liveBytesDelta": 2577504,
+          "liveInstances": 80547,
+          "liveInstancesDelta": 80547
+        },
+        {
+          "className": "Instructions",
+          "libraryUri": null,
+          "allocationBytesDelta": 263632,
+          "allocationInstancesDelta": 322,
+          "liveBytes": 598272,
+          "liveBytesDelta": 263632,
+          "liveInstances": 920,
+          "liveInstancesDelta": 322
+        },
+        {
+          "className": "_Uint32List",
+          "libraryUri": "dart:typed_data",
+          "allocationBytesDelta": 225280,
+          "allocationInstancesDelta": 3520,
+          "liveBytes": 1057984,
+          "liveBytesDelta": 225280,
+          "liveInstances": 3703,
+          "liveInstancesDelta": 3520
+        },
+        {
+          "className": "ICData",
+          "libraryUri": null,
+          "allocationBytesDelta": 121024,
+          "allocationInstancesDelta": 1891,
+          "liveBytes": 326784,
+          "liveBytesDelta": 121024,
+          "liveInstances": 5106,
+          "liveInstancesDelta": 1891
+        }
+      ],
+      "rawProfilePath": "/run/media/kingwill101/disk2/code/code/dart_packages/artisanal/pkgs/ultraviolet/benchmark/profiles/renderer_diff/overall/memory_profile.json"
+    },
+    "summaryPath": "/run/media/kingwill101/disk2/code/code/dart_packages/artisanal/pkgs/ultraviolet/benchmark/profiles/renderer_diff/overall/summary.json",
+    "rawProfilePath": "/run/media/kingwill101/disk2/code/code/dart_packages/artisanal/pkgs/ultraviolet/benchmark/profiles/renderer_diff/overall/cpu_profile.json",
+    "error": null
+  },
+  "regions": [],
+  "warnings": [
+    "Profile run duration of 15000ms elapsed; terminating the target process."
+  ]
+}

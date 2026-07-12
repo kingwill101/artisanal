@@ -1,0 +1,10 @@
+=== Full Stack Benchmark ===
+
+Phase 1 (text scroll):    200 frames in 588ms — 340.1 FPS
+Phase 2 (animated gfx):   100 frames in 395ms — 253.2 FPS
+Phase 3 (event decode):   6500 events in 17ms
+Phase 4 (string + layout): 282072 total width in 78ms
+
+Total output: 0 bytes
+Metrics: FPS: 278.7 (156.9-326.2) | Frame: 3ms | Render: 2003µs (55.8%) | Frames: 302 (skipped: 302)
+Total check value: 288872

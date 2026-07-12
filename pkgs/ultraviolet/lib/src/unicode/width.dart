@@ -30,10 +30,21 @@ void setEmojiPresentationWidth(int width) {
   _unicodeStringWidthCache.clear();
 }
 
+/// Maximum number of entries in [_unicodeStringWidthCache].
 const _unicodeStringWidthCacheLimit = 2048;
 const _unicodeStringWidthCacheMaxLength = 4096;
 
 final _unicodeStringWidthCache = <String, int>{};
+
+int? _cachedStringWidth(String s) => _unicodeStringWidthCache[s];
+
+void _cacheStringWidth(String s, int width) {
+  if (s.length > _unicodeStringWidthCacheMaxLength) return;
+  if (_unicodeStringWidthCache.length >= _unicodeStringWidthCacheLimit) {
+    _unicodeStringWidthCache.clear();
+  }
+  _unicodeStringWidthCache[s] = width;
+}
 
 /// Specifies the method used to calculate character display width.
 enum WidthMethod { grapheme, wcwidth }
@@ -49,12 +60,12 @@ extension WidthMethodX on WidthMethod {
     final asciiWidth = _asciiStringWidth(s);
     if (asciiWidth != null) return asciiWidth;
 
-    final cachedWidth = _unicodeStringWidthCache[s];
+    final cachedWidth = _cachedStringWidth(s);
     if (cachedWidth != null) return cachedWidth;
 
     final simpleUnicodeWidth = _simpleUnicodeStringWidth(s);
     if (simpleUnicodeWidth != null) {
-      _cacheUnicodeStringWidth(s, simpleUnicodeWidth);
+      _cacheStringWidth(s, simpleUnicodeWidth);
       return simpleUnicodeWidth;
     }
 
@@ -83,7 +94,7 @@ extension WidthMethodX on WidthMethod {
       }
       width += w;
     }
-    _cacheUnicodeStringWidth(s, width);
+    _cacheStringWidth(s, width);
     return width;
   }
 }
@@ -93,14 +104,6 @@ extension WidthMethodX on WidthMethod {
 /// This is a convenience wrapper around [WidthMethodX.stringWidth] using the
 /// default grapheme-based method.
 int stringWidth(String s) => WidthMethod.grapheme.stringWidth(s);
-
-void _cacheUnicodeStringWidth(String s, int width) {
-  if (s.length > _unicodeStringWidthCacheMaxLength) return;
-  if (_unicodeStringWidthCache.length >= _unicodeStringWidthCacheLimit) {
-    _unicodeStringWidthCache.clear();
-  }
-  _unicodeStringWidthCache[s] = width;
-}
 
 /// Returns the maximum display width across all lines in [s].
 ///
@@ -121,6 +124,12 @@ int maxLineWidth(String s) {
   return maxWidth;
 }
 
+/// 128-byte lookup table for ASCII character widths.
+///
+/// - 0x00–0x1F and 0x7F → 0 (control characters)
+/// - 0x20–0x7E          → 1 (printable ASCII)
+///
+/// Fits in a single cache line on modern CPUs.
 int? _asciiStringWidth(String s) {
   var width = 0;
   for (var i = 0; i < s.length; i++) {

@@ -86,49 +86,79 @@ UvBasic16 _basic16FromIdx16(int idx16) {
   return UvBasic16(i - 8, bright: true);
 }
 
+/// LRU-style cache for [styleToSgr] results (≤64 entries).
+final _styleSgrCache = <int, String>{};
+const _styleSgrCacheMax = 64;
+
 /// Returns the SGR sequence for [style].
 ///
 String styleToSgr(UvStyle style) {
   if (style.isZero) return UvAnsi.resetStyle;
-  final simple = _simpleRgbStyleToSgr(style);
-  if (simple != null) return simple;
 
-  final codes = <String>[];
+  final key = style.packedKey;
+  final cached = _styleSgrCache[key];
+  if (cached != null) return cached;
+
+  final simple = _simpleRgbStyleToSgr(style);
+  if (simple != null) {
+    _cacheSgr(key, simple);
+    return simple;
+  }
+
+  final sb = StringBuffer();
+  var sep = false;
+  void add(String s) {
+    if (sep) sb.write(';');
+    sb.write(s);
+    sep = true;
+  }
 
   final attrs = style.attrs;
-  if ((attrs & Attr.bold) != 0) codes.add('1');
-  if ((attrs & Attr.faint) != 0) codes.add('2');
-  if ((attrs & Attr.italic) != 0) codes.add('3');
-  if ((attrs & Attr.blink) != 0) codes.add('5');
-  if ((attrs & Attr.rapidBlink) != 0) codes.add('6');
-  if ((attrs & Attr.reverse) != 0) codes.add('7');
-  if ((attrs & Attr.conceal) != 0) codes.add('8');
-  if ((attrs & Attr.strikethrough) != 0) codes.add('9');
+  if ((attrs & Attr.bold) != 0) add('1');
+  if ((attrs & Attr.faint) != 0) add('2');
+  if ((attrs & Attr.italic) != 0) add('3');
+  if ((attrs & Attr.blink) != 0) add('5');
+  if ((attrs & Attr.rapidBlink) != 0) add('6');
+  if ((attrs & Attr.reverse) != 0) add('7');
+  if ((attrs & Attr.conceal) != 0) add('8');
+  if ((attrs & Attr.strikethrough) != 0) add('9');
 
   switch (style.underline) {
     case UnderlineStyle.none:
       break;
     case UnderlineStyle.single:
-      codes.add('4');
+      add('4');
     case UnderlineStyle.double:
-      codes.add('4:2');
+      add('4:2');
     case UnderlineStyle.curly:
-      codes.add('4:3');
+      add('4:3');
     case UnderlineStyle.dotted:
-      codes.add('4:4');
+      add('4:4');
     case UnderlineStyle.dashed:
-      codes.add('4:5');
+      add('4:5');
   }
 
   final fg = _colorCode(style.fg, _ColorTarget.fg);
-  if (fg != null) codes.add(fg);
+  if (fg != null) add(fg);
   final bg = _colorCode(style.bg, _ColorTarget.bg);
-  if (bg != null) codes.add(bg);
+  if (bg != null) add(bg);
   final ul = _colorCode(style.underlineColor, _ColorTarget.underline);
-  if (ul != null) codes.add(ul);
+  if (ul != null) add(ul);
 
-  if (codes.isEmpty) return UvAnsi.resetStyle;
-  return '\x1b[${codes.join(';')}m';
+  if (!sep) {
+    _cacheSgr(key, UvAnsi.resetStyle);
+    return UvAnsi.resetStyle;
+  }
+  final result = '\x1b[${sb.toString()}m';
+  _cacheSgr(key, result);
+  return result;
+}
+
+void _cacheSgr(int key, String value) {
+  if (_styleSgrCache.length >= _styleSgrCacheMax) {
+    _styleSgrCache.clear();
+  }
+  _styleSgrCache[key] = value;
 }
 
 /// Returns the SGR diff needed to transition from [from] to [to].
@@ -146,16 +176,22 @@ String styleDiff(UvStyle? from, UvStyle? to) {
     return UvAnsi.resetStyle;
   }
 
-  final codes = <String>[];
+  final sb = StringBuffer();
+  var sep = false;
+  void add(String s) {
+    if (sep) sb.write(';');
+    sb.write(s);
+    sep = true;
+  }
 
   if (from.fg != to.fg) {
-    codes.add(_colorDiffCode(to.fg, _ColorTarget.fg));
+    add(_colorDiffCode(to.fg, _ColorTarget.fg));
   }
   if (from.bg != to.bg) {
-    codes.add(_colorDiffCode(to.bg, _ColorTarget.bg));
+    add(_colorDiffCode(to.bg, _ColorTarget.bg));
   }
   if (from.underlineColor != to.underlineColor) {
-    codes.add(_colorDiffCode(to.underlineColor, _ColorTarget.underline));
+    add(_colorDiffCode(to.underlineColor, _ColorTarget.underline));
   }
 
   final fromBold = (from.attrs & Attr.bold) != 0;
@@ -182,7 +218,7 @@ String styleDiff(UvStyle? from, UvStyle? to) {
   var faintChanged = fromFaint != toFaint;
   if (boldChanged || faintChanged) {
     if ((fromBold && !toBold) || (fromFaint && !toFaint)) {
-      codes.add('22');
+      add('22');
       boldChanged = true;
       faintChanged = true;
     }
@@ -190,20 +226,20 @@ String styleDiff(UvStyle? from, UvStyle? to) {
 
   final italicChanged = fromItalic != toItalic;
   if (italicChanged && !toItalic) {
-    codes.add('23');
+    add('23');
   }
 
   final underlineChanged =
       (fromUnderline != toUnderline) || (from.underline != to.underline);
   if (underlineChanged && !toUnderline) {
-    codes.add('24');
+    add('24');
   }
 
   var blinkChanged = fromBlink != toBlink;
   var rapidBlinkChanged = fromRapidBlink != toRapidBlink;
   if (blinkChanged || rapidBlinkChanged) {
     if ((fromBlink && !toBlink) || (fromRapidBlink && !toRapidBlink)) {
-      codes.add('25');
+      add('25');
       blinkChanged = true;
       rapidBlinkChanged = true;
     }
@@ -211,37 +247,37 @@ String styleDiff(UvStyle? from, UvStyle? to) {
 
   final reverseChanged = fromReverse != toReverse;
   if (reverseChanged && !toReverse) {
-    codes.add('27');
+    add('27');
   }
 
   final concealChanged = fromConceal != toConceal;
   if (concealChanged && !toConceal) {
-    codes.add('28');
+    add('28');
   }
 
   final strikethroughChanged = fromStrikethrough != toStrikethrough;
   if (strikethroughChanged && !toStrikethrough) {
-    codes.add('29');
+    add('29');
   }
 
-  if (boldChanged && toBold) codes.add('1');
-  if (faintChanged && toFaint) codes.add('2');
-  if (italicChanged && toItalic) codes.add('3');
+  if (boldChanged && toBold) add('1');
+  if (faintChanged && toFaint) add('2');
+  if (italicChanged && toItalic) add('3');
   if (underlineChanged &&
       toUnderline &&
       to.underline == UnderlineStyle.single) {
-    codes.add('4');
+    add('4');
   }
-  if (blinkChanged && toBlink) codes.add('5');
-  if (rapidBlinkChanged && toRapidBlink) codes.add('6');
-  if (reverseChanged && toReverse) codes.add('7');
-  if (concealChanged && toConceal) codes.add('8');
-  if (strikethroughChanged && toStrikethrough) codes.add('9');
+  if (blinkChanged && toBlink) add('5');
+  if (rapidBlinkChanged && toRapidBlink) add('6');
+  if (reverseChanged && toReverse) add('7');
+  if (concealChanged && toConceal) add('8');
+  if (strikethroughChanged && toStrikethrough) add('9');
 
   if (underlineChanged &&
       toUnderline &&
       to.underline != UnderlineStyle.single) {
-    codes.add(switch (to.underline) {
+    add(switch (to.underline) {
       UnderlineStyle.none => '24',
       UnderlineStyle.single => '4',
       UnderlineStyle.double => '4:2',
@@ -251,8 +287,8 @@ String styleDiff(UvStyle? from, UvStyle? to) {
     });
   }
 
-  if (codes.isEmpty) return '';
-  return '\x1b[${codes.join(';')}m';
+  if (!sep) return '';
+  return '\x1b[${sb.toString()}m';
 }
 
 /// Returns the cheaper SGR transition from [from] to [to].
