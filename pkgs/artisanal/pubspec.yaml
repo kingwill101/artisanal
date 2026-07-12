@@ -16,7 +16,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  ultraviolet: ^0.3.0
+  ultraviolet: ^0.4.0
   artisanal_widgets: ^0.2.1
   acanthis: ^1.5.1
   args: ^2.7.0
