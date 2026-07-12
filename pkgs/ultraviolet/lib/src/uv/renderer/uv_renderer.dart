@@ -723,6 +723,14 @@ final class UvTerminalRenderer extends TerminalRenderer {
     }
     final w = cur.width();
     final h = cur.height();
+
+    // Fast bail-out: if every row in newbuf is dirty, all content was
+    // explicitly written this frame so there can be no stale cells.
+    if (newbuf.dirtyRows.length >= h &&
+        !newbuf.dirtyRows.take(h).contains(false)) {
+      return;
+    }
+
     final empty = Cell.emptyCell();
     for (var y = 0; y < h; y++) {
       final curLine = cur.line(y);
@@ -744,15 +752,6 @@ final class UvTerminalRenderer extends TerminalRenderer {
   }
 
   int _touched(Buffer buf) {
-    if (buf.dirtyRows.isEmpty) return buf.height();
-    var n = 0;
-    for (final dirty in buf.dirtyRows) {
-      if (dirty) n++;
-    }
-    return n;
-  }
-
-  int _dirtyTouched(Buffer buf) {
     if (buf.dirtyRows.isEmpty) return buf.height();
     var n = 0;
     for (final dirty in buf.dirtyRows) {
@@ -931,7 +930,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     // artifacts on screen.
     _markStaleCells(newbuf);
 
-    final touchedLines = _dirtyTouched(newbuf);
+    final touchedLines = _touched(newbuf);
     if (!_clear && touchedLines == 0) {
       metrics.endFrame(skipped: true);
       return;
