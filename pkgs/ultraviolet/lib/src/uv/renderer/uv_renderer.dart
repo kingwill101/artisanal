@@ -1327,7 +1327,8 @@ final class UvTerminalRenderer extends TerminalRenderer {
 
   static bool _canClearWith(Cell? c) {
     if (c == null) return true;
-    if (c.width != 1 || c.content != ' ') return false;
+    if (c.width != 1) return false;
+    if (c.asciiCodeUnit != 0x20 && c.content != ' ') return false;
     final style = c.style;
     // Cells with an explicit foreground or background color must be written
     // individually — EL (erase line) would replace them with the terminal's
@@ -2766,6 +2767,8 @@ bool _scanBufferForSixel(Buffer buffer) {
     final line = buffer.line(y);
     if (line == null) continue;
     for (final cell in line.cells) {
+      // Printable ASCII cells can never contain terminal graphics sequences.
+      if (cell.asciiCodeUnit != null) continue;
       if (!terminal_graphics.mayContainTerminalGraphics(cell.content)) {
         continue;
       }
