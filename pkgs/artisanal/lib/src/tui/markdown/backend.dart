@@ -337,44 +337,22 @@ const _blockHtmlTags = {
 
 List<md.Node> _normalizeBlockquotes(List<md.Node> nodes) {
   final normalized = <md.Node>[];
-  var i = 0;
 
-  while (i < nodes.length) {
-    final node = nodes[i];
+  for (final node in nodes) {
     if (node is md.Element && node.tag == 'blockquote') {
-      final mergedChildren = <md.Node>[];
-
-      while (i < nodes.length &&
-          nodes[i] is md.Element &&
-          (nodes[i] as md.Element).tag == 'blockquote') {
-        final blockquote = nodes[i] as md.Element;
-        final children = blockquote.children ?? const <md.Node>[];
-        final normalizedChildren = _normalizeBlockquotes(children);
-        if (normalizedChildren.isEmpty) {
-          mergedChildren.add(md.Element('p', [md.Text('')]));
-        } else {
-          mergedChildren.addAll(normalizedChildren);
-        }
-        i++;
-      }
-
-      final nestedFixed = _normalizeBlockquoteMarkers(mergedChildren);
-      normalized.add(_cloneElement(node, nestedFixed));
-      continue;
-    }
-
-    if (node is md.Element && node.children != null) {
+      normalized.add(
+        _cloneElement(node, _normalizeBlockquotes(node.children ?? const [])),
+      );
+    } else if (node is md.Element && node.children != null) {
       normalized.add(
         _cloneElement(node, _normalizeBlockquotes(node.children!)),
       );
     } else {
       normalized.add(node);
     }
-
-    i++;
   }
 
-  return normalized;
+  return _normalizeBlockquoteMarkers(normalized);
 }
 
 List<md.Node> _normalizeBlockquoteMarkers(List<md.Node> nodes) {

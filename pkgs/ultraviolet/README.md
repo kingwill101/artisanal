@@ -73,19 +73,19 @@ Future<void> main() async {
 
 Raycast maze:
 
-![Raycast maze demo](assets/raycast.gif)
+![Raycast maze demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/raycast.gif)
 
 Conway's Game of Life:
 
-![Conway demo](assets/conway.gif)
+![Conway demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/conway.gif)
 
 Metaballs / marching squares:
 
-![Metaballs demo](assets/metaballs.gif)
+![Metaballs demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/metaballs.gif)
 
 Layout example (`example/layout.dart`):
 
-![Layout demo](assets/layout.png)
+![Layout demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/layout.png)
 
 ## Performance Tips
 

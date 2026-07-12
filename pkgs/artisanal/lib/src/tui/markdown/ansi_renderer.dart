@@ -38,6 +38,7 @@ import 'html_context.dart';
 import 'image_renderer.dart' show
     ImageProtocol,
     detectImageProtocol,
+    imageCellDimensions,
     renderImageToAnsi;
 export 'options.dart';
 export 'styles.dart' show MarkdownElementStyle;
@@ -138,6 +139,9 @@ class AnsiRenderer implements NodeVisitor {
 
   /// Current blockquote nesting depth.
   int _blockquoteDepth = 0;
+
+  /// Whether the next block inside a quote should consume a blank separator.
+  bool _blockquoteBlankLinePending = false;
 
   /// Whether the last output was a block element (needs trailing newline).
   bool _lastWasBlock = false;
@@ -286,11 +290,6 @@ class AnsiRenderer implements NodeVisitor {
       }
     }
 
-    // Apply blockquote prefix if inside a blockquote
-    if (_inBlockquote && content.contains('\n')) {
-      content = _applyBlockquotePrefix(content);
-    }
-
     // Apply syntax highlighting for code blocks
     if (_inCodeBlock) {
       if (_shouldSyntaxHighlight(content, _codeBlockLanguage)) {
@@ -305,6 +304,14 @@ class AnsiRenderer implements NodeVisitor {
       if (options.codeBlockBorder && content.contains('\n')) {
         content = _applyCodeBlockPrefix(content);
       }
+
+      // Apply blockquote prefix after highlighting so the quote markers don't
+      // get treated as code content by the syntax highlighter.
+      if (_inBlockquote) {
+        content = _applyBlockquotePrefixAll(content);
+      }
+    } else if (_inBlockquote && content.contains('\n')) {
+      content = _applyBlockquotePrefix(content);
     }
 
     // If inside a table cell, write to cell buffer instead
@@ -346,13 +353,23 @@ class AnsiRenderer implements NodeVisitor {
         return true;
 
       case 'blockquote':
-        _ensureNewline();
+        if (_inBlockquote && _blockquoteBlankLinePending && _blockquoteDepth > 0) {
+          _buffer.write('${_blockquotePrefixOnly()}\n');
+          _blockquoteBlankLinePending = false;
+        } else {
+          _ensureNewline();
+        }
         _inBlockquote = true;
         _blockquoteDepth++;
         return true;
 
       case 'pre':
-        _ensureNewline();
+        if (_inBlockquote && _blockquoteBlankLinePending) {
+          _buffer.write('${_blockquotePrefixOnly()}\n');
+          _blockquoteBlankLinePending = false;
+        } else {
+          _ensureNewline();
+        }
         _startCodeBlock(element);
         return true;
 
@@ -548,7 +565,12 @@ class AnsiRenderer implements NodeVisitor {
             }
           }
         }
-        _buffer.write('\n');
+        if (_inBlockquote) {
+          _buffer.write('\n');
+          _blockquoteBlankLinePending = true;
+        } else {
+          _buffer.write('\n');
+        }
         _lastWasBlock = true;
         break;
 
@@ -556,6 +578,7 @@ class AnsiRenderer implements NodeVisitor {
         _blockquoteDepth--;
         if (_blockquoteDepth <= 0) {
           _inBlockquote = false;
+          _blockquoteBlankLinePending = false;
           if (_blockquoteDepth < 0) {
             _blockquoteDepth = 0;
           }
@@ -833,12 +856,16 @@ class AnsiRenderer implements NodeVisitor {
   // Blockquote Helpers
   // ─────────────────────────────────────────────────────────────────────────────
 
-  void _writeBlockquotePrefix() {
+  String _blockquotePrefixOnly() {
     final color =
         options.blockquoteBorderColor ?? _defaultBlockquoteBorderColor();
     final colorSeq = color.toAnsi(ColorProfile.trueColor);
     final prefix = '\u2502 ' * _blockquoteDepth;
-    _buffer.write('$colorSeq$prefix$_ansiReset');
+    return '$colorSeq$prefix$_ansiReset';
+  }
+
+  void _writeBlockquotePrefix() {
+    _buffer.write(_blockquotePrefixOnly());
 
     // Apply blockquote text style
     final style = options.blockquoteStyle ?? _defaultBlockquoteStyle();
@@ -847,10 +874,7 @@ class AnsiRenderer implements NodeVisitor {
 
   String _applyBlockquotePrefix(String text) {
     final lines = text.split('\n');
-    final color =
-        options.blockquoteBorderColor ?? _defaultBlockquoteBorderColor();
-    final colorSeq = color.toAnsi(ColorProfile.trueColor);
-    final prefix = '\u2502 ' * _blockquoteDepth;
+    final prefix = _blockquotePrefixOnly();
 
     return lines
         .asMap()
@@ -860,9 +884,14 @@ class AnsiRenderer implements NodeVisitor {
           final line = entry.value;
           if (i == 0) return line; // First line already has prefix
           if (line.isEmpty && i == lines.length - 1) return line;
-          return '$colorSeq$prefix$_ansiReset$line';
+          return '$prefix$line';
         })
         .join('\n');
+  }
+
+  String _applyBlockquotePrefixAll(String text) {
+    final prefix = _blockquotePrefixOnly();
+    return text.split('\n').map((line) => '$prefix$line').join('\n');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -894,6 +923,10 @@ class AnsiRenderer implements NodeVisitor {
           options.codeBlockBorderStyle ?? style_border.Border.rounded;
       final borderColor = Colors.gray;
       final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
+
+      if (_inBlockquote) {
+        _buffer.write('${_blockquotePrefixOnly()}\n${_blockquotePrefixOnly()}');
+      }
 
       if (_codeBlockLanguage != null) {
         _buffer.write(
@@ -929,8 +962,12 @@ class AnsiRenderer implements NodeVisitor {
       final borderColor = Colors.gray;
       final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
       // Close the last line and draw bottom border
+      _buffer.write('\n');
+      if (_inBlockquote) {
+        _buffer.write(_blockquotePrefixOnly());
+      }
       _buffer.write(
-        '\n$borderSeq${border.bottomLeft}${border.bottom}${border.bottom}${border.bottom}$_ansiReset\n',
+        '$borderSeq${border.bottomLeft}${border.bottom}${border.bottom}${border.bottom}$_ansiReset\n',
       );
     } else {
       _buffer.write('\n');
@@ -1062,7 +1099,11 @@ class AnsiRenderer implements NodeVisitor {
   }
 
   void _renderTerminalImage(img.Image image) {
-    final (cols, rows) = _imageCellDimensions(image);
+    final (cols, rows) = imageCellDimensions(
+      image,
+      maxColumns: options.imageMaxWidth,
+      maxRows: options.imageMaxHeight,
+    );
 
     // Use forced protocol if set.
     var protocol = options.imageProtocol ?? detectImageProtocol();
@@ -1080,20 +1121,6 @@ class AnsiRenderer implements NodeVisitor {
       return;
     }
     _buffer.write('[Image: ${image.width}x${image.height}px]');
-  }
-
-  (int columns, int rows) _imageCellDimensions(img.Image image) {
-    const double cellAspect = 0.45;
-    final imageAspect = image.width / image.height;
-    var columns = (image.height * cellAspect * imageAspect).ceil();
-    var rows = image.height ~/ 18 + 1;
-    final maxCols = options.imageMaxWidth;
-    if (maxCols != null && columns > maxCols) {
-      final scale = maxCols / columns;
-      columns = maxCols;
-      rows = (rows * scale).ceil();
-    }
-    return (columns.clamp(1, 200), rows.clamp(1, 80));
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

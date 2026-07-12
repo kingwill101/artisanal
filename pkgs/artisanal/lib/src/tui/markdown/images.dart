@@ -3,7 +3,7 @@ import 'package:markdown/markdown.dart' show Element;
 
 import '../../style/style.dart';
 import 'image_renderer.dart'
-    show ImageProtocol, detectImageProtocol, renderImageToAnsi;
+    show ImageProtocol, detectImageProtocol, imageCellDimensions, renderImageToAnsi;
 import 'render_context.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,14 +35,17 @@ void renderImage(MarkdownRenderContext ctx, Element element) {
 }
 
 void _renderTerminalImage(MarkdownRenderContext ctx, img.Image image) {
-  final protocol = detectImageProtocol();
+  final protocol = ctx.options.imageProtocol ?? detectImageProtocol();
   if (protocol == ImageProtocol.none) {
     ctx.outputBuffer.write('[Image: ${image.width}x${image.height}px]');
     return;
   }
 
-  final (cols, rows) = _imageCellDimensions(image,
-      maxColumns: ctx.options.imageMaxWidth);
+  final (cols, rows) = imageCellDimensions(
+    image,
+    maxColumns: ctx.options.imageMaxWidth,
+    maxRows: ctx.options.imageMaxHeight,
+  );
   final escaped = renderImageToAnsi(image, protocol,
       columns: cols, rows: rows);
   if (escaped != null) {
@@ -52,21 +55,6 @@ void _renderTerminalImage(MarkdownRenderContext ctx, img.Image image) {
   }
 }
 
-(int columns, int rows) _imageCellDimensions(img.Image image,
-    {int? maxColumns}) {
-  const double cellAspect = 0.45;
-  final imageAspect = image.width / image.height;
-  var columns = (image.height * cellAspect * imageAspect).ceil();
-  var rows = image.height ~/ 18 + 1;
-
-  if (maxColumns != null && columns > maxColumns) {
-    final scale = maxColumns / columns;
-    columns = maxColumns;
-    rows = (rows * scale).ceil();
-  }
-
-  return (columns.clamp(1, 200), rows.clamp(1, 80));
-}
 
 void _renderImagePlaceholder(MarkdownRenderContext ctx, String alt, String src) {
   final style = Style().dim();

@@ -30,6 +30,10 @@ void startCodeBlock(MarkdownRenderContext ctx, Element element) {
     final borderColor = Colors.gray;
     final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
 
+    if (ctx.inBlockquote) {
+      ctx.outputBuffer.write('\n${renderBlockquotePrefixOnly(ctx)}');
+    }
+
     if (ctx.codeBlockLanguage != null) {
       ctx.outputBuffer.write(
         '$borderSeq${border.topLeft}${border.top} ${ctx.codeBlockLanguage} '
@@ -41,7 +45,9 @@ void startCodeBlock(MarkdownRenderContext ctx, Element element) {
         '${MarkdownRenderContext.ansiReset}\n',
       );
     }
-    ctx.outputBuffer.write('$borderSeq${border.left}${MarkdownRenderContext.ansiReset} ');
+    ctx.outputBuffer.write(
+      '$borderSeq${border.left}${MarkdownRenderContext.ansiReset} ',
+    );
   }
 
   if (!ctx.options.syntaxHighlighting || ctx.codeBlockLanguage == null) {
@@ -90,4 +96,13 @@ String applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {
     if (i == 0) return line;
     return '$prefix$styleSeq$line';
   }).join('\n');
+}
+
+String renderBlockquotePrefixOnly(MarkdownRenderContext ctx) {
+  final color = ctx.options.blockquoteBorderColor;
+  if (color == null) {
+    return '│ ';
+  }
+  final seq = color.toAnsi(ColorProfile.trueColor);
+  return '$seq│ ${MarkdownRenderContext.ansiReset}';
 }

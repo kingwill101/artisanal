@@ -61,6 +61,7 @@ class AnsiRendererOptions {
     this.tableBorderStyle,
     this.renderImages = false,
     this.imageMaxWidth,
+    this.imageMaxHeight,
     this.imageProtocol,
     this.syntaxHighlighting = true,
     this.maxSyntaxHighlightCodeUnits = 8000,
@@ -106,6 +107,7 @@ class AnsiRendererOptions {
     MarkdownElementStyle? tableBorderStyle,
     bool renderImages = false,
     int? imageMaxWidth,
+    int? imageMaxHeight,
     ImageProtocol? imageProtocol,
     bool syntaxHighlighting = true,
     int? maxSyntaxHighlightCodeUnits,
@@ -144,6 +146,7 @@ class AnsiRendererOptions {
       tableBorderStyle: tableBorderStyle?.resolveStyle(),
       renderImages: renderImages,
       imageMaxWidth: imageMaxWidth,
+      imageMaxHeight: imageMaxHeight,
       imageProtocol: imageProtocol,
       syntaxHighlighting: syntaxHighlighting,
       maxSyntaxHighlightCodeUnits: maxSyntaxHighlightCodeUnits,
@@ -265,8 +268,13 @@ class AnsiRendererOptions {
 
   /// Maximum width in terminal columns for inline images.
   ///
-  /// When null, the image is rendered at its natural cell size.
+  /// When null, the image is clipped using a sensible default cap.
   final int? imageMaxWidth;
+
+  /// Maximum height in terminal rows for inline images.
+  ///
+  /// When null, the image is clipped using a sensible default cap.
+  final int? imageMaxHeight;
 
   /// Force a specific terminal image protocol.
   ///
@@ -309,6 +317,7 @@ class AnsiRendererOptions {
     Style? tableBorderStyle,
     bool? renderImages,
     int? imageMaxWidth,
+    int? imageMaxHeight,
     ImageProtocol? imageProtocol,
     bool? syntaxHighlighting,
     int? maxSyntaxHighlightCodeUnits,
@@ -347,6 +356,7 @@ class AnsiRendererOptions {
       tableBorderStyle: tableBorderStyle ?? this.tableBorderStyle,
       renderImages: renderImages ?? this.renderImages,
       imageMaxWidth: imageMaxWidth ?? this.imageMaxWidth,
+      imageMaxHeight: imageMaxHeight ?? this.imageMaxHeight,
       imageProtocol: imageProtocol ?? this.imageProtocol,
       syntaxHighlighting: syntaxHighlighting ?? this.syntaxHighlighting,
       maxSyntaxHighlightCodeUnits:

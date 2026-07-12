@@ -1,0 +1,3 @@
+# Assets are referenced in the README via GitHub raw URLs.
+# Excluding them keeps the package lean on pub.dev and in cache.
+assets/

@@ -1,9 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:artisanal/src/style/border.dart' as style_border;
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/style/style.dart';
 import 'package:artisanal/src/terminal/ansi.dart';
 import 'package:artisanal/src/tui/markdown/ansi_renderer.dart';
+import 'package:artisanal/src/tui/markdown/image_renderer.dart';
 import 'package:artisanal/src/tui/markdown/syntax_highlighter.dart';
+import 'package:image/image.dart' as img;
 import 'package:markdown/markdown.dart' as md;
 import 'package:test/test.dart';
 
@@ -394,6 +398,24 @@ void main() {
       expect(plain, contains('code line'));
     });
 
+    test('blockquote with highlighted code block keeps quote fence intact', () {
+      final result = markdownToAnsi('''
+> ```dart
+> void main() {
+>   print('hello');
+> }
+> ```
+''');
+      final plain = stripAnsi(result);
+      final lines = plain.split('\n');
+      expect(lines, contains('│ '));
+      expect(lines, contains('│ ╭─ dart '));
+      expect(lines, contains('│ │ void main() {'));
+      expect(lines, contains("│ │   print('hello');"));
+      expect(lines, contains('│ ╰───'));
+      expect(plain, isNot(contains('38;2')));
+    });
+
     test('list item containing inline code', () {
       final result = markdownToAnsi('- Use `foo()` function\n- And `bar()`');
       final plain = stripAnsi(result);
@@ -441,13 +463,25 @@ void main() {
       expect(plain, contains('Second para'));
     });
 
+    test('blockquote keeps separator bar before nested quote', () {
+      final result = markdownToAnsi('''
+> A quote can span multiple lines,
+> include **bold** text, and even
+>
+> > Nested quote.
+''');
+      final lines = stripAnsi(result).split('\n');
+      expect(lines, contains('│ '));
+      expect(lines, contains('│ │ Nested quote.'));
+    });
+
     test('nested blockquotes render nested borders', () {
       final result = markdownToAnsi('> Outer\n>> Inner');
       // Should have the blockquote border character
       expect(result, contains('\u2502'));
-      final plain = stripAnsi(result);
-      expect(plain, contains('Outer'));
-      expect(plain, contains('Inner'));
+      final lines = stripAnsi(result).split('\n');
+      expect(lines, contains('│ Outer'));
+      expect(lines, contains('│ │ Inner'));
     });
   });
 
@@ -1140,6 +1174,23 @@ void main() {
       );
       final result = renderer.render(nodes);
       expect(stripAnsi(result), contains('> Item'));
+    });
+
+    test('caps inline image height when unspecified', () {
+      final image = img.Image(width: 1000, height: 1000);
+      final bytes = Uint8List.fromList(img.encodePng(image));
+      final doc = md.Document(extensionSet: md.ExtensionSet.gitHubFlavored);
+      final nodes = doc.parse('![Alt](https://example.com/large.png)');
+      final renderer = AnsiRenderer(
+        options: const AnsiRendererOptions(
+          renderImages: true,
+          imageProtocol: ImageProtocol.kitty,
+        ),
+      );
+      renderer.imageCache['https://example.com/large.png'] = bytes;
+
+      final result = renderer.render(nodes);
+      expect(result, contains('r=16'));
     });
   });
 

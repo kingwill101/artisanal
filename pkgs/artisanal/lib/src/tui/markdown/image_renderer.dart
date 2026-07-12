@@ -130,9 +130,14 @@ Future<img.Image?> svgToImage(String svgContent, {int width = 200, int height = 
   }
 }
 
+const int _defaultMaxRows = 16;
+
 /// Determines the approximate cell dimensions for displaying an image.
-(int columns, int rows) imageCellDimensions(img.Image image,
-    {int? maxColumns, int? maxRows}) {
+(int columns, int rows) imageCellDimensions(
+  img.Image image, {
+  int? maxColumns,
+  int? maxRows,
+}) {
   // Assume a cell is roughly 2:1 pixel ratio (e.g., 8×18 font).
   const double cellAspect = 0.45; // width/height per cell
   final imageAspect = image.width / image.height;
@@ -144,9 +149,11 @@ Future<img.Image?> svgToImage(String svgContent, {int width = 200, int height = 
     columns = maxColumns;
     rows = (rows * scale).ceil();
   }
-  if (maxRows != null && rows > maxRows) {
-    final scale = maxRows / rows;
-    rows = maxRows;
+
+  final effectiveMaxRows = maxRows ?? _defaultMaxRows;
+  if (rows > effectiveMaxRows) {
+    final scale = effectiveMaxRows / rows;
+    rows = effectiveMaxRows;
     columns = (columns * scale).ceil();
   }
 
@@ -165,6 +172,13 @@ String? renderImageToAnsi(img.Image image, ImageProtocol protocol,
     case ImageProtocol.iterm2:
       return ITerm2Image.encode(image, columns: columns, rows: rows);
     case ImageProtocol.sixel:
+      if (columns != null || rows != null) {
+        return SixelImage.encodeResized(
+          image,
+          columns: columns ?? image.width,
+          rows: rows ?? _defaultMaxRows,
+        );
+      }
       return SixelImage.encode(image);
     case ImageProtocol.halfblock:
       return _renderHalfBlock(image, columns: columns ?? 40, rows: rows ?? 20);
