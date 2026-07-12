@@ -536,14 +536,14 @@ void main() {
       expect(b.touched[1], isNotNull);
       expect(b.touched[1]!.firstCell, 2);
       expect(b.touched[1]!.lastCell, 5);
-      expect(b.touched[1]!.spans, const [DirtySpan(start: 2, end: 5)]);
+      expect(b.touched[1]!.spans, [DirtySpan(start: 2, end: 5)]);
       expect(b.dirtyRows[1], isTrue);
 
       // merge range
       b.touchLine(1, 1, 10);
       expect(b.touched[1]!.firstCell, 1);
       expect(b.touched[1]!.lastCell, 11);
-      expect(b.touched[1]!.spans, const [DirtySpan(start: 1, end: 11)]);
+      expect(b.touched[1]!.spans, [DirtySpan(start: 1, end: 11)]);
 
       // out-of-bounds should not throw
       b.touchLine(0, -1, 1);
@@ -558,7 +558,7 @@ void main() {
       b.touchLine(9, 0, 1);
       b.touchLine(13, 0, 1);
 
-      expect(b.touched[0]!.spans, const [
+      expect(b.touched[0]!.spans, [
         DirtySpan(start: 1, end: 2),
         DirtySpan(start: 5, end: 6),
         DirtySpan(start: 9, end: 10),
@@ -569,7 +569,7 @@ void main() {
       b.touchLine(17, 0, 1);
 
       expect(b.touched[0]!.overflowed, isTrue);
-      expect(b.touched[0]!.spans, const [DirtySpan(start: 1, end: 18)]);
+      expect(b.touched[0]!.spans, [DirtySpan(start: 1, end: 18)]);
     });
 
     test('clearDirtyLine and clearDirtyTracking reset row metadata', () {
@@ -615,7 +615,7 @@ void main() {
       expect(b.isCellDirty(3, 0), isTrue);
       expect(b.isCellDirty(4, 0), isFalse);
       expect(b.isCellDirty(7, 0), isTrue);
-      expect(b.dirtyBitSpans(0), const [
+      expect(b.dirtyBitSpans(0), [
         DirtySpan(start: 2, end: 4),
         DirtySpan(start: 7, end: 8),
       ]);

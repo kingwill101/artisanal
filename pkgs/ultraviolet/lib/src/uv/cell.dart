@@ -423,8 +423,18 @@ final class Cell {
   /// replacement `Cell` object first.
   void copyFrom(Cell other) {
     if (identical(this, other)) return;
-    _releaseLink();
-    _releasePooledContent();
+    // Inline the release checks — avoids method call overhead for the common
+    // case where there's no pooled content or link to release.
+    if (_linkId != 0) {
+      _linkFinalizer.detach(_linkFinalizerToken);
+      _linkRegistry.release(_linkId);
+      _link = const Link();
+      _linkId = 0;
+    }
+    if (_contentKind == _CellContentKind.complex) {
+      _pooledContentFinalizer.detach(_pooledContentToken);
+      _graphemePool.release(_contentValue);
+    }
     _style = other._style;
     _styleId = other._styleId;
     _link = other._link;
