@@ -99,10 +99,12 @@ final class DirtyDensityMap {
 }
 
 final class DirtySpan {
-  const DirtySpan({required this.start, required this.end});
+  DirtySpan({required this.start, required this.end});
 
-  final int start;
-  final int end;
+  /// Mutable — spans are recycled by the buffer's dirty-tracking arena
+  /// to avoid per-frame allocation churn.
+  int start;
+  int end;
 
   bool overlapsOrTouches(DirtySpan other) =>
       start <= other.end && end >= other.start;
@@ -771,7 +773,9 @@ final class Buffer {
             ? ch.spans
             : <DirtySpan>[DirtySpan(start: mergedFirst, end: mergedLast)];
         if (spans.isNotEmpty) {
-          spans[0] = DirtySpan(start: mergedFirst, end: mergedLast);
+          // Mutate in-place to avoid DirtySpan allocation.
+          spans[0].start = mergedFirst;
+          spans[0].end = mergedLast;
           if (spans.length > 1) spans.removeRange(1, spans.length);
         }
         touched[y] = LineData._tracked(
@@ -788,10 +792,9 @@ final class Buffer {
           final mergedSpans = ch._mutableSpans
               ? ch.spans
               : List<DirtySpan>.from(ch.spans);
-          mergedSpans[mergedSpans.length - 1] = DirtySpan(
-            start: lastSpan.start,
-            end: last > lastSpan.end ? last : lastSpan.end,
-          );
+          // Mutate the last span in-place.
+          final tail = mergedSpans[mergedSpans.length - 1];
+          if (last > tail.end) tail.end = last;
           touched[y] = LineData._tracked(
             firstCell: first < prevFirst ? first : prevFirst,
             lastCell: last > prevLast ? last : prevLast,
@@ -1032,10 +1035,9 @@ UvColor? _scaledColor(UvColor? color, double opacity) {
     }
     final last = spans[writeIndex - 1];
     if (last.overlapsOrTouches(span)) {
-      spans[writeIndex - 1] = DirtySpan(
-        start: last.start < span.start ? last.start : span.start,
-        end: last.end > span.end ? last.end : span.end,
-      );
+      // Mutate the existing span in-place to avoid allocation.
+      if (span.start < last.start) last.start = span.start;
+      if (span.end > last.end) last.end = span.end;
       continue;
     }
     spans[writeIndex++] = span;
@@ -1050,7 +1052,9 @@ UvColor? _scaledColor(UvColor? color, double opacity) {
 
   final first = spans.first.start;
   final last = spans[writeIndex - 1].end;
-  spans[0] = DirtySpan(start: first, end: last);
+  // Reuse the first span instead of allocating.
+  spans[0].start = first;
+  spans[0].end = last;
   if (spans.length > 1) spans.removeRange(1, spans.length);
   return (spans: spans, overflowed: true);
 }
