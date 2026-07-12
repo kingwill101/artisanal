@@ -210,7 +210,7 @@ final class EventDecoder {
           );
         default:
           // Alt-modified sequences: ESC + <utf8/control>
-          final (n, ev) = parseUtf8(buf.sublist(1));
+          final (n, ev) = parseUtf8At(buf, 1);
           if (n == 0) {
             return allowIncompleteEsc
                 ? (1, KeyPressEvent(Key(code: keyEscape)))
@@ -239,9 +239,11 @@ final class EventDecoder {
     return parseUtf8(buf);
   }
 
-  (int, Event?) parseUtf8(List<int> buf) {
-    if (buf.isEmpty) return (0, null);
-    final b = buf[0];
+  (int, Event?) parseUtf8(List<int> buf) => parseUtf8At(buf, 0);
+
+  (int, Event?) parseUtf8At(List<int> buf, int offset) {
+    if (offset >= buf.length) return (0, null);
+    final b = buf[offset];
 
     // Control codes + DEL (0x7F).
     if (b <= 0x1f || b == 0x7f) {
@@ -273,8 +275,8 @@ final class EventDecoder {
     var consumed = 0;
     final sb = StringBuffer();
 
-    while (consumed < buf.length) {
-      final decoded = _decodeOneRune(buf.sublist(consumed));
+    while (offset + consumed < buf.length) {
+      final decoded = decodeOneRuneAt(buf, offset + consumed);
       if (!decoded.ok) {
         if (decoded.consumed == 0) return (0, null); // need more bytes
         return (1, UnknownEvent(String.fromCharCode(b)));
@@ -1747,7 +1749,14 @@ final bool _kittyInit = (() {
 
 List<int> _to7Bit(List<int> buf, int intro7) {
   if (buf.isEmpty) return const [];
-  return <int>[0x1b, intro7, ...buf.sublist(1)];
+  // Pre-allocate the result list to avoid the spread + sublist allocation.
+  final result = List<int>.filled(buf.length + 1, 0);
+  result[0] = 0x1b;
+  result[1] = intro7;
+  for (var i = 1; i < buf.length; i++) {
+    result[i + 1] = buf[i];
+  }
+  return result;
 }
 
 KeyPressEvent? _brokenEscIntroducerAsKey(int intro) {
@@ -1822,9 +1831,9 @@ int? _xParseRgbComponent(String hex) {
   return ((v * 255) / max).round().clamp(0, 255);
 }
 
-({int consumed, int rune, bool ok}) _decodeOneRune(List<int> buf) {
-  if (buf.isEmpty) return (consumed: 0, rune: 0, ok: false);
-  final b0 = buf[0] & 0xff;
+({int consumed, int rune, bool ok}) decodeOneRuneAt(List<int> buf, int offset) {
+  if (offset >= buf.length) return (consumed: 0, rune: 0, ok: false);
+  final b0 = buf[offset] & 0xff;
   if (b0 < 0x80) return (consumed: 1, rune: b0, ok: true);
 
   int need;
@@ -1846,10 +1855,10 @@ int? _xParseRgbComponent(String hex) {
     return (consumed: 1, rune: b0, ok: false);
   }
 
-  if (buf.length < need) return (consumed: 0, rune: 0, ok: false);
+  if (offset + need > buf.length) return (consumed: 0, rune: 0, ok: false);
 
   for (var i = 1; i < need; i++) {
-    final bx = buf[i] & 0xff;
+    final bx = buf[offset + i] & 0xff;
     if ((bx & 0xC0) != 0x80) return (consumed: 1, rune: b0, ok: false);
     rune = (rune << 6) | (bx & 0x3F);
   }
