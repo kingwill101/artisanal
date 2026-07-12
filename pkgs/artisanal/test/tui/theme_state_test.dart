@@ -1,3 +1,4 @@
+import 'package:artisanal/src/tui/cmd.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/theme.dart';
 import 'package:artisanal/src/tui/terminal_palette.dart';
@@ -105,27 +106,31 @@ void main() {
 
   test('TerminalThemeHost can issue core-color probes', () async {
     final host = _TestTerminalThemeHost();
-    final msg = await host.probeTerminalTheme().execute();
+    final cmd = host.probeTerminalTheme();
 
-    expect(msg, isA<BatchMsg>());
-    expect((msg as BatchMsg).messages, hasLength(3));
+    expect(cmd, isA<ParallelCmd>());
+    final batch = cmd as ParallelCmd;
+    expect(batch.commands, hasLength(3));
+    expect(await batch.commands[0].execute(), isA<WriteRawMsg>());
+    expect(await batch.commands[1].execute(), isA<WriteRawMsg>());
+    expect(await batch.commands[2].execute(), isA<WriteRawMsg>());
   });
 
-  test(
-    'TerminalThemeHost can issue startup probes with palette entries',
-    () async {
-      final host = _TestTerminalThemeHost();
-      final msg = await host.initTerminalTheme(paletteCount: 4).execute();
+  test('TerminalThemeHost can issue startup probes with palette entries', () {
+    final host = _TestTerminalThemeHost();
+    final cmd = host.initTerminalTheme(paletteCount: 4);
 
-      expect(msg, isA<BatchMsg>());
-      final outer = msg as BatchMsg;
-      expect(outer.messages, hasLength(2));
-      expect(outer.messages.first, isA<BatchMsg>());
-      expect(outer.messages.last, isA<BatchMsg>());
-      expect((outer.messages.first as BatchMsg).messages, hasLength(3));
-      expect((outer.messages.last as BatchMsg).messages, hasLength(4));
-    },
-  );
+    expect(cmd, isA<ParallelCmd>());
+    final outer = cmd as ParallelCmd;
+    expect(outer.commands, hasLength(2));
+    expect(outer.commands.first, isA<ParallelCmd>());
+    expect(outer.commands.last, isA<ParallelCmd>());
+
+    final core = outer.commands.first as ParallelCmd;
+    final palette = outer.commands.last as ParallelCmd;
+    expect(core.commands, hasLength(3));
+    expect(palette.commands, hasLength(4));
+  });
 }
 
 final class _TestTerminalThemeHost with TerminalThemeHost {}

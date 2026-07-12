@@ -37,9 +37,7 @@ void renderStartListItem(MarkdownRenderContext ctx, Element element) {
     }
   }
 
-  ctx.listItemStack.add(
-    ListItemContext(trimLeadingWhitespace: true),
-  );
+  ctx.listItemStack.add(ListItemContext(trimLeadingWhitespace: true));
 }
 
 Element? renderParentList(MarkdownRenderContext ctx) {
@@ -87,7 +85,11 @@ String renderIndentContinuationLines(String text, int indent) {
 
   final prefix = ' ' * indent;
   final lines = text.split('\n');
-  return lines.asMap().entries.map((e) => e.key == 0 ? e.value : '$prefix${e.value}').join('\n');
+  return lines
+      .asMap()
+      .entries
+      .map((e) => e.key == 0 ? e.value : '$prefix${e.value}')
+      .join('\n');
 }
 
 Style defaultBlockquoteStyle() => Style().italic().dim();
@@ -101,7 +103,9 @@ void renderWriteBlockquotePrefix(MarkdownRenderContext ctx) {
     ctx.buffer.write('$seq│ ${MarkdownRenderContext.ansiReset}');
   }
 
-  ctx.buffer.write(ctx.styleToAnsi(ctx.options.blockquoteStyle ?? defaultBlockquoteStyle()));
+  ctx.buffer.write(
+    ctx.styleToAnsi(ctx.options.blockquoteStyle ?? defaultBlockquoteStyle()),
+  );
 }
 
 String renderApplyBlockquotePrefix(MarkdownRenderContext ctx, String text) {

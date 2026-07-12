@@ -775,8 +775,8 @@ class Cmd {
 
   /// A command that runs commands in sequence.
   ///
-  /// Each command completes before the next starts. Messages are collected
-  /// and returned together after all commands complete.
+  /// Each command completes before the next starts. Each command's message is
+  /// delivered as it completes, before the next command begins.
   ///
   /// ```dart
   /// return (newModel, Cmd.sequence([
@@ -789,17 +789,7 @@ class Cmd {
     if (commands.isEmpty) return none();
     if (commands.length == 1) return commands.first;
 
-    return Cmd(() async {
-      final messages = <Msg>[];
-      for (final cmd in commands) {
-        final msg = await cmd.execute();
-        if (msg != null) messages.add(msg);
-      }
-
-      if (messages.isEmpty) return null;
-      if (messages.length == 1) return messages.first;
-      return BatchMsg(messages);
-    });
+    return Cmd(() async => SequenceMsg(commands));
   }
 
   /// A command that runs an async function and maps the result to a message.
@@ -1016,12 +1006,29 @@ class EveryCmd extends Cmd {
 /// }
 /// ```
 class ParallelCmd extends Cmd {
-  ParallelCmd(this.commands) : super(_placeholder);
-
-  static Future<Msg?> _placeholder() async => null;
+  ParallelCmd(this.commands)
+    : super(() async {
+        final futures = commands.map((cmd) => cmd.execute());
+        final results = await Future.wait(futures);
+        return results.whereType<Msg>().firstOrNull;
+      });
 
   /// The commands to execute in parallel.
   final List<Cmd> commands;
+}
+
+/// Message produced by [Cmd.sequence], wrapping commands that the runtime
+/// will execute one at a time, delivering each result via [send] as it
+/// completes before proceeding to the next command.
+final class SequenceMsg extends Msg {
+  /// Creates a sequence message.
+  const SequenceMsg(this.commands);
+
+  /// The commands to execute in order.
+  final List<Cmd> commands;
+
+  @override
+  String toString() => 'SequenceMsg(${commands.length} commands)';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

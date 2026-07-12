@@ -14,7 +14,8 @@ import 'options.dart';
 import 'render_context.dart';
 import 'headings.dart';
 import 'lists.dart';
-import 'code_block.dart' show startCodeBlock, endCodeBlock, applyCodeBlockPrefix;
+import 'code_block.dart'
+    show startCodeBlock, endCodeBlock, applyCodeBlockPrefix;
 import 'hr.dart' show renderHorizontalRule;
 import 'tables.dart' show renderTable;
 import 'images.dart' show renderImage;
@@ -35,7 +36,7 @@ import 'images.dart' show renderImage;
 /// ```
 class MarkdownRenderer implements NodeVisitor {
   MarkdownRenderer({AnsiRendererOptions? options})
-      : _options = options ?? const AnsiRendererOptions();
+    : _options = options ?? const AnsiRendererOptions();
 
   final AnsiRendererOptions _options;
   late final MarkdownRenderContext _ctx = MarkdownRenderContext(
@@ -43,7 +44,6 @@ class MarkdownRenderer implements NodeVisitor {
     styleToAnsi: _styleToAnsiOpen,
     headingStyleOf: (tag) => headingStyle(_ctx, tag),
   );
-
 
   // ─── Public API ────────────────────────────────────────────────────
 
@@ -70,9 +70,7 @@ class MarkdownRenderer implements NodeVisitor {
   ///
   /// Returns a map of URL → image bytes. Pass the result to [renderToAnsi]
   /// or [render] when [AnsiRendererOptions.renderImages] is enabled.
-  static Future<Map<String, Uint8List>> preloadImages(
-    String markdown,
-  ) async {
+  static Future<Map<String, Uint8List>> preloadImages(String markdown) async {
     final nodes = markdown_backend.parseMarkdownNodes(markdown);
     final urls = <String>[];
     _collectImageUrls(nodes, urls);
@@ -113,15 +111,12 @@ class MarkdownRenderer implements NodeVisitor {
         client.close();
         return null;
       }
-      final bytes = await response.fold<Uint8List>(
-        Uint8List(0),
-        (prev, chunk) {
-          final combined = Uint8List(prev.length + chunk.length);
-          combined.setRange(0, prev.length, prev);
-          combined.setRange(prev.length, combined.length, chunk);
-          return combined;
-        },
-      );
+      final bytes = await response.fold<Uint8List>(Uint8List(0), (prev, chunk) {
+        final combined = Uint8List(prev.length + chunk.length);
+        combined.setRange(0, prev.length, prev);
+        combined.setRange(prev.length, combined.length, chunk);
+        return combined;
+      });
       client.close();
 
       // Convert SVG to PNG via pure_svg so img.decodeImage works later.
@@ -148,9 +143,7 @@ class MarkdownRenderer implements NodeVisitor {
 
   @override
   void visitText(Text text) {
-    var content = text.text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n');
+    var content = text.text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
     // Decode HTML entities
     content = _ctx.htmlUnescape.convert(content);
@@ -334,10 +327,13 @@ class MarkdownRenderer implements NodeVisitor {
         return false;
 
       case 'input':
-        final checked = element.attributes['type'] == 'checkbox' &&
+        final checked =
+            element.attributes['type'] == 'checkbox' &&
             element.attributes.containsKey('checked');
         _outputBuffer.write(
-          checked ? _ctx.options.checkboxChecked : _ctx.options.checkboxUnchecked,
+          checked
+              ? _ctx.options.checkboxChecked
+              : _ctx.options.checkboxUnchecked,
         );
         return false;
 
@@ -452,9 +448,7 @@ class MarkdownRenderer implements NodeVisitor {
 
       case 'tr':
         if (_ctx.inTableHeader) {
-          _ctx.tableHeaders.addAll(
-            _ctx.currentTableRow.map((e) => e.trim()),
-          );
+          _ctx.tableHeaders.addAll(_ctx.currentTableRow.map((e) => e.trim()));
         } else {
           _ctx.tableRows.add(
             _ctx.currentTableRow.map((e) => e.trim()).toList(),
@@ -497,12 +491,9 @@ class MarkdownRenderer implements NodeVisitor {
 
   Style _getEmphasisStyle() =>
       _ctx.options.emphasisStyle ?? _defaultEmphasisStyle();
-  Style _getStrongStyle() =>
-      _ctx.options.strongStyle ?? _defaultStrongStyle();
-  Style _getCodeStyle() =>
-      _ctx.options.codeStyle ?? _defaultCodeStyle();
-  Style _getLinkStyle() =>
-      _ctx.options.linkStyle ?? _defaultLinkStyle();
+  Style _getStrongStyle() => _ctx.options.strongStyle ?? _defaultStrongStyle();
+  Style _getCodeStyle() => _ctx.options.codeStyle ?? _defaultCodeStyle();
+  Style _getLinkStyle() => _ctx.options.linkStyle ?? _defaultLinkStyle();
   Style _getStrikethroughStyle() =>
       _ctx.options.strikethroughStyle ?? _defaultStrikethroughStyle();
 
@@ -560,11 +551,11 @@ class MarkdownRenderer implements NodeVisitor {
   String _wrapText(String text, int width) {
     // Simple word-wrap at width
     if (text.length <= width) return text;
-    
+
     final result = StringBuffer();
     var lineLength = 0;
     final words = text.split(' ');
-    
+
     for (final word in words) {
       if (lineLength + word.length + 1 > width) {
         result.write('\n');
@@ -579,15 +570,14 @@ class MarkdownRenderer implements NodeVisitor {
         lineLength += word.length;
       }
     }
-    
+
     return result.toString();
   }
 
   // ─── Internal helpers ─────────────────────────────────────────────
 
   void _ensureNewline() {
-    if (_ctx.buffer.length > 0 &&
-        !_ctx.buffer.toString().endsWith('\n')) {
+    if (_ctx.buffer.length > 0 && !_ctx.buffer.toString().endsWith('\n')) {
       _ctx.buffer.write('\n');
     }
   }
@@ -640,6 +630,5 @@ Style _defaultEmphasisStyle() => Style().italic();
 Style _defaultStrongStyle() => Style().bold();
 Style _defaultCodeStyle() =>
     Style().foreground(Colors.brightYellow).background(Colors.gray800);
-Style _defaultLinkStyle() =>
-    Style().foreground(Colors.blue).underline();
+Style _defaultLinkStyle() => Style().foreground(Colors.blue).underline();
 Style _defaultStrikethroughStyle() => Style().strikethrough().dim();

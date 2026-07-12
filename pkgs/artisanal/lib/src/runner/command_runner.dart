@@ -79,7 +79,8 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       if (scriptPath.startsWith(cwd)) {
         var relative = scriptPath.substring(cwd.length);
         final sep = dartio.Platform.pathSeparator;
-        if (relative.startsWith(sep) || relative.startsWith('/') ||
+        if (relative.startsWith(sep) ||
+            relative.startsWith('/') ||
             relative.startsWith('\\')) {
           relative = relative.substring(1);
         }

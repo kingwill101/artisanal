@@ -33,7 +33,9 @@ This demo shows **Glamour themes** rendered through the unified
 
 void main() {
   print('');
-  print('\x1b[1m\x1b[96m═ Glamour Theme Demo (via MarkdownRenderer) ═══════════\x1b[0m');
+  print(
+    '\x1b[1m\x1b[96m═ Glamour Theme Demo (via MarkdownRenderer) ═══════════\x1b[0m',
+  );
   print('');
 
   _renderTheme('Dark Theme', GlamourTheme.dark);

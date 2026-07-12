@@ -93,6 +93,7 @@ export 'cmd.dart'
         every,
         CmdFunc,
         CmdFunc1,
+        SequenceMsg,
         SetWindowTitleMsg,
         ClearScreenMsg,
         EnterAltScreenMsg,

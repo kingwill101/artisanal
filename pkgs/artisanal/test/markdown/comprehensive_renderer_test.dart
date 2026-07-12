@@ -463,7 +463,7 @@ void main() {
       expect(plain, contains('Second para'));
     });
 
-    test('blockquote keeps separator bar before nested quote', () {
+    test('blockquote joins nested quote directly after preceding line', () {
       final result = markdownToAnsi('''
 > A quote can span multiple lines,
 > include **bold** text, and even
@@ -471,8 +471,8 @@ void main() {
 > > Nested quote.
 ''');
       final lines = stripAnsi(result).split('\n');
-      expect(lines, contains('│ '));
-      expect(lines, contains('│ │ Nested quote.'));
+      expect(lines, contains('│ include bold text, and even'));
+      expect(lines, contains('││ Nested quote.'));
     });
 
     test('nested blockquotes render nested borders', () {
@@ -481,7 +481,7 @@ void main() {
       expect(result, contains('\u2502'));
       final lines = stripAnsi(result).split('\n');
       expect(lines, contains('│ Outer'));
-      expect(lines, contains('│ │ Inner'));
+      expect(lines, contains('││ Inner'));
     });
   });
 

@@ -85,15 +85,12 @@ Future<(img.Image image, String mimeType)?> downloadImage(String url) async {
       return null;
     }
 
-    final bytes = await response.fold<Uint8List>(
-      Uint8List(0),
-      (prev, chunk) {
-        final combined = Uint8List(prev.length + chunk.length);
-        combined.setRange(0, prev.length, prev);
-        combined.setRange(prev.length, combined.length, chunk);
-        return combined;
-      },
-    );
+    final bytes = await response.fold<Uint8List>(Uint8List(0), (prev, chunk) {
+      final combined = Uint8List(prev.length + chunk.length);
+      combined.setRange(0, prev.length, prev);
+      combined.setRange(prev.length, combined.length, chunk);
+      return combined;
+    });
     client.close();
 
     final mimeType = response.headers.value('content-type') ?? '';
@@ -119,7 +116,11 @@ Future<(img.Image image, String mimeType)?> downloadImage(String url) async {
 }
 
 /// Converts an SVG string to a raster [img.Image] using pure_svg.
-Future<img.Image?> svgToImage(String svgContent, {int width = 200, int height = 200}) async {
+Future<img.Image?> svgToImage(
+  String svgContent, {
+  int width = 200,
+  int height = 200,
+}) async {
   try {
     final loader = SvgStringLoader(svgContent);
     final pngBytes = await renderSvgToPng(loader, width: width, height: height);
@@ -164,8 +165,12 @@ const int _defaultMaxRows = 16;
 /// image protocol.
 ///
 /// Returns the escape sequence string, or `null` if rendering failed.
-String? renderImageToAnsi(img.Image image, ImageProtocol protocol,
-    {int? columns, int? rows}) {
+String? renderImageToAnsi(
+  img.Image image,
+  ImageProtocol protocol, {
+  int? columns,
+  int? rows,
+}) {
   switch (protocol) {
     case ImageProtocol.kitty:
       return KittyImage.encode(image, columns: columns, rows: rows);
@@ -212,8 +217,16 @@ String _renderHalfBlock(img.Image image, {int columns = 40, int rows = 20}) {
       final top = resized.getPixel(x, y * 2);
       final bot = resized.getPixel(x, y * 2 + 1);
       final cell = Style()
-          .foreground(Color.complete(trueColor: rgb(top.r.toInt(), top.g.toInt(), top.b.toInt())))
-          .background(Color.complete(trueColor: rgb(bot.r.toInt(), bot.g.toInt(), bot.b.toInt())))
+          .foreground(
+            Color.complete(
+              trueColor: rgb(top.r.toInt(), top.g.toInt(), top.b.toInt()),
+            ),
+          )
+          .background(
+            Color.complete(
+              trueColor: rgb(bot.r.toInt(), bot.g.toInt(), bot.b.toInt()),
+            ),
+          )
           .render('▀');
       buffer.write(cell);
     }
@@ -233,7 +246,10 @@ Future<String?> downloadAndRenderImage(
   if (result == null) return null;
 
   final (image, _) = result;
-  final (cols, rows) =
-      imageCellDimensions(image, maxColumns: maxColumns, maxRows: maxRows);
+  final (cols, rows) = imageCellDimensions(
+    image,
+    maxColumns: maxColumns,
+    maxRows: maxRows,
+  );
   return renderImageToAnsi(image, protocol, columns: cols, rows: rows);
 }

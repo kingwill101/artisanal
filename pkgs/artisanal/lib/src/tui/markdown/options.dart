@@ -340,7 +340,8 @@ class AnsiRendererOptions {
       codeBlockStyle: codeBlockStyle ?? this.codeBlockStyle,
       linkStyle: linkStyle ?? this.linkStyle,
       blockquoteStyle: blockquoteStyle ?? this.blockquoteStyle,
-      blockquoteBorderColor: blockquoteBorderColor ?? this.blockquoteBorderColor,
+      blockquoteBorderColor:
+          blockquoteBorderColor ?? this.blockquoteBorderColor,
       strikethroughStyle: strikethroughStyle ?? this.strikethroughStyle,
       bulletChar: bulletChar ?? this.bulletChar,
       hyperlinks: hyperlinks ?? this.hyperlinks,

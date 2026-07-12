@@ -1,17 +1,13 @@
 import '../../style/style.dart';
 import 'render_context.dart';
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Horizontal Rule
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-
-
 void renderHorizontalRule(MarkdownRenderContext ctx) {
-
   final width = ctx.options.hrWidth ?? ctx.options.width ?? 40;
 
   final line = ctx.options.hrChar * width;
@@ -27,9 +23,6 @@ void renderHorizontalRule(MarkdownRenderContext ctx) {
   ctx.outputBuffer.write('\n');
 
   ctx.lastWasBlock = true;
-
 }
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────

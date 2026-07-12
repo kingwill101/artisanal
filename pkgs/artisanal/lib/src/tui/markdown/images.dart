@@ -3,7 +3,11 @@ import 'package:markdown/markdown.dart' show Element;
 
 import '../../style/style.dart';
 import 'image_renderer.dart'
-    show ImageProtocol, detectImageProtocol, imageCellDimensions, renderImageToAnsi;
+    show
+        ImageProtocol,
+        detectImageProtocol,
+        imageCellDimensions,
+        renderImageToAnsi;
 import 'render_context.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,8 +50,7 @@ void _renderTerminalImage(MarkdownRenderContext ctx, img.Image image) {
     maxColumns: ctx.options.imageMaxWidth,
     maxRows: ctx.options.imageMaxHeight,
   );
-  final escaped = renderImageToAnsi(image, protocol,
-      columns: cols, rows: rows);
+  final escaped = renderImageToAnsi(image, protocol, columns: cols, rows: rows);
   if (escaped != null) {
     ctx.outputBuffer.write(escaped);
   } else {
@@ -55,8 +58,11 @@ void _renderTerminalImage(MarkdownRenderContext ctx, img.Image image) {
   }
 }
 
-
-void _renderImagePlaceholder(MarkdownRenderContext ctx, String alt, String src) {
+void _renderImagePlaceholder(
+  MarkdownRenderContext ctx,
+  String alt,
+  String src,
+) {
   final style = Style().dim();
   ctx.outputBuffer.write(ctx.styleToAnsi(style));
   ctx.outputBuffer.write('[Image: $alt]');

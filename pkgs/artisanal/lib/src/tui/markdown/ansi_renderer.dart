@@ -35,14 +35,14 @@ import 'backend.dart' as markdown_backend;
 import 'syntax_highlighter.dart';
 import 'options.dart';
 import 'html_context.dart';
-import 'image_renderer.dart' show
-    ImageProtocol,
-    detectImageProtocol,
-    imageCellDimensions,
-    renderImageToAnsi;
+import 'image_renderer.dart'
+    show
+        ImageProtocol,
+        detectImageProtocol,
+        imageCellDimensions,
+        renderImageToAnsi;
 export 'options.dart';
 export 'styles.dart' show MarkdownElementStyle;
-
 
 /// Configuration options for ANSI markdown rendering.
 ///
@@ -353,8 +353,11 @@ class AnsiRenderer implements NodeVisitor {
         return true;
 
       case 'blockquote':
-        if (_inBlockquote && _blockquoteBlankLinePending && _blockquoteDepth > 0) {
-          _buffer.write('${_blockquotePrefixOnly()}\n');
+        if (_inBlockquote &&
+            _blockquoteBlankLinePending &&
+            _blockquoteDepth > 0) {
+          // Consume the separator without emitting an extra blank quoted row;
+          // the nested quote should attach directly to the preceding quoted line.
           _blockquoteBlankLinePending = false;
         } else {
           _ensureNewline();
@@ -860,7 +863,7 @@ class AnsiRenderer implements NodeVisitor {
     final color =
         options.blockquoteBorderColor ?? _defaultBlockquoteBorderColor();
     final colorSeq = color.toAnsi(ColorProfile.trueColor);
-    final prefix = '\u2502 ' * _blockquoteDepth;
+    final prefix = '\u2502' * _blockquoteDepth + ' ';
     return '$colorSeq$prefix$_ansiReset';
   }
 
@@ -1114,8 +1117,12 @@ class AnsiRenderer implements NodeVisitor {
       protocol = ImageProtocol.halfblock;
     }
 
-    final escaped = renderImageToAnsi(image, protocol,
-        columns: cols, rows: rows);
+    final escaped = renderImageToAnsi(
+      image,
+      protocol,
+      columns: cols,
+      rows: rows,
+    );
     if (escaped != null) {
       _buffer.write(escaped);
       return;
@@ -1883,8 +1890,8 @@ class AnsiRenderer implements NodeVisitor {
       // syntactic separators, not content.  But nested blockquotes
       // (like those produced by normalizer-merged `> >`) represent
       // genuine section breaks and need a visible blank line.
-      final enteringNestedBlockquote = _elementStack.isNotEmpty &&
-          _elementStack.last.tag == 'blockquote';
+      final enteringNestedBlockquote =
+          _elementStack.isNotEmpty && _elementStack.last.tag == 'blockquote';
       if (enteringNestedBlockquote) {
         _buffer.write('\n');
       }
@@ -1960,8 +1967,6 @@ class _ListItemContext {
   final StringBuffer buffer = StringBuffer();
   bool trimLeadingWhitespace;
 }
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Convenience Function

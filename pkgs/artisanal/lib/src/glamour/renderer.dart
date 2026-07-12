@@ -21,7 +21,9 @@ import '../uv/wrap.dart' as uv_wrap;
 /// final result = AnsiRenderer(options: options).render(nodes);
 /// ```
 /// {@endtemplate}
-@Deprecated('Use AnsiRenderer with GlamourTheme.toAnsiRendererOptions() instead')
+@Deprecated(
+  'Use AnsiRenderer with GlamourTheme.toAnsiRendererOptions() instead',
+)
 class GlamourRenderer implements md.NodeVisitor {
   /// Creates a renderer with a theme and optional line width.
   GlamourRenderer({required this.theme, this.width = 80});

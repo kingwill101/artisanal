@@ -5,6 +5,19 @@ import 'package:test/test.dart';
 
 String normalize(String input) => input.replaceAll('\r\n', '\n');
 
+File _resolveFixture(String relativePath) {
+  final candidates = <String>[
+    relativePath,
+    'pkgs/artisanal/$relativePath',
+    'packages/artisanal/$relativePath',
+  ];
+  for (final candidate in candidates) {
+    final file = File(candidate);
+    if (file.existsSync()) return file;
+  }
+  throw FileSystemException('Unable to locate test fixture', relativePath);
+}
+
 void expectParity(String markdown, {AnsiRendererOptions? options}) {
   final oldOutput = markdownToAnsi(markdown, options: options);
   final newOutput = MarkdownRenderer(options: options).renderToAnsi(markdown);
@@ -17,8 +30,8 @@ void expectParity(String markdown, {AnsiRendererOptions? options}) {
 }
 
 void main() {
-  final comprehensive = File(
-    'pkgs/artisanal/test/markdown/fixtures/comprehensive.md',
+  final comprehensive = _resolveFixture(
+    'test/markdown/fixtures/comprehensive.md',
   ).readAsStringSync();
 
   group('MarkdownRenderer parity', () {
@@ -31,7 +44,10 @@ void main() {
         comprehensive,
         options: AnsiRendererOptions.fromElementStyles(
           width: 88,
-          h1Style: MarkdownElementStyle(foreground: Colors.brightCyan, bold: true),
+          h1Style: MarkdownElementStyle(
+            foreground: Colors.brightCyan,
+            bold: true,
+          ),
           h2Style: MarkdownElementStyle(foreground: Colors.cyan, bold: true),
           emphasisStyle: MarkdownElementStyle(italic: true),
           strongStyle: MarkdownElementStyle(bold: true),

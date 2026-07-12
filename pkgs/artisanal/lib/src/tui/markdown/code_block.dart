@@ -26,7 +26,8 @@ void startCodeBlock(MarkdownRenderContext ctx, Element element) {
   }
 
   if (ctx.options.codeBlockBorder) {
-    final border = ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
+    final border =
+        ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
     final borderColor = Colors.gray;
     final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
 
@@ -65,7 +66,8 @@ void endCodeBlock(MarkdownRenderContext ctx) {
   ctx.codeBlockLanguage = null;
 
   if (ctx.options.codeBlockBorder) {
-    final border = ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
+    final border =
+        ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
     final borderColor = Colors.gray;
     final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
     ctx.outputBuffer.write(
@@ -78,7 +80,8 @@ void endCodeBlock(MarkdownRenderContext ctx) {
 }
 
 String applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {
-  final border = ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
+  final border =
+      ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
   final borderColor = Colors.gray;
   final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
   final prefix = '$borderSeq${border.left}${MarkdownRenderContext.ansiReset} ';
@@ -90,19 +93,24 @@ String applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {
       : ctx.styleToAnsi(ctx.options.codeBlockStyle ?? defaultCodeBlockStyle());
 
   final lines = text.split('\n');
-  return lines.asMap().entries.map((entry) {
-    final i = entry.key;
-    final line = entry.value;
-    if (i == 0) return line;
-    return '$prefix$styleSeq$line';
-  }).join('\n');
+  return lines
+      .asMap()
+      .entries
+      .map((entry) {
+        final i = entry.key;
+        final line = entry.value;
+        if (i == 0) return line;
+        return '$prefix$styleSeq$line';
+      })
+      .join('\n');
 }
 
 String renderBlockquotePrefixOnly(MarkdownRenderContext ctx) {
   final color = ctx.options.blockquoteBorderColor;
+  final depth = ctx.blockquoteDepth;
   if (color == null) {
-    return '│ ';
+    return '${'│' * depth} ';
   }
   final seq = color.toAnsi(ColorProfile.trueColor);
-  return '$seq│ ${MarkdownRenderContext.ansiReset}';
+  return '$seq${'│' * depth} ${MarkdownRenderContext.ansiReset}';
 }

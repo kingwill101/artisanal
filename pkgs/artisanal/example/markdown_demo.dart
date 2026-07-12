@@ -49,39 +49,48 @@ void main() {
 ''';
 
 void main() {
-  _demo('1. Basic MarkdownRenderer',
-        'MarkdownRenderer().renderToAnsi(md)',
-        MarkdownRenderer().renderToAnsi(_md));
+  _demo(
+    '1. Basic MarkdownRenderer',
+    'MarkdownRenderer().renderToAnsi(md)',
+    MarkdownRenderer().renderToAnsi(_md),
+  );
 
-  _demo('2. Custom MarkdownElementStyle',
-        'AnsiRendererOptions.fromElementStyles(...)',
-        MarkdownRenderer(
-          options: AnsiRendererOptions.fromElementStyles(
-            width: 72,
-            h1Style: MarkdownElementStyle(
-              foreground: Colors.brightMagenta, bold: true),
-            h2Style: MarkdownElementStyle(
-              foreground: Colors.magenta, bold: true),
-            codeStyle: MarkdownElementStyle(
-              foreground: Colors.brightYellow,
-              background: Colors.gray800),
-            strongStyle: MarkdownElementStyle(
-              bold: true, underline: true),
-            bulletChar: '\u25b8',
-          ),
-        ).renderToAnsi(_md));
+  _demo(
+    '2. Custom MarkdownElementStyle',
+    'AnsiRendererOptions.fromElementStyles(...)',
+    MarkdownRenderer(
+      options: AnsiRendererOptions.fromElementStyles(
+        width: 72,
+        h1Style: MarkdownElementStyle(
+          foreground: Colors.brightMagenta,
+          bold: true,
+        ),
+        h2Style: MarkdownElementStyle(foreground: Colors.magenta, bold: true),
+        codeStyle: MarkdownElementStyle(
+          foreground: Colors.brightYellow,
+          background: Colors.gray800,
+        ),
+        strongStyle: MarkdownElementStyle(bold: true, underline: true),
+        bulletChar: '\u25b8',
+      ),
+    ).renderToAnsi(_md),
+  );
 
-  _demo('3. Glamour Dark Theme',
-        'GlamourTheme.dark.toAnsiRendererOptions()',
-        MarkdownRenderer(
-          options: GlamourTheme.dark.toAnsiRendererOptions(width: 72),
-        ).renderToAnsi(_md));
+  _demo(
+    '3. Glamour Dark Theme',
+    'GlamourTheme.dark.toAnsiRendererOptions()',
+    MarkdownRenderer(
+      options: GlamourTheme.dark.toAnsiRendererOptions(width: 72),
+    ).renderToAnsi(_md),
+  );
 
-  _demo('4. Glamour Light Theme',
-        'GlamourTheme.light.toAnsiRendererOptions()',
-        MarkdownRenderer(
-          options: GlamourTheme.light.toAnsiRendererOptions(width: 72),
-        ).renderToAnsi(_md));
+  _demo(
+    '4. Glamour Light Theme',
+    'GlamourTheme.light.toAnsiRendererOptions()',
+    MarkdownRenderer(
+      options: GlamourTheme.light.toAnsiRendererOptions(width: 72),
+    ).renderToAnsi(_md),
+  );
 }
 
 void _demo(String label, String subtitle, String output) {

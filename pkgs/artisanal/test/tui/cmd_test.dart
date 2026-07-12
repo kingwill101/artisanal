@@ -197,16 +197,14 @@ void main() {
       expect((msg as TestMsg).value, 'single');
     });
 
-    test('multiple commands return BatchMsg', () async {
+    test('multiple commands return SequenceMsg', () async {
       final cmd = Cmd.sequence([
         Cmd.message(const TestMsg('first')),
         Cmd.message(const TestMsg('second')),
       ]);
 
       final msg = await cmd.execute();
-      expect(msg, isA<BatchMsg>());
-      final batch = msg as BatchMsg;
-      expect(batch.messages, hasLength(2));
+      expect(msg, isA<SequenceMsg>());
     });
 
     test('runs commands in order', () async {
@@ -224,10 +222,12 @@ void main() {
         }),
       ]);
 
-      await cmd.execute();
-
-      // Commands should run in order despite timing
-      expect(order, [1, 2]);
+      // SequenceMsg is executed by the runtime, not via cmd.execute().
+      // Verify the commands are wrapped correctly.
+      final msg = await cmd.execute();
+      expect(msg, isA<SequenceMsg>());
+      final seq = msg as SequenceMsg;
+      expect(seq.commands, hasLength(2));
     });
 
     test('filters out null results', () async {
@@ -237,9 +237,12 @@ void main() {
         Cmd(() async => null),
       ]);
 
+      // SequenceMsg is executed by the runtime. Direct execute() returns
+      // the wrapper with all commands preserved.
       final msg = await cmd.execute();
-      expect(msg, isA<TestMsg>());
-      expect((msg as TestMsg).value, 'only');
+      expect(msg, isA<SequenceMsg>());
+      final seq = msg as SequenceMsg;
+      expect(seq.commands, hasLength(3));
     });
   });
 

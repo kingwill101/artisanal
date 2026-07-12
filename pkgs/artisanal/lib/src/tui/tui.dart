@@ -81,7 +81,7 @@
 /// - [Cmd.quit] - Exit the program
 /// - [Cmd.tick] - Timer that fires once
 /// - [Cmd.batch] - Run commands concurrently
-/// - [Cmd.sequence] - Run commands in order
+/// - [Cmd.sequence] - Run commands in order, delivering each result one by one
 /// - [Cmd.perform] - Wrap async operations
 library;
 

@@ -21,7 +21,9 @@ export 'src/glamour/renderer.dart';
 ///
 /// This function is **deprecated**. Use [markdownToAnsi] with
 /// `GlamourTheme.toAnsiRendererOptions()` instead.
-@Deprecated('Use markdownToAnsi with GlamourTheme.toAnsiRendererOptions() instead')
+@Deprecated(
+  'Use markdownToAnsi with GlamourTheme.toAnsiRendererOptions() instead',
+)
 String renderStyle(
   String markdown, {
   required GlamourTheme theme,

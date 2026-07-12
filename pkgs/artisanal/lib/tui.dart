@@ -99,8 +99,8 @@
 /// - **[Cmd]**: Represents an effect to be performed by the runtime (quitting,
 ///   sending a message, running an external process).
 ///
-/// Use [BatchMsg] to group multiple messages, and `Cmd.batch` to group multiple
-/// commands.
+/// Use [BatchMsg] to group multiple messages, `Cmd.batch` to run commands
+/// concurrently, and `Cmd.sequence` to run commands in order.
 /// {@endtemplate}
 ///
 /// {@template artisanal_tui_program_lifecycle}

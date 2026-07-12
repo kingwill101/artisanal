@@ -2934,6 +2934,13 @@ class Program<M extends Model> with HotReloadMixin {
         return;
       }
 
+      // Handle sequence message - execute commands one at a time, forwarding
+      // each result via send() as it completes before starting the next.
+      if (msg is SequenceMsg) {
+        _executeSequence(msg);
+        return;
+      }
+
       // Handle internal control messages
       if (_handleControlMessage(msg)) {
         return;
@@ -4082,6 +4089,20 @@ class Program<M extends Model> with HotReloadMixin {
         rethrow;
       }
     }
+  }
+
+  /// Executes a [SequenceMsg] by running each command one at a time and
+  /// forwarding each result via [send] as it completes.
+  void _executeSequence(SequenceMsg msg) {
+    // Run asynchronously to avoid blocking the message loop.
+    unawaited(
+      Future<void>(() async {
+        for (final cmd in msg.commands) {
+          final result = await cmd.execute();
+          if (result != null) send(result);
+        }
+      }),
+    );
   }
 
   /// Triggers program quit.

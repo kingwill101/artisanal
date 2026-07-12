@@ -5,6 +5,7 @@ workspace:
   - pkgs/artisanal_widgets
   - pkgs/artisanal_widgets/example/github_cli
   - pkgs/artisanal_widgets/example/flutter_cli_port
+  - pkgs/stock_tracker
   - pkgs/ultraviolet
   - pkgs/flutter_artisanal
 
