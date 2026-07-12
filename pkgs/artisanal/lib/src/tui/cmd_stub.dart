@@ -755,20 +755,48 @@ class Cmd {
 
   /// A command that runs multiple commands concurrently.
   ///
-  /// All commands start executing immediately. Each command's message is
-  /// delivered as it completes, without waiting for the others.
+  /// All commands start executing immediately. Messages are collected and
+  /// delivered together after all commands complete.
+  ///
+  /// For per-command delivery as each completes, use [Cmd.parallel] instead.
   ///
   /// ```dart
   /// return (newModel, Cmd.batch([
   ///   fetchUsers(),
   ///   fetchPosts(),
-  ///   Cmd.tick(Duration(seconds: 5), (t) => TimeoutMsg()),
   /// ]));
   /// ```
   static Cmd batch(List<Cmd> commands) {
     if (commands.isEmpty) return none();
     if (commands.length == 1) return commands.first;
 
+    return Cmd(() async {
+      final futures = commands.map((cmd) => cmd.execute());
+      final results = await Future.wait(futures);
+      final messages = results.whereType<Msg>().toList();
+
+      if (messages.isEmpty) return null;
+      if (messages.length == 1) return messages.first;
+      return BatchMsg(messages);
+    });
+  }
+
+  /// A command that runs multiple commands concurrently, delivering each
+  /// message as soon as its command completes.
+  ///
+  /// Unlike [Cmd.batch], which waits for all commands and returns a single
+  /// [BatchMsg], [Cmd.parallel] forwards each sub-command's message via the
+  /// runtime's [send] mechanism the moment that command finishes.
+  ///
+  /// ```dart
+  /// return (newModel, Cmd.parallel([
+  ///   loadModel(),
+  ///   Cmd.tick(Duration(milliseconds: 100), (_) => TickMsg()),
+  /// ]));
+  /// ```
+  static Cmd parallel(List<Cmd> commands) {
+    if (commands.isEmpty) return none();
+    if (commands.length == 1) return commands.first;
     return ParallelCmd(commands);
   }
 

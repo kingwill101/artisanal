@@ -805,25 +805,50 @@ class Cmd {
 
   /// A command that runs multiple commands concurrently.
   ///
-  /// All commands start executing immediately. Each command's message is
-  /// delivered as it completes, without waiting for the others.
+  /// All commands start executing immediately. Messages are collected and
+  /// delivered together after all commands complete.
+  ///
+  /// For per-command delivery as each completes, use [Cmd.parallel] instead.
   ///
   /// ```dart
   /// return (newModel, Cmd.batch([
   ///   fetchUsers(),
   ///   fetchPosts(),
-  ///   Cmd.tick(Duration(seconds: 5), (t) => TimeoutMsg()),
   /// ]));
   /// ```
   static Cmd batch(List<Cmd> commands) {
     if (commands.isEmpty) return none();
     if (commands.length == 1) return commands.first;
 
-    // ParallelCmd is handled by the runtime: each sub-command is dispatched
-    // through _executeCommand and its message forwarded via send() as soon
-    // as that command finishes.  This matches the documented semantics of
-    // "sent as they complete" — unlike the old Future.wait approach which
-    // blocked until every command resolved.
+    return Cmd(() async {
+      final futures = commands.map((cmd) => cmd.execute());
+      final results = await Future.wait(futures);
+      final messages = results.whereType<Msg>().toList();
+
+      if (messages.isEmpty) return null;
+      if (messages.length == 1) return messages.first;
+      return BatchMsg(messages);
+    });
+  }
+
+  /// A command that runs multiple commands concurrently, delivering each
+  /// message as soon as its command completes.
+  ///
+  /// Unlike [Cmd.batch], which waits for all commands and returns a single
+  /// [BatchMsg], [Cmd.parallel] forwards each sub-command's message via the
+  /// runtime's [send] mechanism the moment that command finishes.  This is
+  /// useful when one command is slow and others produce fast periodic updates
+  /// (e.g. a spinner tick batched with a long model load).
+  ///
+  /// ```dart
+  /// return (newModel, Cmd.parallel([
+  ///   loadModel(),
+  ///   Cmd.tick(Duration(milliseconds: 100), (_) => TickMsg()),
+  /// ]));
+  /// ```
+  static Cmd parallel(List<Cmd> commands) {
+    if (commands.isEmpty) return none();
+    if (commands.length == 1) return commands.first;
     return ParallelCmd(commands);
   }
 
@@ -1050,10 +1075,10 @@ class EveryCmd extends Cmd {
 /// A command that executes multiple commands in parallel through the Program's
 /// command execution system.
 ///
-/// Unlike [Cmd.batch], which executes commands directly and waits for all to
-/// complete before returning messages, [ParallelCmd] delegates each command
-/// to [Program._executeCommand], allowing special commands like [EveryCmd]
-/// and [StreamCmd] to be properly started.
+/// [Cmd.parallel] creates a [ParallelCmd] for the same reason: so that each
+/// sub-command's message is forwarded via the runtime's [send] as soon as it
+/// completes.  [ParallelCmd] also delegates special commands like [EveryCmd]
+/// and [StreamCmd] to [Program._executeCommand] for proper lifecycle.
 ///
 /// Use this when you need to start both regular commands and special commands
 /// (like timers or streams) in parallel:
@@ -1070,9 +1095,17 @@ class EveryCmd extends Cmd {
 /// }
 /// ```
 class ParallelCmd extends Cmd {
-  ParallelCmd(this.commands) : super(_placeholder);
-
-  static Future<Msg?> _placeholder() async => null;
+  ParallelCmd(this.commands) : super(() async {
+    // When dispatched through the runtime, ParallelCmd is handled
+    // specially by Program._executeCommand which runs each sub-command
+    // individually so messages are delivered as each completes.
+    // This closure provides a reasonable fallback for standalone use.
+    for (final sub in commands) {
+      final msg = await sub.execute();
+      if (msg != null) return msg;
+    }
+    return null;
+  });
 
   /// The commands to execute in parallel.
   final List<Cmd> commands;
