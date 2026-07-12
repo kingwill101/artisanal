@@ -2412,6 +2412,11 @@ String? _overwriteMoveSeq(
     if (x < 0 || x >= line.cells.length) return null;
 
     final cell = line.cells[x];
+    final style = style_ops.convertStyle(cell.style, s._profile);
+    final link = style_ops.convertLink(cell.link, s._profile);
+    // Style/link check first — this is the most likely to fail (e.g. when
+    // every cell has a different style), so short-circuit early.
+    if (style != s._cur.style || link != s._cur.link) return null;
     if (cell.width != 1) return null;
     if (cell.content.isEmpty) return null;
     if (cell.content.trim().isEmpty) return null;
@@ -2421,10 +2426,6 @@ String? _overwriteMoveSeq(
         cell.content.contains('\r')) {
       return null;
     }
-
-    final style = style_ops.convertStyle(cell.style, s._profile);
-    final link = style_ops.convertLink(cell.link, s._profile);
-    if (style != s._cur.style || link != s._cur.link) return null;
 
     seq.write(cell.content);
   }
@@ -2443,6 +2444,10 @@ String? _overwritableCellText(
   if (line == null || x < 0 || x >= line.cells.length) return null;
 
   final cell = line.cells[x];
+  final style = style_ops.convertStyle(cell.style, s._profile);
+  final link = style_ops.convertLink(cell.link, s._profile);
+  // Style/link check first — short-circuits when every cell has a different style.
+  if (style != s._cur.style || link != s._cur.link) return null;
   if (cell.width != 1) return null;
   if (cell.content.isEmpty) return null;
   if (cell.content.trim().isEmpty) return null;
@@ -2453,9 +2458,6 @@ String? _overwritableCellText(
     return null;
   }
 
-  final style = style_ops.convertStyle(cell.style, s._profile);
-  final link = style_ops.convertLink(cell.link, s._profile);
-  if (style != s._cur.style || link != s._cur.link) return null;
   return cell.content;
 }
 
