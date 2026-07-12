@@ -755,8 +755,8 @@ class Cmd {
 
   /// A command that runs multiple commands concurrently.
   ///
-  /// All commands start executing immediately. Messages are collected
-  /// and sent as they complete.
+  /// All commands start executing immediately. Each command's message is
+  /// delivered as it completes, without waiting for the others.
   ///
   /// ```dart
   /// return (newModel, Cmd.batch([
@@ -769,15 +769,7 @@ class Cmd {
     if (commands.isEmpty) return none();
     if (commands.length == 1) return commands.first;
 
-    return Cmd(() async {
-      final futures = commands.map((cmd) => cmd.execute());
-      final results = await Future.wait(futures);
-      final messages = results.whereType<Msg>().toList();
-
-      if (messages.isEmpty) return null;
-      if (messages.length == 1) return messages.first;
-      return BatchMsg(messages);
-    });
+    return ParallelCmd(commands);
   }
 
   /// A command that runs commands in sequence.
