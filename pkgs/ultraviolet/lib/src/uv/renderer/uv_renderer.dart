@@ -280,14 +280,17 @@ final class _Cursor {
     required this.y,
     this.style = const UvStyle(),
     this.link = const Link(),
+    this.styleId = 0,
   });
 
   int x;
   int y;
   UvStyle style;
+  int styleId;
   Link link;
 
-  _Cursor clone() => _Cursor(x: x, y: y, style: style, link: link);
+  _Cursor clone() =>
+      _Cursor(x: x, y: y, style: style, link: link, styleId: styleId);
 }
 
 /// Low-level terminal renderer for the Ultraviolet engine.
@@ -1106,6 +1109,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
       if (!_cur.style.isZero) {
         _buf.write(UvAnsi.resetStyle);
         _cur.style = const UvStyle();
+        _cur.styleId = 0;
       }
       if (!_cur.link.isZero) {
         _buf.write(UvAnsi.resetHyperlink());
@@ -1114,26 +1118,37 @@ final class UvTerminalRenderer extends TerminalRenderer {
       return;
     }
 
-    final newStyle = _profile == cp.Profile.trueColor
-        ? cell.style
-        : style_ops.convertStyle(cell.style, _profile);
     final newLink = _profile == cp.Profile.trueColor
         ? cell.link
         : style_ops.convertLink(cell.link, _profile);
-    final oldStyle = _profile == cp.Profile.trueColor
-        ? _cur.style
-        : style_ops.convertStyle(_cur.style, _profile);
     final oldLink = _profile == cp.Profile.trueColor
         ? _cur.link
         : style_ops.convertLink(_cur.link, _profile);
 
-    if (newStyle != oldStyle) {
-      if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
-        final seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
-        _buf.write(seq);
+    // Fast path: compare pre-computed style IDs instead of full style objects.
+    if (_profile == cp.Profile.trueColor) {
+      if (cell.styleId != _cur.styleId) {
+        final newStyle = cell.style;
+        final oldStyle = _cur.style;
+        if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
+          final seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+          _buf.write(seq);
+        }
+        _cur.style = newStyle;
+        _cur.styleId = cell.styleId;
       }
-      _cur.style = cell.style;
+    } else {
+      final newStyle = style_ops.convertStyle(cell.style, _profile);
+      final oldStyle = style_ops.convertStyle(_cur.style, _profile);
+      if (newStyle != oldStyle) {
+        if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
+          final seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+          _buf.write(seq);
+        }
+        _cur.style = cell.style;
+      }
     }
+
     if (newLink != oldLink) {
       _buf.write(UvAnsi.setHyperlink(newLink.url, newLink.params));
       _cur.link = cell.link;
