@@ -21,7 +21,7 @@ broader Artisanal toolkit from a single dependency.
 
 ```yaml
 dependencies:
-  artisanal_widgets: ^0.1.0
+  artisanal_widgets: ^0.3.0
 ```
 
 ## Import
@@ -98,8 +98,22 @@ for passive hover behavior; `mouse: true` alone only enables
   `PopupMenuItem`, `CheckedPopupMenuItem`, `PopupMenuDivider`
 - Sliders: `Slider`, `RangeSlider`, `RangeValues`
 - Indicators: `LinearProgressIndicator`, `CircularProgressIndicator`
+- Data display: `DataTable.cells` with column spans and alignment,
+  `MonthlyCalendar`, and terminal-cell `Shadow` presets
 - Charts: `SparklineChart`, `LineChart`, `BarChart`, `HeatmapChart`,
   `PieChart`, `RibbonChart` with optional in-chart legends
+
+The `example/widget_features` app combines these components with a fixed
+terminal viewport, UV subtree filters, and world-coordinate canvas shapes.
+For a focused effects walkthrough, run
+`dart run example/uv_effects/main.dart`; it compares an ordinary widget tree
+with a `CellFilter`-processed copy and includes a composed filter stack.
+
+For a production-style primary-screen example, run
+`dart run example/inline_build_monitor/main.dart`. It keeps a responsive build
+dashboard pinned at the bottom while staged command output streams into native
+terminal scrollback. Press `p` to pause, `r` to rebuild, `e` to simulate a
+failure, or `q` to quit.
 
 ![Charts](images/charting.png)
 The OpenCode example is self-contained under

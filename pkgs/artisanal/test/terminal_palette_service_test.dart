@@ -41,32 +41,29 @@ void main() {
     test(
       'requestCoreColors batches foreground background and cursor probes',
       () async {
-        final msg = await TerminalPaletteService()
-            .requestCoreColors()
-            .execute();
+        final command = TerminalPaletteService().requestCoreColors();
 
-        expect(msg, isA<BatchMsg>());
-        final batch = msg as BatchMsg;
-        expect(batch.messages, hasLength(3));
+        expect(command, isA<ParallelCmd>());
+        final commands = (command as ParallelCmd).commands;
+        expect(commands, hasLength(3));
         expect(
-          batch.messages.whereType<WriteRawMsg>().map((m) => m.data).toList(),
+          await _rawWrites(commands),
           equals(<String>['\x1b]10;?\x07', '\x1b]11;?\x07', '\x1b]12;?\x07']),
         );
       },
     );
 
     test('requestPalette deduplicates and sorts indices', () async {
-      final msg = await TerminalPaletteService().requestPalette(<int>[
+      final command = TerminalPaletteService().requestPalette(<int>[
         7,
         2,
         7,
         0,
-      ]).execute();
+      ]);
 
-      expect(msg, isA<BatchMsg>());
-      final batch = msg as BatchMsg;
+      expect(command, isA<ParallelCmd>());
       expect(
-        batch.messages.whereType<WriteRawMsg>().map((m) => m.data).toList(),
+        await _rawWrites((command as ParallelCmd).commands),
         equals(<String>['\x1b]4;0;?\x07', '\x1b]4;2;?\x07', '\x1b]4;7;?\x07']),
       );
     });
@@ -77,11 +74,19 @@ void main() {
           .execute();
       expect(zero, isNull);
 
-      final three = await TerminalPaletteService()
-          .requestAnsiPalette(count: 3)
-          .execute();
-      expect(three, isA<BatchMsg>());
-      expect((three as BatchMsg).messages, hasLength(3));
+      final three = TerminalPaletteService().requestAnsiPalette(count: 3);
+      expect(three, isA<ParallelCmd>());
+      expect((three as ParallelCmd).commands, hasLength(3));
     });
   });
+}
+
+Future<List<String>> _rawWrites(List<Cmd> commands) async {
+  final messages = await Future.wait(
+    commands.map((command) => command.execute()),
+  );
+  return messages
+      .whereType<WriteRawMsg>()
+      .map((message) => message.data)
+      .toList();
 }

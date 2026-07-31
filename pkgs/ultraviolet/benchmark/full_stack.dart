@@ -184,21 +184,21 @@ void main() {
   print('=== Full Stack Benchmark ===');
   print('');
   print(
-    'Phase 1 (text scroll):    ${phase1Frames} frames in '
+    'Phase 1 (text scroll):    $phase1Frames frames in '
     '${phase1Elapsed.inMilliseconds}ms — '
     '${phase1Fps.toStringAsFixed(1)} FPS',
   );
   print(
-    'Phase 2 (animated gfx):   ${phase2Frames} frames in '
+    'Phase 2 (animated gfx):   $phase2Frames frames in '
     '${phase2Elapsed.inMilliseconds}ms — '
     '${phase2Fps.toStringAsFixed(1)} FPS',
   );
   print(
-    'Phase 3 (event decode):   ${phase3Events} events in '
+    'Phase 3 (event decode):   $phase3Events events in '
     '${phase3Elapsed.inMilliseconds}ms',
   );
   print(
-    'Phase 4 (string + layout): ${phase4Width} total width in '
+    'Phase 4 (string + layout): $phase4Width total width in '
     '${phase4Elapsed.inMilliseconds}ms',
   );
   print('');

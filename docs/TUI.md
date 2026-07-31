@@ -182,9 +182,10 @@ await program.run();
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `altScreen` | `bool` | `true` | Use alternate screen buffer (fullscreen mode) |
-| `screenMode` | `ScreenMode?` | `null` | Explicitly choose `fullScreen`, `inline`, or `inlineAuto`; takes precedence over `altScreen` |
+| `screenMode` | `ScreenMode?` | `null` | Explicitly choose `fullScreen`, `inline`, `inlineAuto`, or `fixed`; takes precedence over `altScreen` |
 | `inlineHeight` | `int` | `4` | Height of the inline UI region when using inline modes |
 | `uiAnchor` | `UiAnchor` | `bottom` | Anchor the inline UI to the top or bottom of the viewport |
+| `fixedViewport` | `FixedViewport?` | `null` | Zero-based terminal rectangle owned by `ScreenMode.fixed` |
 | `mouse` | `bool` | `false` | Enable mouse tracking |
 | `mouseMode` | `MouseMode` | `none` | Mouse tracking mode (`none`, `cellMotion`, `allMotion`) |
 | `fps` | `int` | `60` | Maximum frames per second (1-120) |
@@ -284,6 +285,27 @@ Inline-mode behavior:
 
 `ScreenMode.inlineAuto` is reserved for future content-aware sizing. Today it
 behaves the same as `ScreenMode.inline` and still uses `inlineHeight`.
+
+### Fixed Viewport Mode
+
+Fixed mode owns an arbitrary rectangle on the primary screen. It clips output
+to that rectangle, translates absolute cursor movement into it, and preserves
+terminal content outside it. This is useful for embedding a TUI beside other
+terminal-owned content.
+
+```dart
+await runProgram(
+  const StatusModel(),
+  options: const ProgramOptions(
+    screenMode: ScreenMode.fixed,
+    fixedViewport: FixedViewport(x: 2, y: 1, width: 58, height: 20),
+  ),
+);
+```
+
+`x` and `y` are zero-based. A viewport that reaches beyond the current terminal
+is clipped on each resize. Fixed mode uses the UV renderer and never enters the
+alternate screen.
 
 ### Budget-Aware Degradation
 

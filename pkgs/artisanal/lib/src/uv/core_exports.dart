@@ -2,6 +2,7 @@ export 'buffer.dart' show Buffer, Line, LineData;
 export 'cell.dart'
     show
         Cell,
+        CellDiffOption,
         Link,
         UvStyle,
         UvColor,

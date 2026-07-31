@@ -46,6 +46,9 @@ final class Canvas
 
   final ScreenBuffer _scr;
 
+  /// The mutable backing buffer.
+  Buffer get buffer => _scr.buffer;
+
   /// Resizes the canvas backing buffer to the given dimensions.
   void resize(int width, int height) => _scr.resize(width, height);
 

@@ -15,6 +15,7 @@ events, and terminal capability handling.
 - High-performance diff renderer (`UvTerminalRenderer`)
 - Typed keyboard/mouse/focus/resize events
 - Style + color primitives (`UvStyle`, `UvColor`)
+- Per-cell diff policies (`normal`, `skip`, `alwaysUpdate`, `forcedWidth`)
 - ANSI helpers (`Ansi`) and renderer-level ANSI sequences (`UvAnsi`)
 - Terminal capability detection
 - Image protocol support (Kitty, iTerm2, Sixel, fallback drawables)
@@ -141,6 +142,21 @@ terminal.setCell(
 terminal.setCell(3, 2, Cell(content: 'i'));
 terminal.draw();
 ```
+
+Control exceptional diff behavior on a cell:
+
+```dart
+terminal.setCell(
+  0,
+  0,
+  Cell(content: '•', diffOption: CellDiffOption.alwaysUpdate),
+);
+```
+
+Use `CellDiffOption.skip` for terminal cells owned by an external renderer and
+`CellDiffOption.forcedWidth(width)` for escape-sequence-backed content whose
+display width cannot be inferred from its text. Ordinary cells should keep the
+default `CellDiffOption.normal` fast path.
 
 Fill an area:
 

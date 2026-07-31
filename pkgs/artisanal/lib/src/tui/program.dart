@@ -223,6 +223,36 @@ enum ScreenMode {
   /// This currently behaves the same as [ScreenMode.inline] and uses
   /// [ProgramOptions.inlineHeight] until automatic sizing lands.
   inlineAuto,
+
+  /// Renders inside an arbitrary fixed rectangle on the primary screen.
+  /// Content outside the rectangle is preserved.
+  fixed,
+}
+
+/// A fixed terminal rectangle, using zero-based cell coordinates.
+final class FixedViewport {
+  /// Creates a viewport at ([x], [y]) with the requested [width] and [height].
+  const FixedViewport({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  }) : assert(x >= 0),
+       assert(y >= 0),
+       assert(width > 0),
+       assert(height > 0);
+
+  /// Zero-based left column.
+  final int x;
+
+  /// Zero-based top row.
+  final int y;
+
+  /// Requested width in terminal cells.
+  final int width;
+
+  /// Requested height in terminal cells.
+  final int height;
 }
 
 /// Which edge of the terminal the inline UI region is anchored to.
@@ -248,6 +278,7 @@ class ProgramOptions {
     this.screenMode,
     this.inlineHeight = 4,
     this.uiAnchor = UiAnchor.bottom,
+    this.fixedViewport,
     this.mouse = false,
     this.mouseMode = MouseMode.none,
     this.fps = 60,
@@ -282,7 +313,11 @@ class ProgramOptions {
     this.metricsInterval = const Duration(seconds: 1),
     this.renderBudget = const RenderBudgetOptions(),
     this.nowProvider = _defaultNowProvider,
-  }) : assert(fps >= 1 && fps <= 120, 'fps must be between 1 and 120');
+  }) : assert(fps >= 1 && fps <= 120, 'fps must be between 1 and 120'),
+       assert(
+         screenMode != ScreenMode.fixed || fixedViewport != null,
+         'fixedViewport is required when screenMode is ScreenMode.fixed',
+       );
 
   static DateTime _defaultNowProvider() => DateTime.now();
 
@@ -308,6 +343,9 @@ class ProgramOptions {
   /// Only meaningful when the effective mode is [ScreenMode.inline] or
   /// [ScreenMode.inlineAuto].
   final UiAnchor uiAnchor;
+
+  /// Rectangle owned by the program when using [ScreenMode.fixed].
+  final FixedViewport? fixedViewport;
 
   /// Resolves the effective [ScreenMode] from [screenMode] and [altScreen].
   ScreenMode get effectiveScreenMode {
@@ -578,6 +616,10 @@ class ProgramOptions {
   /// Creates a copy with the given fields replaced.
   ProgramOptions copyWith({
     bool? altScreen,
+    ScreenMode? screenMode,
+    int? inlineHeight,
+    UiAnchor? uiAnchor,
+    FixedViewport? fixedViewport,
     bool? mouse,
     MouseMode? mouseMode,
     int? fps,
@@ -615,9 +657,10 @@ class ProgramOptions {
   }) {
     return ProgramOptions(
       altScreen: altScreen ?? this.altScreen,
-      screenMode: screenMode,
-      inlineHeight: inlineHeight,
-      uiAnchor: uiAnchor,
+      screenMode: screenMode ?? this.screenMode,
+      inlineHeight: inlineHeight ?? this.inlineHeight,
+      uiAnchor: uiAnchor ?? this.uiAnchor,
+      fixedViewport: fixedViewport ?? this.fixedViewport,
       mouse: mouse ?? this.mouse,
       mouseMode: mouseMode ?? this.mouseMode,
       fps: fps ?? this.fps,
@@ -803,6 +846,7 @@ class ProgramOptions {
       screenMode: screenMode,
       inlineHeight: inlineHeight,
       uiAnchor: uiAnchor,
+      fixedViewport: fixedViewport,
       mouse: mouse,
       mouseMode: mouseMode,
       fps: fps,
@@ -1595,6 +1639,7 @@ class Program<M extends Model> with HotReloadMixin {
       screenMode: effectiveMode,
       inlineHeight: _options.inlineHeight,
       uiAnchor: _options.uiAnchor,
+      fixedViewport: _options.fixedViewport,
     );
 
     _setupRenderer(rendererOptions);
@@ -1632,7 +1677,8 @@ class Program<M extends Model> with HotReloadMixin {
   void _createRenderer(TuiRendererOptions options) {
     if (_options.disableRenderer) {
       _renderer = SimpleTuiRenderer(terminal: _terminal!, options: options);
-    } else if (_options.useUltravioletRenderer) {
+    } else if (_options.useUltravioletRenderer ||
+        options.screenMode == ScreenMode.fixed) {
       _renderer = UltravioletTuiRenderer(
         terminal: _terminal!,
         options: options,
@@ -3320,6 +3366,7 @@ class Program<M extends Model> with HotReloadMixin {
       screenMode: effectiveMode,
       inlineHeight: _options.inlineHeight,
       uiAnchor: _options.uiAnchor,
+      fixedViewport: _options.fixedViewport,
     );
     _setupRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
@@ -3683,6 +3730,7 @@ class Program<M extends Model> with HotReloadMixin {
       screenMode: effectiveMode,
       inlineHeight: _options.inlineHeight,
       uiAnchor: _options.uiAnchor,
+      fixedViewport: _options.fixedViewport,
     );
     _setupRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;

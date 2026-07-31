@@ -3,7 +3,7 @@ import 'dart:convert' show base64Encode, utf8;
 
 import '../platform/platform.dart' show environment, isWindows;
 
-import 'program.dart' show ScreenMode, UiAnchor;
+import 'program.dart' show FixedViewport, ScreenMode, UiAnchor;
 import 'terminal.dart';
 import 'terminal_native_frame.dart';
 import 'terminal_render_inspector.dart';
@@ -99,7 +99,11 @@ class TuiRendererOptions {
     this.screenMode = ScreenMode.fullScreen,
     this.inlineHeight = 4,
     this.uiAnchor = UiAnchor.bottom,
-  });
+    this.fixedViewport,
+  }) : assert(
+         screenMode != ScreenMode.fixed || fixedViewport != null,
+         'fixedViewport is required when screenMode is ScreenMode.fixed',
+       );
 
   /// Maximum frames per second for rendering.
   ///
@@ -130,9 +134,15 @@ class TuiRendererOptions {
   /// Which edge of the viewport this inline UI region is anchored to.
   final UiAnchor uiAnchor;
 
+  /// Rectangle owned by a [ScreenMode.fixed] renderer.
+  final FixedViewport? fixedViewport;
+
   /// Whether the renderer operates in inline (non-alt-screen) mode.
   bool get isInline =>
       screenMode == ScreenMode.inline || screenMode == ScreenMode.inlineAuto;
+
+  /// Whether output is constrained to a primary-screen viewport.
+  bool get isBounded => isInline || screenMode == ScreenMode.fixed;
 
   /// The minimum time between renders.
   Duration get frameTime => Duration(milliseconds: 1000 ~/ fps);
@@ -664,6 +674,30 @@ class UltravioletTuiRenderer
   int? _inlineTerminalHeight;
   final List<String> _inlineLogHistory = <String>[];
 
+  ({int x, int y, int width, int height}) _viewportGeometry() {
+    final terminalWidth = terminal.width > 0 ? terminal.width : 1;
+    final terminalHeight = terminal.height > 0 ? terminal.height : 1;
+    final viewport = _options.fixedViewport;
+    if (_options.screenMode == ScreenMode.fixed && viewport != null) {
+      final x = viewport.x.clamp(0, terminalWidth - 1);
+      final y = viewport.y.clamp(0, terminalHeight - 1);
+      return (
+        x: x,
+        y: y,
+        width: viewport.width.clamp(1, terminalWidth - x),
+        height: viewport.height.clamp(1, terminalHeight - y),
+      );
+    }
+
+    final height = _options.inlineHeight.clamp(1, terminalHeight);
+    return (
+      x: 0,
+      y: _options.uiAnchor == UiAnchor.bottom ? terminalHeight - height : 0,
+      width: terminalWidth,
+      height: height,
+    );
+  }
+
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
 
@@ -856,26 +890,29 @@ class UltravioletTuiRenderer
     if (_initialized) return;
 
     final isInline = _options.isInline;
+    final isBounded = _options.isBounded;
 
-    if (!isInline && _options.altScreen) {
+    if (!isBounded && _options.altScreen) {
       terminal.enterAltScreen();
     }
-    if (!isInline) {
+    if (!isBounded) {
       terminal.write(uv_graphics.deleteAllRetainedGraphics());
       _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
     }
     if (_options.hideCursor) {
       terminal.hideCursor();
     }
-    if (!isInline && _options.altScreen) {
+    if (!isBounded && _options.altScreen) {
       terminal.clearScreen();
     }
 
     final (width: w, height: h) = terminal.size;
-    _inlineTerminalWidth = isInline ? w : null;
-    _inlineTerminalHeight = isInline ? h : null;
-    final renderHeight = isInline ? _options.inlineHeight.clamp(1, h) : h;
-    _screen = uv_buffer.ScreenBuffer(w, renderHeight);
+    final geometry = isBounded ? _viewportGeometry() : null;
+    _inlineTerminalWidth = isBounded ? w : null;
+    _inlineTerminalHeight = isBounded ? h : null;
+    final renderWidth = geometry?.width ?? w;
+    final renderHeight = geometry?.height ?? h;
+    _screen = uv_buffer.ScreenBuffer(renderWidth, renderHeight);
 
     final envMap = environment;
     final env = envMap.entries.map((e) => '${e.key}=${e.value}').toList();
@@ -892,7 +929,7 @@ class UltravioletTuiRenderer
     // cursor positioning to the UI region.  The UV renderer runs in
     // fullscreen mode (absolute CUP) on the full-size buffer; we
     // post-process the output to shift row coordinates.
-    if (isInline) {
+    if (isBounded) {
       _inlineSink = _CapturingSink(_inlineCapture);
       _renderer = uv_term.UvTerminalRenderer(_inlineSink!, env: env);
       _renderer!.setFullscreen(true);
@@ -908,7 +945,7 @@ class UltravioletTuiRenderer
       _renderer!.setMapNewline(mapNewline);
       // Resizes invalidate row geometry. Scroll optimization can otherwise
       // emit DL/IL operations derived from the old width while the new frame
-      // is being painted. Ratatui uses a plain cell diff for this path.
+      // is being painted. Use a plain cell diff for this path.
       _renderer!.setScrollOptim(false);
     }
 
@@ -921,11 +958,13 @@ class UltravioletTuiRenderer
       _renderer!.setTabStops(w);
     }
 
-    if (!isInline) {
+    if (!isBounded) {
       _renderer!.saveCursor();
       _renderer!.erase();
     } else {
-      if (_options.uiAnchor == UiAnchor.bottom && terminal.isTerminal) {
+      if (isInline &&
+          _options.uiAnchor == UiAnchor.bottom &&
+          terminal.isTerminal) {
         terminal.write(List.filled(renderHeight, '\r\n').join());
       }
       _inlineNeedsFullClear = true;
@@ -941,11 +980,11 @@ class UltravioletTuiRenderer
     final (width: w, height: h) = terminal.size;
     final scr = _screen;
     if (scr == null) return;
-    final targetHeight = _options.isInline
-        ? _options.inlineHeight.clamp(1, h)
-        : h;
+    final geometry = _options.isBounded ? _viewportGeometry() : null;
+    final targetWidth = geometry?.width ?? w;
+    final targetHeight = geometry?.height ?? h;
     final inlineTerminalSizeChanged =
-        _options.isInline &&
+        _options.isBounded &&
         (_inlineTerminalWidth != w || _inlineTerminalHeight != h);
     if (inlineTerminalSizeChanged && TuiTrace.enabled) {
       TuiTrace.event(
@@ -962,31 +1001,33 @@ class UltravioletTuiRenderer
         },
       );
     }
-    if (scr.width() == w &&
+    if (scr.width() == targetWidth &&
         scr.height() == targetHeight &&
         !inlineTerminalSizeChanged) {
       return;
     }
-    final sizeChanged = scr.width() != w || scr.height() != targetHeight;
-    final isShrinking = w < scr.width() || targetHeight < scr.height();
+    final sizeChanged =
+        scr.width() != targetWidth || scr.height() != targetHeight;
+    final isShrinking =
+        targetWidth < scr.width() || targetHeight < scr.height();
     if (sizeChanged) {
-      scr.resize(w, targetHeight);
-      _renderer?.resize(w, targetHeight);
-      if (!_options.isInline) {
-        // Ratatui resizes both screen buffers and resets the previous buffer
-        // before the callback paints. Do the same at the UV boundary so the
+      scr.resize(targetWidth, targetHeight);
+      _renderer?.resize(targetWidth, targetHeight);
+      if (!_options.isBounded) {
+        // Resize both screen buffers and reset the previous buffer before the
+        // callback paints. Do the same at the UV boundary so the
         // diff never compares a new-width frame with old-width geometry.
-        _renderer?.resetForResize(w, targetHeight);
+        _renderer?.resetForResize(targetWidth, targetHeight);
       }
       _invalidateNativeFrameCache(resetPrevious: true);
-      // Match Ratatui's resize contract: discard the previous diff state and
-      // render a complete frame at the latest backend size. Horizontal shrink
+      // Discard the previous diff state and render a complete frame at the
+      // latest backend size. Horizontal shrink
       // is especially important because wrapping can leave old cells visible.
       if (isShrinking) {
         scr.clear();
       }
     }
-    if (!_options.isInline) {
+    if (!_options.isBounded) {
       // A normal resize was reset above; the initial frame is erased during
       // initialization. No second erase is needed here.
     } else {
@@ -998,7 +1039,8 @@ class UltravioletTuiRenderer
       // next r.flush() call and destroy log history.
       _inlineCapture.clear();
       _inlineNeedsFullClear = true;
-      _inlineNeedsLogReplay = _options.uiAnchor == UiAnchor.bottom;
+      _inlineNeedsLogReplay =
+          _options.isInline && _options.uiAnchor == UiAnchor.bottom;
       _inlineTerminalWidth = w;
       _inlineTerminalHeight = h;
     }
@@ -1014,14 +1056,14 @@ class UltravioletTuiRenderer
       _ => view.toString(),
     };
     final (width: terminalWidth, height: terminalHeight) = terminal.size;
-    final targetHeight = _options.isInline
-        ? _options.inlineHeight.clamp(1, terminalHeight)
-        : terminalHeight;
+    final geometry = _options.isBounded ? _viewportGeometry() : null;
+    final targetWidth = geometry?.width ?? terminalWidth;
+    final targetHeight = geometry?.height ?? terminalHeight;
     final sizeChanged =
         _screen == null ||
-        _screen!.width() != terminalWidth ||
+        _screen!.width() != targetWidth ||
         _screen!.height() != targetHeight ||
-        (_options.isInline &&
+        (_options.isBounded &&
             (_inlineTerminalWidth != terminalWidth ||
                 _inlineTerminalHeight != terminalHeight));
 
@@ -1056,13 +1098,13 @@ class UltravioletTuiRenderer
   @override
   void clear() {
     _initialize();
-    if (!_options.isInline) {
+    if (!_options.isBounded) {
       terminal.write(uv_graphics.deleteAllRetainedGraphics());
     }
     _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
     _renderer?.erase();
     // Discard any ESC[2J queued by erase() into the inline capture buffer.
-    if (_options.isInline) _inlineCapture.clear();
+    if (_options.isBounded) _inlineCapture.clear();
     _dirty = true;
     _invalidateNativeFrameCache(resetPrevious: true);
     // Stop the stopwatch to force next render to proceed
@@ -1076,7 +1118,7 @@ class UltravioletTuiRenderer
     _initialize();
     _renderer?.erase();
     // Discard any ESC[2J queued by erase() into the inline capture buffer.
-    if (_options.isInline) _inlineCapture.clear();
+    if (_options.isBounded) _inlineCapture.clear();
     _dirty = true;
     _invalidateNativeFrameCache(resetPrevious: true);
     // Stop the stopwatch to force next render to proceed past frame-rate
@@ -1185,15 +1227,15 @@ class UltravioletTuiRenderer
       return;
     }
 
-    final isInline = _options.isInline;
+    final isBounded = _options.isBounded;
     final graphicsFrame = uv_graphics.TerminalGraphicsFrame.scan(_pendingView);
-    final forceInlineFullRedraw = isInline && _inlineNeedsFullClear;
+    final forceInlineFullRedraw = isBounded && _inlineNeedsFullClear;
 
     // Phase 1: ANSI parse → StyledString
     final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
     final ss = uv_styled.newStyledString(
       _options.ansiCompress ? compressAnsi(_pendingView) : _pendingView,
-    )..wrap = !isInline;
+    )..wrap = !isBounded;
     parseSw?.stop();
 
     // Phase 2: Draw styled string into screen buffer
@@ -1211,7 +1253,7 @@ class UltravioletTuiRenderer
 
     // Phase 3: Diff buffers and compute update sequence
     final Stopwatch? diffSw = tracing ? (Stopwatch()..start()) : null;
-    if (isInline) {
+    if (isBounded) {
       // Inline mode restores the real terminal cursor after every frame, so
       // the UV renderer must not rely on its previous cursor position when
       // generating incremental updates.
@@ -1222,7 +1264,7 @@ class UltravioletTuiRenderer
 
     // Phase 4: Flush to terminal
     final Stopwatch? writeSw = tracing ? (Stopwatch()..start()) : null;
-    if (isInline) {
+    if (isBounded) {
       _flushInline();
     } else {
       // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
@@ -1289,13 +1331,14 @@ class UltravioletTuiRenderer
     final sink = _inlineSink;
     if (r == null || sink == null) return;
 
-    final termHeight = terminal.height;
     final scr = _screen;
     if (scr == null) return;
+    final geometry = _viewportGeometry();
+    final termHeight = terminal.height;
     final uiHeight = scr.height();
-    final uiStartRow = _options.uiAnchor == UiAnchor.bottom
-        ? termHeight - uiHeight + 1
-        : 1;
+    final uiWidth = scr.width();
+    final uiStartRow = geometry.y + 1;
+    final uiStartColumn = geometry.x + 1;
     final logBottom = uiStartRow - 1;
 
     // Clear the capturing buffer and let the UV renderer write into it.
@@ -1315,12 +1358,17 @@ class UltravioletTuiRenderer
 
     // Shift all absolute row-addressing sequences into the anchored inline
     // region before replaying UV's diff output onto the real terminal.
-    final offset = uiStartRow - 1;
-    final shifted = offset > 0 ? _offsetInlineRows(raw, offset) : raw;
+    final rowOffset = uiStartRow - 1;
+    final columnOffset = uiStartColumn - 1;
+    final shifted = rowOffset > 0 || columnOffset > 0
+        ? _offsetViewportPositions(raw, rowOffset, columnOffset)
+        : raw;
 
     final shouldClearInlineRegion = _inlineNeedsFullClear;
     final shouldReplayLogBand =
-        _inlineNeedsLogReplay && _options.uiAnchor == UiAnchor.bottom;
+        _inlineNeedsLogReplay &&
+        _options.isInline &&
+        _options.uiAnchor == UiAnchor.bottom;
     if (TuiTrace.enabled) {
       TuiTrace.event(
         'inline.flush',
@@ -1329,7 +1377,9 @@ class UltravioletTuiRenderer
           'terminalWidth': terminal.width,
           'terminalHeight': termHeight,
           'uiHeight': uiHeight,
+          'uiWidth': uiWidth,
           'uiStartRow': uiStartRow,
+          'uiStartColumn': uiStartColumn,
           'logBottom': logBottom,
           'rawLength': raw.length,
           'shiftedLength': shifted.length,
@@ -1354,8 +1404,12 @@ class UltravioletTuiRenderer
     if (shouldClearInlineRegion) {
       for (var row = 0; row < uiHeight; row++) {
         final absRow = uiStartRow + row;
-        out.write(Ansi.cursorTo(absRow, 1));
-        out.write(Ansi.clearLine);
+        _appendViewportRowClear(
+          out,
+          row: absRow,
+          column: uiStartColumn,
+          width: uiWidth,
+        );
       }
       _inlineNeedsFullClear = false;
     }
@@ -1410,8 +1464,12 @@ class UltravioletTuiRenderer
   /// - `CUP` / `HVP`: `ESC[<row>;<col>H` and `ESC[<row>;<col>f`
   /// - home shortcuts: `ESC[H` / `ESC[f`
   /// - `VPA`: `ESC[<row>d`
-  static String _offsetInlineRows(String input, int rowOffset) {
-    if (input.isEmpty || rowOffset <= 0) return input;
+  static String _offsetViewportPositions(
+    String input,
+    int rowOffset,
+    int columnOffset,
+  ) {
+    if (input.isEmpty || (rowOffset <= 0 && columnOffset <= 0)) return input;
 
     final cupOrHvpRe = RegExp(r'\x1b\[(?:(\d+)(?:;(\d+))?)?([Hf])');
     final vpaRe = RegExp(r'\x1b\[(\d+)d');
@@ -1422,15 +1480,38 @@ class UltravioletTuiRenderer
       final colStr = m.group(2);
       final finalByte = m.group(3)!;
       final row = (rowStr == null ? 1 : int.parse(rowStr)) + rowOffset;
-      final col = colStr == null ? 1 : int.parse(colStr);
+      final col = (colStr == null ? 1 : int.parse(colStr)) + columnOffset;
       return '\x1b[$row;$col$finalByte';
     });
     result = result.replaceAllMapped(vpaRe, (m) {
       final row = int.parse(m.group(1)!) + rowOffset;
       return '\x1b[${row}d';
     });
+    if (columnOffset > 0) {
+      final horizontalAbsoluteRe = RegExp(r'\x1b\[(\d+)([G`])');
+      result = result.replaceAllMapped(horizontalAbsoluteRe, (m) {
+        final column = int.parse(m.group(1)!) + columnOffset;
+        return '\x1b[$column${m.group(2)}';
+      });
+    }
 
     return result;
+  }
+
+  void _appendViewportRowClear(
+    StringBuffer out, {
+    required int row,
+    required int column,
+    required int width,
+  }) {
+    out.write(Ansi.cursorTo(row, column));
+    if (column == 1 && width >= terminal.width) {
+      out.write(Ansi.clearLine);
+      return;
+    }
+    out
+      ..write(Ansi.reset)
+      ..write(' ' * width);
   }
 
   @override
@@ -1438,21 +1519,24 @@ class UltravioletTuiRenderer
     if (!_initialized) return;
 
     final isInline = _options.isInline;
+    final isBounded = _options.isBounded;
 
-    if (!isInline) {
+    if (!isBounded) {
       terminal.write(uv_graphics.deleteAllRetainedGraphics());
       _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
     } else {
       terminal.write(Ansi.resetScrollRegion);
-      if (_options.uiAnchor == UiAnchor.bottom && terminal.supportsAnsi) {
+      if (terminal.supportsAnsi) {
         _clearInlineRegion();
+      }
+      if (isInline && _options.uiAnchor == UiAnchor.bottom) {
         terminal.write(Ansi.cursorTo(terminal.height, 1));
       }
     }
     if (_options.hideCursor) {
       terminal.showCursor();
     }
-    if (!isInline && _options.altScreen) {
+    if (!isBounded && _options.altScreen) {
       terminal.exitAltScreen();
     }
     _initialized = false;
@@ -1462,42 +1546,28 @@ class UltravioletTuiRenderer
     final scr = _screen;
     if (scr == null) return;
     final termHeight = terminal.height;
+    final geometry = _viewportGeometry();
     final uiHeight = scr.height().clamp(1, termHeight).toInt();
-    final uiStartRow = _options.uiAnchor == UiAnchor.bottom
-        ? termHeight - uiHeight + 1
-        : 1;
+    final uiStartRow = geometry.y + 1;
+    final uiStartColumn = geometry.x + 1;
+    final uiWidth = scr.width();
     final out = StringBuffer()..write(Ansi.cursorSaveDec);
     for (var row = 0; row < uiHeight; row++) {
+      _appendViewportRowClear(
+        out,
+        row: uiStartRow + row,
+        column: uiStartColumn,
+        width: uiWidth,
+      );
+    }
+    if (_options.isInline) {
       out
-        ..write(Ansi.cursorTo(uiStartRow + row, 1))
+        ..write(Ansi.cursorTo(termHeight, 1))
         ..write(Ansi.clearLine);
     }
-    out
-      ..write(Ansi.cursorTo(termHeight, 1))
-      ..write(Ansi.clearLine)
-      ..write(Ansi.cursorRestoreDec);
+    out.write(Ansi.cursorRestoreDec);
     terminal.write(out.toString());
   }
-}
-
-final class _TerminalStringSink implements StringSink {
-  _TerminalStringSink(this.terminal);
-
-  final TuiTerminal terminal;
-
-  @override
-  void write(Object? obj) => terminal.write(obj?.toString() ?? '');
-
-  @override
-  void writeAll(Iterable objects, [String separator = '']) =>
-      write(objects.join(separator));
-
-  @override
-  void writeCharCode(int charCode) =>
-      terminal.write(String.fromCharCode(charCode));
-
-  @override
-  void writeln([Object? obj = '']) => terminal.writeln(obj?.toString() ?? '');
 }
 
 /// A [StringSink] that captures all writes into a [StringBuffer].

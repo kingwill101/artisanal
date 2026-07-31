@@ -75,6 +75,7 @@ const _examples = [
   'timer',
   'trello',
   'tui-daemon-combo',
+  'uv-effects',
   'uv-input',
   'views',
   'window-size',

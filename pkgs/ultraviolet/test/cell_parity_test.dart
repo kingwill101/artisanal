@@ -50,6 +50,21 @@ void main() {
       expect(emojiA, isNot(emojiC));
     });
 
+    test('diff options participate in equality and cloning', () {
+      final normal = Cell(content: 'A');
+      final always = Cell(
+        content: 'A',
+        diffOption: CellDiffOption.alwaysUpdate,
+      );
+      final clone = always.clone();
+
+      expect(normal, isNot(always));
+      expect(clone, always);
+      expect(clone.diffOption, CellDiffOption.alwaysUpdate);
+      expect(CellDiffOption.forcedWidth(3).width, 3);
+      expect(() => CellDiffOption.forcedWidth(0), throwsArgumentError);
+    });
+
     test('pools complex graphemes and tracks refcounts across clones', () {
       final emoji = Cell(content: '\u0061\u0308', width: 1);
       final clone = emoji.clone();

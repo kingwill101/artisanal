@@ -23,13 +23,43 @@ class DataTable extends StatelessWidget {
     this.borderColor,
     this.borderStyle = DataTableBorderStyle.normal,
     super.key,
-  });
+  }) : _headerCells = columns
+           .map((value) => DataTableCell(value))
+           .toList(growable: false),
+       _cellRows = rows
+           .map(
+             (row) => row
+                 .map((value) => DataTableCell(value))
+                 .toList(growable: false),
+           )
+           .toList(growable: false);
+
+  /// Creates a table with structured cells supporting spans and alignment.
+  DataTable.cells({
+    required List<DataTableCell> columns,
+    required List<List<DataTableCell>> rows,
+    this.headerStyle,
+    this.cellStyle,
+    this.borderColor,
+    this.borderStyle = DataTableBorderStyle.normal,
+    super.key,
+  }) : columns = columns.map((cell) => cell.value).toList(growable: false),
+       rows = rows
+           .map((row) => row.map((cell) => cell.value).toList(growable: false))
+           .toList(growable: false),
+       _headerCells = List<DataTableCell>.unmodifiable(columns),
+       _cellRows = rows
+           .map((row) => List<DataTableCell>.unmodifiable(row))
+           .toList(growable: false);
 
   /// Column header labels.
   final List<String> columns;
 
   /// Row data. Each inner list must have the same length as [columns].
   final List<List<String>> rows;
+
+  final List<DataTableCell> _headerCells;
+  final List<List<DataTableCell>> _cellRows;
 
   /// Style for header text. Defaults to bold theme title.
   final Style? headerStyle;
@@ -57,15 +87,13 @@ class DataTable extends StatelessWidget {
     // Calculate column widths.
     final colCount = columns.length;
     final widths = List<int>.filled(colCount, 0);
-    for (var i = 0; i < colCount; i++) {
-      widths[i] = columns[i].length;
+    _measureCells(_headerCells, widths);
+    for (final row in _cellRows) {
+      _measureCells(row, widths);
     }
-    for (final row in rows) {
-      for (var i = 0; i < colCount && i < row.length; i++) {
-        if (row[i].length > widths[i]) {
-          widths[i] = row[i].length;
-        }
-      }
+    _expandWidthsForSpans(_headerCells, widths);
+    for (final row in _cellRows) {
+      _expandWidthsForSpans(row, widths);
     }
 
     final chars = _borderChars();
@@ -74,27 +102,36 @@ class DataTable extends StatelessWidget {
     // Build a horizontal rule line.
     String buildHRule(String h, String cross, String? left, String? right) {
       final parts = <String>[];
-      if (left != null) parts.add(left);
+      if (left != null) parts.add('$left$h');
       for (var i = 0; i < colCount; i++) {
         parts.add(h * widths[i]);
         if (i < colCount - 1) {
           parts.add('$h$cross$h');
         }
       }
-      if (right != null) parts.add(right);
+      if (right != null) parts.add('$h$right');
       return parts.join();
     }
 
     // Build a content row (header or data).
-    Widget buildRow(List<String> values, Style textStyle) {
+    Widget buildRow(List<DataTableCell> values, Style textStyle) {
       final cells = <Widget>[];
       if (hasOuterBorder) {
         cells.add(Text('${chars.v} ', style: bStyle));
       }
-      for (var i = 0; i < colCount; i++) {
-        final value = i < values.length ? values[i] : '';
-        cells.add(Text(value.padRight(widths[i]), style: textStyle));
-        if (i < colCount - 1) {
+      var column = 0;
+      var cellIndex = 0;
+      while (column < colCount) {
+        final cell = cellIndex < values.length
+            ? values[cellIndex]
+            : const DataTableCell('');
+        final span = cell.columnSpan.clamp(1, colCount - column);
+        final width = _spannedWidth(widths, column, span);
+        final value = _align(cell.value, width, cell.textAlign);
+        cells.add(Text(value, style: cell.style ?? textStyle));
+        column += span;
+        cellIndex++;
+        if (column < colCount) {
           cells.add(Text(' ${chars.v} ', style: bStyle));
         }
       }
@@ -117,7 +154,7 @@ class DataTable extends StatelessWidget {
     }
 
     // Header row.
-    children.add(buildRow(columns, hStyle));
+    children.add(buildRow(_headerCells, hStyle));
 
     // Header separator.
     children.add(
@@ -133,7 +170,7 @@ class DataTable extends StatelessWidget {
     );
 
     // Data rows.
-    for (final row in rows) {
+    for (final row in _cellRows) {
       children.add(buildRow(row, cStyle));
     }
 
@@ -192,6 +229,78 @@ class DataTable extends StatelessWidget {
       ),
     };
   }
+
+  static void _measureCells(List<DataTableCell> cells, List<int> widths) {
+    var column = 0;
+    for (final cell in cells) {
+      if (column >= widths.length) break;
+      if (cell.columnSpan == 1 && cell.value.length > widths[column]) {
+        widths[column] = cell.value.length;
+      }
+      column += cell.columnSpan;
+    }
+  }
+
+  static void _expandWidthsForSpans(
+    List<DataTableCell> cells,
+    List<int> widths,
+  ) {
+    var column = 0;
+    for (final cell in cells) {
+      if (column >= widths.length) break;
+      final span = cell.columnSpan.clamp(1, widths.length - column);
+      final available = _spannedWidth(widths, column, span);
+      final deficit = cell.value.length - available;
+      if (deficit > 0) {
+        widths[column + span - 1] += deficit;
+      }
+      column += span;
+    }
+  }
+
+  static int _spannedWidth(List<int> widths, int start, int span) {
+    var width = 0;
+    for (var i = 0; i < span; i++) {
+      width += widths[start + i];
+    }
+    // A span consumes the padding and separator columns that would otherwise
+    // appear between its covered columns.
+    return width + (span - 1) * 3;
+  }
+
+  static String _align(String value, int width, TextAlign alignment) {
+    final remaining = width - value.length;
+    if (remaining <= 0) return value;
+    return switch (alignment) {
+      TextAlign.right => '${' ' * remaining}$value',
+      TextAlign.center =>
+        '${' ' * (remaining ~/ 2)}$value${' ' * (remaining - remaining ~/ 2)}',
+      TextAlign.left || TextAlign.justify => value.padRight(width),
+    };
+  }
+}
+
+/// Structured content for a [DataTable.cells] table.
+final class DataTableCell {
+  /// Creates a table cell.
+  const DataTableCell(
+    this.value, {
+    this.columnSpan = 1,
+    this.textAlign = TextAlign.left,
+    this.style,
+  }) : assert(columnSpan > 0);
+
+  /// Cell text.
+  final String value;
+
+  /// Number of logical columns consumed by this cell.
+  final int columnSpan;
+
+  /// Horizontal alignment inside the combined cell width.
+  final TextAlign textAlign;
+
+  /// Optional style overriding the table's header or body style.
+  final Style? style;
 }
 
 /// Border style for [DataTable].

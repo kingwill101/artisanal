@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+
+- Added `ScreenMode.fixed` and `FixedViewport` for rendering into an arbitrary
+  primary-screen rectangle without clearing surrounding terminal content.
+- Added world-coordinate canvas shapes (`CanvasLine`,
+  `CanvasRectangle`, `CanvasCircle`, and `CanvasPoints`) backed by the existing
+  braille chart canvas.
+- Added an `uv-effects` TUI example showing the low-level
+  `Canvas` -> `BufferRenderSink` -> terminal effects pipeline.
+
+### Changed
+
+- Routed fixed viewports through the UV renderer with clipped row and column
+  addressing, viewport-scoped clears, and preservation of surrounding primary
+  screen content.
+- Reset fullscreen UV diff state whenever terminal geometry changes so a frame
+  is never compared against cells from the previous width.
+
+### Fixed
+
+- Invalidate cached remote-plugin kernel snapshots when the active Dart SDK
+  changes, avoiding invalid SDK hash failures after SDK upgrades.
+- Fixed horizontal downsizing artifacts by forcing a clean repaint after the
+  screen buffer shrinks and disabling geometry-sensitive scroll operations
+  during resize.
+- Kept inline and fixed-viewport cleanup bounded to the rows and columns owned
+  by the application.
+
 ## 0.4.0
 
 ### Added

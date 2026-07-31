@@ -1,0 +1,6 @@
+**/.dart_tool/
+**/.vscode/
+**/build/
+example/**/traces/
+example/github_cli/web/*.dill
+example/github_cli/web/*.wasm

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+### Changed
+
+- Updated the supported Artisanal workspace releases to `artisanal` 0.5.x,
+  `artisanal_widgets` 0.3.x, and `ultraviolet` 0.5.x.
+
 ## 0.2.0
 
 ### Changed

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+
+- Added per-cell diff policies for always-redrawn cells, externally owned
+  skipped cells, and content with an explicitly forced terminal width.
+
+### Changed
+
+- Added row-level routing for cells that require explicit diff semantics while
+  preserving the tile-based fast path for ordinary dirty rows.
+
+### Fixed
+
+- Fixed wide-cell trailing cleanup in the line-oriented diff traversal,
+  including styled wide-glyph shrink handling.
+- Prevented cursor movement optimizations from overwriting cells marked as
+  externally owned or crossing the trailing region of a wide glyph.
+
 ## 0.4.0
 
 ### Performance

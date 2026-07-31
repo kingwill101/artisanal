@@ -1,7 +1,8 @@
 import 'package:artisanal/src/terminal/ansi.dart';
 import 'package:artisanal/src/terminal/terminal_base.dart';
 import 'package:artisanal/src/tui/renderer.dart';
-import 'package:artisanal/src/tui/program.dart' show ScreenMode, UiAnchor;
+import 'package:artisanal/src/tui/program.dart'
+    show FixedViewport, ProgramOptions, ScreenMode, UiAnchor;
 import 'package:test/test.dart';
 
 import 'inline_terminal_harness.dart';
@@ -684,6 +685,74 @@ void main() {
     });
   });
 
+  group('UltravioletTuiRenderer fixed viewport mode', () {
+    test('offsets rows and columns without clearing surrounding content', () {
+      final terminal = StringTerminal(terminalWidth: 20, terminalHeight: 10);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(
+          fps: 100000,
+          altScreen: false,
+          screenMode: ScreenMode.fixed,
+          fixedViewport: FixedViewport(x: 4, y: 2, width: 6, height: 3),
+        ),
+      );
+
+      renderer.render('hello');
+
+      expect(renderer.screenBuffer?.width(), 6);
+      expect(renderer.screenBuffer?.height(), 3);
+      expect(terminal.output, contains(Ansi.cursorTo(3, 5)));
+      expect(terminal.output, isNot(contains(Ansi.altScreenEnter)));
+      expect(terminal.output, isNot(contains(Ansi.clearScreen)));
+      expect(terminal.output, isNot(contains(Ansi.clearLine)));
+    });
+
+    test('clips a viewport that extends beyond the terminal', () {
+      final terminal = StringTerminal(terminalWidth: 8, terminalHeight: 5);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(
+          fps: 100000,
+          altScreen: false,
+          screenMode: ScreenMode.fixed,
+          fixedViewport: FixedViewport(x: 6, y: 3, width: 20, height: 20),
+        ),
+      );
+
+      renderer.render('abcdef');
+
+      expect(renderer.screenBuffer?.width(), 2);
+      expect(renderer.screenBuffer?.height(), 2);
+      expect(terminal.output, contains(Ansi.cursorTo(4, 7)));
+    });
+
+    test('requires viewport geometry and preserves it through copyWith', () {
+      expect(
+        () => TuiRendererOptions(screenMode: ScreenMode.fixed),
+        throwsA(isA<AssertionError>()),
+      );
+
+      const viewport = FixedViewport(x: 2, y: 3, width: 10, height: 4);
+      final options = const ProgramOptions(
+        screenMode: ScreenMode.fixed,
+        fixedViewport: viewport,
+      ).copyWith(fps: 30);
+
+      expect(options.effectiveScreenMode, ScreenMode.fixed);
+      expect(options.fixedViewport, same(viewport));
+
+      final clearedNullable = const ProgramOptions(
+        screenMode: ScreenMode.fixed,
+        fixedViewport: viewport,
+        startupTitle: 'temporary',
+      ).withoutStartupTitle();
+      expect(clearedNullable.startupTitle, isNull);
+      expect(clearedNullable.effectiveScreenMode, ScreenMode.fixed);
+      expect(clearedNullable.fixedViewport, same(viewport));
+    });
+  });
+
   group('TuiRendererOptions.isInline', () {
     test('returns true for ScreenMode.inline', () {
       const options = TuiRendererOptions(screenMode: ScreenMode.inline);
@@ -698,6 +767,15 @@ void main() {
     test('returns false for ScreenMode.fullScreen', () {
       const options = TuiRendererOptions(screenMode: ScreenMode.fullScreen);
       expect(options.isInline, isFalse);
+    });
+
+    test('fixed viewport is bounded but not anchored inline', () {
+      const options = TuiRendererOptions(
+        screenMode: ScreenMode.fixed,
+        fixedViewport: FixedViewport(x: 0, y: 0, width: 10, height: 5),
+      );
+      expect(options.isInline, isFalse);
+      expect(options.isBounded, isTrue);
     });
   });
 }

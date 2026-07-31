@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+
+- Added `MonthlyCalendar` with selected, today, adjacent-month, and marker
+  styling.
+- Added `Shadow` presets and `CellFilter` for applying UV buffer effects to a
+  widget subtree.
+- Added structured `DataTableCell` content with column spans, alignment, and
+  per-cell styles through `DataTable.cells`.
+- Added `example/widget_features` demonstrating fixed viewports, shadows,
+  calendars, table spans, filters, and canvas shapes together.
+- Added `example/uv_effects` demonstrating single and composed UV effects on
+  ordinary widget subtrees through `CellFilter`.
+- Added `example/inline_build_monitor`, a responsive bottom-pinned build
+  dashboard with staged progress, streaming logs, native scrollback, and
+  interactive pause, rebuild, and failure controls.
+
+### Changed
+
+- Updated the feature examples and package constraints for `artisanal` 0.5.x
+  and the new UV rendering surface.
+
 ## 0.2.2
 
 ### Changed
@@ -20,7 +43,7 @@
 
 ### Added
 
-- Added a widget-based `flutter_cli_port` example that ports the Ratatui
+- Added a widget-based `flutter_cli_port` example that ports the Rust
   `flutter-cli` dashboard onto Artisanal Widgets and the Artisanal command
   runner.
 - Added an inline widget dashboard example for bottom-pinned non-alt-screen

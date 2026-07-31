@@ -164,6 +164,7 @@ export 'view.dart'
 export 'program.dart'
     show
         ScreenMode,
+        FixedViewport,
         UiAnchor,
         ProgramHostResolver,
         ProgramHostBinding,

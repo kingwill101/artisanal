@@ -117,17 +117,17 @@ void main() {
   print('');
   print(
     'Phase 1 (full-buffer): '
-    '${phase1Frames} frames in ${phase1Elapsed.inMilliseconds}ms — '
+    '$phase1Frames frames in ${phase1Elapsed.inMilliseconds}ms — '
     '${_fmt(phase1CellsPerSec)} cells/s',
   );
   print(
     'Phase 2 (patch 10%):   '
-    '${phase2Frames} frames in ${phase2Elapsed.inMilliseconds}ms — '
+    '$phase2Frames frames in ${phase2Elapsed.inMilliseconds}ms — '
     '${_fmt(phase2CellsPerSec)} cells/s',
   );
   print(
     'Phase 3 (style-heavy): '
-    '${phase3Frames} frames in ${phase3Elapsed.inMilliseconds}ms',
+    '$phase3Frames frames in ${phase3Elapsed.inMilliseconds}ms',
   );
   print('');
   print('Total rendered: ${sink.bytesWritten} bytes');

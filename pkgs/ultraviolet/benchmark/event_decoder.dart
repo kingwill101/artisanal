@@ -215,29 +215,29 @@ void main() {
   print('');
   print(
     'Phase 1 (ASCII keys):     ${_fmt(phase1EventsPerSec)} bytes/s  '
-    '(${phase1Count} events)',
+    '($phase1Count events)',
   );
   print(
     'Phase 2 (CSI cursor):     ${_fmt(phase2EventsPerSec)} bytes/s  '
-    '(${phase2Count} events)',
+    '($phase2Count events)',
   );
   print(
     'Phase 3 (SGR mouse):      ${_fmt(phase3EventsPerSec)} bytes/s  '
-    '(${phase3Count} events)',
+    '($phase3Count events)',
   );
   print(
     'Phase 4 (OSC):            ${_fmt(phase4EventsPerSec)} bytes/s  '
-    '(${phase4Count} events)',
+    '($phase4Count events)',
   );
   print(
     'Phase 5 (Kitty keyboard): ${_fmt(phase5EventsPerSec)} bytes/s  '
-    '(${phase5Count} events)',
+    '($phase5Count events)',
   );
   print(
     'Phase 6 (mixed):          '
     '${phase6Iterations * mixedData.length} bytes in '
     '${phase6Elapsed.inMilliseconds}ms  '
-    '(${phase6Count} events)',
+    '($phase6Count events)',
   );
   print('');
   print('Total check value: $totalCheck');

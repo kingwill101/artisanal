@@ -76,7 +76,7 @@ class _DataTableShowcaseState extends w.State<DataTableShowcase> {
                   ['artisanal', 'Dart', '142'],
                   ['ink', 'TypeScript', '26k'],
                   ['bubbletea', 'Go', '28k'],
-                  ['ratatui', 'Rust', '11k'],
+                  ['crossterm', 'Rust', '4k'],
                 ],
                 borderStyle: _styles[_styleIndex],
               ),
@@ -107,6 +107,34 @@ class _DataTableShowcaseState extends w.State<DataTableShowcase> {
                   ['5678', 'user', '8.7', '2.1', 'code-server'],
                   ['9012', 'user', '3.2', '1.8', 'bash'],
                   ['3456', 'root', '0.1', '0.3', 'sshd'],
+                ],
+                borderStyle: _styles[_styleIndex],
+              ),
+              w.Divider(width: 60),
+
+              // -- Structured cells and column spans --
+              w.Text('Column Spans and Alignment', style: theme.titleMedium),
+              w.DataTable.cells(
+                columns: const [
+                  w.DataTableCell('Service'),
+                  w.DataTableCell('Status'),
+                  w.DataTableCell('Workers'),
+                ],
+                rows: [
+                  const [w.DataTableCell('Production', columnSpan: 3)],
+                  const [
+                    w.DataTableCell('quotes'),
+                    w.DataTableCell('healthy'),
+                    w.DataTableCell('12', textAlign: w.TextAlign.right),
+                  ],
+                  [
+                    const w.DataTableCell('trades'),
+                    w.DataTableCell(
+                      'degraded',
+                      style: theme.bodyMedium.copy()..foreground(theme.warning),
+                    ),
+                    const w.DataTableCell('3', textAlign: w.TextAlign.right),
+                  ],
                 ],
                 borderStyle: _styles[_styleIndex],
               ),

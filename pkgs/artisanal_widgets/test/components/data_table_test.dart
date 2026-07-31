@@ -1,4 +1,5 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
+import 'package:artisanal/style.dart' show Style;
 import 'package:test/test.dart';
 
 void main() {
@@ -121,6 +122,85 @@ void main() {
       // 'Bobby' is longer than 'Name', so column width should accommodate.
       expect(tester.find.text('Bobby'), isTrue);
       expect(tester.find.text('Al'), isTrue);
+    });
+
+    test(
+      'structured cells span columns without an internal separator',
+      () async {
+        final tester = WidgetTester(screenWidth: 40);
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(
+          DataTable.cells(
+            columns: const [
+              DataTableCell('A'),
+              DataTableCell('B'),
+              DataTableCell('C'),
+            ],
+            rows: const [
+              [DataTableCell('summary', columnSpan: 2), DataTableCell('3')],
+            ],
+          ),
+        );
+
+        final row = Style.stripAnsi(
+          tester.view
+              .split('\n')
+              .firstWhere((line) => line.contains('summary')),
+        );
+        expect(row, contains('summary'));
+        expect(row.split('│'), hasLength(2));
+      },
+    );
+
+    test('structured cells support alignment and per-cell style', () async {
+      final tester = WidgetTester(screenWidth: 40);
+      addTearDown(() => tester.dispose());
+      final highlighted = Style()..bold();
+
+      await tester.pumpWidget(
+        DataTable.cells(
+          columns: const [DataTableCell('Name'), DataTableCell('Value')],
+          rows: [
+            [
+              const DataTableCell('x'),
+              DataTableCell(
+                '7',
+                textAlign: TextAlign.right,
+                style: highlighted,
+              ),
+            ],
+          ],
+        ),
+      );
+
+      expect(tester.find.text('7'), isTrue);
+      expect(tester.view, contains('\x1b[1m'));
+    });
+
+    test('rounded mixed-span rows keep every border at one width', () async {
+      final tester = WidgetTester(screenWidth: 40);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        DataTable.cells(
+          columns: const [DataTableCell('Task'), DataTableCell('State')],
+          rows: const [
+            [DataTableCell('Renderer', columnSpan: 2)],
+            [DataTableCell('diff'), DataTableCell('ready')],
+          ],
+          borderStyle: DataTableBorderStyle.rounded,
+        ),
+      );
+
+      final lines = Style.stripAnsi(tester.view)
+          .split('\n')
+          .where((line) => line.trim().isNotEmpty)
+          .map((line) => line.trimRight())
+          .toList();
+      expect(lines.map((line) => line.length).toSet(), hasLength(1));
+      expect(lines.first, startsWith('╭─'));
+      expect(lines.first, endsWith('─╮'));
     });
 
     group('border styles', () {

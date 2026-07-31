@@ -169,6 +169,13 @@ Run the widget reference example from the workspace root:
 dart run pkgs/artisanal_widgets/example/inline_status_dashboard/main.dart
 ```
 
+For a fuller build-monitor demonstration with responsive layout, staged
+progress, live metrics, and interactive controls:
+
+```bash
+dart run pkgs/artisanal_widgets/example/inline_build_monitor/main.dart
+```
+
 ## Rules for App Code
 
 Do:
@@ -256,6 +263,7 @@ The widget example lives in:
 
 ```text
 pkgs/artisanal_widgets/example/inline_status_dashboard/main.dart
+pkgs/artisanal_widgets/example/inline_build_monitor/main.dart
 ```
 
 ## Mental Model

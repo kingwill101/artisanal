@@ -38,6 +38,7 @@ export 'positioned.dart';
 export 'rich_text.dart';
 export 'row.dart';
 export 'shrink_wrap.dart';
+export 'shadow.dart';
 export 'sized_box.dart';
 export 'spacer.dart';
 export 'spacing.dart';

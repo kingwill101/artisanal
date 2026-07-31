@@ -373,6 +373,8 @@ final class UvTerminalRenderer extends TerminalRenderer {
       <_DeferredRetainedGraphic>[];
   final List<_DeferredDisplayPayload> _deferredDisplayPayloads =
       <_DeferredDisplayPayload>[];
+  final Set<int> _alwaysUpdateCells = <int>{};
+  int _alwaysUpdateWidth = 0;
   Buffer? _curbuf;
   String _lastFlushedOutput = '';
   late final Screen _screen;
@@ -754,6 +756,48 @@ final class UvTerminalRenderer extends TerminalRenderer {
     }
   }
 
+  void _markAlwaysUpdateCells(Buffer newbuf) {
+    final width = newbuf.width();
+    final height = newbuf.height();
+    if (_alwaysUpdateWidth != width) {
+      _alwaysUpdateCells.clear();
+      _alwaysUpdateWidth = width;
+    }
+
+    // Previously discovered cells must dirty their row on every frame. This
+    // keeps the ordinary path proportional to dirty rows instead of adding a
+    // full-buffer scan to every render.
+    if (_alwaysUpdateCells.isNotEmpty) {
+      for (final index in _alwaysUpdateCells.toList(growable: false)) {
+        final y = index ~/ width;
+        final x = index - y * width;
+        final cell = y < height ? newbuf.line(y)?.at(x) : null;
+        if (cell?.diffOption.isAlwaysUpdate ?? false) {
+          newbuf.touch(x, y);
+        } else {
+          _alwaysUpdateCells.remove(index);
+        }
+      }
+    }
+
+    final dirtyRows = newbuf.dirtyRows;
+    final scanAll = dirtyRows.isEmpty;
+    for (var y = 0; y < height; y++) {
+      if (!scanAll && (y >= dirtyRows.length || !dirtyRows[y])) continue;
+      final line = newbuf.line(y);
+      if (line == null) continue;
+      for (var x = 0; x < line.length; x++) {
+        final index = y * width + x;
+        if (line.at(x)?.diffOption.isAlwaysUpdate ?? false) {
+          _alwaysUpdateCells.add(index);
+          newbuf.touch(x, y);
+        } else {
+          _alwaysUpdateCells.remove(index);
+        }
+      }
+    }
+  }
+
   int _touched(Buffer buf) {
     if (buf.dirtyRows.isEmpty) return buf.height();
     var n = 0;
@@ -950,6 +994,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     // Without this pass the tile-based diff would skip those cells, leaving
     // artifacts on screen.
     _markStaleCells(newbuf);
+    _markAlwaysUpdateCells(newbuf);
 
     final touchedLines = _touched(newbuf);
     if (!_clear && touchedLines == 0) {
@@ -1082,7 +1127,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     _cur.y = y;
   }
 
-  void _move(Buffer? newbuf, int x, int y) {
+  void _move(Buffer? newbuf, int x, int y, {bool allowOverwrite = true}) {
     var width = 0;
     var height = 0;
     if (_curbuf != null) {
@@ -1113,7 +1158,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
 
     if (x == _cur.x && y == _cur.y) return;
 
-    _moveCursor(newbuf, x, y, true);
+    _moveCursor(newbuf, x, y, allowOverwrite);
   }
 
   // --- Pen / cell writing ---------------------------------------------------
@@ -1232,6 +1277,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
   }
 
   void _putAttrCell(Buffer? newbuf, Cell? cell) {
+    if (cell?.diffOption.isSkip ?? false) return;
     if (cell != null && cell.isZero) return;
 
     if (_atPhantom) {
@@ -1243,9 +1289,9 @@ final class UvTerminalRenderer extends TerminalRenderer {
 
     if (cell?.drawable != null) {
       final drawable = cell!.drawable as Drawable;
-      drawable.draw(_screen, rect(_cur.x, _cur.y, cell.width, 1));
+      drawable.draw(_screen, rect(_cur.x, _cur.y, cell.outputWidth, 1));
     } else {
-      final rawWidth = cell?.width;
+      final rawWidth = cell?.outputWidth;
       if (rawWidth == 0) return;
 
       final cellWidth = (rawWidth == null || rawWidth < 0) ? 1 : rawWidth;
@@ -1570,6 +1616,11 @@ final class UvTerminalRenderer extends TerminalRenderer {
         for (var y = tile.minY; y < tile.maxY; y++) {
           if (wholeRowHandled[y]) continue;
           if (y >= newbuf.dirtyRows.length || !newbuf.dirtyRows[y]) continue;
+          if (_requiresCellDiff(newbuf, y)) {
+            _transformLineWithCellDiff(newbuf, y);
+            wholeRowHandled[y] = true;
+            continue;
+          }
           if (_shouldTransformWholeRowInTile(newbuf, density, y)) {
             _transformLine(newbuf, y, segmented: false);
             wholeRowHandled[y] = true;
@@ -1616,6 +1667,10 @@ final class UvTerminalRenderer extends TerminalRenderer {
   }
 
   void _transformLine(Buffer newbuf, int y, {bool segmented = true}) {
+    if (_requiresCellDiff(newbuf, y)) {
+      _transformLineWithCellDiff(newbuf, y);
+      return;
+    }
     final spans = segmented ? newbuf.dirtyBitSpans(y) : const <DirtySpan>[];
     if (spans.length > 1) {
       if (_canMergeAdjacentDirtySpans(newbuf, y, spans)) {
@@ -1641,6 +1696,135 @@ final class UvTerminalRenderer extends TerminalRenderer {
     }
 
     _transformWholeLine(newbuf, y);
+  }
+
+  bool _requiresCellDiff(Buffer newbuf, int y) {
+    final newLine = newbuf.line(y);
+    if (newLine == null) return false;
+    final oldLine = _curbuf != null && y < _curbuf!.height()
+        ? _curbuf!.line(y)
+        : null;
+
+    for (var x = 0; x < newLine.length; x++) {
+      final current = newLine.at(x);
+      if (current == null) continue;
+      if (!current.diffOption.isNormal) return true;
+
+      final previous = oldLine?.at(x);
+      if (previous == null || _cellEqual(previous, current)) continue;
+      if (current.outputWidth > 1 && current.content.contains('\uFE0F')) {
+        return true;
+      }
+      if (previous.outputWidth > current.outputWidth &&
+          _styleIsVisibleOnBlank(previous.style)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _transformLineWithCellDiff(Buffer newbuf, int y) {
+    if (_curbuf == null) return;
+    final newLine = newbuf.line(y);
+    if (newLine == null) return;
+    final oldLine = y < _curbuf!.height() ? _curbuf!.line(y) : null;
+    final length = newLine.length;
+
+    var x = 0;
+    while (x < length) {
+      final current = newLine.at(x)!;
+      final previous = oldLine?.at(x) ?? Cell.emptyCell();
+      final option = current.diffOption;
+      final currentWidth = current.outputWidth > 0 ? current.outputWidth : 1;
+
+      if (option.isSkip) {
+        x++;
+        continue;
+      }
+
+      if (option.isForcedWidth) {
+        if (!_cellEqual(previous, current)) {
+          _emitDiffCell(newbuf, current, x, y);
+        }
+        x += currentWidth;
+        continue;
+      }
+
+      final changed = option.isAlwaysUpdate || !_cellEqual(previous, current);
+      if (!changed) {
+        x += currentWidth;
+        continue;
+      }
+
+      _emitDiffCell(newbuf, current, x, y);
+      final previousWidth = previous.outputWidth > 0 ? previous.outputWidth : 1;
+
+      if (currentWidth > 1 && current.content.contains('\uFE0F')) {
+        var trailing = x + 1;
+        final trailingEnd = (x + currentWidth).clamp(0, length);
+        while (trailing < trailingEnd) {
+          final trailingCell = newLine.at(trailing)!;
+          final trailingWidth = trailingCell.outputWidth > 0
+              ? trailingCell.outputWidth
+              : 1;
+          if (!trailingCell.diffOption.isSkip &&
+              !_cellEqual(oldLine?.at(trailing), trailingCell)) {
+            _emitDiffCell(newbuf, trailingCell, trailing, y);
+          }
+          trailing += trailingWidth;
+        }
+        x = trailingEnd;
+        continue;
+      }
+
+      if (currentWidth > 1) {
+        x += currentWidth;
+        continue;
+      }
+
+      if (previousWidth > currentWidth &&
+          _styleIsVisibleOnBlank(previous.style)) {
+        var trailing = x + 1;
+        var trailingEnd = (x + previousWidth).clamp(0, length);
+        while (trailing < trailingEnd) {
+          final trailingCell = newLine.at(trailing)!;
+          final trailingWidth = trailingCell.outputWidth > 0
+              ? trailingCell.outputWidth
+              : 1;
+          trailingEnd =
+              (trailingEnd > trailing + trailingWidth
+                      ? trailingEnd
+                      : trailing + trailingWidth)
+                  .clamp(0, length);
+          if (!trailingCell.diffOption.isSkip) {
+            _emitDiffCell(newbuf, trailingCell, trailing, y);
+          }
+          trailing += trailingWidth;
+        }
+        x = trailingEnd;
+        continue;
+      }
+
+      x++;
+    }
+
+    _syncRenderedRange(oldLine, newLine, 0, length);
+  }
+
+  void _emitDiffCell(Buffer newbuf, Cell cell, int x, int y) {
+    _move(newbuf, x, y, allowOverwrite: false);
+    // UV represents the covered half of a wide glyph as a zero-width cell.
+    // A diff emission at that position must be a real blank so the terminal
+    // clears the physical column.
+    _putCell(newbuf, cell.isZero ? Cell.emptyCell() : cell);
+  }
+
+  static bool _styleIsVisibleOnBlank(UvStyle style) {
+    const visibleAttrs =
+        Attr.reverse | Attr.blink | Attr.rapidBlink | Attr.strikethrough;
+    return style.bg != null ||
+        style.underline != UnderlineStyle.none ||
+        (style.attrs & visibleAttrs) != 0;
   }
 
   bool _canMergeAdjacentDirtySpans(

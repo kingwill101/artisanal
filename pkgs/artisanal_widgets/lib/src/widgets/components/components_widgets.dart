@@ -66,6 +66,7 @@ export 'decision_card.dart';
 export 'accent_panel.dart';
 export 'command_palette.dart';
 export 'data_table.dart';
+export 'monthly_calendar.dart';
 export 'tree_view.dart';
 export 'metric_display.dart';
 export 'step_indicator.dart';

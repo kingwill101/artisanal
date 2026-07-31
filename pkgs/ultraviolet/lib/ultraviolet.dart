@@ -41,6 +41,7 @@ export 'src/uv/buffer.dart' show Buffer, Line, LineData;
 export 'src/uv/cell.dart'
     show
         Cell,
+        CellDiffOption,
         Link,
         UvStyle,
         UvColor,

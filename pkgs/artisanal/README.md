@@ -31,7 +31,7 @@ Build everything from rich command-line tools to complex interactive TUI applica
 
 ```yaml
 dependencies:
-  artisanal: ^0.2.0
+  artisanal: ^0.5.0
 ```
 
 > **Note**: This package uses workspace resolution. Use a path or git reference in standalone projects.
@@ -270,6 +270,8 @@ await runProgram(
 - 2D cell buffer with styled cells
 - Diff-based terminal updates (minimal redraws)
 - Layer composition and hit-testing
+- Reusable color, CRT, scanline, distortion, and persistence effects through
+  `BufferRenderSink`
 - Mouse support and focus events
 - Graphics: Kitty, Sixel, iTerm2, half-block drawing
 
@@ -293,4 +295,5 @@ See the `example/` directory for comprehensive demos:
 - `lipgloss_table.dart` – Styled tables
 - `log_viewer_demo.dart` – Monitoring dashboard
 - `command_center_demo.dart` – Multi-panel layouts
-- UV-specific demos now live in `pkgs/ultraviolet/example/`
+- `tui/examples/uv-effects/main.dart` – Applying UV effects to a canvas buffer
+- Additional engine-specific demos live in `pkgs/ultraviolet/example/`

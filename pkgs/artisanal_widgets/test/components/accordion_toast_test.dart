@@ -19,7 +19,7 @@ void main() {
         expect(tester.locateText('Section'), isNotNull);
       });
 
-      test('collapsed shows > chevron', () async {
+      test('collapsed shows right-pointing chevron', () async {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
@@ -27,7 +27,7 @@ void main() {
           Accordion(title: 'Section', child: Text('Body')),
         );
 
-        expect(tester.locateText('>'), isNotNull);
+        expect(tester.locateText('▸'), isNotNull);
       });
 
       test('collapsed does NOT show child content', () async {
@@ -41,7 +41,7 @@ void main() {
         expect(tester.locateText('Hidden Body'), isNull);
       });
 
-      test('expanded shows v chevron', () async {
+      test('expanded shows down-pointing chevron', () async {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
@@ -49,7 +49,7 @@ void main() {
           Accordion(title: 'Section', expanded: true, child: Text('Body')),
         );
 
-        expect(tester.locateText('v'), isNotNull);
+        expect(tester.locateText('▾'), isNotNull);
       });
 
       test('expanded shows child content', () async {

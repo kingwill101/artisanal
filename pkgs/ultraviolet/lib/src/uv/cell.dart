@@ -28,6 +28,71 @@ import '../unicode/width.dart';
 /// Underline style for terminal cells.
 enum UnderlineStyle { none, single, double, curly, dotted, dashed }
 
+/// Controls how a [Cell] participates in terminal-buffer diffing.
+///
+/// Most cells use [normal]. [skip] preserves terminal content owned by an
+/// external renderer, while [alwaysUpdate] redraws a cell even when its value
+/// is unchanged. [forcedWidth] is intended for escape-sequence-backed content
+/// whose terminal width cannot be inferred from its text.
+final class CellDiffOption {
+  const CellDiffOption._(this._kind, this.width);
+
+  /// Uses normal value-based diffing.
+  static const normal = CellDiffOption._(_CellDiffKind.normal, null);
+
+  /// Never writes this cell during a terminal-buffer diff.
+  static const skip = CellDiffOption._(_CellDiffKind.skip, null);
+
+  /// Writes this cell on every rendered frame.
+  static const alwaysUpdate = CellDiffOption._(
+    _CellDiffKind.alwaysUpdate,
+    null,
+  );
+
+  /// Uses [width] for diff traversal and cursor tracking.
+  factory CellDiffOption.forcedWidth(int width) {
+    if (width <= 0) {
+      throw ArgumentError.value(width, 'width', 'must be greater than zero');
+    }
+    return CellDiffOption._(_CellDiffKind.forcedWidth, width);
+  }
+
+  final _CellDiffKind _kind;
+
+  /// The forced terminal width, or `null` for non-forced options.
+  final int? width;
+
+  /// Whether normal value-based diffing is enabled.
+  bool get isNormal => _kind == _CellDiffKind.normal;
+
+  /// Whether terminal output for this cell is suppressed.
+  bool get isSkip => _kind == _CellDiffKind.skip;
+
+  /// Whether this cell is redrawn even when unchanged.
+  bool get isAlwaysUpdate => _kind == _CellDiffKind.alwaysUpdate;
+
+  /// Whether [width] overrides the measured cell width.
+  bool get isForcedWidth => _kind == _CellDiffKind.forcedWidth;
+
+  // Keep this exact rather than hashed because it is embedded in [PackedCell]
+  // and therefore participates in equality, not just hash bucketing.
+  int get _fingerprint => _kind.index | ((width ?? 0) << 2);
+
+  @override
+  bool operator ==(Object other) =>
+      other is CellDiffOption && other._kind == _kind && other.width == width;
+
+  @override
+  int get hashCode => _fingerprint;
+
+  @override
+  String toString() => isForcedWidth
+      ? 'CellDiffOption.forcedWidth($width)'
+      : 'CellDiffOption.${_kind.name}';
+}
+
+enum _CellDiffKind { normal, skip, alwaysUpdate, forcedWidth }
+
 /// Terminal hyperlink metadata (OSC 8).
 ///
 /// Carries a target [url] and optional [params] for terminals supporting
@@ -237,6 +302,7 @@ final class Cell {
     String content = '',
     UvStyle style = const UvStyle(),
     Link link = const Link(),
+    this.diffOption = CellDiffOption.normal,
     this.drawable,
     int? width,
   }) {
@@ -254,6 +320,7 @@ final class Cell {
     required int contentValue,
     required int styleId,
     required int linkId,
+    this.diffOption = CellDiffOption.normal,
     this.drawable,
   }) : _style = style,
        _link = link,
@@ -273,6 +340,7 @@ final class Cell {
   int _contentValue = 0;
   int _styleId = 0;
   int _linkId = 0;
+  CellDiffOption diffOption;
   final Object _pooledContentToken = Object();
   final Object _linkFinalizerToken = Object();
 
@@ -311,6 +379,9 @@ final class Cell {
     _updatePackedContent();
   }
 
+  /// Width used by terminal diff traversal and cursor accounting.
+  int get outputWidth => diffOption.width ?? _width;
+
   Object? drawable;
 
   /// Returns a fixed-layout packed cell tuple for fast comparisons.
@@ -327,7 +398,8 @@ final class Cell {
       word0:
           (_contentKind & _cellContentKindMask) |
           ((_width & _cellWidthMask) << _cellWidthShift) |
-          (contentLo << _packedContentShift),
+          (contentLo << _packedContentShift) |
+          (diffOption._fingerprint << _packedDiffOptionShift),
       word1: contentHi,
       word2: _styleId,
       word3: _linkId,
@@ -358,7 +430,10 @@ final class Cell {
   /// grapheme text.
   int get renderFingerprint => _mixHash(
     _mixHash(_mixHash(_contentKind, _contentValue), _width),
-    _mixHash(_mixHash(_styleId, _linkId), identityHashCode(drawable)),
+    _mixHash(
+      _mixHash(_styleId, _linkId),
+      _mixHash(diffOption._fingerprint, identityHashCode(drawable)),
+    ),
   );
 
   /// Whether this cell has no content, style, link, or drawable.
@@ -367,6 +442,7 @@ final class Cell {
       _width == 0 &&
       _styleId == 0 &&
       _linkId == 0 &&
+      diffOption.isNormal &&
       drawable == null;
 
   /// Whether this cell represents a plain space with no attributes.
@@ -375,6 +451,7 @@ final class Cell {
       _width == 1 &&
       _styleId == 0 &&
       _linkId == 0 &&
+      diffOption.isNormal &&
       drawable == null;
 
   /// Returns a copy of this cell.
@@ -393,6 +470,7 @@ final class Cell {
       contentValue: _contentValue,
       styleId: _styleId,
       linkId: _linkId,
+      diffOption: diffOption,
       drawable: drawable,
     );
   }
@@ -413,6 +491,7 @@ final class Cell {
       contentValue: 0,
       styleId: _styleId,
       linkId: _linkId,
+      diffOption: diffOption,
       drawable: drawable,
     );
   }
@@ -442,6 +521,7 @@ final class Cell {
     _width = other._width;
     _contentKind = other._contentKind;
     _contentValue = other._contentValue;
+    diffOption = other.diffOption;
     drawable = other.drawable;
     if (_contentKind == _CellContentKind.complex) {
       _graphemePool.retain(_contentValue);
@@ -465,6 +545,7 @@ final class Cell {
     _width = 1;
     _contentKind = _CellContentKind.space;
     _contentValue = 0;
+    diffOption = other.diffOption;
     drawable = other.drawable;
     if (_linkId != 0) {
       _linkRegistry.retain(_linkId);
@@ -478,6 +559,7 @@ final class Cell {
     _width = 1;
     _contentKind = _CellContentKind.space;
     _contentValue = 0;
+    diffOption = CellDiffOption.normal;
   }
 
   /// Releases any pooled grapheme content owned by this cell.
@@ -499,6 +581,7 @@ final class Cell {
     _link = const Link();
     _linkId = 0;
     drawable = null;
+    diffOption = CellDiffOption.normal;
     _width = 1;
     _contentKind = _CellContentKind.space;
     _contentValue = 0;
@@ -513,6 +596,7 @@ final class Cell {
     _link = const Link();
     _linkId = 0;
     drawable = null;
+    diffOption = CellDiffOption.normal;
     _width = 0;
     _contentKind = _CellContentKind.empty;
     _contentValue = 0;
@@ -527,6 +611,7 @@ final class Cell {
     contentValue: 0,
     styleId: 0,
     linkId: 0,
+    diffOption: CellDiffOption.normal,
   );
 
   /// Creates an empty placeholder cell with zero width and no attributes.
@@ -538,6 +623,7 @@ final class Cell {
     contentValue: 0,
     styleId: 0,
     linkId: 0,
+    diffOption: CellDiffOption.normal,
   );
 
   /// Creates a new cell from a grapheme, computing its display width.
@@ -613,12 +699,13 @@ final class Cell {
       other._contentValue == _contentValue &&
       other._width == _width &&
       other._styleId == _styleId &&
-      other._linkId == _linkId;
+      other._linkId == _linkId &&
+      other.diffOption == diffOption;
 
   @override
   int get hashCode => _mixHash(
     _mixHash(_mixHash(_contentKind, _contentValue), _width),
-    _mixHash(_styleId, _linkId),
+    _mixHash(_mixHash(_styleId, _linkId), diffOption._fingerprint),
   );
 
   void _setContent(String value) {
@@ -1032,6 +1119,7 @@ const int _cellContentKindMask = 0x3;
 const int _cellWidthShift = 2;
 const int _packedContentShift = 6;
 const int _contentValueBits = 32;
+const int _packedDiffOptionShift = _packedContentShift + _contentValueBits;
 const int _contentPackLoMask = (1 << _contentValueBits) - 1;
 
 int? _trySingleScalar(String value) {

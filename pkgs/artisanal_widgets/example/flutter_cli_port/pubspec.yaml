@@ -1,5 +1,5 @@
 name: flutter_cli_port
-description: Artisanal Widgets port of the Ratatui flutter-cli dashboard.
+description: Artisanal Widgets port of the Rust flutter-cli dashboard.
 publish_to: none
 resolution: workspace
 
@@ -11,8 +11,8 @@ executables:
   flutter_cli_port: main
 
 dependencies:
-  artisanal: ^0.4.0
-  artisanal_widgets: ^0.2.1
+  artisanal: ^0.5.0
+  artisanal_widgets: ^0.3.0
 
 dev_dependencies:
   test: ^1.28.0

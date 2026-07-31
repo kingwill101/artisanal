@@ -13,4 +13,15 @@ export 'core.dart'
         putText,
         sampleSeries;
 export 'braille.dart' show BrailleCanvas;
+export 'canvas_shapes.dart'
+    show
+        CanvasRange,
+        CanvasPoint,
+        CanvasShape,
+        CanvasPainter,
+        CanvasLine,
+        CanvasRectangle,
+        CanvasCircle,
+        CanvasPoints,
+        drawCanvasShapes;
 export 'palette.dart' show ChartRamp, uvColorFromHex, uvStyleFromHex;
