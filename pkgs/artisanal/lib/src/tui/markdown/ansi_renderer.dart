@@ -31,7 +31,7 @@ import '../../style/style.dart';
 import '../../style/color.dart';
 import '../../tui/bubbles/components/table.dart' as table_component;
 import '../../uv/wrap.dart' as uv_wrap;
-import 'backend.dart' as markdown_backend;
+import 'renderer.dart' show MarkdownRenderer;
 import 'syntax_highlighter.dart';
 import 'options.dart';
 import 'html_context.dart';
@@ -152,6 +152,9 @@ class AnsiRenderer implements NodeVisitor {
   /// Render state for HTML `<details>` elements normalized by the backend.
   final List<DetailsContext> _detailsStack = [];
 
+  /// Tracks whether the current element was handled by a custom block hook.
+  final List<bool> _handledElementStack = [];
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Table State
   // ─────────────────────────────────────────────────────────────────────────────
@@ -251,6 +254,7 @@ class AnsiRenderer implements NodeVisitor {
     _inParagraph = false;
     _paragraphBuffer.clear();
     _textStyleActive = false;
+    _handledElementStack.clear();
 
     for (final node in nodes) {
       node.accept(this);
@@ -321,9 +325,18 @@ class AnsiRenderer implements NodeVisitor {
   @override
   bool visitElementBefore(Element element) {
     _elementStack.add(element);
+    _handledElementStack.add(false);
 
     if (_insideCollapsedDetailsBody && element.tag != 'summary') {
       _elementStack.removeLast();
+      _handledElementStack.removeLast();
+      return false;
+    }
+
+    final customBlock = _renderCustomBlock(element);
+    if (customBlock != null) {
+      _handledElementStack[_handledElementStack.length - 1] = true;
+      _buffer.write(customBlock);
       return false;
     }
 
@@ -531,6 +544,8 @@ class AnsiRenderer implements NodeVisitor {
   @override
   void visitElementAfter(Element element) {
     _elementStack.removeLast();
+    final handled = _handledElementStack.removeLast();
+    if (handled) return;
 
     switch (element.tag) {
       case 'h1':
@@ -562,17 +577,17 @@ class AnsiRenderer implements NodeVisitor {
 
             if (effectiveWidth > 0) {
               final wrapped = _wrapText(content, effectiveWidth);
-              _activeBuffer.write(wrapped);
+              _activeBuffer.write(
+                _inBlockquote ? _applyBlockquotePrefix(wrapped) : wrapped,
+              );
             } else {
               _activeBuffer.write(content);
             }
           }
         }
+        _activeBuffer.write('\n');
         if (_inBlockquote) {
-          _buffer.write('\n');
           _blockquoteBlankLinePending = true;
-        } else {
-          _buffer.write('\n');
         }
         _lastWasBlock = true;
         break;
@@ -1862,6 +1877,40 @@ class AnsiRenderer implements NodeVisitor {
     });
   }
 
+  String? _renderCustomBlock(Element element) {
+    if (options.blockHandlers.isEmpty || !_isBlockElement(element.tag)) {
+      return null;
+    }
+
+    final context = MarkdownBlockContext(
+      element: element,
+      options: options,
+      renderMarkdown: (markdown, {int? width}) {
+        final renderer = MarkdownRenderer(
+          options: options.copyWith(width: width ?? options.width),
+        );
+        return renderer.renderToAnsi(markdown);
+      },
+    );
+
+    for (final handler in options.blockHandlers) {
+      final output = handler(context);
+      if (output != null) return output;
+    }
+
+    return null;
+  }
+
+  bool _isBlockElement(String tag) {
+    return switch (tag) {
+      'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6' => true,
+      'p' || 'blockquote' || 'pre' || 'ul' || 'ol' || 'li' => true,
+      'hr' || 'table' || 'thead' || 'tbody' || 'tfoot' || 'tr' => true,
+      'th' || 'td' || 'details' || 'figure' || 'section' || 'article' => true,
+      _ => false,
+    };
+  }
+
   /// Returns the currently active output buffer.
   ///
   /// When inside a table cell, returns [_currentCellBuffer].
@@ -1879,11 +1928,17 @@ class AnsiRenderer implements NodeVisitor {
   }
 
   void _ensureNewline() {
-    if (_buffer.isNotEmpty && !_buffer.toString().endsWith('\n')) {
-      _buffer.write('\n');
+    final buffer = _activeBuffer;
+    if (buffer.isNotEmpty && !buffer.toString().endsWith('\n')) {
+      buffer.write('\n');
     }
     if (_lastWasBlock && !_inBlockquote) {
-      _buffer.write('\n');
+      final inListItemBuffer =
+          _listItemStack.isNotEmpty &&
+          identical(buffer, _listItemStack.last.buffer);
+      if (!(inListItemBuffer && buffer.isEmpty)) {
+        buffer.write('\n');
+      }
       _lastWasBlock = false;
     } else if (_lastWasBlock) {
       // Inside a blockquote: blank lines between paragraph→list are
@@ -1893,7 +1948,7 @@ class AnsiRenderer implements NodeVisitor {
       final enteringNestedBlockquote =
           _elementStack.isNotEmpty && _elementStack.last.tag == 'blockquote';
       if (enteringNestedBlockquote) {
-        _buffer.write('\n');
+        buffer.write('\n');
       }
       _lastWasBlock = false;
     }
@@ -1990,6 +2045,5 @@ class _ListItemContext {
 /// print(styled);
 /// ```
 String markdownToAnsi(String markdown, {AnsiRendererOptions? options}) {
-  final nodes = markdown_backend.parseMarkdownNodes(markdown);
-  return AnsiRenderer(options: options).render(nodes);
+  return MarkdownRenderer(options: options).renderToAnsi(markdown);
 }

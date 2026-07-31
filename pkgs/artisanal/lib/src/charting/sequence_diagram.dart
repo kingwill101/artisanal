@@ -1056,6 +1056,7 @@ void drawSequenceDiagram(
   Rectangle area,
   SequenceDiagram diagram, {
   SequenceDiagramTheme theme = SequenceDiagramTheme.defaultTheme,
+  SequenceDiagramOptions? options,
 }) {
   if (diagram.participants.isEmpty) return;
 
@@ -1068,7 +1069,12 @@ void drawSequenceDiagram(
     idx[participants[i].id] = i;
   }
 
-  final centers = _resolveCenters(participants, messages, idx, _defaultMinGap);
+  final centers = _resolveCenters(
+    participants,
+    messages,
+    idx,
+    options?.minParticipantGap ?? _defaultMinGap,
+  );
 
   // Calculate width
   var maxX = 40;
@@ -1333,18 +1339,58 @@ String renderSequenceDiagram(
   String content, {
   SequenceDiagramOptions? options,
   SequenceDiagramTheme? theme,
+  int? maxWidth,
 }) {
   final diagram = parseSequenceDiagram(content);
   if (diagram == null || diagram.participants.isEmpty) return '';
 
-  final layout = layoutSequenceDiagram(diagram, options: options);
+  SequenceDiagram renderedDiagram = diagram;
+  SequenceDiagramOptions? layoutOptions = options;
+  if (maxWidth != null) {
+    var fitWidth = math.max(1, maxWidth - 2);
+    final initialGap = options?.minParticipantGap ?? _defaultMinGap;
+    while (true) {
+      renderedDiagram = _fitSequenceDiagramToWidth(diagram, fitWidth);
+      layoutOptions = SequenceDiagramOptions(
+        minParticipantGap: _fitParticipantGap(
+          renderedDiagram,
+          fitWidth,
+          initialGap,
+        ),
+      );
+      final layout = layoutSequenceDiagram(
+        renderedDiagram,
+        options: layoutOptions,
+      );
+      final canvas = Canvas(layout.width, layout.height);
+      final resolvedTheme = theme ?? SequenceDiagramTheme.defaultTheme;
+      drawSequenceDiagram(
+        canvas,
+        rect(0, 0, layout.width, layout.height),
+        renderedDiagram,
+        theme: resolvedTheme,
+        options: layoutOptions,
+      );
+      final rendered = canvas.render();
+      if (_renderedWidth(rendered) <= maxWidth) {
+        return rendered;
+      }
+      if (fitWidth <= 1) {
+        break;
+      }
+      fitWidth--;
+    }
+    return _renderSequenceDiagramFallback(diagram, maxWidth);
+  }
+  final layout = layoutSequenceDiagram(renderedDiagram, options: layoutOptions);
   final canvas = Canvas(layout.width, layout.height);
   final resolvedTheme = theme ?? SequenceDiagramTheme.defaultTheme;
   drawSequenceDiagram(
     canvas,
     rect(0, 0, layout.width, layout.height),
-    diagram,
+    renderedDiagram,
     theme: resolvedTheme,
+    options: layoutOptions,
   );
 
   return canvas.render();
@@ -1394,6 +1440,203 @@ LayoutResult layoutSequenceDiagram(
   }
 
   return (lines: List.filled(h, ''), width: width, height: h);
+}
+
+SequenceDiagram _fitSequenceDiagramToWidth(
+  SequenceDiagram diagram,
+  int maxWidth,
+) {
+  if (maxWidth <= 0) return diagram;
+
+  final naturalWidth = layoutSequenceDiagram(diagram).width;
+  if (naturalWidth <= maxWidth) return diagram;
+
+  var participantBudget = math.max(
+    4,
+    maxWidth ~/ math.max(2, diagram.participants.length + 1),
+  );
+  var messageBudget = math.max(6, maxWidth ~/ 2);
+  var noteBudget = messageBudget;
+  var fragmentBudget = math.max(6, maxWidth ~/ 3);
+
+  SequenceDiagram compacted = diagram;
+  for (var i = 0; i < 12; i++) {
+    compacted = _compactSequenceDiagram(
+      diagram,
+      participantBudget: participantBudget,
+      messageBudget: messageBudget,
+      noteBudget: noteBudget,
+      fragmentBudget: fragmentBudget,
+    );
+    if (layoutSequenceDiagram(compacted).width <= maxWidth) {
+      return compacted;
+    }
+
+    if (participantBudget <= 3 && messageBudget <= 4) {
+      break;
+    }
+
+    participantBudget = math.max(3, participantBudget - 1);
+    messageBudget = math.max(4, messageBudget - 2);
+    noteBudget = math.max(4, noteBudget - 2);
+    fragmentBudget = math.max(4, fragmentBudget - 1);
+  }
+
+  return compacted;
+}
+
+int _fitParticipantGap(SequenceDiagram diagram, int maxWidth, int initialGap) {
+  for (var gap = math.max(1, initialGap); gap >= 1; gap--) {
+    final width = layoutSequenceDiagram(
+      diagram,
+      options: SequenceDiagramOptions(minParticipantGap: gap),
+    ).width;
+    if (width <= maxWidth) return gap;
+  }
+  return 1;
+}
+
+int _renderedWidth(String rendered) {
+  var widest = 0;
+  for (final line in Style.stripAnsi(rendered).split('\n')) {
+    widest = math.max(widest, _stringWidth(line));
+  }
+  return widest;
+}
+
+String _renderSequenceDiagramFallback(SequenceDiagram diagram, int maxWidth) {
+  final lines = <String>['sequenceDiagram'];
+  for (final participant in diagram.participants) {
+    final line = 'participant ${participant.id} as ${participant.label}';
+    lines.add(_truncateForWidth(line, maxWidth));
+  }
+
+  for (final step in diagram.steps) {
+    switch (step) {
+      case SequenceStepMessage(:final message):
+        lines.add(
+          _truncateForWidth(
+            '${message.from} -> ${message.to}: ${message.label}',
+            maxWidth,
+          ),
+        );
+      case SequenceStepNote(:final note):
+        lines.add(
+          _truncateForWidth(
+            'note over ${note.over.join(", ")}: ${note.label}',
+            maxWidth,
+          ),
+        );
+      case SequenceStepActivation(:final activation):
+        lines.add(
+          _truncateForWidth(
+            '${activation.active ? "activate" : "deactivate"} ${activation.participant}',
+            maxWidth,
+          ),
+        );
+      case SequenceStepFragment(:final fragment):
+        lines.add(
+          _truncateForWidth(
+            '${fragment.kind.prefix} ${fragment.label}',
+            maxWidth,
+          ),
+        );
+    }
+  }
+
+  return lines.map((line) => _truncateForWidth(line, maxWidth)).join('\n');
+}
+
+SequenceDiagram _compactSequenceDiagram(
+  SequenceDiagram diagram, {
+  required int participantBudget,
+  required int messageBudget,
+  required int noteBudget,
+  required int fragmentBudget,
+}) {
+  final participants = [
+    for (final participant in diagram.participants)
+      SequenceParticipant(
+        id: participant.id,
+        label: _truncateForWidth(participant.label, participantBudget),
+        style: participant.style,
+      ),
+  ];
+
+  final messages = <SequenceMessage>[];
+  for (final message in diagram.messages) {
+    messages.add(
+      SequenceMessage(
+        from: message.from,
+        to: message.to,
+        label: _truncateForWidth(message.label, messageBudget),
+        style: message.style,
+        head: message.head,
+        number: message.number,
+        activate: message.activate,
+        deactivate: message.deactivate,
+        styleOverride: message.styleOverride,
+      ),
+    );
+  }
+
+  final steps = <SequenceStep>[];
+  var messageIndex = 0;
+  for (final step in diagram.steps) {
+    switch (step) {
+      case SequenceStepMessage():
+        steps.add(SequenceStepMessage(messages[messageIndex++]));
+      case SequenceStepNote(:final note):
+        steps.add(
+          SequenceStepNote(
+            SequenceNote(
+              over: note.over,
+              label: _truncateForWidth(note.label, noteBudget),
+            ),
+          ),
+        );
+      case SequenceStepActivation(:final activation):
+        steps.add(SequenceStepActivation(activation));
+      case SequenceStepFragment(:final fragment):
+        steps.add(
+          SequenceStepFragment(
+            SequenceFragment(
+              kind: fragment.kind,
+              label: _truncateForWidth(fragment.label, fragmentBudget),
+            ),
+          ),
+        );
+    }
+  }
+
+  return (
+    participants: participants,
+    messages: messages,
+    steps: steps,
+    groups: diagram.groups,
+    rects: diagram.rects,
+    actorStyles: diagram.actorStyles,
+  );
+}
+
+String _truncateForWidth(String text, int maxWidth) {
+  if (maxWidth <= 0) return '';
+  if (_stringWidth(text) <= maxWidth) return text;
+  if (maxWidth <= 1) return text.isEmpty ? '' : text.substring(0, 1);
+
+  final buffer = StringBuffer();
+  var used = 0;
+  for (final rune in text.runes) {
+    final char = String.fromCharCode(rune);
+    final charWidth = rune > 127 ? 2 : 1;
+    if (used + charWidth >= maxWidth) break;
+    buffer.write(char);
+    used += charWidth;
+  }
+  if (buffer.isEmpty) {
+    return text.substring(0, 1);
+  }
+  return '$buffer…';
 }
 
 /// Rendering options.

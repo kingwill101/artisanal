@@ -7,11 +7,11 @@ import 'package:pure_svg/svg.dart' show SvgStringLoader, renderSvgToPng;
 
 import '../../style/style.dart';
 import '../../style/color.dart';
-import 'ansi_renderer.dart' as legacy;
 import 'backend.dart' as markdown_backend;
 import 'html_context.dart';
 import 'options.dart';
 import 'render_context.dart';
+import 'syntax_highlighter.dart';
 import 'headings.dart';
 import 'lists.dart';
 import 'code_block.dart'
@@ -19,6 +19,7 @@ import 'code_block.dart'
 import 'hr.dart' show renderHorizontalRule;
 import 'tables.dart' show renderTable;
 import 'images.dart' show renderImage;
+import '../../uv/wrap.dart' as uv_wrap;
 
 /// Renders markdown to ANSI-styled terminal output using standalone functions.
 ///
@@ -44,6 +45,7 @@ class MarkdownRenderer implements NodeVisitor {
     styleToAnsi: _styleToAnsiOpen,
     headingStyleOf: (tag) => headingStyle(_ctx, tag),
   );
+  final List<bool> _handledBlockStack = [];
 
   // ─── Public API ────────────────────────────────────────────────────
 
@@ -59,11 +61,46 @@ class MarkdownRenderer implements NodeVisitor {
 
   /// Renders parsed markdown nodes to ANSI-styled text.
   String render(List<Node> nodes, {Map<String, Uint8List>? imageCache}) {
-    final renderer = legacy.AnsiRenderer(options: _options);
+    _ctx.buffer.clear();
+    _ctx.activeBuffer = _ctx.buffer;
+    _ctx.elementStack.clear();
+    _ctx.listDepth = 0;
+    _ctx.listCounters.clear();
+    _ctx.listItemStack.clear();
+    _ctx.inBlockquote = false;
+    _ctx.blockquoteDepth = 0;
+    _ctx.lastWasBlock = false;
+    _ctx.pendingLinkUrl = null;
+    _ctx.imageAltText = null;
+    _ctx.detailsStack.clear();
+    _ctx.tableHeaders.clear();
+    _ctx.tableRows.clear();
+    _ctx.tableAlignments.clear();
+    _ctx.currentTableRow.clear();
+    _ctx.currentCellBuffer.clear();
+    _ctx.inTableHeader = false;
+    _ctx.inTableCell = false;
+    _ctx.inCodeBlock = false;
+    _ctx.codeBlockLanguage = null;
+    _ctx.syntaxHighlighter = null;
+    _ctx.inParagraph = false;
+    _ctx.paragraphBuffer.clear();
+    _ctx.textStyleActive = false;
+    _inlineStyleDepth = 0;
+    _handledBlockStack.clear();
     if (imageCache != null) {
-      renderer.imageCache.addAll(imageCache);
+      _ctx.imageCache.addAll(imageCache);
     }
-    return renderer.render(nodes);
+
+    for (final node in nodes) {
+      node.accept(this);
+    }
+
+    var result = _ctx.buffer.toString();
+    while (result.endsWith('\n\n')) {
+      result = result.substring(0, result.length - 1);
+    }
+    return result;
   }
 
   /// Scans markdown for image URLs and downloads them in parallel.
@@ -143,6 +180,8 @@ class MarkdownRenderer implements NodeVisitor {
 
   @override
   void visitText(Text text) {
+    if (_insideCollapsedDetailsBody) return;
+
     var content = text.text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
     // Decode HTML entities
@@ -158,13 +197,17 @@ class MarkdownRenderer implements NodeVisitor {
       }
     }
 
-    // Apply blockquote prefix if inside a blockquote with multi-line content
-    if (_ctx.inBlockquote && content.contains('\n')) {
-      content = renderApplyBlockquotePrefix(_ctx, content);
+    if (_ctx.inBlockquote && !_ctx.inParagraph && content.contains('\n')) {
+      content = renderApplyBlockquotePrefixAll(_ctx, content);
     }
 
-    // Apply syntax highlighting and code block border for code blocks
     if (_ctx.inCodeBlock) {
+      if (_shouldSyntaxHighlight(content, _ctx.codeBlockLanguage)) {
+        content = _highlighter.highlightCode(
+          content,
+          language: _ctx.codeBlockLanguage,
+        );
+      }
       if (_ctx.options.codeBlockBorder && content.contains('\n')) {
         content = applyCodeBlockPrefix(_ctx, content);
       }
@@ -182,6 +225,14 @@ class MarkdownRenderer implements NodeVisitor {
   @override
   bool visitElementBefore(Element element) {
     _ctx.elementStack.add(element);
+    _handledBlockStack.add(false);
+
+    final handlerOutput = _renderCustomBlock(element);
+    if (handlerOutput != null) {
+      _handledBlockStack[_handledBlockStack.length - 1] = true;
+      _outputBuffer.write(handlerOutput);
+      return false;
+    }
 
     switch (element.tag) {
       // ─── Headings ──────────────────────────────────────────────
@@ -198,6 +249,9 @@ class MarkdownRenderer implements NodeVisitor {
       // ─── Paragraphs ────────────────────────────────────────────
       case 'p':
         _ensureNewline();
+        if (_ctx.inBlockquote) {
+          renderWriteBlockquotePrefix(_ctx);
+        }
         _ctx.inParagraph = true;
         _ctx.paragraphBuffer.clear();
         _startBodyTextStyle();
@@ -208,7 +262,6 @@ class MarkdownRenderer implements NodeVisitor {
         _ensureNewline();
         _ctx.inBlockquote = true;
         _ctx.blockquoteDepth++;
-        renderWriteBlockquotePrefix(_ctx);
         return true;
 
       // ─── Code blocks ───────────────────────────────────────────
@@ -251,13 +304,19 @@ class MarkdownRenderer implements NodeVisitor {
 
       // ─── Details / Summary ─────────────────────────────────────
       case 'details':
+        _ensureNewline();
+        if (_ctx.inBlockquote) {
+          renderWriteBlockquotePrefix(_ctx);
+        }
         final isOpen = element.attributes['open'] != null;
         _ctx.detailsStack.add(DetailsContext(expanded: isOpen));
         return true;
 
       case 'summary':
         if (_ctx.detailsStack.isNotEmpty) {
-          _ctx.detailsStack.last.inSummary = true;
+          final details = _ctx.detailsStack.last;
+          details.inSummary = true;
+          _outputBuffer.write(details.expanded ? '\u25be ' : '\u25b8 ');
         }
         return true;
 
@@ -307,6 +366,9 @@ class MarkdownRenderer implements NodeVisitor {
       case 'a':
         _ctx.pendingLinkUrl = element.attributes['href'];
         _startInlineStyle(_getLinkStyle());
+        if (_ctx.options.hyperlinks && _ctx.pendingLinkUrl != null) {
+          _outputBuffer.write('\x1b]8;;${_ctx.pendingLinkUrl}\x1b\\');
+        }
         return true;
 
       case 'del':
@@ -319,7 +381,14 @@ class MarkdownRenderer implements NodeVisitor {
         return true;
 
       case 'br':
-        _outputBuffer.write('\n');
+        if (_ctx.inParagraph) {
+          _ctx.paragraphBuffer.write('\n');
+        } else {
+          _outputBuffer.write('\n');
+        }
+        if (_ctx.inBlockquote && !_ctx.inParagraph) {
+          renderWriteBlockquotePrefix(_ctx);
+        }
         return false;
 
       case 'img':
@@ -327,6 +396,10 @@ class MarkdownRenderer implements NodeVisitor {
         return false;
 
       case 'input':
+        if (_ctx.listItemStack.isNotEmpty &&
+            _ctx.listItemStack.last.taskCheckboxRendered) {
+          return false;
+        }
         final checked =
             element.attributes['type'] == 'checkbox' &&
             element.attributes.containsKey('checked');
@@ -345,6 +418,8 @@ class MarkdownRenderer implements NodeVisitor {
   @override
   void visitElementAfter(Element element) {
     _ctx.elementStack.removeLast();
+    final handled = _handledBlockStack.removeLast();
+    if (handled) return;
 
     switch (element.tag) {
       case 'h1':
@@ -365,9 +440,6 @@ class MarkdownRenderer implements NodeVisitor {
           _ctx.paragraphBuffer.clear();
           _ctx.inParagraph = false;
           if (content.isNotEmpty) {
-            if (_ctx.inBlockquote) {
-              content = renderApplyBlockquotePrefix(_ctx, content);
-            }
             if (_ctx.options.width != null) {
               var effectiveWidth = _ctx.options.width!;
               if (_ctx.inBlockquote) {
@@ -377,10 +449,13 @@ class MarkdownRenderer implements NodeVisitor {
                 content = _wrapText(content, effectiveWidth);
               }
             }
+            if (_ctx.inBlockquote) {
+              content = renderApplyBlockquotePrefix(_ctx, content);
+            }
             _outputBuffer.write(content);
           }
         }
-        _ctx.buffer.write('\n');
+        _outputBuffer.write('\n');
         _ctx.lastWasBlock = true;
         break;
 
@@ -430,11 +505,13 @@ class MarkdownRenderer implements NodeVisitor {
         if (_ctx.detailsStack.isNotEmpty) {
           _ctx.detailsStack.removeLast();
         }
+        _ensureNewline();
         break;
 
       case 'summary':
         if (_ctx.detailsStack.isNotEmpty) {
           _ctx.detailsStack.last.inSummary = false;
+          _outputBuffer.write('\n');
         }
         break;
 
@@ -478,11 +555,11 @@ class MarkdownRenderer implements NodeVisitor {
         break;
 
       case 'a':
-        _endInlineStyle();
         if (_ctx.pendingLinkUrl != null && _ctx.options.hyperlinks) {
-          _outputBuffer.write('\x1b]8;;${_ctx.pendingLinkUrl}\x1b\\');
+          _outputBuffer.write('\x1b]8;;\x1b\\');
           _ctx.pendingLinkUrl = null;
         }
+        _endInlineStyle();
         break;
     }
   }
@@ -549,43 +626,107 @@ class MarkdownRenderer implements NodeVisitor {
 
   // ─── Text wrapping ────────────────────────────────────────────
   String _wrapText(String text, int width) {
-    // Simple word-wrap at width
-    if (text.length <= width) return text;
+    if (width <= 0) return text;
+    return uv_wrap.wrapAnsiPreserving(text, width);
+  }
 
-    final result = StringBuffer();
-    var lineLength = 0;
-    final words = text.split(' ');
+  bool _shouldSyntaxHighlight(String code, String? language) {
+    if (!_ctx.options.syntaxHighlighting || language == null) return false;
+    final maxCodeUnits = _ctx.options.maxSyntaxHighlightCodeUnits;
+    return maxCodeUnits == null || code.length <= maxCodeUnits;
+  }
 
-    for (final word in words) {
-      if (lineLength + word.length + 1 > width) {
-        result.write('\n');
-        result.write(word);
-        lineLength = word.length;
-      } else {
-        if (lineLength > 0) {
-          result.write(' ');
-          lineLength++;
-        }
-        result.write(word);
-        lineLength += word.length;
-      }
+  SyntaxHighlighter get _highlighter {
+    if (_ctx.syntaxHighlighter != null) return _ctx.syntaxHighlighter!;
+    if (_ctx.options.syntaxTheme != null) {
+      _ctx.syntaxHighlighter = SyntaxHighlighter(
+        theme: _ctx.options.syntaxTheme,
+      );
+    } else {
+      _ctx.syntaxHighlighter = SyntaxHighlighter.adaptive(
+        hasDarkBackground: _ctx.options.hasDarkBackground,
+      );
     }
-
-    return result.toString();
+    return _ctx.syntaxHighlighter!;
   }
 
   // ─── Internal helpers ─────────────────────────────────────────────
 
   void _ensureNewline() {
-    if (_ctx.buffer.length > 0 && !_ctx.buffer.toString().endsWith('\n')) {
-      _ctx.buffer.write('\n');
+    final buffer = _outputBuffer;
+    final hasVisibleContent = _bufferHasVisibleContent(buffer);
+    if (hasVisibleContent && !buffer.toString().endsWith('\n')) {
+      buffer.write('\n');
     }
+    if (_ctx.lastWasBlock && !_ctx.inBlockquote) {
+      if (hasVisibleContent) {
+        buffer.write('\n');
+      }
+      _ctx.lastWasBlock = false;
+    }
+  }
+
+  bool _bufferHasVisibleContent(StringBuffer buffer) {
+    if (buffer.isEmpty) return false;
+    return Style.stripAnsi(buffer.toString()).trim().isNotEmpty;
+  }
+
+  bool get _insideCollapsedDetailsBody {
+    return _ctx.detailsStack.any((details) {
+      return !details.expanded && !details.inSummary;
+    });
+  }
+
+  String? _renderCustomBlock(Element element) {
+    if (_options.blockHandlers.isEmpty || !_isBlockElement(element.tag)) {
+      return null;
+    }
+
+    final context = MarkdownBlockContext(
+      element: element,
+      options: _options,
+      renderMarkdown: (markdown, {int? width}) {
+        final renderer = MarkdownRenderer(
+          options: _options.copyWith(width: width ?? _options.width),
+        );
+        return renderer.renderToAnsi(markdown);
+      },
+    );
+
+    for (final handler in _options.blockHandlers) {
+      final output = handler(context);
+      if (output != null) return output;
+    }
+
+    return null;
+  }
+
+  bool _isBlockElement(String tag) {
+    return switch (tag) {
+      'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6' => true,
+      'p' || 'blockquote' || 'pre' || 'ul' || 'ol' || 'li' => true,
+      'hr' || 'table' || 'thead' || 'tbody' || 'tfoot' || 'tr' => true,
+      'th' || 'td' || 'details' || 'figure' || 'section' || 'article' => true,
+      _ => false,
+    };
   }
 
   static const _ansiReset = '\x1b[0m';
 
   static String _styleToAnsiOpen(Style style) {
+    final codes = <int>[];
+    if (style.isBold) codes.add(1);
+    if (style.isDim) codes.add(2);
+    if (style.isItalic) codes.add(3);
+    if (style.isUnderline) codes.add(4);
+    if (style.isBlink) codes.add(5);
+    if (style.isInverse) codes.add(7);
+    if (style.isStrikethrough) codes.add(9);
+
     final buffer = StringBuffer();
+    if (codes.isNotEmpty) {
+      buffer.write('\x1b[${codes.join(';')}m');
+    }
 
     final fg = style.getForeground;
     if (fg != null) {
@@ -606,18 +747,6 @@ class MarkdownRenderer implements NodeVisitor {
           hasDarkBackground: style.hasDarkBackground,
         ),
       );
-    }
-
-    final codes = <int>[];
-    if (style.isBold) codes.add(1);
-    if (style.isDim) codes.add(2);
-    if (style.isItalic) codes.add(3);
-    if (style.isUnderline) codes.add(4);
-    if (style.isBlink) codes.add(5);
-    if (style.isInverse) codes.add(7);
-    if (style.isStrikethrough) codes.add(9);
-    if (codes.isNotEmpty) {
-      buffer.write('\x1b[${codes.join(';')}m');
     }
 
     return buffer.toString();

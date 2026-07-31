@@ -3717,6 +3717,18 @@ class Program<M extends Model> with HotReloadMixin {
     if (_initializing) return;
 
     final termSize = _terminal?.size;
+    if (termSize != null &&
+        (_lastWindowSizeWidth != termSize.width ||
+            _lastWindowSizeHeight != termSize.height)) {
+      // Keep the model's layout constraints and the renderer's viewport on the
+      // same terminal-size snapshot. During an interactive shrink SIGWINCH can
+      // advance again before a coalesced WindowSizeMsg reaches the model. If we
+      // build now, a line composed for the old width can wrap in the new grid
+      // and insert apparently blank rows.
+      _lastRenderedView = null;
+      _sendWindowSizeIfChanged(termSize.width, termSize.height);
+      return;
+    }
     final sizeChangedSinceLastRender =
         termSize != null &&
         (termSize.width != _lastRenderWidth ||
@@ -3726,6 +3738,27 @@ class Program<M extends Model> with HotReloadMixin {
     final Stopwatch? viewSw = renderId == null ? null : Stopwatch();
     viewSw?.start();
     final view = _model!.view();
+    final sizeAfterView = _terminal?.size;
+    if (termSize != null &&
+        sizeAfterView != null &&
+        (sizeAfterView.width != termSize.width ||
+            sizeAfterView.height != termSize.height)) {
+      TuiTrace.event(
+        'render.size_changed_during_view',
+        tag: TraceTag.render,
+        fields: <String, Object?>{
+          'frameWidth': termSize.width,
+          'frameHeight': termSize.height,
+          'terminalWidth': sizeAfterView.width,
+          'terminalHeight': sizeAfterView.height,
+        },
+      );
+      // Discard this stale-width view before it reaches UV. Updating the model
+      // with the latest dimensions schedules a replacement frame.
+      _lastRenderedView = null;
+      _sendWindowSizeIfChanged(sizeAfterView.width, sizeAfterView.height);
+      return;
+    }
     final degradationLevel = _renderBudgetController.level;
     final effectiveView = _applyRenderDegradation(view, degradationLevel);
     viewSw?.stop();

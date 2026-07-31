@@ -13,7 +13,6 @@ import 'package:github_cli/src/app/theme.dart';
 import 'package:github_cli/src/client/fields.dart';
 import 'package:github_cli/src/ui/markdown/body.dart';
 import 'package:github_cli/src/utils/diff_comment_mapper.dart';
-import 'package:github_cli/src/utils/text_format.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
 
@@ -844,6 +843,175 @@ Outro paragraph.
     expect(plain, isNot(contains('redirect.github.com')));
   });
 
+  test(
+    'GitHub markdown body keeps CodeRabbit summary bullets attached to their headings',
+    () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.ThemeScope(
+          theme: w.Theme.dark(),
+          child: GithubMarkdownBody(
+            data: '''
+<!-- This is an auto-generated comment: release notes by coderabbit.ai -->
+## Summary by CodeRabbit
+
+* **New Features**
+  * Improved Windows terminal raw-mode input handling by automatically enabling virtual-terminal input when entering raw mode, and restoring the previous console input settings when exiting.
+  * Enhances compatibility for advanced console interactions (including mouse input), with changes applied only to the standard input stream.
+
+* **Bug Fixes**
+  * Fixed raw-mode lifecycle to preserve and restore Windows console settings correctly, including safe behavior for nested enable/restore scenarios and non-Windows platforms.
+<!-- end of auto-generated comment: release notes by coderabbit.ai -->
+''',
+            maxWidth: 80,
+          ),
+        ),
+        width: 80,
+        height: 24,
+      );
+
+      final plain = Style.stripAnsi(tester.view);
+
+      expect(plain, contains('• New Features'));
+      expect(plain, contains('• Bug Fixes'));
+      expect(plain, isNot(contains('•\nNew Features')));
+      expect(plain, isNot(contains('•\nBug Fixes')));
+    },
+  );
+
+  test(
+    'GitHub markdown body keeps walkthrough details outside the quote',
+    () async {
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 18);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.ThemeScope(
+          theme: w.Theme.dark(),
+          child: GithubMarkdownBody(
+            data: '''
+> [!WARNING]
+> Review limit reached
+> `@elana-voss`, you've reached your PR review limit, so we couldn't start this review.
+>
+<details open>
+<summary>Walkthrough</summary>
+This is a long walkthrough line that should wrap cleanly outside the quote border and stay aligned with the disclosure body.
+</details>
+''',
+            maxWidth: 60,
+          ),
+        ),
+        width: 60,
+        height: 18,
+      );
+
+      final plain = Style.stripAnsi(tester.view);
+      final lines = plain.split('\n');
+
+      expect(plain, contains('│ [!WARNING]'));
+      expect(plain, contains('│ Review limit reached'));
+      expect(plain, contains('▾ Walkthrough'));
+      expect(
+        plain,
+        contains('  This is a long walkthrough line that should wrap'),
+      );
+      expect(
+        lines
+            .where((line) => line.contains('Walkthrough'))
+            .single
+            .startsWith('│'),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'GitHub markdown body keeps quoted details inside the quote border',
+    () async {
+      final tester = WidgetTester(screenWidth: 72, screenHeight: 20);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.ThemeScope(
+          theme: w.Theme.dark(),
+          child: GithubMarkdownBody(
+            data: '''
+> [!WARNING]
+> Review limit reached
+> `@elana-voss`, you've reached your PR review limit, so we couldn't start this review.
+>
+> <details open>
+> <summary>Walkthrough</summary>
+> This is a long walkthrough line that should stay inside the quote border and wrap cleanly with the disclosure body.
+> </details>
+''',
+            maxWidth: 72,
+          ),
+        ),
+        width: 72,
+        height: 20,
+      );
+
+      final plain = Style.stripAnsi(tester.view);
+      final lines = plain.split('\n');
+
+      expect(plain, contains('│ [!WARNING]'));
+      expect(plain, contains('│ Review limit reached'));
+      expect(plain, contains('│ ▾ Walkthrough'));
+      expect(
+        lines
+            .where((line) => line.contains('Walkthrough'))
+            .single
+            .startsWith('│'),
+        isTrue,
+      );
+      expect(
+        lines
+            .where((line) => line.contains('stay inside the quote'))
+            .every((line) => line.startsWith('│')),
+        isTrue,
+      );
+      expect(
+        lines
+            .where((line) => line.contains('border and wrap cleanly'))
+            .every((line) => line.startsWith('│')),
+        isTrue,
+      );
+    },
+  );
+
+  test('GitHub markdown body renders mermaid fences as diagrams', () async {
+    final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+    addTearDown(() => tester.dispose());
+
+    await tester.pumpWidget(
+      w.ThemeScope(
+        theme: w.Theme.dark(),
+        child: GithubMarkdownBody(
+          data: '''
+```mermaid
+sequenceDiagram
+  participant A as Alice
+  participant B as Bob
+  A->>B: Hello
+```
+''',
+          maxWidth: 80,
+        ),
+      ),
+      width: 80,
+      height: 24,
+    );
+
+    final plain = Style.stripAnsi(tester.view);
+    expect(plain, contains('Alice'));
+    expect(plain, contains('Bob'));
+    expect(plain, isNot(contains('sequenceDiagram')));
+  });
+
   test('markdown probe prints rendered ANSI output', () {
     const markdown = '''
 Fixes #63435
@@ -904,13 +1072,13 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     await _pumpUntil(tester, () => tester.find.text('Release notes'));
     final plainCollapsed = Style.stripAnsi(tester.view);
 
-    expect(plainCollapsed, contains('> Release notes'));
+    expect(plainCollapsed, contains('▸ Release notes'));
     expect(plainCollapsed, isNot(contains('Hidden release body')));
 
     tester.tap(tester.find.textLocation('Release notes'));
     final plainExpanded = Style.stripAnsi(tester.view);
 
-    expect(plainExpanded, contains('v Release notes'));
+    expect(plainExpanded, contains('▾ Release notes'));
     expect(plainExpanded, contains('Hidden release body'));
   });
 

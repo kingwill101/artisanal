@@ -174,6 +174,7 @@ export 'src/terminal/terminal.dart'
 export 'src/tui/editor_core/editor_core.dart';
 // Markdown rendering
 export 'src/tui/markdown/ansi_renderer.dart';
+export 'src/tui/markdown/github_comment.dart';
 export 'src/tui/markdown/glamour_bridge.dart';
 export 'src/tui/markdown/renderer.dart' show MarkdownRenderer;
 export 'src/tui/markdown/fence_language_resolver.dart';

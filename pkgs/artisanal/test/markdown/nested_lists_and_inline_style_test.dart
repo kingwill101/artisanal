@@ -82,6 +82,56 @@ void main() {
       expect(lines[4], contains('Child B1'));
     });
 
+    test(
+      'paragraph list items keep their text attached before nested lists',
+      () {
+        final result = markdownToAnsi(
+          '''* **New Features**
+  * Improved raw-mode input handling
+  * Mouse input now reaches stdin
+* **Bug Fixes**
+  * Restored console settings on exit''',
+          options: const AnsiRendererOptions(width: 80),
+        );
+        final plain = stripAnsi(result);
+        final lines = plain
+            .split('\n')
+            .map((line) => line.trimRight())
+            .toList();
+
+        expect(lines, isNot(contains('•')));
+        expect(lines, contains('• New Features'));
+        expect(lines, contains('• Bug Fixes'));
+        expect(plain, contains('  • Improved raw-mode input handling'));
+        expect(plain, contains('  • Mouse input now reaches stdin'));
+        expect(plain, contains('  • Restored console settings on exit'));
+      },
+    );
+
+    test(
+      'renders CodeRabbit release notes summary bullets on the same line',
+      () {
+        final result = markdownToAnsi('''
+<!-- This is an auto-generated comment: release notes by coderabbit.ai -->
+## Summary by CodeRabbit
+
+* **New Features**
+  * Improved Windows terminal raw-mode input handling by automatically enabling virtual-terminal input when entering raw mode, and restoring the previous console input settings when exiting.
+  * Enhances compatibility for advanced console interactions (including mouse input), with changes applied only to the standard input stream.
+
+* **Bug Fixes**
+  * Fixed raw-mode lifecycle to preserve and restore Windows console settings correctly, including safe behavior for nested enable/restore scenarios and non-Windows platforms.
+<!-- end of auto-generated comment: release notes by coderabbit.ai -->
+''', options: const AnsiRendererOptions(width: 80));
+        final plain = stripAnsi(result);
+
+        expect(plain, contains('• New Features'));
+        expect(plain, contains('• Bug Fixes'));
+        expect(plain, isNot(contains('\n•\nNew Features')));
+        expect(plain, isNot(contains('\n•\nBug Fixes')));
+      },
+    );
+
     test('deeply nested list (3 levels)', () {
       final result = markdownToAnsi('''- Level 1
   - Level 2
@@ -138,18 +188,13 @@ void main() {
         options: const AnsiRendererOptions(width: 80),
       );
 
-      // Both should contain the styled code
-      final codePattern = RegExp(r'\x1b\[.*?print\(\).*?\x1b\[0m');
-      expect(
-        codePattern.hasMatch(withoutWidth),
-        isTrue,
-        reason: 'without width should have styled code',
-      );
-      expect(
-        codePattern.hasMatch(withWidth),
-        isTrue,
-        reason: 'with width should have styled code',
-      );
+      // Both should contain the styled code.
+      expect(withoutWidth, contains('\x1b['));
+      expect(withoutWidth, contains('print()'));
+      expect(withoutWidth, contains('\x1b[0m'));
+      expect(withWidth, contains('\x1b['));
+      expect(withWidth, contains('print()'));
+      expect(withWidth, contains('\x1b[0m'));
     });
 
     test('bold text styling preserved with width', () {

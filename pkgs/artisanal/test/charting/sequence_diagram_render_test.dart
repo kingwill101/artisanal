@@ -1,6 +1,8 @@
 /// Tests for the sequence diagram renderer.
 library;
 
+import 'dart:math' as math;
+
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/uv.dart';
 import 'package:test/test.dart';
@@ -160,6 +162,54 @@ sequenceDiagram
       );
       expect(output, isNotEmpty);
       expect(output, contains('Hello'));
+    });
+
+    test('compact rendering fits a requested width', () {
+      final output = renderSequenceDiagram('''
+sequenceDiagram
+  participant StdioTerminal
+  participant terminal_windows_io
+  participant kernel32_dll
+  participant Console
+  StdioTerminal->terminal_windows_io: enableWindowsVtInput()
+  terminal_windows_io->kernel32_dll: GetConsoleMode / SetConsoleMode
+  kernel32_dll->Console: apply VT input mode
+''', maxWidth: 80);
+
+      final plain = Style.stripAnsi(output);
+      final widestLine = plain
+          .split('\n')
+          .fold<int>(
+            0,
+            (widest, line) => math.max(widest, Layout.getWidth(line)),
+          );
+
+      expect(plain, isNotEmpty);
+      expect(widestLine, lessThanOrEqualTo(80));
+    });
+
+    test('compact rendering falls back cleanly in narrow panes', () {
+      final output = renderSequenceDiagram('''
+sequenceDiagram
+  participant StdioTerminal
+  participant terminal_windows_io
+  participant kernel32_dll
+  participant Console
+  StdioTerminal->terminal_windows_io: enableWindowsVtInput()
+  terminal_windows_io->kernel32_dll: GetConsoleMode / SetConsoleMode
+  kernel32_dll->Console: apply VT input mode
+''', maxWidth: 40);
+
+      final plain = Style.stripAnsi(output);
+      final widestLine = plain
+          .split('\n')
+          .fold<int>(
+            0,
+            (widest, line) => math.max(widest, Layout.getWidth(line)),
+          );
+
+      expect(plain, isNotEmpty);
+      expect(widestLine, lessThanOrEqualTo(40));
     });
   });
 

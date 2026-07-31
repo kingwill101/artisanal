@@ -121,10 +121,9 @@ class MarkdownRenderContext {
 /// Context for tracking list item rendering state.
 class ListItemContext {
   ListItemContext({
-    this.continuationIndent = 0,
-    this.taskCheckboxRendered = false,
-    this.trimLeadingWhitespace = true,
-  });
+    required this.continuationIndent,
+    required this.taskCheckboxRendered,
+  }) : trimLeadingWhitespace = taskCheckboxRendered;
 
   final int continuationIndent;
   final bool taskCheckboxRendered;

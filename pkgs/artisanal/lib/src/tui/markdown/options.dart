@@ -1,9 +1,71 @@
+import 'package:markdown/markdown.dart' show Element, Node, Text;
+
 import '../../style/border.dart' as style_border;
 import '../../style/color.dart';
 import '../../style/style.dart';
 import 'image_renderer.dart' show ImageProtocol;
 import 'syntax_highlighter.dart' show ChromaTheme;
 import 'styles.dart' show MarkdownElementStyle;
+
+typedef MarkdownBlockHandler = String? Function(MarkdownBlockContext context);
+
+final class MarkdownBlockContext {
+  MarkdownBlockContext({
+    required this.element,
+    required this.options,
+    required this.renderMarkdown,
+  });
+
+  final Element element;
+  final AnsiRendererOptions options;
+  final String Function(String markdown, {int? width}) renderMarkdown;
+
+  String get tag => element.tag;
+
+  String get kind => element.tag;
+
+  Map<String, String> get attributes => element.attributes;
+
+  String get text => _flattenText(element);
+
+  String? get language => _codeLanguageFor(element);
+
+  bool get hasOpenAttribute => element.attributes.containsKey('open');
+}
+
+String _flattenText(Node node) {
+  if (node is Text) return node.text;
+  if (node is! Element) return '';
+  final buffer = StringBuffer();
+  for (final child in node.children ?? const <Node>[]) {
+    buffer.write(_flattenText(child));
+  }
+  return buffer.toString();
+}
+
+String? _codeLanguageFor(Element element) {
+  Element? codeElement;
+  if (element.tag == 'code') {
+    codeElement = element;
+  } else if (element.tag == 'pre') {
+    for (final child in element.children ?? const <Node>[]) {
+      if (child is Element && child.tag == 'code') {
+        codeElement = child;
+        break;
+      }
+    }
+  }
+
+  final classes =
+      codeElement?.attributes['class']?.split(RegExp(r'\s+')) ??
+      const <String>[];
+  for (final cls in classes) {
+    if (cls.startsWith('language-')) {
+      return cls.substring('language-'.length);
+    }
+  }
+  return null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Renderer Options
@@ -59,6 +121,7 @@ class AnsiRendererOptions {
     this.tableHeaderStyle,
     this.tableCellStyle,
     this.tableBorderStyle,
+    this.blockHandlers = const <MarkdownBlockHandler>[],
     this.renderImages = false,
     this.imageMaxWidth,
     this.imageMaxHeight,
@@ -105,6 +168,7 @@ class AnsiRendererOptions {
     MarkdownElementStyle? tableHeaderStyle,
     MarkdownElementStyle? tableCellStyle,
     MarkdownElementStyle? tableBorderStyle,
+    List<MarkdownBlockHandler> blockHandlers = const <MarkdownBlockHandler>[],
     bool renderImages = false,
     int? imageMaxWidth,
     int? imageMaxHeight,
@@ -144,6 +208,7 @@ class AnsiRendererOptions {
       tableHeaderStyle: tableHeaderStyle?.resolveStyle(),
       tableCellStyle: tableCellStyle?.resolveStyle(),
       tableBorderStyle: tableBorderStyle?.resolveStyle(),
+      blockHandlers: blockHandlers,
       renderImages: renderImages,
       imageMaxWidth: imageMaxWidth,
       imageMaxHeight: imageMaxHeight,
@@ -242,6 +307,12 @@ class AnsiRendererOptions {
   /// Style for table borders.
   final Style? tableBorderStyle;
 
+  /// Custom handlers for block-level markdown elements.
+  ///
+  /// Each handler may return ANSI output for a block element. The first
+  /// non-null result wins and skips the default renderer for that block.
+  final List<MarkdownBlockHandler> blockHandlers;
+
   /// Whether to enable syntax highlighting for code blocks.
   final bool syntaxHighlighting;
 
@@ -315,6 +386,7 @@ class AnsiRendererOptions {
     Style? tableHeaderStyle,
     Style? tableCellStyle,
     Style? tableBorderStyle,
+    List<MarkdownBlockHandler>? blockHandlers,
     bool? renderImages,
     int? imageMaxWidth,
     int? imageMaxHeight,
@@ -355,6 +427,7 @@ class AnsiRendererOptions {
       tableHeaderStyle: tableHeaderStyle ?? this.tableHeaderStyle,
       tableCellStyle: tableCellStyle ?? this.tableCellStyle,
       tableBorderStyle: tableBorderStyle ?? this.tableBorderStyle,
+      blockHandlers: blockHandlers ?? this.blockHandlers,
       renderImages: renderImages ?? this.renderImages,
       imageMaxWidth: imageMaxWidth ?? this.imageMaxWidth,
       imageMaxHeight: imageMaxHeight ?? this.imageMaxHeight,

@@ -89,6 +89,7 @@ class Markdown extends DisplayComponent {
       blockquoteStyle: options.blockquoteStyle,
       blockquoteBorderColor: options.blockquoteBorderColor,
       strikethroughStyle: options.strikethroughStyle,
+      blockHandlers: options.blockHandlers,
       bulletChar: options.bulletChar,
       hyperlinks: options.hyperlinks,
       hrChar: options.hrChar,
@@ -149,6 +150,7 @@ class MarkdownOptions {
     this.blockquoteStyle,
     this.blockquoteBorderColor,
     this.strikethroughStyle,
+    this.blockHandlers = const <MarkdownBlockHandler>[],
     this.bulletChar = '\u2022',
     this.hyperlinks = true,
     this.hrChar = '\u2500',
@@ -218,6 +220,9 @@ class MarkdownOptions {
 
   /// Style for strikethrough text.
   final Style? strikethroughStyle;
+
+  /// Custom handlers for block-level markdown elements.
+  final List<MarkdownBlockHandler> blockHandlers;
 
   /// Character used for bullet points.
   final String bulletChar;

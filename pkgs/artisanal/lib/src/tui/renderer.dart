@@ -656,6 +656,7 @@ class UltravioletTuiRenderer
   // Inline mode captures UV output so absolute row-addressing sequences can
   // be rewritten into the anchored region before bytes reach the terminal.
   final StringBuffer _inlineCapture = StringBuffer();
+  final StringBuffer _fullscreenCapture = StringBuffer();
   _CapturingSink? _inlineSink;
   bool _inlineNeedsFullClear = false;
   bool _inlineNeedsLogReplay = false;
@@ -899,13 +900,16 @@ class UltravioletTuiRenderer
       _renderer!.setMapNewline(false);
       _renderer!.setScrollOptim(false);
     } else {
-      final sink = _TerminalStringSink(terminal);
+      final sink = _CapturingSink(_fullscreenCapture);
       _renderer = uv_term.UvTerminalRenderer(sink, env: env);
       _renderer!.setFullscreen(true);
       _renderer!.setRelativeCursor(false);
       final mapNewline = !isWindows && terminal.isTerminal;
       _renderer!.setMapNewline(mapNewline);
-      _renderer!.setScrollOptim(true);
+      // Resizes invalidate row geometry. Scroll optimization can otherwise
+      // emit DL/IL operations derived from the old width while the new frame
+      // is being painted. Ratatui uses a plain cell diff for this path.
+      _renderer!.setScrollOptim(false);
     }
 
     // Apply terminal movement optimizations. Allow a compatibility override so
@@ -963,13 +967,28 @@ class UltravioletTuiRenderer
         !inlineTerminalSizeChanged) {
       return;
     }
-    if (scr.width() != w || scr.height() != targetHeight) {
+    final sizeChanged = scr.width() != w || scr.height() != targetHeight;
+    final isShrinking = w < scr.width() || targetHeight < scr.height();
+    if (sizeChanged) {
       scr.resize(w, targetHeight);
       _renderer?.resize(w, targetHeight);
+      if (!_options.isInline) {
+        // Ratatui resizes both screen buffers and resets the previous buffer
+        // before the callback paints. Do the same at the UV boundary so the
+        // diff never compares a new-width frame with old-width geometry.
+        _renderer?.resetForResize(w, targetHeight);
+      }
       _invalidateNativeFrameCache(resetPrevious: true);
+      // Match Ratatui's resize contract: discard the previous diff state and
+      // render a complete frame at the latest backend size. Horizontal shrink
+      // is especially important because wrapping can leave old cells visible.
+      if (isShrinking) {
+        scr.clear();
+      }
     }
     if (!_options.isInline) {
-      _renderer?.erase();
+      // A normal resize was reset above; the initial frame is erased during
+      // initialization. No second erase is needed here.
     } else {
       _renderer?.erase();
       // Discard the ESC[H ESC[2J that erase() queues into _inlineCapture.
@@ -1211,14 +1230,35 @@ class UltravioletTuiRenderer
       // visible flashes when scroll optimization emits DL/IL before the
       // replacement content arrives.  Terminals that don't support mode 2026
       // silently ignore these sequences.
-      terminal.write(UvAnsi.beginSynchronizedUpdate);
+      _fullscreenCapture.clear();
+      final frame = StringBuffer()..write(UvAnsi.beginSynchronizedUpdate);
       for (final sequence in graphicsFrame.deletionSequencesSince(
         _lastGraphicsFrame,
       )) {
-        terminal.write(sequence);
+        frame.write(sequence);
       }
       r.flush();
-      terminal.write(UvAnsi.endSynchronizedUpdate);
+      if (TuiTrace.enabled) {
+        final output = r.lastFlushedOutput;
+        TuiTrace.event(
+          'uv.fullscreen.flush',
+          tag: TraceTag.flush,
+          fields: {
+            'width': terminal.width,
+            'height': terminal.height,
+            'bytes': output.length,
+            'containsEraseScreen': output.contains('\x1b[2J'),
+            'containsEraseLine': output.contains('\x1b[2K'),
+            'containsCursorHome': output.contains('\x1b[H'),
+            'containsSyncBegin': output.contains('\x1b[?2026h'),
+            'containsSyncEnd': output.contains('\x1b[?2026l'),
+          },
+        );
+      }
+      frame
+        ..write(_fullscreenCapture)
+        ..write(UvAnsi.endSynchronizedUpdate);
+      terminal.write(frame.toString());
     }
     writeSw?.stop();
     _dirty = false;

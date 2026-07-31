@@ -32,9 +32,7 @@ import 'package:artisanal/artisanal.dart'
         drawHeatmap,
         drawPieChart,
         drawRibbonChart,
-        parseSequenceDiagram,
-        drawSequenceDiagram,
-        layoutSequenceDiagram,
+        renderSequenceDiagram,
         SequenceDiagram,
         SequenceDiagramTheme;
 import 'package:artisanal/uv.dart' show Canvas, Cell, Rectangle, UvStyle, rect;

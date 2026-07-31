@@ -16,7 +16,7 @@ import 'package:artisanal/tui.dart'
         TuiTrace,
         TraceTag;
 import 'package:artisanal/artisanal.dart'
-    show markdownToAnsi, AnsiRendererOptions;
+    show MarkdownRenderer, AnsiRendererOptions;
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'
@@ -195,7 +195,9 @@ class MarkdownText extends StatefulWidget {
       hasDarkBackground: hasDarkBackground,
       textStyle: textStyle ?? baseOptions.textStyle,
     );
-    var content = markdownToAnsi(data, options: effectiveOptions);
+    var content = MarkdownRenderer(
+      options: effectiveOptions,
+    ).renderToAnsi(data);
 
     if (!softWrap && maxWidth != null) {
       content = Layout.truncateLines(content, maxWidth);
@@ -242,6 +244,7 @@ class MarkdownText extends StatefulWidget {
       _styleCacheKey(options.tableHeaderStyle),
       _styleCacheKey(options.tableCellStyle),
       _styleCacheKey(options.tableBorderStyle),
+      Object.hashAll(options.blockHandlers.map(identityHashCode)),
       options.syntaxHighlighting,
       options.maxSyntaxHighlightCodeUnits,
       identityHashCode(options.syntaxTheme),

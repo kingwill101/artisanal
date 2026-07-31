@@ -1,7 +1,9 @@
 import 'package:artisanal/style.dart' show Border, Style;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/artisanal.dart' as markdown;
+import 'package:artisanal/artisanal.dart'
+    show AnsiRendererOptions, renderSequenceDiagram;
 import 'package:artisanal_widgets/widgets.dart' as w;
+import 'dart:math' as math;
 
 import '../../utils/text_format.dart';
 
@@ -50,36 +52,36 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
   @override
   w.Widget build(w.BuildContext context) {
     final theme = w.ThemeScope.of(context);
-    if (_segments.isEmpty) {
-      return _markdownText(theme, _fallbackMarkdown);
-    }
-
-    return w.Column(
-      crossAxisAlignment: w.CrossAxisAlignment.stretch,
-      gap: 1,
-      children: [
-        for (var i = 0; i < _segments.length; i++)
-          _segmentWidget(theme, _segments[i], i),
-      ],
-    );
+    final hasDarkBackground = w.hasDarkBackground;
+    final content = _segments.isEmpty
+        ? _markdownText(theme, _fallbackMarkdown, hasDarkBackground)
+        : w.Column(
+            crossAxisAlignment: w.CrossAxisAlignment.stretch,
+            gap: 1,
+            children: [
+              for (var i = 0; i < _segments.length; i++)
+                _segmentWidget(theme, hasDarkBackground, _segments[i], i),
+            ],
+          );
+    return content;
   }
 
   w.Widget _segmentWidget(
     w.Theme theme,
+    bool hasDarkBackground,
     GithubMarkdownSegment segment,
     int index,
   ) {
-    return switch (segment) {
-      GithubMarkdownTextSegment(:final markdown) => _markdownText(
-        theme,
-        markdown,
-      ),
-      GithubMarkdownDetailsSegment(
+    switch (segment) {
+      case GithubMarkdownTextSegment(:final markdown):
+        return _markdownText(theme, markdown, hasDarkBackground);
+      case GithubMarkdownDetailsSegment(
         :final summary,
         :final markdown,
         :final initiallyExpanded,
-      ) =>
-        w.Accordion(
+        :final quoted,
+      ):
+        final details = w.Accordion(
           title: summary,
           expanded: _expandedDetails[index] ?? initiallyExpanded,
           onChanged: (expanded) {
@@ -91,13 +93,41 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
           child: _markdownText(
             theme,
             markdown.trim().isEmpty ? '_No details provided._' : markdown,
+            hasDarkBackground,
+            maxWidth: widget.maxWidth == null
+                ? null
+                : math.max(1, widget.maxWidth! - 2),
           ),
-        ),
-    };
+        );
+
+        if (!quoted) return details;
+
+        return w.DecoratedBox(
+          decoration: w.BoxDecoration(
+            border: Border.normal.copyWith(
+              top: '',
+              bottom: '',
+              right: '',
+              topLeft: '',
+              topRight: '',
+              bottomLeft: '',
+              bottomRight: '',
+            ),
+          ),
+          child: w.Padding(
+            padding: const w.EdgeInsets.only(left: 1),
+            child: details,
+          ),
+        );
+    }
   }
 
-  w.Widget _markdownText(w.Theme theme, String markdown) {
-    final hasDarkBackground = w.hasDarkBackground;
+  w.Widget _markdownText(
+    w.Theme theme,
+    String markdown,
+    bool hasDarkBackground, {
+    int? maxWidth,
+  }) {
     return w.MarkdownText(
       data: markdown,
       options: githubMarkdownOptions(
@@ -105,7 +135,7 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
         hasDarkBackground: hasDarkBackground,
       ),
       softWrap: true,
-      maxWidth: widget.maxWidth,
+      maxWidth: maxWidth ?? widget.maxWidth,
       textStyle: _bodyTextStyle(theme, hasDarkBackground),
     );
   }
@@ -132,13 +162,13 @@ Style widgetTextStyleBase(bool hasDarkBackground) {
   return Style()..hasDarkBackground = hasDarkBackground;
 }
 
-markdown.AnsiRendererOptions githubMarkdownOptions(
+AnsiRendererOptions githubMarkdownOptions(
   w.Theme theme, {
   required bool hasDarkBackground,
 }) {
   final codeSurface = theme.surfaceVariant ?? theme.surface;
   Style themedStyle() => Style()..hasDarkBackground = hasDarkBackground;
-  return markdown.AnsiRendererOptions(
+  return AnsiRendererOptions(
     textStyle: themedStyle()..foreground(theme.onBackground),
     h1Style: themedStyle()
       ..bold()
@@ -180,6 +210,15 @@ markdown.AnsiRendererOptions githubMarkdownOptions(
       ..foreground(theme.primary),
     tableCellStyle: themedStyle()..foreground(theme.onBackground),
     tableBorderStyle: themedStyle()..foreground(theme.border),
+    blockHandlers: [
+      (context) {
+        if (context.tag != 'pre' || context.language != 'mermaid') return null;
+        return renderSequenceDiagram(
+          context.text.trim(),
+          maxWidth: context.options.width,
+        );
+      },
+    ],
     codeBlockBorderStyle: Border.rounded,
     syntaxHighlighting: false,
   );

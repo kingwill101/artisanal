@@ -83,7 +83,7 @@ class SequenceDiagramModel extends ViewComponent {
     if (d == null || d.participants.isEmpty) {
       return _emptyView();
     }
-    return renderSequenceDiagram(mermaid, theme: theme);
+    return renderSequenceDiagram(mermaid, theme: theme, maxWidth: width);
   }
 
   String _emptyView() {

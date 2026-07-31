@@ -1,3 +1,5 @@
+import 'dart:io' show stdout;
+
 import 'package:artisanal/bubbles.dart'
     hide
         CodeBlockCommentDelimiters,
@@ -160,7 +162,8 @@ sequenceDiagram
 }
 
 String _render(String mermaid) {
-  return renderSequenceDiagram(mermaid);
+  final width = stdout.hasTerminal ? stdout.terminalColumns : 80;
+  return renderSequenceDiagram(mermaid, maxWidth: width);
 }
 
 void _printSection(String title, String content) {

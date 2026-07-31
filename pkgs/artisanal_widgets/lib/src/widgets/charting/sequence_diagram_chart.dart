@@ -47,14 +47,9 @@ class SequenceDiagramChart extends LeafRenderObjectWidget {
   /// Custom theme for rendering. Uses default theme if null.
   final SequenceDiagramTheme? diagramTheme;
 
-  SequenceDiagram? get _parsedDiagram {
-    return mermaid.isNotEmpty ? parseSequenceDiagram(mermaid) : null;
-  }
-
   @override
   RenderObject createRenderObject() {
     return _RenderSequenceDiagramChart(
-      diagram: _parsedDiagram,
       mermaid: mermaid,
       chartWidth: width,
       chartHeight: height,
@@ -66,7 +61,6 @@ class SequenceDiagramChart extends LeafRenderObjectWidget {
   void updateRenderObject(RenderObject renderObject) {
     final ro = renderObject as _RenderSequenceDiagramChart;
     ro
-      ..diagram = _parsedDiagram
       ..mermaid = mermaid
       ..chartWidth = width
       ..chartHeight = height
@@ -75,7 +69,7 @@ class SequenceDiagramChart extends LeafRenderObjectWidget {
 
   @override
   Object view() => _renderSequenceDiagramString(
-    _parsedDiagram,
+    mermaid,
     width ?? 80,
     height ?? 24,
     diagramTheme ?? SequenceDiagramTheme.defaultTheme,
@@ -84,14 +78,12 @@ class SequenceDiagramChart extends LeafRenderObjectWidget {
 
 class _RenderSequenceDiagramChart extends RenderBox {
   _RenderSequenceDiagramChart({
-    required this.diagram,
     required this.mermaid,
     required this.chartWidth,
     required this.chartHeight,
     required this.theme,
   });
 
-  SequenceDiagram? diagram;
   String mermaid;
   int? chartWidth;
   int? chartHeight;
@@ -113,7 +105,7 @@ class _RenderSequenceDiagramChart extends RenderBox {
       constraints.maxHeight,
       24,
     );
-    _lastPaint = _renderSequenceDiagramString(diagram, w, h, theme);
+    _lastPaint = _renderSequenceDiagramString(mermaid, w, h, theme);
     size = constraints.constrain(Size(w.toDouble(), h.toDouble()));
   }
 
@@ -121,24 +113,21 @@ class _RenderSequenceDiagramChart extends RenderBox {
   String paint() {
     final w = chartWidth ?? 80;
     final h = chartHeight ?? 24;
-    return _lastPaint ?? _renderSequenceDiagramString(diagram, w, h, theme);
+    return _lastPaint ?? _renderSequenceDiagramString(mermaid, w, h, theme);
   }
 }
 
 String _renderSequenceDiagramString(
-  SequenceDiagram? diagram,
+  String mermaid,
   int width,
   int height,
   SequenceDiagramTheme theme,
 ) {
-  if (diagram == null || diagram.participants.isEmpty) return '';
-
-  final layout = layoutSequenceDiagram(diagram);
-  final canvas = Canvas(
-    math.max(width, layout.width),
-    math.max(height, layout.height),
+  final rendered = renderSequenceDiagram(
+    mermaid,
+    theme: theme,
+    maxWidth: width,
   );
-  final area = rect(0, 0, canvas.width(), canvas.height());
-  drawSequenceDiagram(canvas, area, diagram, theme: theme);
-  return canvas.render();
+  if (rendered.isEmpty) return '';
+  return rendered;
 }

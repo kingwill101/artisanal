@@ -104,4 +104,25 @@ void main() {
       r.flush();
     }
   });
+
+  test('UvTerminalRenderer resets the previous surface before a resize frame', () {
+    final out = _TestSink();
+    final r = UvTerminalRenderer(out, env: const ['TERM=xterm-256color']);
+    r.setFullscreen(true);
+
+    final before = Buffer.create(12, 6);
+    before.setCell(11, 5, Cell(content: 'Z', width: 1));
+    r.render(before);
+    r.flush();
+
+    r.resize(5, 2);
+    r.resetForResize(5, 2);
+    final after = Buffer.create(5, 2);
+    after.setCell(0, 0, Cell(content: 'A', width: 1));
+    r.render(after);
+    r.flush();
+
+    expect(r.lastFlushedOutput, contains('\x1b[2J'));
+    expect(r.lastFlushedOutput, contains('A'));
+  });
 }

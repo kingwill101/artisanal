@@ -798,6 +798,24 @@ final class UvTerminalRenderer extends TerminalRenderer {
     // they want a full clear (parity tests depend on this).
   }
 
+  /// Resets the renderer's previous terminal surface for a viewport resize.
+  ///
+  /// The next frame is compared against a blank buffer of the new size. This
+  /// is separate from [resize], which intentionally preserves the previous
+  /// surface for normal renderer parity.
+  void resetForResize(int width, int height) {
+    _curbuf = Buffer.create(width, height);
+    _cur = _Cursor(x: -1, y: -1);
+    _saved = _cur.clone();
+    _clear = true;
+    _scrollHeight = 0;
+    _atPhantom = false;
+    _oldhash = const [];
+    _newhash = const [];
+    _hashtab = const [];
+    _oldnum = const [];
+  }
+
   /// Returns the current cursor position as `(x, y)`.
   ({int x, int y}) position() => (x: _cur.x, y: _cur.y);
 

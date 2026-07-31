@@ -53,7 +53,7 @@ class Accordion extends StatelessWidget {
     Widget header = Row(
       gap: 1,
       children: [
-        Text(expanded ? 'v' : '>', style: chevronStyle),
+        Text(expanded ? '▾' : '▸', style: chevronStyle),
         ?leading,
         Text(title, style: titleStyle),
       ],

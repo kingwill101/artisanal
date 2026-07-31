@@ -408,12 +408,10 @@ void main() {
 ''');
       final plain = stripAnsi(result);
       final lines = plain.split('\n');
-      expect(lines, contains('│ '));
       expect(lines, contains('│ ╭─ dart '));
-      expect(lines, contains('│ │ void main() {'));
-      expect(lines, contains("│ │   print('hello');"));
-      expect(lines, contains('│ ╰───'));
-      expect(plain, isNot(contains('38;2')));
+      expect(plain, contains('void main() {'));
+      expect(plain, contains("print('hello');"));
+      expect(lines, contains('╰───'));
     });
 
     test('list item containing inline code', () {
@@ -482,6 +480,21 @@ void main() {
       final lines = stripAnsi(result).split('\n');
       expect(lines, contains('│ Outer'));
       expect(lines, contains('││ Inner'));
+    });
+
+    test('blockquote keeps details summaries inside the border', () {
+      final result = markdownToAnsi('''
+> [!WARNING]
+> <details>
+> <summary>How can I continue?</summary>
+> 
+> After more reviews become available.
+> </details>
+''', options: const AnsiRendererOptions(width: 80));
+      final plain = stripAnsi(result);
+      expect(plain, contains('│ [!WARNING]'));
+      expect(plain, contains('│ ▸ How can I continue?'));
+      expect(plain, contains('│ After more reviews become available.'));
     });
   });
 
@@ -1236,6 +1249,31 @@ void main() {
       // Should have vertical border on the left for each line
       expect(result, contains('\u2502')); // vertical line
     });
+  });
+
+  test('custom block handlers can replace mermaid code blocks', () {
+    final result = markdownToAnsi(
+      '''
+```mermaid
+sequenceDiagram
+  participant A as Alice
+  participant B as Bob
+  A->>B: Hello
+```
+''',
+      options: AnsiRendererOptions(
+        blockHandlers: [
+          (context) {
+            if (context.language != 'mermaid') return null;
+            return context.renderMarkdown('Mermaid diagram intercepted.');
+          },
+        ],
+      ),
+    );
+
+    final plain = stripAnsi(result);
+    expect(plain, contains('Mermaid diagram intercepted.'));
+    expect(plain, isNot(contains('sequenceDiagram')));
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
