@@ -2619,6 +2619,10 @@ class Program<M extends Model> with HotReloadMixin {
   bool _shouldRunStartupProbes(TuiTerminal term) {
     if (!term.supportsAnsi || !term.isTerminal) return false;
     final explicit = _options.startupProbes;
+    // A callback-backed display sink cannot answer terminal queries. Avoid
+    // sending startup probes into the capture stream unless the caller has
+    // explicitly opted into that behavior.
+    if (_options.output != null && explicit != true) return false;
     if (explicit != null) return explicit;
     return platform.canProbeTerminal(term);
   }
