@@ -205,6 +205,7 @@ calls it via the generic service envelope.
 // Host side — example/tui/remote_plugin_generic_service_host_demo.dart
 import 'dart:io' as io;
 import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:artisanal/uv.dart' as uv;
 import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
 
 Future<void> main() async {
