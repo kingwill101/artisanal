@@ -353,7 +353,7 @@ void main() {
     test(
       'serveWidgetApp + browser transport uses session capability image mode by default',
       () async {
-        late w.WidgetApp app;
+        late w.ArtisanalApp app;
         final server =
             await artisanal.serveWidgetApp(
                   transport: artisanal.Transport.browser,
@@ -364,8 +364,8 @@ void main() {
                     signalHandlers: false,
                     frameTick: false,
                   ),
-                  appBuilder: () => app = w.WidgetApp(
-                    w.Image(
+                  appBuilder: () => app = w.ArtisanalApp(
+                    home: w.Image(
                       image: w.MemoryImage(_encodeTestImage()),
                       width: 2,
                       height: 1,
@@ -399,8 +399,8 @@ void main() {
                     signalHandlers: false,
                     frameTick: false,
                   ),
-                  appBuilder: () => w.WidgetApp(
-                    w.Image(
+                  appBuilder: () => w.ArtisanalApp(
+                    home: w.Image(
                       image: w.MemoryImage(_encodeTestImage()),
                       width: 2,
                       height: 1,
@@ -489,10 +489,8 @@ void main() {
                     signalHandlers: false,
                     frameTick: false,
                   ),
-                  appBuilder: () => w.ArtisanalApp(
-                    title: 'Socket App',
-                    home: _QuitOnInitWidget(),
-                  ),
+                  appBuilder: () =>
+                      w.ArtisanalApp(title: 'Socket App', home: _ReadyWidget()),
                 )
                 as hosts.SocketTerminalHostServer;
 
@@ -504,8 +502,10 @@ void main() {
         );
         addTearDown(socket.close);
 
-        final chunk = await socket.first.timeout(const Duration(seconds: 5));
-        final output = utf8.decode(chunk, allowMalformed: true);
+        final output = await _readSocketUntil(
+          socket,
+          (output) => output.contains('ready'),
+        );
 
         expect(output, contains('ready'));
       },
@@ -514,7 +514,7 @@ void main() {
     test(
       'serveWidgetApp + socket transport uses session capability image mode by default',
       () async {
-        late w.ArtisanalApp app;
+        late w.WidgetApp app;
         final server =
             await artisanal.serveWidgetApp(
                   transport: artisanal.Transport.socket,
@@ -525,8 +525,8 @@ void main() {
                     signalHandlers: false,
                     frameTick: false,
                   ),
-                  appBuilder: () => app = w.ArtisanalApp(
-                    home: w.Image(
+                  appBuilder: () => app = w.WidgetApp(
+                    w.Image(
                       image: w.MemoryImage(_encodeTestImage()),
                       width: 2,
                       height: 1,
@@ -571,8 +571,8 @@ void main() {
                     signalHandlers: false,
                     frameTick: false,
                   ),
-                  appBuilder: () => w.ArtisanalApp(
-                    home: w.Image(
+                  appBuilder: () => w.WidgetApp(
+                    w.Image(
                       image: w.MemoryImage(_encodeTestImage()),
                       width: 2,
                       height: 1,
@@ -668,7 +668,7 @@ void main() {
                   appBuilder: () => w.WidgetApp(
                     w.ReloadHost(
                       controller: controller,
-                      builder: (context, revision) => _QuitOnInitWidget(),
+                      builder: (context, revision) => _ReadyWidget(),
                     ),
                   ),
                 )
@@ -682,8 +682,10 @@ void main() {
         );
         addTearDown(socket.close);
 
-        final chunk = await socket.first.timeout(const Duration(seconds: 5));
-        final output = utf8.decode(chunk, allowMalformed: true);
+        final output = await _readSocketUntil(
+          socket,
+          (output) => output.contains('ready'),
+        );
         expect(output, contains('ready'));
 
         final signalFuture = controller.stream.first;
@@ -863,4 +865,9 @@ final class _PrintAndQuitWidgetState extends w.State<_PrintAndQuitWidget> {
 final class _IdleWidget extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) => w.Text('idle');
+}
+
+final class _ReadyWidget extends w.StatelessWidget {
+  @override
+  w.Widget build(w.BuildContext context) => w.Text('ready');
 }

@@ -312,6 +312,7 @@ class SocketTerminalBackend implements TerminalBackend {
   final StreamController<void> _shutdownController =
       StreamController<void>.broadcast();
   StreamSubscription<List<int>>? _socketSubscription;
+  Future<void> _socketWriteQueue = Future<void>.value();
 
   @override
   final bool supportsAnsi;
@@ -329,17 +330,30 @@ class SocketTerminalBackend implements TerminalBackend {
   @override
   void writeRaw(String data) {
     if (_disposed) return;
-    socket.write(data);
+    _socketWriteQueue = _socketWriteQueue
+        .then<void>((_) {
+          if (!_disposed) {
+            socket.add(utf8.encode(data));
+          }
+        })
+        .catchError((_) {});
   }
 
   @override
-  Future<void> flush() async {
-    if (_disposed) return;
-    try {
-      await socket.flush();
-    } on StateError {
-      //ignore
-    }
+  Future<void> flush() {
+    if (_disposed) return Future<void>.value();
+    _socketWriteQueue = _socketWriteQueue
+        .then<void>((_) async {
+          if (!_disposed) {
+            try {
+              await socket.flush();
+            } on StateError {
+              // Ignore flushes racing with socket shutdown.
+            }
+          }
+        })
+        .catchError((_) {});
+    return _socketWriteQueue;
   }
 
   @override
