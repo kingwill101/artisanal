@@ -1,4 +1,4 @@
-# Inline TUI Guide
+# Share the terminal screen with an inline TUI
 
 Inline TUIs render on the terminal's primary screen instead of the alternate
 screen. Use them for command workflows where users need normal shell output,

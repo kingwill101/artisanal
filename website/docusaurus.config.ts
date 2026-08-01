@@ -4,14 +4,19 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Artisanal',
-  tagline: 'A Dart toolkit for building beautiful terminal applications',
+  tagline: 'Build polished command-line tools and terminal apps in Dart',
   favicon: 'img/favicon.svg',
 
   url: 'https://artisanal.dev',
   baseUrl: '/',
 
-  onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenLinks: 'throw',
+  onBrokenAnchors: 'throw',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
+  },
 
   i18n: {
     defaultLocale: 'en',
@@ -32,10 +37,7 @@ const config: Config = {
           // Show breadcrumbs at the top of each page.
           breadcrumbs: true,
           // Exclude internal files from the site.
-          exclude: [
-            // Internal planning doc, not user-facing
-            'documentation_checklist.md',
-          ],
+          exclude: ['workspace_architecture.md'],
         },
         // No blog needed.
         blog: false,
@@ -68,10 +70,10 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Overview', to: '/docs/docs_index' },
-            { label: 'TUI Runtime', to: '/docs/tui' },
-            { label: 'Widget Catalog', to: '/docs/widgets' },
-            { label: 'UV System', to: '/docs/uv' },
+            { label: 'Start here', to: '/docs/docs_index' },
+            { label: 'Build a TUI', to: '/docs/tui' },
+            { label: 'Build with widgets', to: '/docs/widgets' },
+            { label: 'Draw with UV', to: '/docs/uv' },
           ],
         },
       ],

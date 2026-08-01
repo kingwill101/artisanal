@@ -1,15 +1,17 @@
-# Unicode Utilities
+# Measure terminal text correctly
 
-Artisanal includes helpers for grapheme cluster iteration and approximate terminal width calculations.
+String length is not the same as terminal width. These helpers let you iterate
+visible graphemes and estimate how many terminal cells text will occupy,
+including wide CJK characters and emoji.
 
 ## Grapheme Iteration
 
 ```dart
-import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+import 'package:artisanal/terminal.dart' as terminal;
 
 void main() {
   final s = String.fromCharCodes([0x41, 0x1F600, 0x6F22]);
-  for (final g in uni.graphemes(s)) {
+  for (final g in terminal.graphemes(s)) {
     print(g);
   }
 }
@@ -18,28 +20,28 @@ void main() {
 ## Width Calculation
 
 ```dart
-import 'package:artisanal/src/unicode/width.dart' as uw;
+import 'package:ultraviolet/ultraviolet.dart' as uv;
 
 void main() {
-  print(uw.stringWidth('ASCII'));
-  print(uw.stringWidth(String.fromCharCodes([0x1F600])));
+  print(uv.stringWidth('ASCII'));
+  print(uv.stringWidth(String.fromCharCodes([0x1F600])));
   final cjk = String.fromCharCodes([0x6F22, 0x5B57]);
-  print(uw.maxLineWidth('ab\n$cjk'));
+  print(uv.maxLineWidth('ab\n$cjk'));
 
-  uw.setEmojiPresentationWidth(1);
-  print('emoji width=1: ${uw.stringWidth(String.fromCharCodes([0x1F600]))}');
+  uv.setEmojiPresentationWidth(1);
+  print('emoji width=1: ${uv.stringWidth(String.fromCharCodes([0x1F600]))}');
 
-  uw.setEmojiPresentationWidth(2);
-  print('emoji width=2: ${uw.stringWidth(String.fromCharCodes([0x1F600]))}');
+  uv.setEmojiPresentationWidth(2);
+  print('emoji width=2: ${uv.stringWidth(String.fromCharCodes([0x1F600]))}');
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - Width is minimal and approximate; complex emoji sequences may be undercounted.
 - Emoji width is a global setting; set it once at startup.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [layout.md](layout.md)

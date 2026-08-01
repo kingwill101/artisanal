@@ -1,24 +1,111 @@
 /* Artisanal docs — custom theme overrides */
 
 :root {
-    --ifm-color-primary: #22c55e;
-    --ifm-color-primary-dark: #16a34a;
-    --ifm-color-primary-darker: #15803d;
-    --ifm-color-primary-darkest: #166534;
-    --ifm-color-primary-light: #4ade80;
-    --ifm-color-primary-lighter: #86efac;
-    --ifm-color-primary-lightest: #bbf7d0;
-    --ifm-code-font-size: 90%;
-    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-color-primary: #397824;
+  --ifm-color-primary-dark: #2e641d;
+  --ifm-color-primary-darker: #285819;
+  --ifm-color-primary-darkest: #1d4012;
+  --ifm-color-primary-light: #478f2e;
+  --ifm-color-primary-lighter: #55a63a;
+  --ifm-color-primary-lightest: #dff4d4;
+  --ifm-code-font-size: 90%;
+  --ifm-font-family-base: 'Aptos', 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  --ifm-heading-font-family: 'Iowan Old Style', 'Palatino Linotype',
+    'Book Antiqua', Palatino, serif;
+  --ifm-navbar-background-color: #171a18;
+  --ifm-navbar-link-color: #eef2e8;
+  --ifm-footer-background-color: #101310;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 [data-theme='dark'] {
-    --ifm-color-primary: #4ade80;
-    --ifm-color-primary-dark: #22c55e;
-    --ifm-color-primary-darker: #16a34a;
-    --ifm-color-primary-darkest: #15803d;
-    --ifm-color-primary-light: #86efac;
-    --ifm-color-primary-lighter: #bbf7d0;
-    --ifm-color-primary-lightest: #dcfce7;
-    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #a6ef76;
+  --ifm-color-primary-dark: #8ade59;
+  --ifm-color-primary-darker: #79d749;
+  --ifm-color-primary-darkest: #55b42b;
+  --ifm-color-primary-light: #b8f391;
+  --ifm-color-primary-lighter: #c8f6aa;
+  --ifm-color-primary-lightest: #eafde0;
+  --ifm-navbar-background-color: #0d100e;
+  --ifm-footer-background-color: #0a0c0a;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
+}
+
+.navbar {
+  height: 68px;
+  padding: 0 max(16px, calc((100% - 1220px) / 2));
+  border-bottom: 1px solid #3d463f;
+  box-shadow: none;
+}
+
+.navbar__brand {
+  margin-right: 32px;
+}
+
+.navbar__title {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino,
+    serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.navbar__title::after {
+  content: '_';
+  color: #a6ef76;
+}
+
+.navbar__link {
+  font-family: 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono', Consolas,
+    monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: #a6ef76;
+}
+
+.navbar__toggle,
+.navbar__items--right .clean-btn {
+  color: #eef2e8;
+}
+
+.footer,
+.footer--dark {
+  --ifm-footer-background-color: #0a0c0a;
+  border-top: 1px solid #343c35;
+}
+
+.footer__title,
+.footer__copyright,
+.footer__link-item {
+  font-family: 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono', Consolas,
+    monospace;
+}
+
+.footer__title {
+  color: #a6ef76;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footer__link-item,
+.footer__copyright {
+  color: #aab3aa;
+  font-size: 0.76rem;
+}
+
+.footer__link-item:hover {
+  color: #f0f4ec;
+}
+
+@media (max-width: 996px) {
+  .navbar {
+    padding: 0 16px;
+  }
 }

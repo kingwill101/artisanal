@@ -1,25 +1,11 @@
-# Bubbles Components
+# Add interactive prompts and components
 
-Artisanal Bubbles are reusable interactive TUI components. Use them directly via prompt helpers or compose them into larger programs.
+Use Bubbles when you need an input, picker, list, table, spinner, progress bar,
+or another interactive piece without building its state machine from scratch.
+Simple programs can call a prompt helper; larger TEA apps can compose the
+underlying models.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Prompt Helpers](#prompt-helpers)
-  - [Select and Multi-Select](#select-and-multi-select)
-  - [Search and Anticipate](#search-and-anticipate)
-  - [Text Area](#text-area)
-  - [Password Prompts](#password-prompts)
-  - [Wizard](#wizard)
-- [Compose in a Program](#compose-in-a-program)
-- [Display Components](#display-components)
-- [Model Catalog](#model-catalog)
-- [Prompt Options](#prompt-options)
-- [Gotchas](#gotchas)
-- [Related Docs](#related-docs)
-
-## Overview
+## Choose how to use a component
 
 There are two primary ways to use Bubbles:
 
@@ -284,13 +270,13 @@ Future<void> main() async {
 
 Use `textareaPromptOptions` for full-screen editing and `promptProgramOptions` for inline prompts.
 
-## Gotchas
+## Things to keep in mind
 
 - Prompt helpers return `null` on cancel; handle `null` explicitly.
 - Text area prompts use `ctrl+s` to submit and `esc` to cancel by default.
 - `RenderConfig` should match terminal width for display components.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [tui.md](tui.md)

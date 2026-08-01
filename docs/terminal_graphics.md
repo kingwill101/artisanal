@@ -1,6 +1,9 @@
-# Terminal Graphics
+# Show images in the terminal
 
-Artisanal provides robust support for high-resolution graphics in the terminal, including images, icons, and custom drawings. It abstracts the complexities of different terminal graphics protocols into a unified API.
+Artisanal can display images through Kitty, iTerm2, or Sixel and fall back to
+Unicode half blocks when none of those protocols are available. The drawable
+API lets application code use one image path while capability detection chooses
+the best output for the current terminal.
 
 ## Supported Protocols
 

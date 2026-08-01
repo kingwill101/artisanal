@@ -1,6 +1,8 @@
-# Renderer Abstraction
+# Choose where output goes
 
-Renderers control how styled output is generated and where it goes. Artisanal provides multiple renderer types for terminals, strings, and no-op output.
+A renderer decides where styled output goes. Use the terminal renderer for a
+real CLI, the string renderer when you need to capture output, and the null
+renderer when output should be discarded.
 
 ## Quick Start
 
@@ -110,7 +112,7 @@ void main() {
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - `TerminalRenderer` strips ANSI when `forceNoAnsi` is true or output is not a TTY.
 - `StringRenderer` writes to `stringOutput`; `output` is null.
@@ -159,7 +161,7 @@ renderer.render(result);
 See [uv.md → Post-Processing Filters](uv.md#post-processing-filters) for the
 full filter catalog and `BufferRenderSink` usage.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [terminal.md](terminal.md)

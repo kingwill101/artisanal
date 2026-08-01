@@ -1,11 +1,13 @@
-# Physics Helpers (Experimental)
+# Add simple physics
 
-Artisanal provides lightweight adapters around Forge2D for demos and interactive UI experiments. This API is experimental.
+These lightweight Forge2D helpers are useful for playful demos and interactive
+terminal experiments. The API is experimental and exported by
+`package:artisanal/artisanal.dart`.
 
 ## Quick Start
 
 ```dart
-import 'package:artisanal/physics.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   const PhysicsSettings(velocityIterations: 8, positionIterations: 3).apply();
@@ -30,12 +32,12 @@ void main() {
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - This module is `@experimental` and may change in minor releases.
 - For advanced usage, access the underlying Forge2D types directly.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [uv.md](uv.md)

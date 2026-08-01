@@ -1,24 +1,28 @@
-# Artisanal Architecture
+# How Artisanal fits together
 
-Artisanal is a full-stack terminal toolkit for Dart, providing everything needed to build polished CLI applications and interactive TUIs. It's inspired by Charm's ecosystem (Lip Gloss, Bubble Tea, Ultraviolet).
+You do not have to adopt the whole stack to use Artisanal. A command-line tool
+might only use `Console` and `Style`; an interactive app can add either the TEA
+runtime or the widget framework; a custom renderer can work directly with
+Ultraviolet.
 
-## Two Programming Models
+This page explains where those pieces meet and helps you choose the smallest
+useful starting point.
 
-Artisanal offers two independent ways to build an interactive TUI. Both sit on top of the same `Program` runtime and UV renderer, but they present very different developer experiences:
+## Choose how to structure an interactive app
 
-| | TEA Model | Widget System |
+Both approaches run on the same `Program` runtime and Ultraviolet renderer.
+Choose based on how you prefer to organize application code:
+
+| | TEA model | Widget system |
 |---|---|---|
-| **Location** | `pkgs/artisanal` | `pkgs/artisanal_widgets` |
-| **Import** | `package:artisanal/runtime.dart` | `package:artisanal_widgets/widgets.dart` |
-| **Root type** | Your class `implements Model` | `ArtisanalApp(...)` / `WidgetApp(root)` |
-| **Runner** | `runProgram(myModel)` | `runArtisanalApp(...)` / `runWidgetApp(...)` |
-| **State** | Immutable — return a new model | `setState()` in `StatefulWidget`; immutable fields in plain `Widget` |
-| **Rendering** | `view()` → `String` / `View` (ANSI output) | `build(BuildContext)` → `Widget` subtree; element tree renders it |
-| **Docs** | [tui.md](tui.md) | [widgets.md](widgets.md) |
+| **A good fit for** | Small apps, custom event flows, and direct runtime control | Screens, forms, navigation, and reusable UI |
+| **Code shape** | `Model`, `update`, and `view` | `Widget`, `State`, and `build` |
+| **Start with** | [The TEA runtime](tui.md) | [The widget framework](widgets.md) |
 
-The two are not exclusive — the Widget system's `WidgetApp` is itself a `Model`, so it runs inside the same `Program` runtime.
+The two are not isolated worlds. `WidgetApp` is itself a `Model`, so advanced
+apps can mix widget screens with lower-level runtime features when needed.
 
-## High-Level Architecture
+## How output reaches the terminal
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -62,7 +66,7 @@ The two are not exclusive — the Widget system's `WidgetApp` is itself a `Model
 
 ### 1. Style System (Lip Gloss-inspired)
 
-**Location:** `lib/src/style/`  
+**Location:** `pkgs/artisanal/lib/src/style/`
 **Documentation:** [style.md](style.md)
 
 The Style system provides a fluent API for terminal text styling:
@@ -86,7 +90,7 @@ print(style.render('Hello, World!'));
 
 ### 2. TUI System (Bubble Tea-inspired)
 
-**Location:** `lib/src/tui/`  
+**Location:** `pkgs/artisanal/lib/src/tui/`
 **Documentation:** [tui.md](tui.md)
 
 The TUI system implements the Elm Architecture for interactive terminal applications:
@@ -146,7 +150,7 @@ Container(
 
 ### 4. UV System (Ultraviolet)
 
-**Location:** `lib/src/uv/`  
+**Location:** `pkgs/ultraviolet/lib/src/uv/`
 **Documentation:** [uv.md](uv.md)
 
 Low-level cell-based terminal rendering:
@@ -172,8 +176,8 @@ Artisanal has two color systems serving different purposes:
 
 | System | Location | Purpose |
 |--------|----------|---------|
-| **Style Colors** | `lib/src/style/color.dart` | High-level API producing ANSI strings |
-| **UV Colors** | `lib/src/uv/cell.dart` | Low-level cell storage for deferred rendering |
+| **Style Colors** | `pkgs/artisanal/lib/src/style/color.dart` | High-level API producing ANSI strings |
+| **UV Colors** | `pkgs/ultraviolet/lib/src/uv/cell.dart` | Low-level cell storage for deferred rendering |
 
 ### Style Colors
 
@@ -236,14 +240,11 @@ import 'package:artisanal/args.dart';
 // Terminal abstraction
 import 'package:artisanal/terminal.dart';
 
-// Markdown rendering (ANSI + Glamour)
-import 'package:artisanal/markdown.dart';
-import 'package:artisanal/glamour.dart';
+// Umbrella API: Console, Markdown, charting, plugins, Liquid, and physics
+import 'package:artisanal/artisanal.dart';
 
-// Extras
-import 'package:artisanal/charting.dart';
-import 'package:artisanal/liquid.dart';
-import 'package:artisanal/physics.dart';
+// Focused high-fidelity Markdown renderer
+import 'package:artisanal/glamour.dart';
 ```
 
 ## Satellite Libraries
@@ -315,27 +316,30 @@ final style = Style().foreground(BasicColor('#ff5500'));
 ## Performance Considerations
 
 1. **Diff-based Rendering**: UV only redraws changed cells
-2. **Synchronized Output**: Uses DCS/ST sequences for atomic updates
+2. **Synchronized Output**: Uses DEC synchronized-output mode where supported
 3. **Frame Rate Control**: Configurable FPS with automatic throttling
 4. **Lazy Evaluation**: Style rendering is deferred until needed
 
 ## File Organization
 
 ```
-lib/
+pkgs/artisanal/lib/
 ├── artisanal.dart      # Main entry point
 ├── style.dart          # Style system exports
 ├── tui.dart            # TUI framework exports
 ├── bubbles.dart        # Bubble components exports
-├── uv.dart             # UV renderer compatibility re-export (artisanal)
+├── compat.dart         # Compatibility helpers
+├── editor_core.dart    # Low-level editor primitives
+├── glamour.dart        # Focused high-fidelity Markdown renderer
 ├── args.dart           # CLI argument parser exports
 ├── terminal.dart       # Terminal abstraction exports
-├── markdown.dart       # Markdown renderer exports
-├── glamour.dart        # High-fidelity Markdown renderer
-├── charting.dart       # Charting primitives
-├── liquid.dart         # Liquid adapters (experimental)
-├── physics.dart        # Physics helpers (experimental)
+├── testing.dart        # Widget testing re-export
+├── uv.dart             # UV compatibility re-export
+├── widgets.dart        # Widget framework re-export
 └── src/
+    ├── charting/       # Charting renderers
+    ├── plugins/        # Remote plugin protocol and surfaces
+    ├── run/            # App and hosted runner support
     ├── style/          # Lip Gloss-inspired styling
     ├── tui/            # Bubble Tea-inspired TUI
     │   └── bubbles/    # Pre-built TEA components
@@ -350,10 +354,10 @@ lib/
     ├── layout/         # Layout utilities
     ├── renderer/       # Renderer abstraction
     ├── runner/         # Command runner
-    ├── markdown/       # Markdown to ANSI
-    ├── charting/       # Charting renderers
+    ├── tui/markdown/   # Markdown to ANSI
     ├── glamour/        # Glamour renderer
-    └── liquid/         # Liquid adapters
+    ├── liquid/         # Liquid adapters
+    └── physics/        # Forge2D helpers
 ```
 
 Standalone UV users should import `package:ultraviolet/ultraviolet.dart` directly;

@@ -1,11 +1,14 @@
-# Liquid Templates (Experimental)
+# Build terminal output with Liquid
 
-Artisanal provides Liquid tag adapters for building UI blocks in templates. This API is experimental and may change in minor releases.
+Liquid tags can describe panels, stacks, text, progress, and charts in a
+template instead of Dart code. This integration is experimental and may change
+in a minor release. The API is exported by
+`package:artisanal/artisanal.dart`.
 
 ## Quick Start
 
 ```dart
-import 'package:artisanal/liquid.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   registerLiquidUiTags();
@@ -29,24 +32,30 @@ void main() {
 
 ## Custom Tags
 
-Register tags and filters on a `LiquidEnvironment` when you need isolated behavior per template.
+Use Liquify's `environmentSetup` callback when tags and filters should be
+registered only for one template environment.
 
 ```dart
-import 'package:artisanal/liquid.dart';
+import 'package:artisanal/artisanal.dart';
+import 'package:liquify/liquify.dart' as liquify;
 
 void main() {
-  final env = LiquidEnvironment()..registerUiTags();
-  final template = LiquidTemplate.parse('{% text content:"Hello" %}', env: env);
+  final template = liquify.Template.parse(
+    '{% text content:"Hello" %}',
+    environmentSetup: (environment) {
+      registerLiquidUiTags(environment: environment);
+    },
+  );
   print(template.render());
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - This module is `@experimental` and may change in minor releases.
 - Tag parsing and render targets are still evolving.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [style.md](style.md)

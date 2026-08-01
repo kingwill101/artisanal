@@ -1,43 +1,11 @@
-# Style System
+# Style terminal output
 
-The Artisanal Style system provides a fluent, chainable API for styling terminal output. Inspired by Go's [Lip Gloss](https://github.com/charmbracelet/lipgloss) library, it enables composable styling with support for colors, borders, padding, margins, alignment, and more.
+`Style` lets you add color, borders, spacing, sizing, and alignment without
+assembling ANSI codes by hand. Styles are reusable and automatically adapt to
+the terminal's color capabilities. The API is inspired by Go's
+[Lip Gloss](https://github.com/charmbracelet/lipgloss).
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Color System](#color-system)
-  - [BasicColor](#basiccolor)
-  - [AnsiColor](#ansicolor)
-  - [AdaptiveColor](#adaptivecolor)
-  - [CompleteColor](#completecolor)
-  - [CompleteAdaptiveColor](#completeadaptivecolor)
-  - [Color Presets](#color-presets)
-  - [ColorProfile](#colorprofile)
-- [Text Styling](#text-styling)
-- [Layout Properties](#layout-properties)
-  - [Padding](#padding)
-  - [Margin](#margin)
-  - [Alignment](#alignment)
-- [Borders](#borders)
-  - [Border Presets](#border-presets)
-  - [BorderSides](#bordersides)
-  - [Border Colors](#border-colors)
-- [Width and Height](#width-and-height)
-- [LipList](#liplist)
-- [Layout Composition](#layout-composition)
-- [Rendering and Color Degradation](#rendering-and-color-degradation)
-- [Style Composition](#style-composition)
-- [Theme System](#theme-system)
-- [Ranges and ANSI Slicing](#ranges-and-ansi-slicing)
-- [Color Blending Utilities](#color-blending-utilities)
-- [Print Helpers](#print-helpers)
-- [Console Tag Parser](#console-tag-parser)
-- [UV System Integration](#uv-system-integration)
-
----
-
-## Overview
+## Quick start
 
 The Style system is designed around a fluent API where each method returns the Style instance, allowing method chaining:
 
@@ -54,17 +22,7 @@ final style = Style()
 print(style.render('Hello World'));
 ```
 
-Key features:
-- **Fluent API**: Chain methods for readable style definitions
-- **Composable**: Styles can be copied and extended
-- **Color Profile Aware**: Automatic degradation for terminal capabilities
-- **Adaptive Colors**: Light/dark terminal background detection
-- **Layout System**: Padding, margin, borders, and alignment
-- **Unicode Support**: Proper handling of wide characters and grapheme clusters
-
----
-
-## Quick Start
+## Common styling patterns
 
 ### Basic Text Styling
 
@@ -1285,7 +1243,7 @@ void main() {
 ## Console Tag Parser
 
 ```dart
-import 'package:artisanal/src/style/tag_parser.dart';
+import 'package:artisanal/style.dart';
 
 void main() {
   final parser = ConsoleTagParser();
@@ -1375,7 +1333,7 @@ final output = Style().render(text);
 
 ---
 
-## API Reference
+## Reference
 
 ### Style Class - Quick Reference
 
@@ -1432,7 +1390,7 @@ final output = Style().render(text);
 - `renderTo(Renderer, [text])` - Render with renderer's settings
 - `toString()` - Render pre-set string or debug representation
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [console.md](console.md) - Console output and tags

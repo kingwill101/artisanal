@@ -1,121 +1,55 @@
-# Widget Composition System
+# Build a TUI with widgets
 
-Artisanal provides **two distinct ways to build a terminal UI**. This document covers the **Widget system** — a Flutter-inspired, composable tree model. For the lower-level TEA (Elm Architecture) model, see [tui.md](tui.md).
+The widget framework is a good fit for apps with several screens, forms,
+scrolling content, navigation, or reusable UI pieces. If you know Flutter, the
+shape will feel familiar: widgets describe the UI, stateful widgets own mutable
+state, and `build()` returns a tree.
 
-## Choosing a UI Model
+You do not need to understand the lower-level TEA runtime before using widgets.
+If you prefer a smaller `Model` → `update` → `view` loop, start with the
+[TEA guide](tui.md) instead.
 
-| | TEA Model ([tui.md](tui.md)) | Widget System (this doc) |
-|---|---|---|
-| **State model** | Immutable — return a new model from `update()` | Mutable `State` via `setState()` for `StatefulWidget`; immutable fields for plain `Widget` |
-| **Rendering** | `view()` returns a `String` or `View` object (rendered ANSI) | `build(BuildContext)` returns a `Widget` subtree; rendering is managed by the element tree |
-| **Message handling** | Override `update(Msg)` directly | Override `handleUpdate(Msg)` — base `update()` auto-fans out to children |
-| **Composition** | Manual — concatenate strings in `view()` | Declarative `children` list, `Row`/`Column`/`Container`, `InheritedWidget` context |
-| **Context / theming** | None — access globals manually | `BuildContext`, `InheritedWidget`, `Theme` via `context.dependOn...` |
-| **Runner** | `runProgram(MyModel())` | `runWidgetApp(WidgetApp(root))` or `runArtisanalApp(ArtisanalApp(...))` |
-| **`StatefulWidget`** | N/A | Requires `WidgetApp` — element tree manages `State` lifecycle |
-| **Best for** | Simple apps, custom pipelines, bubbles integration | Rich layouts, forms, navigation, reusable component libraries |
-
-The Widget system is built on the same `Program` runtime as the TEA model — `WidgetApp` is itself a `Model` that wraps an element tree. You do not need to understand TEA to use the Widget system.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Widget Base Class](#widget-base-class)
-- [Keys and Debugging](#keys-and-debugging)
-- [Widget Lifecycle](#widget-lifecycle)
-- [Theme System](#theme-system)
-- [Layout Widgets](#layout-widgets)
-- [Focus Widgets](#focus-widgets)
-- [Input Widgets](#input-widgets)
-- [Scroll Widgets](#scroll-widgets)
-- [Components Widgets](#components-widgets)
-  - [Flutter-style ports](#flutter-style-ports)
-- [Widget Slot Registry](#widget-slot-registry)
-- [Navigation Widgets](#navigation-widgets)
-- [Selection Widgets](#selection-widgets)
-- [Chart Widgets](#chart-widgets)
-- [Media Widgets](#media-widgets)
-- [Animation Widgets](#animation-widgets)
-- [Widget Testing](#widget-testing)
-- [Creating Custom Widgets](#creating-custom-widgets)
-  - [RenderObject widgets](#renderobject-widgets)
-- [Widget Composition](#widget-composition)
-- [Message Propagation](#message-propagation)
-- [Focus Management](#focus-management)
-- [Integration with TUI Program](#integration-with-tui-program)
-- [Integration with UV Canvas](#integration-with-uv-canvas)
-- [Quick Reference](#quick-reference)
-- [Related Docs](#related-docs)
-
----
-
-## Overview
-
-The Widget system provides:
-
-- **Hierarchical composition** - Build complex UIs from smaller, reusable widgets
-- **Automatic message forwarding** - Parent widgets forward messages to children
-- **Built-in theming** - Access semantic colors and text styles via `theme`
-- **Layout primitives** - `Row`, `Column`, `Wrap`, `Stack`, `Container`, `Text`, `Icon`, `Spacer`, `Divider` (aliases: `HBox`, `VBox`, `Label`)
-- **Adaptive styling** - Colors that auto-switch between light and dark terminals
-
-Stable top-level entrypoints:
-
-- `package:artisanal/app.dart` and `package:artisanal_widgets/app.dart` for app shells, runners, reload helpers, and hosted wrappers
-- `package:artisanal/widgets.dart` and `package:artisanal_widgets/widgets.dart` for the main widget/app/layout/input/navigation surface, including `KeyMap`/`KeyBinding` for shortcut-oriented components like `HelpView` and zone-hit messages like `ZoneInBoundsMsg` for interactive demos
-- `package:artisanal_widgets/charting.dart` for chart widgets
-- `package:artisanal/editors.dart` and `package:artisanal_widgets/editors.dart` for text inputs, higher-level editors, and stable `TextInputKeyMap` / `TextAreaKeyMap` customization
-- `package:artisanal/selection.dart` and `package:artisanal_widgets/selection.dart` for text selection widgets
-- `package:artisanal/testing.dart` and `package:artisanal_widgets/testing.dart` for `WidgetTester`
-
-The older `package:artisanal_widgets/artisanal_widgets.dart` import remains
-available as the broader experimental compatibility surface.
-
-Prefer the direct `package:artisanal_widgets/...` entrypoints when widget code
-is the main thing your app depends on. Use the `package:artisanal/...`
-variants as umbrella convenience re-exports when you already want the broader
-CLI/style/runtime toolkit from the same package.
-
-The local runner helpers (`runWidgetApp`, `runArtisanalApp`, watched/reloadable
-variants) and the hosted browser/socket helpers all accept an `imageAutoMode`
-override. Local runners keep the default environment-driven behavior. Hosted
-browser/socket runners now default to `ImageAutoMode.sessionCapabilities`, so
-`Image(renderMode: ImageRenderMode.auto)` can follow terminal version and
-device-attribute reports from the active remote session instead of only the
-server process environment. Override `imageAutoMode` when you want to force
-portable half-block rendering or another explicit mode.
+## Quick start
 
 ```dart
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 
-class MyApp extends Widget {
-  final header = Text('My Application', style: Style().bold());
-  final content = Column(children: [
-    Text('Line 1'),
-    Text('Line 2'),
-  ]);
+class HelloApp extends StatelessWidget {
+  HelloApp({super.key});
 
   @override
-  List<Widget> get children => [header, content];
-
-  @override
-  Object view() {
+  Widget build(BuildContext context) {
+    final theme = ThemeScope.of(context);
     return Column(
-      gap: 1,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Title', style: theme.titleLarge),
-        Row(
-          gap: 2,
-          children: [Text('Left'), Text('Right')],
-        ),
+        Text('Hello widgets', style: theme.titleLarge),
+        Text('Press q to quit', style: theme.bodyMedium),
       ],
     );
   }
 }
+
+void main() async {
+  await runArtisanalApp(
+    ArtisanalApp(
+      title: 'Hello widgets',
+      home: HelloApp(),
+    ),
+  );
+}
 ```
+
+## Where to import from
+
+Most widget apps need `package:artisanal_widgets/app.dart` and
+`package:artisanal_widgets/widgets.dart`. Focused libraries are also available
+for [charting](#chart-widgets), [editors](#input-widgets),
+[selection](#selection-widgets), and [testing](#widget-testing).
+
+The umbrella package re-exports the main widget and testing APIs as
+`package:artisanal/widgets.dart` and `package:artisanal/testing.dart`.
 
 ---
 
@@ -164,7 +98,7 @@ Use `WidgetApp` to render widgets through the element tree (required for
 `StatefulWidget`):
 
 ```dart
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal_widgets/app.dart';
 
 final app = WidgetApp(MyRoot(), scanZones: true);
@@ -1981,8 +1915,7 @@ for the full token reference and usage examples with `LipList`.
 ## Components Widgets
 
 Higher-level widgets built from layout primitives. These are exported from
-the stable `package:artisanal_widgets/widgets.dart` entrypoint (and re-exported
-by `package:artisanal/tui.dart`). The older
+the stable `package:artisanal_widgets/widgets.dart` entrypoint. The older
 `package:artisanal_widgets/artisanal_widgets.dart` import remains available as
 the broader experimental compatibility surface.
 
@@ -2348,7 +2281,7 @@ chart widget surface.
 
 Legend API details:
 
-- `legendEntries`: `List<ChartLegendEntry>` from `package:artisanal/charting.dart`
+- `legendEntries`: `List<ChartLegendEntry>` from `package:artisanal/artisanal.dart`
 - `legendColumns`: number of legend columns (default `1`)
 - `legendRowGap`: extra blank rows between legend rows (default `0`)
 - `legendPosition`: `topLeft`, `topRight`, `bottomLeft`, `bottomRight`
@@ -3107,7 +3040,7 @@ Alignment.center
 Alignment.bottomRight
 ```
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [tui.md](tui.md) - TEA programming model (the alternative to the Widget system)

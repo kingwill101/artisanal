@@ -1,32 +1,31 @@
-# Color Profile Detection
+# Adapt colors to the terminal
 
-Artisanal detects terminal color capabilities and can downsample ANSI output to match the detected profile.
+Not every terminal can display the same colors. Color-profile detection lets
+you choose an appropriate palette and downsample ANSI output instead of showing
+broken or unreadable styling.
 
 ## Quick Start
 
 ```dart
 import 'dart:io';
-import 'package:artisanal/src/colorprofile/detect.dart' as cp_detect;
-import 'package:artisanal/src/colorprofile/convert.dart' as cp_conv;
-import 'package:artisanal/src/colorprofile/downsample.dart' as cp_down;
-import 'package:artisanal/src/colorprofile/profile.dart' as cp;
+import 'package:ultraviolet/colorprofile.dart' as cp;
 
 void main() {
-  final profile = cp_detect.detect(
+  final profile = cp.detect(
     isTty: stdout.hasTerminal,
     env: Platform.environment,
     isWindows: Platform.isWindows,
   );
   print('profile: $profile');
 
-  final red = cp_conv.sgrColor(
+  final red = cp.sgrColor(
     profile: profile,
-    rgb: const cp_conv.Rgb(255, 0, 0),
+    rgb: const cp.Rgb(255, 0, 0),
   );
   final text = '${red}Hello\x1B[0m';
-  print('styled: ${cp_down.downsampleSgr(text, profile)}');
+  print('styled: ${cp.downsampleSgr(text, profile)}');
 
-  final ascii = cp_down.downsampleSgr(text, cp.Profile.ascii);
+  final ascii = cp.downsampleSgr(text, cp.Profile.ascii);
   print('ascii: $ascii');
 }
 ```
@@ -40,13 +39,13 @@ Detection respects common env vars:
 - `COLORTERM`
 - `TERM`
 
-## Gotchas
+## Things to keep in mind
 
 - `downsampleSgr` only processes SGR sequences; other escapes are untouched.
 - `Profile.ascii` strips color parameters but preserves bold/underline.
 - `NO_COLOR` only reduces output when stdout is a TTY.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [style.md](style.md)

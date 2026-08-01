@@ -1,16 +1,20 @@
-# Markdown Rendering (ANSI + Glamour)
+# Render Markdown in the terminal
 
-Artisanal offers two Markdown renderers:
+Artisanal offers a quick ANSI renderer for inline content and a richer Glamour
+renderer for documents. Choose based on the output you need:
 
-- `markdown.dart`: lightweight Markdown-to-ANSI with simple options.
-- `glamour.dart`: high-fidelity renderer with theme-driven formatting.
+- `package:artisanal/artisanal.dart`: lightweight Markdown-to-ANSI rendering
+  with simple options.
+- `package:artisanal/glamour.dart`: high-fidelity rendering with
+  theme-driven formatting.
 
-Use `markdown.dart` for fast, minimal output. Use `glamour.dart` for rich document-style rendering.
+Use the ANSI renderer for fast, minimal output. Use Glamour for rich,
+document-style rendering.
 
 ## Quick Start (ANSI)
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final markdown = '''
@@ -33,7 +37,6 @@ This is **bold** and *italic*.
 ## ANSI Customization
 
 ```dart
-import 'package:artisanal/markdown.dart';
 import 'package:artisanal/artisanal.dart';
 
 void main() {
@@ -63,7 +66,7 @@ A [link](https://example.com) and some `inline code`.
 ## Syntax Highlighting
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final highlighter = SyntaxHighlighter(
@@ -82,7 +85,7 @@ void main() {
 ## Adaptive Highlighting
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final highlighter = SyntaxHighlighter.adaptive(

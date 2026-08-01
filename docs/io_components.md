@@ -1,6 +1,8 @@
-# Console Components Helper
+# Use higher-level console components
 
-`Console.components` provides higher-level, Laravel-style UI helpers built on Artisanal components.
+`Console.components` groups common, higher-level patterns such as titled
+messages, bullet lists, and spinners. Use it when a basic `Console` method is
+too small but a full TUI would be too much.
 
 ## Quick Start
 
@@ -53,13 +55,13 @@ Future<void> main() async {
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - Many helpers add their own newlines; avoid double spacing.
 - `spin()` falls back to non-animated output when `interactive` is false.
 - `line()` and `rule()` use terminal width to size their output.
 
-## Related Docs
+## Where to go next
 
 - [docs_index.md](docs_index.md) - Full documentation index
 - [console.md](console.md)
