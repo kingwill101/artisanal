@@ -147,7 +147,9 @@ class _ArtisanalAppExampleState extends State<ArtisanalAppExample> {
 }
 ```
 
-`ArtisanalAppBinding` supports the same app-shell features as `runArtisanalApp`: theming (`Theme`, `ThemeMode`), navigation (`home`, `routes`), debug console capture, and `ImageAutoMode`.
+`ArtisanalAppBinding` supports the same app-shell features as passing an
+`ArtisanalApp` to `runWidgetApp`: theming (`Theme`, `ThemeMode`), navigation
+(`home`, `routes`), debug console capture, and `ImageAutoMode`.
 
 ## Repaint loop
 

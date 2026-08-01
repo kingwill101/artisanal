@@ -48,7 +48,7 @@ const String _initialEditorBodyText =
 const String _initialCodeEditorText = '''
 Future<void> bootHostedApp() async {
   // TODO: sync diagnostics in the root showcase
-  await runArtisanalApp(
+  await runWidgetApp(
     ArtisanalApp(title: 'Hosted Demo', home: DemoScreen()),
   ); // FIXME: replace placeholder bootstrap wiring
 }

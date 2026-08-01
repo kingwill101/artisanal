@@ -12,6 +12,7 @@ If you prefer a smaller `Model` → `update` → `view` loop, start with the
 ## Quick start
 
 ```dart
+import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 
@@ -32,7 +33,7 @@ class HelloApp extends StatelessWidget {
 }
 
 void main() async {
-  await runArtisanalApp(
+  await runWidgetApp(
     ArtisanalApp(
       title: 'Hello widgets',
       home: HelloApp(),
@@ -43,9 +44,10 @@ void main() async {
 
 ## Where to import from
 
-Most widget apps need `package:artisanal_widgets/app.dart` and
-`package:artisanal_widgets/widgets.dart`. Focused libraries are also available
-for [charting](#chart-widgets), [editors](#input-widgets),
+Most widget apps use `package:artisanal_widgets/app.dart` for the app shell,
+`package:artisanal_widgets/widgets.dart` for widgets, and `runWidgetApp` from
+`package:artisanal/artisanal.dart` to start the app. Focused libraries are also
+available for [charting](#chart-widgets), [editors](#input-widgets),
 [selection](#selection-widgets), and [testing](#widget-testing).
 
 The umbrella package re-exports the main widget and testing APIs as
@@ -108,12 +110,14 @@ runProgram(
 );
 ```
 
-For the common fullscreen widget case, use the higher-level runners:
+For the common fullscreen widget case, use the higher-level runner:
 
 ```dart
+import 'package:artisanal/artisanal.dart' show runWidgetApp;
+
 await runWidgetApp(WidgetApp(MyRoot()));
 
-await runArtisanalApp(
+await runWidgetApp(
   ArtisanalApp(
     title: 'Demo',
     themeMode: ThemeMode.system,
@@ -126,7 +130,7 @@ Use `theme` / `darkTheme` with `themeMode` when you want an explicit light and
 dark pair instead of the default adaptive palette:
 
 ```dart
-await runArtisanalApp(
+await runWidgetApp(
   ArtisanalApp(
     title: 'Docs',
     theme: Theme.light(),
@@ -140,7 +144,10 @@ await runArtisanalApp(
 The same runner layer can also target browser and raw-socket hosts:
 
 ```dart
-final browserHost = await serveArtisanalAppInBrowser(
+import 'package:artisanal/artisanal.dart' show Transport, serveWidgetApp;
+
+final browserHost = await serveWidgetApp(
+  transport: Transport.browser,
   browserTitle: 'Browser Demo',
   appBuilder: () => ArtisanalApp(
     title: 'Browser Demo',
@@ -148,7 +155,8 @@ final browserHost = await serveArtisanalAppInBrowser(
   ),
 );
 
-final socketHost = await serveArtisanalAppOnSocket(
+final socketHost = await serveWidgetApp(
+  transport: Transport.socket,
   appBuilder: () => ArtisanalApp(
     title: 'Socket Demo',
     home: MyRoot(),
@@ -174,7 +182,7 @@ into automatic `print()` and uncaught zone error capture:
 ```dart
 final console = DebugConsoleController(initiallyVisible: true);
 
-await runArtisanalApp(
+await runWidgetApp(
   ArtisanalApp(
     title: 'Diagnostics',
     debugConsoleController: console,
@@ -201,7 +209,7 @@ shortcut:
 ```dart
 final controller = ReloadController();
 
-await runArtisanalApp(
+await runWidgetApp(
   ArtisanalApp(
     title: 'Reload Demo',
     home: ReloadHost(
@@ -226,7 +234,7 @@ final watcher = await ReloadFileWatcher.watch(
   extensions: const ['.dart'],
 );
 
-await runArtisanalApp(
+await runWidgetApp(
   ArtisanalApp(
     title: 'Reload Demo',
     home: ReloadHost(
@@ -341,7 +349,7 @@ forwards `UvTerminalRenderer` stats into overlays:
 ```dart
 final monitor = RenderMetricsProgramMonitor(prefix: 'Render');
 
-await runArtisanalApp(
+await runWidgetApp(
   ArtisanalApp(home: MyApp()),
   options: ProgramOptions(interceptors: [monitor]),
 );
@@ -415,7 +423,7 @@ class AccentLabel extends StatelessWidget {
 
 ### StatelessWidget and StatefulWidget
 
-> **`WidgetApp` required.** `StatelessWidget` and `StatefulWidget` rely on the element tree managed by `WidgetApp`. Calling `runProgram(StatefulWidget(...))` directly will throw at runtime because no element tree exists to manage `State` lifecycles and `BuildContext`. Always use `runWidgetApp` or `runArtisanalApp` when your tree contains `StatelessWidget` or `StatefulWidget`.
+> **`WidgetApp` required.** `StatelessWidget` and `StatefulWidget` rely on the element tree managed by `WidgetApp`. Calling `runProgram(StatefulWidget(...))` directly will throw at runtime because no element tree exists to manage `State` lifecycles and `BuildContext`. Always wrap the tree in `WidgetApp` or `ArtisanalApp`, then start it with `runWidgetApp`.
 
 ```dart
 class Title extends StatelessWidget {
@@ -460,7 +468,7 @@ class _CounterState extends State<Counter> {
 |---------|-------------|-----------------------------|
 | Message handling | Override `update(Msg)` directly | Override `handleUpdate(Msg)`; base `update()` fans out to children automatically |
 | State update | Return a new model instance | Return `(this, null)` from `handleUpdate`; for `StatefulWidget`, call `setState(() { ... })` |
-| Runner | `runProgram(model)` | `runWidgetApp(WidgetApp(root))` / `runArtisanalApp(ArtisanalApp(...))` |
+| Runner | `runProgram(model)` | `runWidgetApp(WidgetApp(root))` or `runWidgetApp(ArtisanalApp(...))` |
 | `view()` return type | `String` or `View` (ANSI output) | `Widget` subtree (further traversed by element tree); `StatelessWidget.build()` returns a `Widget` |
 | Theme access | Manual | Built-in `theme` getter; `BuildContext` for `InheritedWidget` ancestors |
 | Identification | None | Key-based identity |
@@ -2034,8 +2042,8 @@ Tooltip(
 ```
 
 Passive hover requires `MouseMode.allMotion` when you launch widgets through
-`Program` or `runProgram()` directly. The higher-level `runWidgetApp()` and
-`runArtisanalApp()` helpers already enable that mode by default.
+`Program` or `runProgram()` directly. The higher-level `runWidgetApp()` helper
+already enables that mode by default.
 
 ### Modal and Drawer
 
@@ -2762,15 +2770,16 @@ class TextInput extends Widget with FocusableWidget {
 
 ## Running a Widget App
 
-There are three runners, ordered from highest-level to lowest:
+There are two app shells for the public `runWidgetApp` runner. For lower-level
+control, you can also pass `WidgetApp` directly to `runProgram`.
 
-### `runArtisanalApp` (recommended)
+### `ArtisanalApp` + `runWidgetApp` (recommended)
 
 Full app shell with title, theme, routing, and sensible defaults:
 
 ```dart
 void main() async {
-  await runArtisanalApp(
+  await runWidgetApp(
     ArtisanalApp(
       title: 'My App',
       themeMode: ThemeMode.system,
@@ -2780,7 +2789,7 @@ void main() async {
 }
 ```
 
-### `runWidgetApp`
+### `WidgetApp` + `runWidgetApp`
 
 Lightweight shell — no built-in routing or theming, but enables the element tree:
 
@@ -2807,9 +2816,9 @@ void main() async {
 }
 ```
 
-> **Note:** `runWidgetApp` / `runArtisanalApp` call `runProgram` internally with
-> widget-appropriate defaults (`altScreen: true`, `mouseMode: allMotion`). Prefer
-> them over calling `runProgram(WidgetApp(...))` directly unless you have a
+> **Note:** `runWidgetApp` calls `runProgram` internally with widget-appropriate
+> defaults (`altScreen: true`, `mouseMode: allMotion`). Prefer it over calling
+> `runProgram(WidgetApp(...))` directly unless you have a
 > specific reason to override those defaults.
 
 ### Key Messages
