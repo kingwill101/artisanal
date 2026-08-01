@@ -2,6 +2,42 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
+const legacyDocRedirects = [
+  'ANIMATION',
+  'ARCHITECTURE',
+  'ARGS',
+  'BUBBLES',
+  'CHARTING',
+  'COLORPROFILE',
+  'CONSOLE',
+  'DOCS_INDEX',
+  'INLINE_TUI',
+  'IO_COMPONENTS',
+  'LAYOUT',
+  'LIQUID',
+  'MARKDOWN',
+  'PHYSICS',
+  'PLUGINS',
+  'RENDERER',
+  'REPLAY',
+  'STYLE',
+  'TERMINAL',
+  'TERMINAL_GRAPHICS',
+  'TESTING',
+  'TUI',
+  'UNICODE',
+  'UV',
+  'WIDGETS',
+]
+  .map((docId) => ({
+    from: `/docs/${docId}`,
+    to: `/docs/${docId.toLowerCase()}`,
+  }))
+  .concat({
+    from: '/docs/TUI_INLINE_SUPPORT_PLAN',
+    to: '/docs/inline_tui',
+  });
+
 const config: Config = {
   title: 'Artisanal',
   tagline: 'Build polished command-line tools and terminal apps in Dart',
@@ -45,6 +81,15 @@ const config: Config = {
           customCss: './src/css/custom.css',
         },
       } satisfies Preset.Options,
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: legacyDocRedirects,
+      },
     ],
   ],
 
