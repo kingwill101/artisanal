@@ -423,7 +423,11 @@ class AccentLabel extends StatelessWidget {
 
 ### StatelessWidget and StatefulWidget
 
-> **`WidgetApp` required.** `StatelessWidget` and `StatefulWidget` rely on the element tree managed by `WidgetApp`. Calling `runProgram(StatefulWidget(...))` directly will throw at runtime because no element tree exists to manage `State` lifecycles and `BuildContext`. Always wrap the tree in `WidgetApp` or `ArtisanalApp`, then start it with `runWidgetApp`.
+> **Use `runWidgetApp` for widget trees.** Although widgets implement `Model`
+> for framework integration, passing a bare `StatelessWidget` or
+> `StatefulWidget` to `runProgram` bypasses the element tree that manages
+> `BuildContext` and state lifecycles. Wrap the root in `WidgetApp` or
+> `ArtisanalApp`, then start it with `runWidgetApp`.
 
 ```dart
 class Title extends StatelessWidget {

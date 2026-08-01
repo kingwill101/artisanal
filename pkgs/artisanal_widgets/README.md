@@ -56,6 +56,7 @@ Both the local runner helpers and the hosted browser/socket helpers accept an
 ## Quick start
 
 ```dart
+import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 
