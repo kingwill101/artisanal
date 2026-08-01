@@ -1,16 +1,20 @@
-# Markdown Rendering (ANSI + Glamour)
+# Render Markdown in the terminal
 
-Artisanal offers two Markdown renderers:
+Artisanal offers a quick ANSI renderer for inline content and a richer Glamour
+renderer for documents. Choose based on the output you need:
 
-- `markdown.dart`: lightweight Markdown-to-ANSI with simple options.
-- `glamour.dart`: high-fidelity renderer with theme-driven formatting.
+- `package:artisanal/artisanal.dart`: lightweight Markdown-to-ANSI rendering
+  with simple options.
+- `package:artisanal/glamour.dart`: high-fidelity rendering with
+  theme-driven formatting.
 
-Use `markdown.dart` for fast, minimal output. Use `glamour.dart` for rich document-style rendering.
+Use the ANSI renderer for fast, minimal output. Use Glamour for rich,
+document-style rendering.
 
 ## Quick Start (ANSI)
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final markdown = '''
@@ -33,7 +37,6 @@ This is **bold** and *italic*.
 ## ANSI Customization
 
 ```dart
-import 'package:artisanal/markdown.dart';
 import 'package:artisanal/artisanal.dart';
 
 void main() {
@@ -63,7 +66,7 @@ A [link](https://example.com) and some `inline code`.
 ## Syntax Highlighting
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final highlighter = SyntaxHighlighter(
@@ -82,7 +85,7 @@ void main() {
 ## Adaptive Highlighting
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 void main() {
   final highlighter = SyntaxHighlighter.adaptive(
@@ -243,7 +246,7 @@ Each heading level (`h1` through `h6`) has dedicated theme configuration support
 - Underline styles for secondary headings
 - Vertical spacing control before/after
 
-See [STYLE.md](STYLE.md) for detailed theme configuration options.
+See [style.md](style.md) for detailed theme configuration options.
 
 ### Blockquotes with Border Markers
 
@@ -329,7 +332,7 @@ Supported shortcodes follow the GitHub emoji specification, with rendering that 
 
 ### Related Docs
 
-- [STYLE.md](STYLE.md) - Style system for terminal output
-- [CONSOLE.md](CONSOLE.md) - Console output and markdown integration  
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TERMINAL.md](TERMINAL.md)
+- [style.md](style.md) - Style system for terminal output
+- [console.md](console.md) - Console output and markdown integration  
+- [docs_index.md](docs_index.md) - Full documentation index
+- [terminal.md](terminal.md)

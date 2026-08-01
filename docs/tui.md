@@ -1,46 +1,15 @@
-# TUI System (Bubble Tea-inspired)
+# Build a TUI with the TEA runtime
 
-The TUI system provides an Elm Architecture-based framework for building interactive terminal user interfaces. It's inspired by [Charm's Bubble Tea](https://github.com/charmbracelet/bubbletea) for Go.
+Choose the TEA runtime when you want application state and event handling to be
+small, explicit, and easy to trace. Your model receives a message, returns its
+next state, and renders a view. Commands handle work that happens outside that
+pure update loop.
 
-> **Two ways to build a TUI in Artisanal**
->
-> | Model | Best for | Key entry point |
-> |-------|----------|-----------------|
-> | **TEA model** (this doc) | Direct control, simple apps, custom pipelines | `runProgram(MyModel())` |
-> | **Widget system** ([WIDGETS.md](WIDGETS.md)) | Composable layouts, Flutter-style state, rich interactions | `runArtisanalApp(ArtisanalApp(...))` |
->
-> This document covers the **TEA model only**. If you want the Flutter-like widget tree (`StatelessWidget`, `StatefulWidget`, `WidgetApp`), go to [WIDGETS.md](WIDGETS.md).
+The design is inspired by [Bubble Tea](https://github.com/charmbracelet/bubbletea).
+If you would rather compose screens from `Widget` objects and use
+Flutter-style state, start with [the widget guide](widgets.md).
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Model Interface](#model-interface)
-- [Program Class](#program-class)
-- [Inline Mode](#inline-mode)
-- [Program Hosts](#program-hosts)
-- [Remote Plugin Surfaces](#remote-plugin-surfaces)
-- [Command System (Cmd)](#command-system-cmd)
-- [Message Types (Msg)](#message-types-msg)
-- [Interrupt Handling](#interrupt-handling)
-- [View Rendering](#view-rendering)
-- [Markdown Rendering](#markdown-rendering)
-- [Built-in Bubbles (Components)](#built-in-bubbles-components)
-- [Creating Custom Components](#creating-custom-components)
-- [Composing Components](#composing-components)
-- [Message Filtering](#message-filtering)
-- [Program Interceptors](#program-interceptors)
-- [Replay Automation](#replay-automation)
-- [Trace Logging](#trace-logging)
-- [Hot Reload Support](#hot-reload-support)
-- [TUI Runtime Instrumentation](#tui-runtime-instrumentation)
-- [UV Renderer Integration](#uv-renderer-integration)
-- [Helper Functions](#helper-functions)
-- [Best Practices](#best-practices)
-- [Import](#import)
-- [Related Docs](#related-docs)
-
-## Overview
+## The basic loop
 
 The Elm Architecture (TEA) is a pattern for building interactive applications with three core concepts:
 
@@ -70,14 +39,14 @@ The Elm Architecture (TEA) is a pattern for building interactive applications wi
 
 TEA model entrypoints:
 
-- `package:artisanal/runtime.dart` — `Model`, `Msg`, `Cmd`, `Program`, `runProgram`, `StringTerminal` (for tests), runtime messages
-- `package:artisanal/hosts.dart` — backends, browser/socket hosts, `ProgramHost`
-- `package:artisanal/tui.dart` — broader compatibility barrel (includes bubbles and Bubbles components)
+- `package:artisanal/tui.dart` — `Model`, `Msg`, `Cmd`, `Program`, `runProgram`, runtime messages, and `ProgramHost`
+- `package:artisanal/bubbles.dart` — reusable TEA components and prompt models
+- `package:artisanal/artisanal.dart` — umbrella API including terminal backends and browser/socket hosts
 
-> **Widget system?** Use `package:artisanal_widgets/widgets.dart` and `package:artisanal_widgets/app.dart`. See [WIDGETS.md](WIDGETS.md).
+> **Widget system?** Use `package:artisanal_widgets/widgets.dart` and `package:artisanal_widgets/app.dart`. See [widgets.md](widgets.md).
 
 ```dart
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 class CounterModel implements Model {
   final int count;
@@ -246,7 +215,7 @@ Inline mode renders a bounded TUI region on the terminal's primary screen
 instead of switching to the alternate screen buffer.
 
 For a complete guide to scrollback-preserving command dashboards, child-process
-logs, and widget-based inline panels, see [INLINE_TUI.md](INLINE_TUI.md).
+logs, and widget-based inline panels, see [inline_tui.md](inline_tui.md).
 
 ```dart
 await runProgram(
@@ -618,9 +587,9 @@ await runProgram(
 The package examples include scripted JSON bridge, raw socket, and browser
 websocket demos:
 
-- `dart run example/tui/bridge_json_demo.dart`
-- `dart run example/tui/socket_host_demo.dart --port=2323`
-- `dart run example/tui/browser_websocket_demo.dart --port=8080`
+- `dart run pkgs/artisanal/example/tui/bridge_json_demo.dart`
+- `dart run pkgs/artisanal/example/tui/socket_host_demo.dart --port=2323`
+- `dart run pkgs/artisanal/example/tui/browser_websocket_demo.dart --port=8080`
 
 For a reusable server wrapper, use `BrowserTerminalHostServer.bind(...)` or
 `BrowserTerminalHostServer.serveProgram(...)`. These helpers serve the default
@@ -648,7 +617,7 @@ before the host script applies the runtime state.
 
 ## Remote Plugin Surfaces
 
-`package:artisanal/plugins.dart` defines the supported out-of-process plugin
+`package:artisanal/artisanal.dart` defines the supported out-of-process plugin
 surface for remote-rendered plugins.
 
 The current stable layers are:
@@ -1013,7 +982,7 @@ View view() {
 ## Markdown Rendering
 
 ```dart
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 
 @override
 View view() {
@@ -1343,13 +1312,6 @@ Configuration:
   layer. The inner interceptor runs first; the chord interceptor processes the
   result.
 
-Annotated example:
-
-<a href="../examples/key-chord/main.dart">
-  Key Chord Demo
-</a>
-(Run with `dart run example/tui/examples/key-chord/main.dart`)
-
 ## Replay Automation
 
 `ProgramReplay` provides deterministic event playback for demos, tests, and perf runs.
@@ -1543,7 +1505,7 @@ dart run bin/my_app.dart
 ```
 
 ```dart
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 void main() async {
   TuiEvidence.configureForTest(
@@ -1563,7 +1525,7 @@ void main() async {
 ```dart
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 void main() async {
   final lines = await File('build/evidence.jsonl').readAsLines();
@@ -1603,11 +1565,11 @@ dart run --enable-vm-service example/my_example.dart
 ```
 
 The `runWatchedArtisanalApp` and `runReloadableArtisanalApp` helpers from
-`package:artisanal/app.dart` activate the file-watcher automatically when the
+`package:artisanal_widgets/app.dart` activate the file-watcher automatically when the
 VM service is reachable:
 
 ```dart
-import 'package:artisanal/app.dart';
+import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 
 void main() async {
@@ -1699,7 +1661,7 @@ Each log line is tagged with a pipeline phase:
 ### Logging and Spans
 
 ```dart
-import 'package:artisanal/runtime.dart'; // TuiTrace and TraceTag are exported
+import 'package:artisanal/tui.dart'; // TuiTrace and TraceTag are exported
 
 // Simple tagged log
 TuiTrace.log('custom message', tag: TraceTag.render);
@@ -1813,17 +1775,17 @@ UpdateResult quit(Model model) => (model, Cmd.quit());
 
 ```dart
 // Stable core TUI runtime
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
-// Broader compatibility barrel and pre-built bubbles
+// Pre-built TEA components
 import 'package:artisanal/bubbles.dart';
 ```
 
-## Related Docs
+## Where to go next
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [WIDGETS.md](WIDGETS.md) - Flutter-like Widget system (the alternative UI model)
-- [REPLAY.md](REPLAY.md) - Replay automation system
-- [BUBBLES.md](BUBBLES.md) - TEA-composable interactive components
-- [UV.md](UV.md) - UV renderer integration
-- [MARKDOWN.md](MARKDOWN.md) - Markdown rendering
+- [docs_index.md](docs_index.md) - Full documentation index
+- [widgets.md](widgets.md) - Flutter-like Widget system (the alternative UI model)
+- [replay.md](replay.md) - Replay automation system
+- [bubbles.md](bubbles.md) - TEA-composable interactive components
+- [uv.md](uv.md) - UV renderer integration
+- [markdown.md](markdown.md) - Markdown rendering

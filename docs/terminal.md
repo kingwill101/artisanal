@@ -1,6 +1,8 @@
-# Terminal Abstraction
+# Work with the terminal
 
-Artisanal provides a unified terminal API for both static output and interactive TUIs. This doc covers the core terminal surface, raw mode, input decoding, ANSI helpers, and image protocols.
+Most applications should start with `Console`, the TUI runtime, or widgets.
+Use the terminal API directly when you need cursor control, raw mode, input
+events, ANSI helpers, or access to the underlying terminal dimensions.
 
 ## Quick Start
 
@@ -141,16 +143,16 @@ void main() {
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - Always call `dispose()` to restore cursor, raw mode, and input state.
 - `enableRawMode()` is a no-op when stdin is not a TTY.
 - `moveCursor()` and `cursorToColumn()` use 1-based coordinates.
 - Shared stdin keeps the event loop alive; call `shutdownSharedStdinStream()` when done.
 
-## Related Docs
+## Where to go next
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [RENDERER.md](RENDERER.md)
-- [UV.md](UV.md)
-- [TUI.md](TUI.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [renderer.md](renderer.md)
+- [uv.md](uv.md)
+- [tui.md](tui.md)

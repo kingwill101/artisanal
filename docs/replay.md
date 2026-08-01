@@ -1,8 +1,10 @@
-# Replay Automation System
+# Record and replay TUI sessions
 
-The replay system provides deterministic event playback for demos, tests, and performance runs. It is runtime-level automation, not tied to any specific app.
+Replay turns a stream of terminal events into a repeatable session. Use it to
+reproduce a bug, run a deterministic demo, compare performance, or inspect what
+the renderer did at a particular moment.
 
-## Overview
+## What replay is useful for
 
 Replay automation allows you to:
 
@@ -17,7 +19,7 @@ The system integrates with the TUI runtime through `ProgramOptions.replay`, with
 ## Quick Start
 
 ```dart
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 void main() async {
   // Scripted replay with timed key presses
@@ -380,7 +382,7 @@ Analyze trace hotspots after a run:
 python analyze_trace.py "$LATEST_TRACE" --top 12
 ```
 
-## API Reference
+## Reference
 
 ### Core Classes
 
@@ -448,9 +450,9 @@ python analyze_trace.py "$LATEST_TRACE" --top 12
 
 ## Related Documentation
 
-- [TUI.md](TUI.md) - TUI runtime and Program class
-- [TESTING.md](TESTING.md) - Testing infrastructure including storms and gauntlet
-- [UV.md](UV.md) - UV renderer integration
+- [tui.md](tui.md) - TUI runtime and Program class
+- [testing.md](testing.md) - Testing infrastructure including storms and gauntlet
+- [uv.md](uv.md) - UV renderer integration
 
 ## Replay Harness Mixin
 
@@ -581,6 +583,5 @@ final resolved = await loadReplayPlan(config: config);
 
 ### References
 
-- **`example/tui/examples/harness_demo/main.dart`** — minimal example (10 lines of app code).
-- **`example/github_cli/lib/src/app/runner.dart`** — full-featured example using compile-time flags (`enableReplayHarness`, `enableProfileHarness`).
-- **`lib/src/tui/replay_harness_mixin.dart`** — source of `ReplayHarnessMixin`, `ProfileHarnessMixin`, `HarnessCommandsMixin`.
+- **`pkgs/artisanal/example/tui/examples/harness_demo/main.dart`** — minimal example (10 lines of app code).
+- **`pkgs/artisanal/lib/src/tui/replay_harness_mixin.dart`** — source of `ReplayHarnessMixin`, `ProfileHarnessMixin`, `HarnessCommandsMixin`.

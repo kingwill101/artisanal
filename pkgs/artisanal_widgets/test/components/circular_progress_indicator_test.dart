@@ -1,20 +1,6 @@
+import 'package:artisanal/tui.dart' show EveryCmd;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
-
-Future<bool> _waitForAnyText(
-  WidgetTester tester,
-  Iterable<String> values, {
-  Duration timeout = const Duration(seconds: 1),
-}) async {
-  final deadline = DateTime.now().add(timeout);
-  while (DateTime.now().isBefore(deadline)) {
-    tester.pump();
-    if (values.any(tester.find.text)) return true;
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-  }
-  tester.pump();
-  return values.any(tester.find.text);
-}
 
 void main() {
   group('CircularProgressIndicator', () {
@@ -41,10 +27,12 @@ void main() {
 
       await tester.pumpWidget(CircularProgressIndicator(value: null));
 
-      expect(tester.find.text('◜'), isTrue);
+      const frames = ['◜', '◠', '◝', '◞', '◡', '◟'];
+      final before = frames.indexWhere(tester.find.text);
+      expect(before, isNonNegative);
     });
 
-    test('indeterminate advances frames over time', () async {
+    test('indeterminate advances on a spinner tick', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
@@ -55,10 +43,22 @@ void main() {
         ),
       );
 
-      expect(tester.find.text('◜'), isTrue);
+      const frames = ['◜', '◠', '◝', '◞', '◡', '◟'];
+      final before = frames.indexWhere(tester.find.text);
+      expect(before, isNonNegative);
 
-      final advanced = await _waitForAnyText(tester, const ['◠', '◝']);
-      expect(advanced, isTrue);
+      final spinnerElement = tester.elements
+          .whereType<StatefulElement>()
+          .singleWhere((element) => element.widget is SpinnerIndicator);
+      final ticker = spinnerElement.state.handleInit();
+      expect(ticker, isA<EveryCmd>());
+
+      final tick = (ticker! as EveryCmd).callback(DateTime.now());
+      expect(tick, isNotNull);
+      spinnerElement.state.handleUpdate(tick!);
+      tester.pump();
+
+      expect(tester.find.text(frames[(before + 1) % frames.length]), isTrue);
     });
   });
 }
