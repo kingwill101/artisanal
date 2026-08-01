@@ -226,7 +226,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
     // rebuilt its view for the new size) must clip at the right margin, not
     // wrap and scroll — a scroll would shift the whole screen under the
     // diff's absolute row addressing. Restored in [dispose].
-    terminal.write(UvAnsi.resetModeAutoWrap);
+    if (terminal.supportsAnsi) {
+      terminal.write(UvAnsi.resetModeAutoWrap);
+    }
     _initialized = true;
   }
 
@@ -281,15 +283,19 @@ class FullScreenTuiRenderer implements TuiRenderer {
     // (the app has not rebuilt its view for the new size yet): draw it
     // clipped and keep the baseline invalid, so the first frame that fits
     // repaints in full.
-    final oversize = _lineCount(content) > size.height;
+    final parsedFrame = TerminalRenderFrame.parse(output);
+    final oversize =
+        _lineCount(content) > size.height ||
+        parsedFrame.lines.any(
+          (line) => renderedLineDisplayWidth(line) > size.width,
+        );
 
     if (!terminal.supportsAnsi || _lastFrame == null || oversize) {
-      _renderFullRedraw(output);
+      _renderFullRedraw(output, clearBefore: oversize);
       _lastFrame = oversize ? null : TerminalRenderFrame.parse(output);
     } else {
-      final nextFrame = TerminalRenderFrame.parse(output);
-      _renderDiffFrame(_lastFrame!, nextFrame);
-      _lastFrame = nextFrame;
+      _renderDiffFrame(_lastFrame!, parsedFrame);
+      _lastFrame = parsedFrame;
     }
 
     _lastView = oversize ? null : content;
@@ -331,7 +337,7 @@ class FullScreenTuiRenderer implements TuiRenderer {
     return count;
   }
 
-  void _renderFullRedraw(String content) {
+  void _renderFullRedraw(String content, {bool clearBefore = false}) {
     // Clip to the terminal height: writing more rows than the screen has
     // scrolls the buffer, shifting everything under the diff's absolute row
     // addressing.
@@ -340,16 +346,28 @@ class FullScreenTuiRenderer implements TuiRenderer {
       content = content.split('\n').sublist(0, height).join('\n');
     }
 
-    // Synchronized-update guards (DEC mode 2026) make the redraw land
-    // atomically on terminals that support it; others ignore the sequences.
-    terminal.write(Ansi.beginSynchronizedUpdate);
-    terminal.cursorHome();
-    final mapped = _options.altScreen ? _mapNewlines(content) : content;
+    if (clearBefore && terminal.supportsAnsi) {
+      // The previous frame may still contain longer text on rows that this
+      // clipped frame reuses. Clear it before painting the replacement.
+      terminal.clearScreen();
+    }
+
+    final synchronized = terminal.supportsAnsi;
+    if (synchronized) {
+      terminal.write(Ansi.beginSynchronizedUpdate);
+      terminal.cursorHome();
+      terminal.write('${Ansi.reset}${UvAnsi.resetHyperlink()}');
+    }
+    final mapped = synchronized && _options.altScreen
+        ? _mapNewlines(content)
+        : content;
     terminal.write(mapped);
 
     // Clear any remaining content from previous render
     _clearToEndOfScreen(content);
-    terminal.write(Ansi.endSynchronizedUpdate);
+    if (synchronized) {
+      terminal.write(Ansi.endSynchronizedUpdate);
+    }
   }
 
   void _renderDiffFrame(
@@ -426,7 +444,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
   void dispose() {
     if (!_initialized) return;
 
-    terminal.write(UvAnsi.setModeAutoWrap);
+    if (terminal.supportsAnsi) {
+      terminal.write(UvAnsi.setModeAutoWrap);
+    }
     if (_options.hideCursor) {
       terminal.showCursor();
     }

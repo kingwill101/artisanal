@@ -111,5 +111,12 @@ void main() {
       expect(edit.column, 9);
       expect(Ansi.stripAnsi(edit.text), 'd');
     });
+
+    test('uses tab-stop width when locating a changed span', () {
+      final edit = lineSpanEdit(_line('\tfoo'), _line('\tbar'))!;
+
+      expect(edit.column, 8);
+      expect(Ansi.stripAnsi(edit.text), 'bar');
+    });
   });
 }

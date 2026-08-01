@@ -126,6 +126,28 @@ void main() {
       expect(terminal.output, contains('row2'));
     });
 
+    test('over-wide frames are not retained as diff baselines', () {
+      final terminal = _ResizableStringTerminal()..resize(5, 3);
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('123456');
+      terminal.clear();
+      terminal.resize(5, 3);
+      renderer.render('1234X');
+
+      expect(terminal.output, contains('1234X'));
+      expect(terminal.output, isNot(contains(Ansi.cursorTo(1, 5))));
+    });
+
+    test('non-ANSI terminals receive no renderer escape sequences', () {
+      final terminal = StringTerminal(ansiSupport: false);
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('plain');
+
+      expect(terminal.output, 'plain');
+    });
+
     test('disables auto-wrap for the session and restores it on dispose', () {
       // With auto-wrap on, an over-wide row (transient mid-resize state)
       // wraps and scrolls the screen; clipped at the margin it is harmless.

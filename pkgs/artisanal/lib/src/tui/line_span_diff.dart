@@ -74,8 +74,7 @@ LineSpanEdit? lineSpanEdit(
       ? oldTokens.length
       : newTokens.length;
   var prefix = 0;
-  while (prefix < minLen &&
-      oldTokens[prefix].text == newTokens[prefix].text) {
+  while (prefix < minLen && oldTokens[prefix].text == newTokens[prefix].text) {
     prefix++;
   }
 
@@ -91,8 +90,7 @@ LineSpanEdit? lineSpanEdit(
   // an earlier sequence changed the pen).
   var suffix = 0;
   if (oldWidth == newWidth) {
-    final maxSuffix = (oldTokens.length - prefix) <
-            (newTokens.length - prefix)
+    final maxSuffix = (oldTokens.length - prefix) < (newTokens.length - prefix)
         ? oldTokens.length - prefix
         : newTokens.length - prefix;
     while (suffix < maxSuffix &&
@@ -102,9 +100,15 @@ LineSpanEdit? lineSpanEdit(
     }
     if (suffix > 0) {
       final oldState = _statePrefixAt(
-          oldLine.statePrefix, oldTokens, oldTokens.length - suffix);
+        oldLine.statePrefix,
+        oldTokens,
+        oldTokens.length - suffix,
+      );
       final newState = _statePrefixAt(
-          newLine.statePrefix, newTokens, newTokens.length - suffix);
+        newLine.statePrefix,
+        newTokens,
+        newTokens.length - suffix,
+      );
       if (oldState != newState) suffix = 0;
     }
   }
@@ -127,13 +131,17 @@ LineSpanEdit? lineSpanEdit(
   );
 }
 
+/// Returns the display width of a parsed line using the terminal's default
+/// eight-column tab stops.
+int renderedLineDisplayWidth(TerminalRenderLine line) =>
+    _totalWidth(_tokenize(line.raw));
+
 /// Blanks (with a reset pen) the display columns a shrinking line leaves
 /// behind: the old line painted [oldWidth] columns, the new one only
 /// [newWidth]. Plain spaces, never erase-to-end-of-line, so columns beyond
 /// the old line's own extent are not touched.
-String _tailErase(int oldWidth, int newWidth) => oldWidth > newWidth
-    ? '${Ansi.reset}${' ' * (oldWidth - newWidth)}'
-    : '';
+String _tailErase(int oldWidth, int newWidth) =>
+    oldWidth > newWidth ? '${Ansi.reset}${' ' * (oldWidth - newWidth)}' : '';
 
 /// The ANSI state active just before token [index], serialized as the
 /// sequences that recreate it from a reset pen. [statePrefix] is the line's
@@ -152,6 +160,7 @@ String _statePrefixAt(String statePrefix, List<_Token> tokens, int index) {
 /// Splits a rendered line into escape-sequence and grapheme-cluster tokens.
 List<_Token> _tokenize(String raw) {
   final out = <_Token>[];
+  var column = 0;
   var i = 0;
   while (i < raw.length) {
     if (raw.codeUnitAt(i) == 0x1B) {
@@ -164,15 +173,16 @@ List<_Token> _tokenize(String raw) {
         width: Ansi.visibleLength(sequence),
         isAnsi: true,
       ));
+      column += out.last.width;
       i = end;
       continue;
     }
     final (:grapheme, :nextIndex) = uni.readGraphemeAt(raw, i);
-    out.add((
-      text: grapheme,
-      width: uv_width.stringWidth(grapheme),
-      isAnsi: false,
-    ));
+    final width = grapheme == '\t'
+        ? 8 - (column % 8)
+        : uv_width.stringWidth(grapheme);
+    out.add((text: grapheme, width: width, isAnsi: false));
+    column += width;
     i = nextIndex;
   }
   return out;
