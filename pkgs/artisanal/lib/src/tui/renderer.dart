@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:convert' show base64Encode, utf8;
 
+import 'line_span_diff.dart';
 import '../platform/platform.dart' show environment, isWindows;
 
 import 'program.dart' show FixedViewport, ScreenMode, UiAnchor;
@@ -167,8 +168,13 @@ String _mapNewlines(String input) {
 
 /// Full-screen renderer using the alternate screen buffer.
 ///
-/// Clears the entire screen and redraws from position (0,0) on each frame.
-/// Best for fullscreen applications that own the entire terminal.
+/// Renders the first frame in full, then diffs subsequent frames line by
+/// line and rewrites only the changed span of each changed line (see
+/// [lineSpanEdit]), inside synchronized-update guards. Cells outside a
+/// changed span are never erased or repainted, so terminal graphics overlaid
+/// on stable regions (e.g. a sixel image beside a text column) survive text
+/// updates on the same rows. Best for fullscreen applications that own the
+/// entire terminal.
 class FullScreenTuiRenderer implements TuiRenderer {
   /// Creates a fullscreen renderer targeting the given [terminal].
   FullScreenTuiRenderer({
@@ -184,6 +190,11 @@ class FullScreenTuiRenderer implements TuiRenderer {
   /// The last rendered view (for skip-if-unchanged optimization).
   String? _lastView;
   TerminalRenderFrame? _lastFrame;
+
+  /// The terminal size the last frame was rendered at. A size change means
+  /// the terminal has reflowed whatever is on screen, so the last frame is
+  /// no longer a valid diff baseline.
+  ({int width, int height})? _lastSize;
 
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
@@ -210,6 +221,14 @@ class FullScreenTuiRenderer implements TuiRenderer {
       terminal.hideCursor();
     }
     terminal.clearScreen();
+    // Disable auto-wrap while this renderer owns the screen: a row longer
+    // than the terminal (a transient mid-resize state, before the app has
+    // rebuilt its view for the new size) must clip at the right margin, not
+    // wrap and scroll — a scroll would shift the whole screen under the
+    // diff's absolute row addressing. Restored in [dispose].
+    if (terminal.supportsAnsi) {
+      terminal.write(UvAnsi.resetModeAutoWrap);
+    }
     _initialized = true;
   }
 
@@ -227,13 +246,27 @@ class FullScreenTuiRenderer implements TuiRenderer {
       _ => view.toString(),
     };
 
+    // A terminal resize reflows whatever is on screen, so the last rendered
+    // frame no longer matches the terminal's actual content — a diff against
+    // it would leave reflowed fragments in every skipped span. Clear and drop
+    // the baseline so this frame paints in full. (Never rate-limit a resize:
+    // the clear must be followed by its redraw in the same render.)
+    final size = terminal.size;
+    final resized = _lastSize != null && size != _lastSize;
+
     // Frame rate limiting using Stopwatch (immune to clock adjustments)
-    if (_frameStopwatch.isRunning) {
+    if (!resized && _frameStopwatch.isRunning) {
       if (_frameStopwatch.elapsed < _options.frameTime) {
         // Skip this frame
         _metrics.endFrame(skipped: true);
         return;
       }
+    }
+
+    if (resized) {
+      terminal.clearScreen();
+      _lastView = null;
+      _lastFrame = null;
     }
 
     // Skip if view hasn't changed
@@ -244,16 +277,29 @@ class FullScreenTuiRenderer implements TuiRenderer {
 
     final output = _options.ansiCompress ? compressAnsi(content) : content;
 
-    if (!terminal.supportsAnsi || _lastFrame == null) {
-      _renderFullRedraw(output);
-      _lastFrame = TerminalRenderFrame.parse(output);
+    // A frame taller than the terminal cannot be diffed or drawn in full
+    // without scrolling the screen, which would shift everything under the
+    // diff's absolute row addressing. This is a transient mid-resize state
+    // (the app has not rebuilt its view for the new size yet): draw it
+    // clipped and keep the baseline invalid, so the first frame that fits
+    // repaints in full.
+    final parsedFrame = TerminalRenderFrame.parse(output);
+    final oversize =
+        _lineCount(content) > size.height ||
+        parsedFrame.lines.any(
+          (line) => renderedLineDisplayWidth(line) > size.width,
+        );
+
+    if (!terminal.supportsAnsi || _lastFrame == null || oversize) {
+      _renderFullRedraw(output, clearBefore: oversize);
+      _lastFrame = oversize ? null : TerminalRenderFrame.parse(output);
     } else {
-      final nextFrame = TerminalRenderFrame.parse(output);
-      _renderDiffFrame(_lastFrame!, nextFrame);
-      _lastFrame = nextFrame;
+      _renderDiffFrame(_lastFrame!, parsedFrame);
+      _lastFrame = parsedFrame;
     }
 
-    _lastView = content;
+    _lastView = oversize ? null : content;
+    _lastSize = size;
     // Reset and start the stopwatch for next frame timing
     _frameStopwatch.reset();
     _frameStopwatch.start();
@@ -282,13 +328,46 @@ class FullScreenTuiRenderer implements TuiRenderer {
     }
   }
 
-  void _renderFullRedraw(String content) {
-    terminal.cursorHome();
-    final mapped = _options.altScreen ? _mapNewlines(content) : content;
+  /// Number of lines in [content] (its newline count plus one).
+  static int _lineCount(String content) {
+    var count = 1;
+    for (var i = 0; i < content.length; i++) {
+      if (content.codeUnitAt(i) == 0x0A) count++;
+    }
+    return count;
+  }
+
+  void _renderFullRedraw(String content, {bool clearBefore = false}) {
+    // Clip to the terminal height: writing more rows than the screen has
+    // scrolls the buffer, shifting everything under the diff's absolute row
+    // addressing.
+    final height = terminal.size.height;
+    if (_lineCount(content) > height) {
+      content = content.split('\n').sublist(0, height).join('\n');
+    }
+
+    if (clearBefore && terminal.supportsAnsi) {
+      // The previous frame may still contain longer text on rows that this
+      // clipped frame reuses. Clear it before painting the replacement.
+      terminal.clearScreen();
+    }
+
+    final synchronized = terminal.supportsAnsi;
+    if (synchronized) {
+      terminal.write(Ansi.beginSynchronizedUpdate);
+      terminal.cursorHome();
+      terminal.write('${Ansi.reset}${UvAnsi.resetHyperlink()}');
+    }
+    final mapped = synchronized && _options.altScreen
+        ? _mapNewlines(content)
+        : content;
     terminal.write(mapped);
 
     // Clear any remaining content from previous render
     _clearToEndOfScreen(content);
+    if (synchronized) {
+      terminal.write(Ansi.endSynchronizedUpdate);
+    }
   }
 
   void _renderDiffFrame(
@@ -306,19 +385,40 @@ class FullScreenTuiRenderer implements TuiRenderer {
 
       if (oldLine == newLine) continue;
 
-      buffer.write(Ansi.cursorTo(i + 1, 1));
-      buffer.write(Ansi.clearLine);
-      buffer.write(Ansi.reset);
-      buffer.write(UvAnsi.resetHyperlink());
+      if (newLine == null) {
+        // The new frame is shorter ? blank the leftover row.
+        buffer.write(Ansi.cursorTo(i + 1, 1));
+        buffer.write(Ansi.clearLine);
+        continue;
+      }
 
-      if (newLine != null) {
+      if (oldLine == null) {
+        // The new frame is taller ? this row's on-screen content is unknown,
+        // so clear it before writing.
+        buffer.write(Ansi.cursorTo(i + 1, 1));
+        buffer.write(Ansi.clearLine);
+        buffer.write(Ansi.reset);
+        buffer.write(UvAnsi.resetHyperlink());
         buffer.write(newLine.statePrefix);
         buffer.write(newLine.raw);
+        continue;
       }
+
+      // Both frames own the row: rewrite only the changed span. Never erase
+      // or repaint the rest of the row ? cells outside the span (and any
+      // terminal graphics overlaid on them) stay untouched.
+      final edit = lineSpanEdit(oldLine, newLine);
+      if (edit == null) continue;
+      buffer.write(Ansi.cursorTo(i + 1, edit.column + 1));
+      buffer.write(edit.text);
     }
 
     if (buffer.isNotEmpty) {
-      terminal.write(buffer.toString());
+      // Atomic frame delivery (DEC 2026): the terminal paints the whole diff
+      // at once, so a cell is never visible mid-rewrite.
+      terminal.write(
+        '${Ansi.beginSynchronizedUpdate}$buffer${Ansi.endSynchronizedUpdate}',
+      );
     }
   }
 
@@ -333,6 +433,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
   void invalidate() {
     _lastView = null;
     _lastFrame = null;
+    // Invalidation is used by forced repaints. The next render must not be
+    // discarded just because the regular frame-rate interval has not elapsed.
+    _frameStopwatch.stop();
   }
 
   @override
@@ -344,6 +447,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
   void dispose() {
     if (!_initialized) return;
 
+    if (terminal.supportsAnsi) {
+      terminal.write(UvAnsi.setModeAutoWrap);
+    }
     if (_options.hideCursor) {
       terminal.showCursor();
     }
@@ -529,7 +635,11 @@ class InlineTuiRenderer implements TuiRenderer {
 
   @override
   void invalidate() {
-    _lastLineCount = 0;
+    // Invalidation is used by forced repaints. The next render must not be
+    // discarded just because the regular frame-rate interval has not elapsed.
+    // Keep the previous line count so an inline repaint rewinds over the
+    // existing UI instead of appending a duplicate below it.
+    _frameStopwatch.stop();
   }
 
   @override

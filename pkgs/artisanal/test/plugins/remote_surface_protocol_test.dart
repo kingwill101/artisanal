@@ -4,6 +4,19 @@ import 'package:test/test.dart';
 void main() {
   const validator = plugins.RemotePluginProtocolValidator();
 
+  test('protocol validation does not require the remote meta-schema', () async {
+    final errors = await validator.validateJson(<String, Object?>{
+      'protocol': plugins.remotePluginProtocolVersion,
+      'type': 'plugin.notify',
+      'payload': <String, Object?>{
+        'requestId': 'offline-validation',
+        'message': 'offline validation',
+      },
+    });
+
+    expect(errors, isEmpty);
+  });
+
   test('host hello round-trips and validates', () async {
     final message = plugins.RemotePluginHostHello(
       hostName: 'artisanal-host',

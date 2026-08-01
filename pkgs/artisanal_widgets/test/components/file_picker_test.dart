@@ -4,6 +4,7 @@ import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'
     show InterruptMsg, MouseAction, MouseButton, MouseMsg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 Future<void> _pumpUntil(
@@ -70,7 +71,7 @@ void main() {
       tester.sendSpecialKey(terminal_keys.KeyType.down);
       tester.sendSpecialKey(terminal_keys.KeyType.enter);
 
-      expect(selectedPath, equals('${tempDir.path}/README.md'));
+      expect(selectedPath, equals(p.join(tempDir.path, 'README.md')));
     });
 
     test('toggles hidden files and opens directories', () async {

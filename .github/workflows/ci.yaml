@@ -40,10 +40,13 @@ jobs:
         run: flutter analyze
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
         package:
           - pkgs/ultraviolet
           - pkgs/artisanal
@@ -65,10 +68,18 @@ jobs:
         working-directory: pkgs/artisanal
         run: dart run tool/precompile_remote_plugins.dart
 
-      - name: Test ${{ matrix.package }}
-        run: |
-          if [ "${{ matrix.package }}" = "pkgs/artisanal_widgets" ]; then
-            flutter test ${{ matrix.package }} -r compact
-          else
-            dart test ${{ matrix.package }} -r compact
-          fi
+      - name: Test Dart package ${{ matrix.package }}
+        if: matrix.package != 'pkgs/artisanal_widgets' && matrix.os != 'windows-latest'
+        run: dart test ${{ matrix.package }} -r compact
+
+      - name: Test Flutter package ${{ matrix.package }}
+        if: matrix.package == 'pkgs/artisanal_widgets' && matrix.os != 'windows-latest'
+        run: flutter test ${{ matrix.package }} -r compact
+
+      - name: Test Dart package on Windows ${{ matrix.package }}
+        if: matrix.package != 'pkgs/artisanal_widgets' && matrix.os == 'windows-latest'
+        run: dart test ${{ matrix.package }} --concurrency=1 -r compact
+
+      - name: Test Flutter package on Windows ${{ matrix.package }}
+        if: matrix.package == 'pkgs/artisanal_widgets' && matrix.os == 'windows-latest'
+        run: flutter test ${{ matrix.package }} --concurrency=1 -r compact

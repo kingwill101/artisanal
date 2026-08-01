@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
@@ -104,7 +105,7 @@ void main() {
       ]);
       expect(
         manifests.first.resolveEntrypoint(),
-        io.File('${directory.path}/alpha.dart').path,
+        p.join(directory.path, 'alpha.dart'),
       );
       expect(
         manifests.first.placement.toSurfacePlacement().surfaceId,
@@ -112,7 +113,7 @@ void main() {
       );
       expect(
         manifests.last.resolveEntrypoint(),
-        io.File('${directory.path}/zeta.dart').path,
+        p.join(directory.path, 'zeta.dart'),
       );
     },
   );
@@ -144,7 +145,7 @@ void main() {
       expect(manifest.manifestPath, manifestFile.path);
       expect(
         manifest.resolveEntrypoint(),
-        io.File('${directory.path}/solo.dart').path,
+        p.join(directory.path, 'solo.dart'),
       );
     },
   );

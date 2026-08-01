@@ -99,6 +99,12 @@ void main() {
         'notification',
       );
 
+      // Focus while the notification fixture is still servicing requests.
+      // The fixture exits after publishing its final frame, so focusing it
+      // after the frame assertions races the child process closing stdin.
+      await workspace.focusPlugin('notification');
+      expect(workspace.router.focusedSurfaceId, 'notification.panel');
+
       await _waitForSurfaceText(
         workspace,
         'clipboard',
@@ -115,8 +121,6 @@ void main() {
       expect(notification, isNotNull);
       expect(notification!.message, 'Background task finished');
 
-      await workspace.focusPlugin('notification');
-      expect(workspace.router.focusedSurfaceId, 'notification.panel');
       expect(
         workspace.manifestForPlugin('notification')?.displayName ??
             'notification',
