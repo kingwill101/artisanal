@@ -31,12 +31,10 @@ const config: Config = {
           editUrl: undefined,
           // Show breadcrumbs at the top of each page.
           breadcrumbs: true,
-          // Exclude internal/duplicate files from the site.
+          // Exclude internal files from the site.
           exclude: [
-            // Lowercase duplicate of ARCHITECTURE.md (causes webpack casing conflict)
-            'architecture.md',
             // Internal planning doc, not user-facing
-            'DOCUMENTATION_CHECKLIST.md',
+            'documentation_checklist.md',
           ],
         },
         // No blog needed.
@@ -70,10 +68,10 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Overview', to: '/docs/DOCS_INDEX' },
-            { label: 'TUI Runtime', to: '/docs/TUI' },
-            { label: 'Widget Catalog', to: '/docs/WIDGETS' },
-            { label: 'UV System', to: '/docs/UV' },
+            { label: 'Overview', to: '/docs/docs_index' },
+            { label: 'TUI Runtime', to: '/docs/tui' },
+            { label: 'Widget Catalog', to: '/docs/widgets' },
+            { label: 'UV System', to: '/docs/uv' },
           ],
         },
       ],

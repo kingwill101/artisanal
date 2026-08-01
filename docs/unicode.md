@@ -41,5 +41,5 @@ void main() {
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [LAYOUT.md](LAYOUT.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [layout.md](layout.md)

@@ -243,7 +243,7 @@ Each heading level (`h1` through `h6`) has dedicated theme configuration support
 - Underline styles for secondary headings
 - Vertical spacing control before/after
 
-See [STYLE.md](STYLE.md) for detailed theme configuration options.
+See [style.md](style.md) for detailed theme configuration options.
 
 ### Blockquotes with Border Markers
 
@@ -329,7 +329,7 @@ Supported shortcodes follow the GitHub emoji specification, with rendering that 
 
 ### Related Docs
 
-- [STYLE.md](STYLE.md) - Style system for terminal output
-- [CONSOLE.md](CONSOLE.md) - Console output and markdown integration  
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TERMINAL.md](TERMINAL.md)
+- [style.md](style.md) - Style system for terminal output
+- [console.md](console.md) - Console output and markdown integration  
+- [docs_index.md](docs_index.md) - Full documentation index
+- [terminal.md](terminal.md)

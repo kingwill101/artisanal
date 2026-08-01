@@ -292,6 +292,6 @@ Use `textareaPromptOptions` for full-screen editing and `promptProgramOptions` f
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TUI.md](TUI.md)
-- [IO_COMPONENTS.md](IO_COMPONENTS.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [tui.md](tui.md)
+- [io_components.md](io_components.md)

@@ -7,9 +7,9 @@ The TUI system provides an Elm Architecture-based framework for building interac
 > | Model | Best for | Key entry point |
 > |-------|----------|-----------------|
 > | **TEA model** (this doc) | Direct control, simple apps, custom pipelines | `runProgram(MyModel())` |
-> | **Widget system** ([WIDGETS.md](WIDGETS.md)) | Composable layouts, Flutter-style state, rich interactions | `runArtisanalApp(ArtisanalApp(...))` |
+> | **Widget system** ([widgets.md](widgets.md)) | Composable layouts, Flutter-style state, rich interactions | `runArtisanalApp(ArtisanalApp(...))` |
 >
-> This document covers the **TEA model only**. If you want the Flutter-like widget tree (`StatelessWidget`, `StatefulWidget`, `WidgetApp`), go to [WIDGETS.md](WIDGETS.md).
+> This document covers the **TEA model only**. If you want the Flutter-like widget tree (`StatelessWidget`, `StatefulWidget`, `WidgetApp`), go to [widgets.md](widgets.md).
 
 ## Table of Contents
 
@@ -74,7 +74,7 @@ TEA model entrypoints:
 - `package:artisanal/hosts.dart` — backends, browser/socket hosts, `ProgramHost`
 - `package:artisanal/tui.dart` — broader compatibility barrel (includes bubbles and Bubbles components)
 
-> **Widget system?** Use `package:artisanal_widgets/widgets.dart` and `package:artisanal_widgets/app.dart`. See [WIDGETS.md](WIDGETS.md).
+> **Widget system?** Use `package:artisanal_widgets/widgets.dart` and `package:artisanal_widgets/app.dart`. See [widgets.md](widgets.md).
 
 ```dart
 import 'package:artisanal/runtime.dart';
@@ -246,7 +246,7 @@ Inline mode renders a bounded TUI region on the terminal's primary screen
 instead of switching to the alternate screen buffer.
 
 For a complete guide to scrollback-preserving command dashboards, child-process
-logs, and widget-based inline panels, see [INLINE_TUI.md](INLINE_TUI.md).
+logs, and widget-based inline panels, see [inline_tui.md](inline_tui.md).
 
 ```dart
 await runProgram(
@@ -1821,9 +1821,9 @@ import 'package:artisanal/bubbles.dart';
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [WIDGETS.md](WIDGETS.md) - Flutter-like Widget system (the alternative UI model)
-- [REPLAY.md](REPLAY.md) - Replay automation system
-- [BUBBLES.md](BUBBLES.md) - TEA-composable interactive components
-- [UV.md](UV.md) - UV renderer integration
-- [MARKDOWN.md](MARKDOWN.md) - Markdown rendering
+- [docs_index.md](docs_index.md) - Full documentation index
+- [widgets.md](widgets.md) - Flutter-like Widget system (the alternative UI model)
+- [replay.md](replay.md) - Replay automation system
+- [bubbles.md](bubbles.md) - TEA-composable interactive components
+- [uv.md](uv.md) - UV renderer integration
+- [markdown.md](markdown.md) - Markdown rendering

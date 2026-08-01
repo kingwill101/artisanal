@@ -85,7 +85,7 @@ needs.
 
 See the in-repo docs for full coverage:
 
-- `docs/DOCS_INDEX.md`
+- `docs/docs_index.md`
 
 ## Quick Start: CLI Output
 
@@ -196,7 +196,7 @@ dart run your_app.dart
 Structured app/domain events can be emitted via `TuiTrace.event(...)` and are
 preserved in replay conversion when they use stable typed `type` names.
 
-Full replay and tracing documentation: `docs/TUI.md`.
+Full replay and tracing documentation: `docs/tui.md`.
 
 ## Bubbles (Reusable Widgets)
 

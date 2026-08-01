@@ -36,7 +36,7 @@ output, and remaps absolute row-addressing sequences into the anchored inline
 region. Full-screen mode continues to use the alternate screen buffer.
 
 For application-level guidance, including log streaming and native scrollback
-expectations, see [INLINE_TUI.md](INLINE_TUI.md).
+expectations, see [inline_tui.md](inline_tui.md).
 
 ### TerminalRenderer
 
@@ -139,7 +139,7 @@ final result = sink.render(sourceBuffer, [gray], dt: 1 / 60);
 renderer.render(result);
 ```
 
-See [UV.md → Color Matrix Effects](UV.md#color-matrix-effects) for the full
+See [uv.md → Color Matrix Effects](uv.md#color-matrix-effects) for the full
 `ColorMatrix` API, chaining examples, and per-channel control.
 
 ### Post-Processing Filters
@@ -156,13 +156,13 @@ final result = sink.render(sourceBuffer, [crt], dt: elapsedSeconds);
 renderer.render(result);
 ```
 
-See [UV.md → Post-Processing Filters](UV.md#post-processing-filters) for the
+See [uv.md → Post-Processing Filters](uv.md#post-processing-filters) for the
 full filter catalog and `BufferRenderSink` usage.
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TERMINAL.md](TERMINAL.md)
-- [STYLE.md](STYLE.md)
-- [COLORPROFILE.md](COLORPROFILE.md)
-- [UV.md](UV.md) - UV system and buffer filter pipeline
+- [docs_index.md](docs_index.md) - Full documentation index
+- [terminal.md](terminal.md)
+- [style.md](style.md)
+- [colorprofile.md](colorprofile.md)
+- [uv.md](uv.md) - UV system and buffer filter pipeline

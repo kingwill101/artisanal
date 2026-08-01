@@ -761,9 +761,9 @@ class MyCommand extends Command<void> {
 
 ## Related Documentation
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [ARGS.md](ARGS.md) - Command runner and argument parsing
-- [STYLE.md](STYLE.md) - Text styling and formatting
-- [TUI.md](TUI.md) - Interactive terminal applications
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
-- [IO_COMPONENTS.md](IO_COMPONENTS.md) - Console components helper
+- [docs_index.md](docs_index.md) - Full documentation index
+- [args.md](args.md) - Command runner and argument parsing
+- [style.md](style.md) - Text styling and formatting
+- [tui.md](tui.md) - Interactive terminal applications
+- [architecture.md](architecture.md) - System architecture
+- [io_components.md](io_components.md) - Console components helper

@@ -4,7 +4,7 @@ These examples run on the primary terminal screen instead of the alternate
 screen. They are intended for CLI workflows where normal terminal scrollback
 must remain useful while a small live UI stays pinned.
 
-See `docs/INLINE_TUI.md` for the authoring guide and `docs/TUI.md` for the
+See `docs/inline_tui.md` for the authoring guide and `docs/tui.md` for the
 runtime options reference.
 
 Run from `pkgs/artisanal`:

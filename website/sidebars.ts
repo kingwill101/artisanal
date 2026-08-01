@@ -4,7 +4,7 @@ const sidebars: SidebarsConfig = {
   docsSidebar: [
     {
       type: 'doc',
-      id: 'DOCS_INDEX',
+      id: 'docs_index',
       label: 'Overview',
     },
     {
@@ -12,57 +12,57 @@ const sidebars: SidebarsConfig = {
       label: 'Getting Started',
       collapsed: false,
       items: [
-        { type: 'doc', id: 'ARCHITECTURE', label: 'Architecture Overview' },
+        { type: 'doc', id: 'architecture', label: 'Architecture Overview' },
       ],
     },
     {
       type: 'category',
       label: 'Core Toolkit',
       items: [
-        { type: 'doc', id: 'CONSOLE', label: 'Console I/O' },
-        { type: 'doc', id: 'ARGS', label: 'Args & Command Runner' },
-        { type: 'doc', id: 'TERMINAL', label: 'Terminal Abstraction' },
-        { type: 'doc', id: 'RENDERER', label: 'Renderer Abstraction' },
+        { type: 'doc', id: 'console', label: 'Console I/O' },
+        { type: 'doc', id: 'args', label: 'Args & Command Runner' },
+        { type: 'doc', id: 'terminal', label: 'Terminal Abstraction' },
+        { type: 'doc', id: 'renderer', label: 'Renderer Abstraction' },
       ],
     },
     {
       type: 'category',
       label: 'Styling & Layout',
       items: [
-        { type: 'doc', id: 'STYLE', label: 'Style System' },
-        { type: 'doc', id: 'LAYOUT', label: 'Layout Utilities' },
-        { type: 'doc', id: 'UNICODE', label: 'Unicode Utilities' },
-        { type: 'doc', id: 'COLORPROFILE', label: 'Color Profiles' },
+        { type: 'doc', id: 'style', label: 'Style System' },
+        { type: 'doc', id: 'layout', label: 'Layout Utilities' },
+        { type: 'doc', id: 'unicode', label: 'Unicode Utilities' },
+        { type: 'doc', id: 'colorprofile', label: 'Color Profiles' },
       ],
     },
     {
       type: 'category',
       label: 'TUI & Components',
       items: [
-        { type: 'doc', id: 'TUI', label: 'TUI Runtime' },
-        { type: 'doc', id: 'WIDGETS', label: 'Widget Catalog' },
-        { type: 'doc', id: 'ANIMATION', label: 'Animation System' },
-        { type: 'doc', id: 'BUBBLES', label: 'Bubbles Components' },
-        { type: 'doc', id: 'IO_COMPONENTS', label: 'Console Components' },
-        { type: 'doc', id: 'PLUGINS', label: 'Remote Plugin Surfaces' },
-        { type: 'doc', id: 'REPLAY', label: 'Replay Automation' },
+        { type: 'doc', id: 'tui', label: 'TUI Runtime' },
+        { type: 'doc', id: 'widgets', label: 'Widget Catalog' },
+        { type: 'doc', id: 'animation', label: 'Animation System' },
+        { type: 'doc', id: 'bubbles', label: 'Bubbles Components' },
+        { type: 'doc', id: 'io_components', label: 'Console Components' },
+        { type: 'doc', id: 'plugins', label: 'Remote Plugin Surfaces' },
+        { type: 'doc', id: 'replay', label: 'Replay Automation' },
       ],
     },
     {
       type: 'category',
       label: 'Rendering & Content',
       items: [
-        { type: 'doc', id: 'UV', label: 'UV System (Ultraviolet)' },
-        { type: 'doc', id: 'TERMINAL_GRAPHICS', label: 'Terminal Graphics' },
-        { type: 'doc', id: 'MARKDOWN', label: 'Markdown Rendering' },
-        { type: 'doc', id: 'CHARTING', label: 'Charting Primitives' },
+        { type: 'doc', id: 'uv', label: 'UV System (Ultraviolet)' },
+        { type: 'doc', id: 'terminal_graphics', label: 'Terminal Graphics' },
+        { type: 'doc', id: 'markdown', label: 'Markdown Rendering' },
+        { type: 'doc', id: 'charting', label: 'Charting Primitives' },
       ],
     },
     {
       type: 'category',
       label: 'Testing & Debugging',
       items: [
-        { type: 'doc', id: 'TESTING', label: 'Widget Testing' },
+        { type: 'doc', id: 'testing', label: 'Widget Testing' },
       ],
     },
     {
@@ -70,8 +70,8 @@ const sidebars: SidebarsConfig = {
       label: 'Experimental',
       collapsed: true,
       items: [
-        { type: 'doc', id: 'LIQUID', label: 'Liquid Templates' },
-        { type: 'doc', id: 'PHYSICS', label: 'Physics Helpers' },
+        { type: 'doc', id: 'liquid', label: 'Liquid Templates' },
+        { type: 'doc', id: 'physics', label: 'Physics Helpers' },
       ],
     },
   ],

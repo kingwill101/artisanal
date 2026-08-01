@@ -57,6 +57,6 @@ void main() {
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [STYLE.md](STYLE.md)
-- [UNICODE.md](UNICODE.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [style.md](style.md)
+- [unicode.md](unicode.md)

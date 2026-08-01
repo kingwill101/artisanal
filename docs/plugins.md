@@ -466,5 +466,5 @@ The `RemotePluginSlotInputRouter` (from `package:artisanal/plugins.dart`)
 routes keyboard, mouse, and focus input to the correct remote surface when
 multiple remote slots are active.
 
-See [WIDGETS.md](WIDGETS.md#widget-slot-registry) for the full widget-layer API.
+See [widgets.md](widgets.md#widget-slot-registry) for the full widget-layer API.
 ```

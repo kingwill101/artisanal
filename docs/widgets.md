@@ -1,10 +1,10 @@
 # Widget Composition System
 
-Artisanal provides **two distinct ways to build a terminal UI**. This document covers the **Widget system** — a Flutter-inspired, composable tree model. For the lower-level TEA (Elm Architecture) model, see [TUI.md](TUI.md).
+Artisanal provides **two distinct ways to build a terminal UI**. This document covers the **Widget system** — a Flutter-inspired, composable tree model. For the lower-level TEA (Elm Architecture) model, see [tui.md](tui.md).
 
 ## Choosing a UI Model
 
-| | TEA Model ([TUI.md](TUI.md)) | Widget System (this doc) |
+| | TEA Model ([tui.md](tui.md)) | Widget System (this doc) |
 |---|---|---|
 | **State model** | Immutable — return a new model from `update()` | Mutable `State` via `setState()` for `StatefulWidget`; immutable fields for plain `Widget` |
 | **Rendering** | `view()` returns a `String` or `View` object (rendered ANSI) | `build(BuildContext)` returns a `Widget` subtree; rendering is managed by the element tree |
@@ -1973,7 +1973,7 @@ should automatically take focus on mount.
 List rows can be styled using the theme's dedicated row tokens
 (`listRow`, `listRowOdd`, `listRowHover`, `listRowEven`, `listRowSelected`)
 so hover, selection, and alternating stripe states all react consistently to
-theme switches. See [STYLE.md → List Row Theme Tokens](STYLE.md#list-row-theme-tokens)
+theme switches. See [style.md → List Row Theme Tokens](style.md#list-row-theme-tokens)
 for the full token reference and usage examples with `LipList`.
 
 ---
@@ -2251,7 +2251,7 @@ SlotRegion<DashboardSlot, DashboardData>(
 )
 ```
 
-For remote plugin surfaces, see [PLUGINS.md](PLUGINS.md).
+For remote plugin surfaces, see [plugins.md](plugins.md).
 
 ---
 
@@ -2427,7 +2427,7 @@ Responses are deduplicated and cached in an in-process `LruCache` keyed by
 
 Animation support in `artisanal_widgets` includes both controller primitives and
 rebuild helpers. For the full animation timeline, curve, tween, and implicit
-animation API see **[ANIMATION.md](ANIMATION.md)**.
+animation API see **[animation.md](animation.md)**.
 
 - `AnimationController`, `AnimationMixin`, `AnimationTickMsg`
 - `AnimatedBuilder`, `ListenableBuilder`, `ValueListenableBuilder`
@@ -2497,7 +2497,7 @@ Key testing types:
 | `ManualClock` | `harness_artifacts.dart` | Override `DateTime.now()` for deterministic timing |
 
 For full harness configuration, `HarnessArtifactManifest` CI integration, and
-all `WidgetGauntlet`/`WidgetStorm` options see **[TESTING.md](TESTING.md)**.
+all `WidgetGauntlet`/`WidgetStorm` options see **[testing.md](testing.md)**.
 
 ---
 
@@ -3109,9 +3109,9 @@ Alignment.bottomRight
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TUI.md](TUI.md) - TEA programming model (the alternative to the Widget system)
-- [UV.md](UV.md) - UV renderer
-- [ANIMATION.md](ANIMATION.md) - Animation timeline and tween system
-- [TESTING.md](TESTING.md) - Widget testing infrastructure
-- [PLUGINS.md](PLUGINS.md) - Remote plugin surfaces and slot registry
+- [docs_index.md](docs_index.md) - Full documentation index
+- [tui.md](tui.md) - TEA programming model (the alternative to the Widget system)
+- [uv.md](uv.md) - UV renderer
+- [animation.md](animation.md) - Animation timeline and tween system
+- [testing.md](testing.md) - Widget testing infrastructure
+- [plugins.md](plugins.md) - Remote plugin surfaces and slot registry

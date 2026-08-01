@@ -448,9 +448,9 @@ python analyze_trace.py "$LATEST_TRACE" --top 12
 
 ## Related Documentation
 
-- [TUI.md](TUI.md) - TUI runtime and Program class
-- [TESTING.md](TESTING.md) - Testing infrastructure including storms and gauntlet
-- [UV.md](UV.md) - UV renderer integration
+- [tui.md](tui.md) - TUI runtime and Program class
+- [testing.md](testing.md) - Testing infrastructure including storms and gauntlet
+- [uv.md](uv.md) - UV renderer integration
 
 ## Replay Harness Mixin
 

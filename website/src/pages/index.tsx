@@ -10,37 +10,37 @@ const features = [
     title: 'TUI Runtime',
     description:
       'A full The Elm Architecture runtime for terminal apps — models, commands, subscriptions, and a hot-reloadable widget tree.',
-    link: '/docs/TUI',
+    link: '/docs/tui',
   },
   {
     title: 'UV (Ultraviolet)',
     description:
       'Cell-based canvas with diff rendering, Sixel/Kitty graphics, color matrix post-processing, and dirty-tracking buffers.',
-    link: '/docs/UV',
+    link: '/docs/uv',
   },
   {
     title: 'Widget Catalog',
     description:
       'Scroll views, virtual lists, animations, slot registries, charts, sequence diagrams, and more — all composable.',
-    link: '/docs/WIDGETS',
+    link: '/docs/widgets',
   },
   {
     title: 'Style System',
     description:
       'Adaptive colors, borders, padding, themes, and WCAG contrast checking — from simple ANSI to full truecolor.',
-    link: '/docs/STYLE',
+    link: '/docs/style',
   },
   {
     title: 'Testing Infrastructure',
     description:
       'WidgetTester, gauntlet stress-testing, widget storms, flicker analysis, and deterministic replay harness.',
-    link: '/docs/TESTING',
+    link: '/docs/testing',
   },
   {
     title: 'Remote Plugins',
     description:
       'Out-of-process plugin surfaces over stdin/stdout with surface composition, RPC services, and multi-plugin workspaces.',
-    link: '/docs/PLUGINS',
+    link: '/docs/plugins',
   },
 ];
 
@@ -74,13 +74,13 @@ export default function Home(): React.JSX.Element {
           <div className={styles.buttons}>
             <Link
               className="button button--secondary button--lg"
-              to="/docs/DOCS_INDEX"
+              to="/docs/docs_index"
             >
               Browse Docs →
             </Link>
             <Link
               className="button button--outline button--secondary button--lg"
-              to="/docs/TUI"
+              to="/docs/tui"
             >
               Quick Start
             </Link>

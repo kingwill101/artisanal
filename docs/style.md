@@ -1434,7 +1434,7 @@ final output = Style().render(text);
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [CONSOLE.md](CONSOLE.md) - Console output and tags
-- [LAYOUT.md](LAYOUT.md) - Layout helpers
-- [COLORPROFILE.md](COLORPROFILE.md) - Color capability detection
+- [docs_index.md](docs_index.md) - Full documentation index
+- [console.md](console.md) - Console output and tags
+- [layout.md](layout.md) - Layout helpers
+- [colorprofile.md](colorprofile.md) - Color capability detection

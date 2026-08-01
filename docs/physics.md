@@ -37,5 +37,5 @@ void main() {
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [UV.md](UV.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [uv.md](uv.md)

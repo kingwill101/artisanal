@@ -38,7 +38,7 @@ Artisanal's Args library provides:
 - **Interactive Control**: `--no-interaction` flag for non-interactive mode
 - **ANSI Control**: `--ansi`/`--no-ansi` flags to force color output
 - **Symfony-style Error Blocks**: Styled `<error>` blocks written to stderr with proper exit codes
-- **Seamless Console Integration**: Each command gets automatic access to the [Console](CONSOLE.md)
+- **Seamless Console Integration**: Each command gets automatic access to the [Console](console.md)
 - **Deterministic Testing Hooks**: Injectable output, input, and exit-code callbacks
 - **Automatic Shell Completion**: Tab-completion for commands, options, and allowed values (bash, zsh, tcsh)
 
@@ -883,7 +883,7 @@ This produces the same styled error block output.
 
 ## Integration with Console
 
-Commands automatically get access to the [Console](CONSOLE.md) through the `io` property:
+Commands automatically get access to the [Console](console.md) through the `io` property:
 
 ```dart
 @override
@@ -969,8 +969,8 @@ void main() async {
 
 ## Related Documentation
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [CONSOLE.md](CONSOLE.md) - Console I/O operations and styling
-- [STYLE.md](STYLE.md) - Text styling and formatting
-- [TUI.md](TUI.md) - Interactive terminal applications
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [docs_index.md](docs_index.md) - Full documentation index
+- [console.md](console.md) - Console I/O operations and styling
+- [style.md](style.md) - Text styling and formatting
+- [tui.md](tui.md) - Interactive terminal applications
+- [architecture.md](architecture.md) - System architecture

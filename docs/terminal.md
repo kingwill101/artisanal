@@ -150,7 +150,7 @@ void main() {
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [RENDERER.md](RENDERER.md)
-- [UV.md](UV.md)
-- [TUI.md](TUI.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [renderer.md](renderer.md)
+- [uv.md](uv.md)
+- [tui.md](tui.md)

@@ -48,6 +48,6 @@ Detection respects common env vars:
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [STYLE.md](STYLE.md)
-- [RENDERER.md](RENDERER.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [style.md](style.md)
+- [renderer.md](renderer.md)

@@ -1599,7 +1599,7 @@ TerminalCapabilities
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TERMINAL.md](TERMINAL.md) - Terminal abstraction
-- [TERMINAL_GRAPHICS.md](TERMINAL_GRAPHICS.md) - Sixel / Kitty / iTerm2 image protocols
-- [CHARTING.md](CHARTING.md) - Charting primitives
+- [docs_index.md](docs_index.md) - Full documentation index
+- [terminal.md](terminal.md) - Terminal abstraction
+- [terminal_graphics.md](terminal_graphics.md) - Sixel / Kitty / iTerm2 image protocols
+- [charting.md](charting.md) - Charting primitives

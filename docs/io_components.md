@@ -61,6 +61,6 @@ Future<void> main() async {
 
 ## Related Docs
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [CONSOLE.md](CONSOLE.md)
-- [BUBBLES.md](BUBBLES.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [console.md](console.md)
+- [bubbles.md](bubbles.md)
