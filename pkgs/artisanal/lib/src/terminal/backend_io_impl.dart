@@ -342,18 +342,19 @@ class SocketTerminalBackend implements TerminalBackend {
   @override
   Future<void> flush() {
     if (_disposed) return Future<void>.value();
-    _socketWriteQueue = _socketWriteQueue
-        .then<void>((_) async {
-          if (!_disposed) {
-            try {
-              await socket.flush();
-            } on StateError {
-              // Ignore flushes racing with socket shutdown.
-            }
-          }
-        })
-        .catchError((_) {});
-    return _socketWriteQueue;
+    final operation = _socketWriteQueue.then<void>((_) async {
+      if (!_disposed) {
+        try {
+          await socket.flush();
+        } on StateError {
+          // Ignore flushes racing with socket shutdown.
+        }
+      }
+    });
+    // Keep the queue usable after an unexpected I/O failure, but return the
+    // original operation so callers can observe that flush did not complete.
+    _socketWriteQueue = operation.catchError((_) {});
+    return operation;
   }
 
   @override
