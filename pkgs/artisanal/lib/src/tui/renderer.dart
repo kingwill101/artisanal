@@ -635,9 +635,10 @@ class InlineTuiRenderer implements TuiRenderer {
 
   @override
   void invalidate() {
-    _lastLineCount = 0;
     // Invalidation is used by forced repaints. The next render must not be
     // discarded just because the regular frame-rate interval has not elapsed.
+    // Keep the previous line count so an inline repaint rewinds over the
+    // existing UI instead of appending a duplicate below it.
     _frameStopwatch.stop();
   }
 

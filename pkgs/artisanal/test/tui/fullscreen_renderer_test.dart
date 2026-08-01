@@ -243,5 +243,6 @@ void main() {
     renderer.render('same frame');
 
     expect(terminal.output, contains('same frame'));
+    expect(terminal.output, contains('\x1b[1A'));
   });
 }
