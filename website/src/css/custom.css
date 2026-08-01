@@ -11,10 +11,9 @@
   --ifm-code-font-size: 90%;
   --ifm-font-family-base: 'Aptos', 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --ifm-heading-font-family: 'Iowan Old Style', 'Palatino Linotype',
-    'Book Antiqua', Palatino, serif;
+    'Book Antiqua', palatino, serif;
   --ifm-navbar-background-color: #171a18;
   --ifm-navbar-link-color: #eef2e8;
-  --ifm-footer-background-color: #101310;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
@@ -27,7 +26,6 @@
   --ifm-color-primary-lighter: #c8f6aa;
   --ifm-color-primary-lightest: #eafde0;
   --ifm-navbar-background-color: #0d100e;
-  --ifm-footer-background-color: #0a0c0a;
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
 }
 
@@ -43,7 +41,7 @@
 }
 
 .navbar__title {
-  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino,
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', palatino,
     serif;
   font-size: 1.3rem;
   font-weight: 800;
@@ -56,7 +54,7 @@
 }
 
 .navbar__link {
-  font-family: 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono', Consolas,
+  font-family: SFMono-Regular, 'Cascadia Code', 'Liberation Mono', consolas,
     monospace;
   font-size: 0.74rem;
   font-weight: 700;
@@ -77,13 +75,14 @@
 .footer,
 .footer--dark {
   --ifm-footer-background-color: #0a0c0a;
+
   border-top: 1px solid #343c35;
 }
 
 .footer__title,
 .footer__copyright,
 .footer__link-item {
-  font-family: 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono', Consolas,
+  font-family: SFMono-Regular, 'Cascadia Code', 'Liberation Mono', consolas,
     monospace;
 }
 

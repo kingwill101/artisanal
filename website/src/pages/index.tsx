@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import styles from './index.module.css';
 
@@ -40,8 +41,10 @@ const supportingLinks = [
 ];
 
 export default function Home(): React.JSX.Element {
+  const {siteConfig} = useDocusaurusContext();
+
   return (
-    <Layout description="Build polished command-line tools and terminal apps in Dart">
+    <Layout description={siteConfig.tagline}>
       <main className={styles.page}>
         <header className={styles.hero}>
           <div className={styles.gridWash} aria-hidden="true" />

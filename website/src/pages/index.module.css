@@ -11,9 +11,10 @@
   --landing-terminal: #171b18;
   --landing-terminal-muted: #9ba79d;
   --landing-serif: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua',
-    Palatino, 'Times New Roman', serif;
-  --landing-mono: 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono',
-    Consolas, monospace;
+    palatino, 'Times New Roman', serif;
+  --landing-mono: SFMono-Regular, 'Cascadia Code', 'Liberation Mono', consolas,
+    monospace;
+
   color: var(--landing-ink);
   background: var(--landing-paper);
   overflow: hidden;
@@ -262,7 +263,7 @@
   width: 6px;
   height: 6px;
   margin-right: 6px;
-  background: currentColor;
+  background: currentcolor;
   border-radius: 50%;
 }
 
