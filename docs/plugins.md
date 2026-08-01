@@ -1,7 +1,10 @@
-# Remote Plugin Surfaces
+# Connect remote UI plugins
 
-`package:artisanal/plugins.dart` provides the supported out-of-process plugin
-surface for remote-rendered plugins.
+Remote UI plugins run outside the host process and send rendered terminal cells
+back over stdin and stdout. Use them when a plugin needs its own process or
+language runtime while the host keeps control of layout, focus, and input.
+
+The API is exported by `package:artisanal/artisanal.dart`.
 
 The current model is host-rendered composition with plugin-rendered content:
 
@@ -54,7 +57,7 @@ renders the received cell state with a UV canvas.
 ```dart
 // example/tui/remote_plugin_host_demo.dart
 import 'dart:io' as io;
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 import 'package:artisanal/uv.dart' as uv;
 
 const _surfaceId = 'demo.panel';
@@ -100,7 +103,7 @@ frames back to the host.
 
 ```dart
 // example/tui/remote_plugin_guest_demo.dart
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 
 const _surfaceId = 'demo.panel';
 const _width = 28;
@@ -201,7 +204,8 @@ calls it via the generic service envelope.
 ```dart
 // Host side — example/tui/remote_plugin_generic_service_host_demo.dart
 import 'dart:io' as io;
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:artisanal/uv.dart' as uv;
 import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
 
 Future<void> main() async {
@@ -255,7 +259,7 @@ Future<void> main() async {
 
 ```dart
 // Guest side — example/tui/remote_plugin_generic_service_guest_demo.dart
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 
 Future<void> main() async {
   final session = await plugins.RemotePluginGuestSession.bindStdio(
@@ -342,8 +346,8 @@ routing (focus, mouse, keyboard) is handled by the built-in
 ```dart
 // example/tui/remote_plugin_workspace/host/main.dart (condensed)
 import 'dart:io' as io;
-import 'package:artisanal/plugins.dart' as plugins;
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart' as uv;
 
 Future<void> main() async {
@@ -462,9 +466,9 @@ SlotRegion<AppSlot, AppData>(
 )
 ```
 
-The `RemotePluginSlotInputRouter` (from `package:artisanal/plugins.dart`)
+The `RemotePluginSlotInputRouter` (from `package:artisanal/artisanal.dart`)
 routes keyboard, mouse, and focus input to the correct remote surface when
 multiple remote slots are active.
 
-See [WIDGETS.md](WIDGETS.md#widget-slot-registry) for the full widget-layer API.
+See [widgets.md](widgets.md#widget-slot-registry) for the full widget-layer API.
 ```

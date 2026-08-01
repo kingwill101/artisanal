@@ -1,46 +1,11 @@
-# Args Wrapper (Command Runner)
+# Build commands and subcommands
 
-The Artisanal Args library provides a polished command-line interface framework built on top of `package:args`. It extends the base functionality with Lip Gloss styling, automatic help generation, verbosity management, and seamless Console integration.
+Use Artisanal's command runner when your program has subcommands, options,
+generated help, or shell completion. It builds on `package:args` and connects
+each command to `Console`, so parsing and user-facing output follow the same
+conventions.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Shell Completion](#shell-completion)
-- [CommandRunner](#commandrunner)
-  - [Creating a Runner](#creating-a-runner)
-  - [Constructor and I/O Hooks](#constructor-and-io-hooks)
-  - [Global Flags](#global-flags)
-  - [Command Namespaces](#command-namespaces)
-  - [Help Output](#help-output)
-- [Command](#command)
-  - [Creating Commands](#creating-commands)
-  - [Accessing Console](#accessing-console)
-  - [Command Help](#command-help)
-- [Command Structure](#command-structure)
-- [Argument Parsing](#argument-parsing)
-- [Error Handling](#error-handling)
-- [Integration with Console](#integration-with-console)
-- [Advanced Usage](#advanced-usage)
-- [Related Documentation](#related-documentation)
-
----
-
-## Overview
-
-Artisanal's Args library provides:
-
-- **Beautiful Help Output**: Automatically styled with Lip Gloss colors
-- **Command Namespacing**: Group commands with `:` separators (e.g., `db:migrate`, `ui:build`)
-- **Namespace Discovery**: Typing a namespace prefix (e.g., `db`) shows subcommands instead of "command not found"
-- **Laravel-style Argument Helpers**: `option()`, `hasOption()`, `argument()`, `arguments`, `argumentCount`
-- **Verbosity Management**: `-v`, `-vv`, and `-vvv` flags plus quiet/silent modes
-- **Interactive Control**: `--no-interaction` flag for non-interactive mode
-- **ANSI Control**: `--ansi`/`--no-ansi` flags to force color output
-- **Symfony-style Error Blocks**: Styled `<error>` blocks written to stderr with proper exit codes
-- **Seamless Console Integration**: Each command gets automatic access to the [Console](CONSOLE.md)
-- **Deterministic Testing Hooks**: Injectable output, input, and exit-code callbacks
-- **Automatic Shell Completion**: Tab-completion for commands, options, and allowed values (bash, zsh, tcsh)
+## Quick start
 
 ```dart
 import 'package:artisanal/args.dart';
@@ -67,51 +32,6 @@ void main(List<String> args) async {
   runner.addCommand(ServeCommand());
   await runner.run(args);
 }
-```
-
----
-
-## Quick Start
-
-### Simple Command
-
-```dart
-import 'package:artisanal/args.dart';
-
-class HelloCommand extends Command<void> {
-  @override
-  String get name => 'hello';
-  
-  @override
-  String get description => 'Say hello to someone';
-  
-  HelloCommand() {
-    argParser.addOption('name', abbr: 'n', help: 'Name to greet');
-  }
-  
-  @override
-  void run() {
-    final name = option('name') as String? ?? 'World';
-    final message = argument(0) ?? '';
-    io.success('Hello, $name! $message');
-  }
-}
-
-void main(List<String> args) async {
-  final runner = CommandRunner('greet', 'A friendly CLI');
-  runner.addCommand(HelloCommand());
-  await runner.run(args);
-}
-```
-
-Run with:
-```bash
-dart run bin/greet.dart hello --name John
-```
-
-Output:
-```
-Hello, John!
 ```
 
 ## Shell Completion
@@ -883,7 +803,7 @@ This produces the same styled error block output.
 
 ## Integration with Console
 
-Commands automatically get access to the [Console](CONSOLE.md) through the `io` property:
+Commands automatically get access to the [Console](console.md) through the `io` property:
 
 ```dart
 @override
@@ -969,8 +889,8 @@ void main() async {
 
 ## Related Documentation
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [CONSOLE.md](CONSOLE.md) - Console I/O operations and styling
-- [STYLE.md](STYLE.md) - Text styling and formatting
-- [TUI.md](TUI.md) - Interactive terminal applications
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [docs_index.md](docs_index.md) - Full documentation index
+- [console.md](console.md) - Console I/O operations and styling
+- [style.md](style.md) - Text styling and formatting
+- [tui.md](tui.md) - Interactive terminal applications
+- [architecture.md](architecture.md) - System architecture

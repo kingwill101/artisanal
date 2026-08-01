@@ -1,24 +1,16 @@
-# Charting Primitives
+# Draw charts in the terminal
 
-Artisanal provides terminal-native chart renderers that draw into UV buffers. Use `renderChartLines` to produce printable output.
+Use the charting helpers for sparklines, line and area charts, histograms,
+heatmaps, pie charts, and sequence diagrams that belong naturally in terminal
+output. They draw into Ultraviolet buffers and can be printed as text or placed
+inside a widget app.
 
-## Table of Contents
-
-- [Quick Start (Sparkline)](#quick-start-sparkline)
-- [Line Chart](#line-chart)
-- [Ribbon / Area Chart](#ribbon--area-chart)
-- [Histogram](#histogram)
-- [Heatmap](#heatmap)
-- [Pie Chart](#pie-chart)
-- [Crosshair Overlay](#crosshair-overlay)
-- [Legend and Palette](#legend-and-palette)
-- [Sequence Diagrams](#sequence-diagrams)
-- [Related Docs](#related-docs)
+The API is currently exported by `package:artisanal/artisanal.dart`.
 
 ## Quick Start (Sparkline)
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final values = [12, 18, 22, 19, 25, 29, 31, 28, 24, 26, 30, 34];
@@ -40,7 +32,7 @@ void main() {
 
 ```dart
 import 'dart:math' as math;
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final series = _series(60, seed: 13, min: 20, max: 90);
@@ -82,7 +74,7 @@ List<double> _series(
 
 ```dart
 import 'dart:math' as math;
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final seriesA = _series(60, seed: 13, min: 20, max: 90);
@@ -129,7 +121,7 @@ List<double> _series(
 
 ```dart
 import 'dart:math' as math;
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final values = _series(50, seed: 99, min: 0, max: 100);
@@ -171,7 +163,7 @@ List<double> _series(
 
 ```dart
 import 'dart:math' as math;
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final grid = _heatmap(28, 12);
@@ -208,7 +200,7 @@ List<List<double>> _heatmap(int width, int height) {
 ## Pie Chart
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final lines = chart.renderChartLines(40, 12, (screen, area) {
@@ -239,7 +231,7 @@ Notes:
 ## Crosshair Overlay
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final lines = chart.renderChartLines(40, 12, (screen, area) {
@@ -279,7 +271,7 @@ Legend entries are typically shown in a framed panel so labels stay readable
 over dense chart regions.
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final ramp = chart.ChartRamp.fromHexes(
@@ -324,7 +316,7 @@ The renderer produces clean ASCII-art output with Unicode box-drawing characters
 #### String Convenience API
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final text = chart.renderSequenceDiagram('''
@@ -343,7 +335,7 @@ void main() {
 For fine-grained control over rendering:
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 import 'package:ultraviolet/ultraviolet.dart' show Canvas, rect;
 
 void main() {
@@ -494,7 +486,7 @@ Color names are parsed from Mermaid `style` declarations and arrow colors.
 Configure visual appearance with a custom theme:
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 import 'package:ultraviolet/ultraviolet.dart' show UvColor, UvStyle;
 
 final customTheme = const chart.SequenceDiagramTheme(
@@ -544,7 +536,7 @@ sequenceDiagram
 Control diagram dimensions:
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 final layout = chart.layoutSequenceDiagram(
   diagram,
@@ -559,7 +551,7 @@ final layout = chart.layoutSequenceDiagram(
 #### Basic Sequence Diagram
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 void main() {
   final text = chart.renderSequenceDiagram('''
@@ -580,7 +572,7 @@ void main() {
 #### Parsed Diagram with Custom Rendering
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 import 'package:ultraviolet/ultraviolet.dart' show Canvas, rect, UvColor, UvStyle;
 
 void main() {
@@ -610,7 +602,7 @@ void main() {
 #### Widget Usage in TUI App
 
 ```dart
-import 'package:artisanal/src/tui/bubbles/sequence_diagram.dart';
+import 'package:artisanal/bubbles.dart';
 
 void main() {
   final diagram = SequenceDiagramModel(
@@ -632,7 +624,7 @@ void main() {
 #### Theme Customization
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 import 'package:ultraviolet/ultraviolet.dart' show UvColor, UvStyle;
 
 void main() {
@@ -668,7 +660,7 @@ void main() {
 Use in any context where you have a UV Canvas:
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 import 'package:ultraviolet/ultraviolet.dart' show Canvas, rect;
 
 String renderDiagram(String mermaid) {
@@ -704,7 +696,7 @@ SequenceDiagramChart(
 Combine with other charting primitives in a single view:
 
 ```dart
-import 'package:artisanal/charting.dart' as chart;
+import 'package:artisanal/artisanal.dart' as chart;
 
 // Render multiple diagrams
 for (final source in sources) {
@@ -713,7 +705,7 @@ for (final source in sources) {
 }
 ```
 
-## Related Docs
+## Where to go next
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [UV.md](UV.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [uv.md](uv.md)

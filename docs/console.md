@@ -1,61 +1,10 @@
-# Console I/O System
+# Print and prompt from a CLI
 
-The Console class provides a high-level API for building polished CLI applications with beautiful, semantic output. It combines terminal styling, interactive prompts, and utility methods for common console operations.
+`Console` handles the everyday work of talking to someone in a terminal. Use it
+for status messages, questions, tables, progress, and errors without managing
+ANSI sequences or terminal capabilities yourself.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Creating a Console](#creating-a-console)
-- [Text Output](#text-output)
-  - [Basic Output](#basic-output)
-  - [Formatted Output](#formatted-output)
-  - [Message Blocks](#message-blocks)
-  - [Alert Boxes](#alert-boxes)
-- [Text Styling](#text-styling)
-  - [Console Tags](#console-tags)
-  - [Custom Styles](#custom-styles)
-  - [Direct Styling](#direct-styling)
-- [Interactive Prompts](#interactive-prompts)
-  - [Text Input](#text-input)
-  - [Confirm Dialogs](#confirm-dialogs)
-  - [Selection Prompts](#selection-prompts)
-  - [Password Input](#password-input)
-  - [Prompt Validators](#prompt-validators)
-- [Tasks and Progress](#tasks-and-progress)
-  - [Simple Tasks](#simple-tasks)
-  - [Complex Tasks](#complex-tasks)
-- [Components](#components)
-  - [Tables](#tables)
-  - [Trees](#trees)
-  - [Progress Bars](#progress-bars)
-  - [Listings](#listings)
-  - [Components Helper](#components-helper)
-- [Advanced Features](#advanced-features)
-  - [Verbosity Control](#verbosity-control)
-  - [Interactive Mode](#interactive-mode)
-  - [Terminal Detection](#terminal-detection)
-  - [Inline Animations](#inline-animations)
-  - [Diff Comments](#diff-comments)
-- [Configuration](#configuration)
-- [Integration with Args](#integration-with-args)
-- [Related Documentation](#related-documentation)
-
----
-
-## Overview
-
-The Console class provides:
-
-- **Beautiful Output**: Styled text with colors and formatting
-- **Semantic Messages**: info, success, comment, question, warn, error, note, caution, verbose, debug
-- **Interactive Prompts**: ask, confirm, choice, secret
-- **Tasks**: Progress indicators with success/failure states
-- **Components**: Tables, trees, progress bars, listings
-- **Console Tags**: Symfony/Laravel-style inline styling
-- **Custom Styles**: Register reusable styled components
-- **Verbosity Control**: Output based on verbosity levels
-- **Terminal Detection**: Automatic ANSI support and color profile
+## Quick start
 
 ```dart
 import 'package:artisanal/artisanal.dart';
@@ -83,35 +32,6 @@ void main() {
   }
 }
 ```
-
----
-
-## Quick Start
-
-### Basic Usage
-
-```dart
-import 'package:artisanal/artisanal.dart';
-
-void main() {
-  final console = Console();
-  
-  console.title('My CLI Tool');
-  console.section('Introduction');
-  
-  console.text('This is a simple CLI tool built with Artisanal.');
-  
-  console.listing([
-    'Feature 1: Beautiful output',
-    'Feature 2: Interactive prompts',
-    'Feature 3: Semantic messages',
-  ]);
-  
-  console.success('Setup complete!');
-}
-```
-
----
 
 ## Creating a Console
 
@@ -761,9 +681,9 @@ class MyCommand extends Command<void> {
 
 ## Related Documentation
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [ARGS.md](ARGS.md) - Command runner and argument parsing
-- [STYLE.md](STYLE.md) - Text styling and formatting
-- [TUI.md](TUI.md) - Interactive terminal applications
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
-- [IO_COMPONENTS.md](IO_COMPONENTS.md) - Console components helper
+- [docs_index.md](docs_index.md) - Full documentation index
+- [args.md](args.md) - Command runner and argument parsing
+- [style.md](style.md) - Text styling and formatting
+- [tui.md](tui.md) - Interactive terminal applications
+- [architecture.md](architecture.md) - System architecture
+- [io_components.md](io_components.md) - Console components helper

@@ -1,6 +1,8 @@
-# Layout Utilities
+# Arrange terminal content
 
-The layout helpers build aligned, width-aware text blocks. They are ANSI-aware for most operations and integrate with the style system.
+The layout helpers place text blocks beside or above one another while
+respecting ANSI styles and terminal width. Use them when a full widget tree
+would be unnecessary but string concatenation is no longer enough.
 
 ## Quick Start
 
@@ -49,14 +51,14 @@ void main() {
 }
 ```
 
-## Gotchas
+## Things to keep in mind
 
 - `truncate` appends a reset before the ellipsis; this can reset styles.
 - `placeHeight` always pads with spaces, even if a fill char is provided.
 - `stack` treats only literal spaces as transparent; styled spaces are opaque.
 
-## Related Docs
+## Where to go next
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [STYLE.md](STYLE.md)
-- [UNICODE.md](UNICODE.md)
+- [docs_index.md](docs_index.md) - Full documentation index
+- [style.md](style.md)
+- [unicode.md](unicode.md)

@@ -1,6 +1,9 @@
-# Animation System
+# Add animation to a widget app
 
-Artisanal features a TEA-native animation system designed specifically for the terminal's message-based update loop. Unlike traditional UI frameworks that rely on a tight render loop and global ticker, Artisanal animations are driven by the The Elm Architecture (TEA) lifecycle.
+Animations follow the same message loop as the rest of an Artisanal app. An
+animation schedules a tick, updates its value when that message arrives, and
+stops scheduling ticks when it is complete. This keeps animation state visible
+to the normal update and testing pipeline.
 
 ## Core Concepts
 

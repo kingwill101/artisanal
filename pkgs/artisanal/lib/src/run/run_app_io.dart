@@ -20,10 +20,7 @@ T _configureImageAutoMode<T extends WidgetApp>(
   return app;
 }
 
-Future<T> _runArtisanalAppWithDebugCapture<T>(
-  ArtisanalApp app,
-  Future<T> Function() body,
-) {
+Future<T> _runWithDebugCapture<T>(ArtisanalApp app, Future<T> Function() body) {
   final controller = app.debugConsoleController;
   if (controller == null) return body();
   if (!app.debugConsoleCapturePrint && !app.debugConsoleCaptureErrors) {
@@ -53,7 +50,7 @@ Future<void> runWidgetApp(
     final resolvedOptions = (options ?? defaultWidgetProgramOptions).copyWith(
       startupTitle: options?.startupTitle ?? app.title,
     );
-    return _runArtisanalAppWithDebugCapture(
+    return _runWithDebugCapture(
       app,
       () => runProgram(
         _configureImageAutoMode(app, imageAutoMode: imageAutoMode),

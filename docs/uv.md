@@ -1,39 +1,14 @@
-# UV System Documentation
+# Draw directly with Ultraviolet
 
-The **UV (Ultraviolet)** subsystem provides high-performance terminal rendering and input handling for building responsive, visually rich terminal UIs. It implements a cell-based rendering model with diffing, styled text, layered composition, and comprehensive input decoding.
+Ultraviolet is the low-level rendering layer beneath Artisanal's TUI runtime and
+widget framework. Most applications do not need to begin here. Use it directly
+when you want to draw cells, compose layers, decode terminal input, build a
+renderer, or work with terminal image protocols.
 
-### Note
+New code should import `package:ultraviolet/ultraviolet.dart`.
+`package:artisanal/uv.dart` remains as a compatibility export.
 
-Primary package path is now `package:ultraviolet/ultraviolet.dart` for direct UV
-usage. `package:artisanal/uv.dart` remains available as a compatibility barrel
-export during the transition.
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Cell and UvStyle](#cell-and-uvstyle)
-3. [UvColor Types](#uvcolor-types)
-4. [Buffer](#buffer)
-5. [Screen](#screen)
-6. [Canvas](#canvas)
-7. [Drawable Interface](#drawable-interface)
-8. [Layer System](#layer-system)
-9. [Geometry](#geometry)
-10. [Layout Helpers](#layout-helpers)
-11. [Terminal Events and Input](#terminal-events-and-input)
-12. [Mouse Handling](#mouse-handling)
-13. [Terminal Capabilities](#terminal-capabilities)
-14. [Rendering Pipeline](#rendering-pipeline)
-15. [Buffer Filters and Render Sinks](#buffer-filters-and-render-sinks)
-16. [Image Drawables](#image-drawables)
-17. [Style Bridge](#style-bridge)
-18. [Quick Start](#quick-start)
-19. [Color Matrix Effects](#color-matrix-effects)
-20. [Post-Processing Filters](#post-processing-filters)
-
----
-
-## Overview
+## The basic idea
 
 UV models the terminal as layers of drawable cells. The architecture consists of:
 
@@ -1433,11 +1408,10 @@ class AsciiArtDrawable implements Drawable {
 ### Profile Conversion
 
 ```dart
-import 'package:artisanal/src/uv/style_ops.dart' as style_ops;
-import 'package:artisanal/src/colorprofile/profile.dart' as cp;
+import 'package:ultraviolet/ultraviolet.dart' as uv;
 
 // Convert style to respect terminal capabilities
-final converted = style_ops.convertStyle(style, cp.Profile.ansi256);
+final converted = uv.convertStyle(style, uv.Profile.ansi256);
 
 // True color -> unchanged
 // ANSI 256 -> RGB downsampled to 256
@@ -1449,11 +1423,11 @@ final converted = style_ops.convertStyle(style, cp.Profile.ansi256);
 
 ```dart
 // Full SGR sequence for a style
-final sgr = style_ops.styleToSgr(style);
+final sgr = uv.styleToSgr(style);
 // "\x1b[1;3;38;2;255;0;0m" for bold italic red
 
 // Diff sequence between styles (minimal change)
-final diff = style_ops.styleDiff(oldStyle, newStyle);
+final diff = uv.styleDiff(oldStyle, newStyle);
 ```
 
 ---
@@ -1555,7 +1529,7 @@ Future<void> renderImage(Terminal terminal, img.Image image) async {
 
 ---
 
-## API Reference
+## Reference
 
 ### Exports from `package:ultraviolet/ultraviolet.dart`
 
@@ -1597,9 +1571,9 @@ MouseMode, MouseButton
 TerminalCapabilities
 ```
 
-## Related Docs
+## Where to go next
 
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TERMINAL.md](TERMINAL.md) - Terminal abstraction
-- [TERMINAL_GRAPHICS.md](TERMINAL_GRAPHICS.md) - Sixel / Kitty / iTerm2 image protocols
-- [CHARTING.md](CHARTING.md) - Charting primitives
+- [docs_index.md](docs_index.md) - Full documentation index
+- [terminal.md](terminal.md) - Terminal abstraction
+- [terminal_graphics.md](terminal_graphics.md) - Sixel / Kitty / iTerm2 image protocols
+- [charting.md](charting.md) - Charting primitives

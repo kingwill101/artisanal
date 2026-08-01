@@ -1,5 +1,4 @@
 import 'package:artisanal/src/tui/cmd.dart';
-import 'package:artisanal/src/tui/msg.dart' show BatchMsg;
 import 'package:test/test.dart';
 
 void main() {
@@ -19,7 +18,11 @@ void main() {
       () async {
         final msg = await Cmd.setClipboardBestEffort('Hello').execute();
         expect(msg, isNotNull);
-        expect(msg is ClipboardSetMsg || msg is BatchMsg, isTrue);
+        expect(msg is ClipboardSetMsg || msg is SequenceMsg, isTrue);
+
+        if (msg is SequenceMsg) {
+          expect(msg.commands, hasLength(2));
+        }
       },
     );
 
