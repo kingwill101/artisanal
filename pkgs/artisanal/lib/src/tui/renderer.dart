@@ -433,6 +433,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
   void invalidate() {
     _lastView = null;
     _lastFrame = null;
+    // Invalidation is used by forced repaints. The next render must not be
+    // discarded just because the regular frame-rate interval has not elapsed.
+    _frameStopwatch.stop();
   }
 
   @override
@@ -633,6 +636,9 @@ class InlineTuiRenderer implements TuiRenderer {
   @override
   void invalidate() {
     _lastLineCount = 0;
+    // Invalidation is used by forced repaints. The next render must not be
+    // discarded just because the regular frame-rate interval has not elapsed.
+    _frameStopwatch.stop();
   }
 
   @override

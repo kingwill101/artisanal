@@ -49,6 +49,26 @@ void main() {
       expect(terminal.output, isNot(contains('alpha')));
     });
 
+    test('invalidate bypasses the frame-rate limiter', () {
+      final terminal = StringTerminal();
+      final renderer = FullScreenTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(
+          fps: 1,
+          altScreen: true,
+          hideCursor: false,
+        ),
+      );
+
+      renderer.render('same frame');
+      terminal.clear();
+
+      renderer.invalidate();
+      renderer.render('same frame');
+
+      expect(terminal.output, contains('same frame'));
+    });
+
     test('re-renders lines whose inherited ANSI state changed', () {
       final terminal = StringTerminal();
       final renderer = buildRenderer(terminal);
@@ -203,5 +223,25 @@ void main() {
         isTrue,
       );
     });
+  });
+
+  test('InlineTuiRenderer invalidate bypasses the frame-rate limiter', () {
+    final terminal = StringTerminal();
+    final renderer = InlineTuiRenderer(
+      terminal: terminal,
+      options: const TuiRendererOptions(
+        fps: 1,
+        altScreen: false,
+        hideCursor: false,
+      ),
+    );
+
+    renderer.render('same frame');
+    terminal.clear();
+
+    renderer.invalidate();
+    renderer.render('same frame');
+
+    expect(terminal.output, contains('same frame'));
   });
 }
