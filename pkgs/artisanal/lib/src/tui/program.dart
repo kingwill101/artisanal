@@ -1602,7 +1602,10 @@ class Program<M extends Model> with HotReloadMixin {
 
   /// Sets up the terminal and renderer.
   Future<void> _setup() async {
-    _terminal ??= platform.createDefaultTerminal(inputTTY: _options.inputTTY);
+    _terminal ??= platform.createDefaultTerminal(
+      inputTTY: _options.inputTTY,
+      output: _options.output,
+    );
 
     // Enable raw mode for character-by-character input
     _terminal!.enableRawMode();
