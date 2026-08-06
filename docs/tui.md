@@ -1305,12 +1305,120 @@ so the model receives both the cancellation notice and the key that caused it.
 
 Configuration:
 
-- `timeout` — `null` (default) waits indefinitely for the continuation key
-  (opencode-style). Set a `Duration` to auto-cancel after inactivity
-  (e.g., `const Duration(milliseconds: 900)`).
-- `inner` — an optional `ProgramInterceptor` to compose underneath the chord
-  layer. The inner interceptor runs first; the chord interceptor processes the
-  result.
+ - `timeout` — `null` (default) waits indefinitely for the continuation key
+   (opencode-style). Set a `Duration` to auto-cancel after inactivity
+   (e.g., `const Duration(milliseconds: 900)`).
+ - `inner` — an optional `ProgramInterceptor` to compose underneath the chord
+   layer. The inner interceptor runs first; the chord interceptor processes the
+   result.
+
+### Keymap Hub
+
+`KeymapHub` is the modern surface-first key interception system. It replaces
+the older `KeyChordInterceptor` with a layered architecture where each
+[`ShortcutSurface`] declares its own bindings and the hub routes pending
+sequences to the topmost surface.
+
+Install the hub as a `ProgramInterceptor` and push surfaces at runtime:
+
+```dart
+import 'package:artisanal/tui.dart' as tui;
+
+final hub = tui.KeymapHub();
+
+// Session surface (default).
+hub.push(
+  tui.ShortcutSurface(
+    id: 'session',
+    bindings: [
+      tui.ShortcutBinding.chord(
+        id: 'toggle_sidebar',
+        leader: 'ctrl+x',
+        key: 'b',
+        description: 'toggle sidebar',
+        group: 'session',
+      ),
+      tui.ShortcutBinding.single(
+        id: 'command_list',
+        key: 'ctrl+p',
+        description: 'commands',
+        group: 'app',
+      ),
+      tui.ShortcutBinding.help(), // ? → help_show
+    ],
+  ),
+);
+
+await tui.runProgram(
+  MyModel(),
+  options: tui.ProgramOptions(interceptor: hub),
+);
+```
+
+Surfaces form a stack. When a key is pressed the hub walks the stack
+top-down, letting the innermost surface claim the key first. Surfaces
+may be exclusive (dialogs) which prevents keys from leaking through to
+surfaces below.
+
+```dart
+// Push an exclusive dialog surface — keys under it do not reach session.
+hub.push(
+  tui.ShortcutSurface(
+    id: 'dialog',
+    exclusive: true,
+    bindings: [
+      tui.ShortcutBinding.single(id: 'confirm', key: 'y', description: 'confirm'),
+      tui.ShortcutBinding.single(id: 'cancel', key: 'n', description: 'cancel'),
+      tui.ShortcutBinding.single(id: 'close', key: 'escape', description: 'close'),
+    ],
+  ),
+);
+
+// Pop the dialog when confirmed.
+hub.pop('dialog');
+```
+
+#### Leader chords and which-key
+
+Leader chords use a prefix key (e.g., `ctrl+x`) followed by a continuation
+key. While the user holds the prefix the hub exposes pending bindings via
+`KeymapHub.pending`, which which-key panels consume to show available
+continuations.
+
+```dart
+final pending = hub.pending;
+// pending.isPending → true while leader is held
+// pending.bindings → List<ShortcutBinding> for the current prefix
+// pending.statusHint → 'ctrl+x …'
+```
+
+A which-key panel renders the pending bindings as a dock or overlay so the
+user can see available chords without memorising them.
+
+#### Messages
+
+| Message | When |
+|---------|------|
+| `KeymapActionMsg` | A binding matched. `actionId` holds the binding id. |
+| `KeymapHelpMsg` | The help key (`?`) was pressed for the active surface. |
+
+#### Configuration
+
+- `leader` — the prefix key for leader chords (default: `ctrl+x`).
+- `helpKey` — the key that opens the shortcuts sheet (default: `?`).
+- `timeout` — auto-cancel a pending leader chord after this duration.
+
+#### API surface
+
+| Class / Function | Purpose |
+|------------------|---------|
+| `KeymapHub` | Core interceptor and surface stack manager. |
+| `ShortcutSurface` | A surface with bindings; may be exclusive. |
+| `ShortcutBinding` | Named key or chord binding with description and group. |
+| `KeymapHubScope` | Inherited widget providing `KeymapHub` to descendants. |
+| `ShortcutSurfaceScope` | Inherited widget providing the active surface to descendants. |
+| `WhichKeySlot` | Dock slot that renders pending which-key data. |
+| `ShortcutsSheet` | Bottom sheet listing all bindings for the active surface. |
 
 ## Replay Automation
 

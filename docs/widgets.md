@@ -1924,6 +1924,117 @@ for the full token reference and usage examples with `LipList`.
 
 ---
 
+## Keyboard Shortcuts and Chords
+
+`artisanal_widgets` provides a surface-first keyboard shortcut system built
+around `KeymapHub`, `ShortcutSurface`, and `ShortcutBinding`. Surfaces
+push/pop at runtime so dialogs, sidebars, and views each declare their own
+bindings without collisions.
+
+### KeymapHubScope
+
+Wrap your app (or a subtree) with `KeymapHubScope` to provide a
+`KeymapHub` to all descendant surfaces:
+
+```dart
+KeymapHubScope(
+  child: MaterialApp.router(
+    routerConfig: router,
+  ),
+);
+```
+
+### ShortcutSurfaceScope
+
+Each screen or route wraps its content with `ShortcutSurfaceScope` to
+declare the active surface's bindings:
+
+```dart
+ShortcutSurfaceScope(
+  surface: ShortcutSurface(
+    id: 'session',
+    bindings: [
+      ShortcutBinding.chord(
+        id: 'toggle_sidebar',
+        leader: 'ctrl+x',
+        key: 'b',
+        description: 'toggle sidebar',
+        group: 'session',
+      ),
+      ShortcutBinding.single(
+        id: 'command_list',
+        key: 'ctrl+p',
+        description: 'commands',
+        group: 'app',
+      ),
+      ShortcutBinding.help(), // ? → help_show
+    ],
+  ),
+  child: SessionScreen(),
+);
+```
+
+### WhichKeySlot
+
+`WhichKeySlot` is a dock widget that renders pending leader-chord
+continuations so the user can see available chords without memorising
+them. Place it in your app's footer or sidebar:
+
+```dart
+Scaffold(
+  footer: WhichKeySlot(),
+  body: SessionScreen(),
+);
+```
+
+While a leader chord is pending the slot shows the available continuations
+grouped by binding group. The hub's `pending` property exposes the current
+state for custom which-key panels.
+
+### ShortcutsSheet
+
+`ShortcutsSheet` is a bottom sheet that lists all bindings for the active
+surface. Trigger it with the `?` key (default) or programmatically:
+
+```dart
+// The ? key is bound by default via ShortcutBinding.help().
+// Open the sheet programmatically:
+ShortcutsSheet.of(context).open();
+```
+
+### WhichKeyPanel
+
+For a custom overlay panel instead of the dock, use `WhichKeyPanel`:
+
+```dart
+WhichKeyPanel(
+  entries: entries,
+  position: WhichKeyPosition.top,
+  child: MyScreen(),
+);
+```
+
+### Leader chords
+
+Leader chords use a prefix key (default: `ctrl+x`) followed by a
+continuation key. The hub tracks pending sequences and exposes them via
+`KeymapHub.pending`:
+
+| Property | Description |
+|----------|-------------|
+| `pending.isPending` | `true` while the leader key is held |
+| `pending.bindings` | Available continuation bindings |
+| `pending.statusHint` | Status bar hint text (e.g. `ctrl+x …`) |
+
+### Messages
+
+| Message | When |
+|---------|------|
+| `KeymapActionMsg` | A binding matched. `actionId` holds the binding id. |
+| `KeymapHelpMsg` | The help key (`?`) was pressed for the active surface. |
+
+---
+
 ## Components Widgets
 
 Higher-level widgets built from layout primitives. These are exported from
