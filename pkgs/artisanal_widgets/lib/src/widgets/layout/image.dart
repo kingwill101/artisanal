@@ -1116,8 +1116,7 @@ T withImageAutoConfiguration<T>({
       _imageAutoModeZoneKey: mode,
       _imageCapabilitiesZoneKey: ?capabilities,
       if (cellPixelWidth != null) _imageCellPixelWidthZoneKey: cellPixelWidth,
-      if (cellPixelHeight != null)
-        _imageCellPixelHeightZoneKey: cellPixelHeight,
+      if (cellPixelHeight != null) _imageCellPixelHeightZoneKey: cellPixelHeight,
     },
   );
 }

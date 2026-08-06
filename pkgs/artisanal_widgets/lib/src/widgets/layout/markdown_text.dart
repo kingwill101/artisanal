@@ -16,7 +16,7 @@ import 'package:artisanal/tui.dart'
         TuiTrace,
         TraceTag;
 import 'package:artisanal/artisanal.dart'
-    show MarkdownRenderer, AnsiRendererOptions;
+    show MarkdownRenderer, markdownToAnsi, AnsiRendererOptions;
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'

@@ -11,6 +11,7 @@ void main() {
       expect(tester.find.text('Performance'), isTrue);
       expect(tester.find.text('Devices'), isTrue);
       expect(tester.find.text('[r] reload'), isTrue);
+      expect(tester.find.text('[P] perf'), isTrue);
       expect(tester.find.text('FPS'), isTrue);
       expect(tester.find.text('Memory'), isTrue);
     });
@@ -25,6 +26,7 @@ void main() {
 
       expect(tester.find.text('Network'), isTrue);
       expect(tester.find.text('method'), isTrue);
+      expect(tester.find.text('code'), isTrue);
     });
   });
 

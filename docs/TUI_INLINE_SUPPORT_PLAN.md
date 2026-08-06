@@ -9,8 +9,8 @@ causes the failures seen while porting `third_party/flutter-cli`: logs push the
 dashboard down, scrollback becomes unusable, and rendered panel content can be
 scrolled into the log area.
 
-Inline mode must support the same class of CLI UX as mature terminal UI
-frameworks and the original `flutter-cli`:
+Inline mode must support the same class of CLI UX as Ratatui, Frankentui, and
+the original `flutter-cli`:
 
 - stay on the primary screen, not the alternate screen;
 - keep the UI pinned to a top or bottom viewport;
@@ -22,25 +22,26 @@ frameworks and the original `flutter-cli`:
 
 ## Reference Findings
 
-### Reference viewport model
+### Ratatui
 
-A mature Rust implementation models inline rendering with a real viewport.
-Its inline viewport tracks the renderable rectangle, while a separate insertion
-primitive writes logs above it. Log lines are not composed into the widget
-view; viewport geometry is updated, cleared as needed, and redrawn afterward.
+Ratatui models inline rendering with a real viewport. `Viewport::Inline(height)`
+tracks the renderable rectangle, and `Terminal::insert_before(height, draw_fn)`
+is the primitive that inserts logs above the inline viewport. It does not
+compose log lines into the widget view. It updates viewport geometry, clears the
+viewport as needed, and redraws the UI afterward.
 
 Important design point: viewport ownership and output insertion are separate
 from widget rendering.
 
 ### Original flutter-cli
 
-The Rust `flutter-cli` intentionally does not use its renderer's built-in inline
+The Rust `flutter-cli` intentionally does not use Ratatui's built-in inline
 viewport for its long-running run dashboard. It avoids DSR cursor-position
 queries by:
 
 1. reading terminal size via ioctl;
 2. pre-scrolling the primary screen with CRLFs to reserve bottom rows;
-3. creating a fixed viewport at the bottom of the terminal;
+3. creating a fixed Ratatui viewport at the bottom of the terminal;
 4. using DECSTBM scroll margins to write logs into the band above the viewport.
 
 It also tracks how many rows of the log band contain real content. Until the
