@@ -4,6 +4,7 @@ import 'dart:io' as io;
 
 import '../colorprofile/detect_impl.dart' as cp_detect;
 import '../style/color.dart';
+import '../uv/terminal_windows_io.dart';
 import 'backend.dart';
 import 'stdin_stream.dart';
 import 'terminal_base.dart';
@@ -221,6 +222,7 @@ class StdioTerminalBackend implements TerminalBackend {
         wasLineMode = _originalLineMode ?? true;
         _stdin.echoMode = false;
         _stdin.lineMode = false;
+        if (identical(_stdin, io.stdin)) enableWindowsVtInput();
         _rawModeEnabled = true;
       } catch (_) {}
     }
@@ -236,6 +238,7 @@ class StdioTerminalBackend implements TerminalBackend {
   void disableRawMode() {
     if (!_rawModeEnabled) return;
     try {
+      if (identical(_stdin, io.stdin)) restoreWindowsVtInput();
       if (_originalEchoMode != null) {
         _stdin.echoMode = _originalEchoMode!;
       }
@@ -309,6 +312,7 @@ class SocketTerminalBackend implements TerminalBackend {
   final StreamController<void> _shutdownController =
       StreamController<void>.broadcast();
   StreamSubscription<List<int>>? _socketSubscription;
+  Future<void> _socketWriteQueue = Future<void>.value();
 
   @override
   final bool supportsAnsi;
@@ -326,17 +330,31 @@ class SocketTerminalBackend implements TerminalBackend {
   @override
   void writeRaw(String data) {
     if (_disposed) return;
-    socket.write(data);
+    _socketWriteQueue = _socketWriteQueue
+        .then<void>((_) {
+          if (!_disposed) {
+            socket.add(utf8.encode(data));
+          }
+        })
+        .catchError((_) {});
   }
 
   @override
-  Future<void> flush() async {
-    if (_disposed) return;
-    try {
-      await socket.flush();
-    } on StateError {
-      //ignore
-    }
+  Future<void> flush() {
+    if (_disposed) return Future<void>.value();
+    final operation = _socketWriteQueue.then<void>((_) async {
+      if (!_disposed) {
+        try {
+          await socket.flush();
+        } on StateError {
+          // Ignore flushes racing with socket shutdown.
+        }
+      }
+    });
+    // Keep the queue usable after an unexpected I/O failure, but return the
+    // original operation so callers can observe that flush did not complete.
+    _socketWriteQueue = operation.catchError((_) {});
+    return operation;
   }
 
   @override

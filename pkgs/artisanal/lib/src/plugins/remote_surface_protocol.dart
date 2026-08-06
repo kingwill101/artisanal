@@ -1644,7 +1644,6 @@ final class RemotePluginProtocolSchemas {
 
   static final Schema message = S.combined(
     $id: 'https://artisanal.dev/schemas/remote-surface-plugin-message.json',
-    $schema: 'https://json-schema.org/draft/2020-12/schema',
     title: 'Artisanal Remote Surface Plugin Message',
     oneOf: byType.values.toList(growable: false),
   );

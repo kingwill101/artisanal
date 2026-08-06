@@ -30,8 +30,10 @@ Future<({int exitCode, String stdout, String stderr})?> runProcess(
   Map<String, String>? environment,
 }) async => null;
 
-Terminal createDefaultTerminal({bool inputTTY = false}) =>
-    throw UnsupportedError('Default terminal requires dart:io');
+Terminal createDefaultTerminal({
+  bool inputTTY = false,
+  void Function(String)? output,
+}) => throw UnsupportedError('Default terminal requires dart:io');
 
 Stream<List<int>>? ttyOpenRead() => null;
 

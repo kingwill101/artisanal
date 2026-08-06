@@ -17,3 +17,5 @@ pkgs/artisanal_widgets/example/opencode/traces/metrics.csv
 third_party/
 .prebuilt/
 .kilo/
+.tmp/
+traces/

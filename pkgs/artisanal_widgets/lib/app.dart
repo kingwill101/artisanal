@@ -1,12 +1,14 @@
-/// Stable app-shell and runner entrypoint for terminal widget apps.
+/// Stable app-shell entrypoint for terminal widget apps.
 ///
 /// Prefer this library when you want the supported hosting surface
 /// without pulling in the full widget namespace:
 ///
 /// - `WidgetApp`
 /// - `ArtisanalApp`
-/// - local runners such as `runWidgetApp(...)` and `runArtisanalApp(...)`
-/// - reload helpers and watched/browser/socket host wrappers
+/// - reload helpers and file-watcher support
+///
+/// Import `package:artisanal/artisanal.dart` for the public `runWidgetApp`
+/// runner and hosted app entrypoints.
 ///
 /// {@category TUI}
 library;

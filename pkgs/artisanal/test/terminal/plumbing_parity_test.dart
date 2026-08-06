@@ -35,6 +35,19 @@ void main() {
       expect(caps.useBackspace, isTrue);
     });
 
+    test(
+      'StdioTerminal redirects writes to the configured output callback',
+      () {
+        final writes = <String>[];
+        final terminal = StdioTerminal(output: writes.add);
+
+        terminal.write('screen bytes');
+        terminal.writeln('line');
+
+        expect(writes, ['screen bytes', 'line${Platform.lineTerminator}']);
+      },
+    );
+
     test('StringTerminal optimizeMovements returns safe defaults', () {
       final terminal = StringTerminal();
       final caps = terminal.optimizeMovements();

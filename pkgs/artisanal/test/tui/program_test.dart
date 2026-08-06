@@ -6606,6 +6606,35 @@ Future<void> main() async {
       },
     );
 
+    test('output callbacks skip auto startup probes by default', () async {
+      final terminal = MockTerminal();
+      final model = _CallbackModel(
+        onInit: () =>
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        onView: () => 'capture-only output',
+      );
+
+      final program = Program(
+        model,
+        options: ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          output: (_) {},
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, _containsRenderedText('capture-only output'));
+      expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+    });
+
     test(
       'startupProbes false disables startup probes for backend terminals',
       () async {

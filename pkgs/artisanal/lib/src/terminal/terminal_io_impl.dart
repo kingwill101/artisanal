@@ -3,6 +3,7 @@ import 'dart:io' as io;
 
 import '../colorprofile/detect_impl.dart' as cp_detect;
 import '../style/color.dart';
+import '../uv/terminal_windows_io.dart';
 import 'ansi.dart';
 import 'stdin_stream.dart';
 import 'terminal_base.dart';
@@ -15,12 +16,17 @@ class StdioTerminal implements Terminal {
   ///
   /// If [stdout] or [stdin] are not provided, uses the process's
   /// standard streams.
-  StdioTerminal({io.Stdout? stdout, io.Stdin? stdin})
+  StdioTerminal({io.Stdout? stdout, io.Stdin? stdin, this.output})
     : _stdout = stdout ?? io.stdout,
       _stdin = stdin ?? io.stdin;
 
   final io.Stdout _stdout;
   final io.Stdin _stdin;
+
+  /// Optional sink for terminal bytes.
+  ///
+  /// When provided, writes are redirected here instead of process stdout.
+  final void Function(String)? output;
 
   // Stdout flush in Dart binds the underlying StreamSink; any concurrent write
   // while a flush is in flight will throw:
@@ -93,6 +99,11 @@ class StdioTerminal implements Terminal {
   @override
   void write(String text) {
     if (text.isEmpty) return;
+    final sink = output;
+    if (sink != null) {
+      sink(text);
+      return;
+    }
     if (_stdoutFlushInFlight != null) {
       _stdoutPending.write(text);
       _stdoutPendingLen += text.length;
@@ -117,6 +128,7 @@ class StdioTerminal implements Terminal {
 
   @override
   Future<void> flush() {
+    if (output != null) return Future<void>.value();
     final existing = _stdoutFlushInFlight;
     if (existing != null) return existing;
 
@@ -350,6 +362,7 @@ class StdioTerminal implements Terminal {
         wasLineMode = _originalLineMode ?? true;
         _stdin.echoMode = false;
         _stdin.lineMode = false;
+        if (identical(_stdin, io.stdin)) enableWindowsVtInput();
         _rawModeEnabled = true;
       } catch (_) {
         // Terminal doesn't support raw mode (e.g., piped input)
@@ -368,6 +381,7 @@ class StdioTerminal implements Terminal {
     if (!_rawModeEnabled) return;
 
     try {
+      if (identical(_stdin, io.stdin)) restoreWindowsVtInput();
       if (_originalEchoMode != null) {
         _stdin.echoMode = _originalEchoMode!;
       }

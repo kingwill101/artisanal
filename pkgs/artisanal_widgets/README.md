@@ -27,6 +27,7 @@ dependencies:
 ## Import
 
 ```dart
+import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 ```
@@ -55,6 +56,7 @@ Both the local runner helpers and the hosted browser/socket helpers accept an
 ## Quick start
 
 ```dart
+import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 
@@ -75,7 +77,7 @@ class HelloApp extends StatelessWidget {
 }
 
 void main() async {
-  await runArtisanalApp(
+  await runWidgetApp(
     ArtisanalApp(
       title: 'Hello widgets',
       home: HelloApp(),
@@ -84,12 +86,11 @@ void main() async {
 }
 ```
 
-`runWidgetApp()` and `runArtisanalApp()` default to
-`MouseMode.allMotion`, so hover-driven widgets such as `Tooltip`,
-`MouseRegion`, and hover-aware scrollbars work without extra setup. If you
-call `runtime.runProgram()` directly, set `mouseMode: runtime.MouseMode.allMotion`
-for passive hover behavior; `mouse: true` alone only enables
-`MouseMode.cellMotion`.
+`runWidgetApp()` defaults to `MouseMode.allMotion`, so hover-driven widgets
+such as `Tooltip`, `MouseRegion`, and hover-aware scrollbars work without extra
+setup. If you call `runtime.runProgram()` directly, set
+`mouseMode: runtime.MouseMode.allMotion` for passive hover behavior. Setting
+only `mouse: true` enables `MouseMode.cellMotion` instead.
 
 ## Flutter-style component ports
 

@@ -1,12 +1,15 @@
-# Testing Infrastructure
+# Test widget apps
 
-Artisanal provides a comprehensive testing suite for TUI widgets, ranging from unit tests to stress-testing "storms" and visual flicker analysis. The core philosophy is to test widgets through the real production message pipeline to ensure behavior exactly matches runtime.
+Widget tests run through the same message and rendering pipeline as a real app.
+You can mount a widget, send keyboard or mouse input, inspect the rendered
+terminal, and reproduce tricky resize or flicker bugs without opening an
+interactive session.
 
-## Widget Testing Harness
+## Start with WidgetTester
 
 The `WidgetTester` is the primary tool for testing widgets. It is designed to feel familiar to Flutter developers while adapting to the terminal environment.
 
-### Core Features
+### What it can do
 
 - **Production Pipeline**: Unlike simple state-to-view tests, `WidgetTester` runs a real `Program` with a mock terminal. Every event follows the full path: `send(msg) -> update(msg) -> view() -> render()`.
 - **Deterministic Frames**: Capture snapshots of the rendered view after each message or pump.

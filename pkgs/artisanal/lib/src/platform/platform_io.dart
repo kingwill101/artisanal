@@ -81,14 +81,20 @@ Future<({int exitCode, String stdout, String stderr})?> runProcess(
   }
 }
 
-Terminal createDefaultTerminal({bool inputTTY = false}) {
+Terminal createDefaultTerminal({
+  bool inputTTY = false,
+  void Function(String)? output,
+}) {
   if (inputTTY) {
     final control = TtyTerminal.tryOpen();
     if (control != null) {
-      return SplitTerminal(control: control, output: StdioTerminal());
+      return SplitTerminal(
+        control: control,
+        output: StdioTerminal(output: output),
+      );
     }
   }
-  return StdioTerminal();
+  return StdioTerminal(output: output);
 }
 
 Stream<List<int>>? ttyOpenRead() {

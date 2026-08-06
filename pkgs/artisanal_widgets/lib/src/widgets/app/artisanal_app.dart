@@ -172,11 +172,11 @@ final class ArtisanalApp extends WidgetApp {
   /// Number of visible log rows in the built-in debug console.
   final int debugConsoleHeight;
 
-  /// Whether `runArtisanalApp` should capture `print()` output into the
+  /// Whether `runWidgetApp` should capture `print()` output into the
   /// attached [debugConsoleController].
   final bool debugConsoleCapturePrint;
 
-  /// Whether `runArtisanalApp` should capture uncaught zone errors into the
+  /// Whether `runWidgetApp` should capture uncaught zone errors into the
   /// attached [debugConsoleController].
   final bool debugConsoleCaptureErrors;
 
