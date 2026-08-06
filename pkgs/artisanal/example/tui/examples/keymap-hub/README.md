@@ -22,4 +22,4 @@ dart run example/tui/examples/keymap-hub/main.dart
 Surfaces are pushed on a [KeymapHub] installed as the program interceptor.
 Unclaimed keys under an exclusive dialog do not fall through to the session map.
 
-See also: [docs/KEYMAP_SURFACE_PLAN.md](../../../../../docs/KEYMAP_SURFACE_PLAN.md).
+See also: [docs/docs_index.md](docs/docs_index.md).

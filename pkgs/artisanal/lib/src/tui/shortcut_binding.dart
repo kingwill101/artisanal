@@ -1,6 +1,5 @@
 /// Unified single-key and multi-key shortcut bindings for [KeymapHub].
 ///
-/// See `docs/KEYMAP_SURFACE_PLAN.md`.
 library;
 
 import 'key_binding.dart' show Help, KeyBinding, KeyMap, keyMatchesSingle;

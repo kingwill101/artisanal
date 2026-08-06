@@ -8,7 +8,6 @@
 /// sequences (leader chords). Pending sequences expose which-key data via
 /// [KeymapHub.pending].
 ///
-/// See `docs/KEYMAP_SURFACE_PLAN.md`.
 library;
 
 import 'dart:async';
