@@ -37,6 +37,7 @@ export 'src/widgets/layout/block_focus.dart';
 export 'src/widgets/plugins/slots.dart';
 export 'src/widgets/components/components_widgets.dart';
 export 'src/widgets/components/overlay.dart';
+export 'src/widgets/chords/chords.dart';
 export 'package:artisanal/tui.dart' show ZoneInBoundsMsg;
 export 'package:artisanal/tui.dart' show KeyBinding, KeyMap, Spinner, Spinners;
 export 'src/widgets/input/input_widgets.dart';

@@ -13,7 +13,7 @@ import 'dart:io';
 
 import 'app.dart';
 export 'app.dart';
-import 'models/chat_model.dart';
+import 'chords.dart';
 import 'theme.dart';
 import 'replay_driver.dart';
 
@@ -89,26 +89,14 @@ void main(List<String> args) async {
     );
   }
 
-  final app = w.WidgetApp(
-    OpenCodeApp(),
-    backgroundColorBuilder: currentOpenCodeRouteBackground,
+  // Surface-first keymap hub (OpenTUI-style layers): routes push surfaces.
+  final hub = openCodeKeymapHub(
+    innerInterceptor: replayPlan?.interceptor,
   );
 
-  final chordInterceptor = tui.KeyChordInterceptor(
-    bindings: [
-      tui.KeyChordBinding(
-        id: AppChord.sidebar.id,
-        prefix: tui.KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
-        key: tui.KeyBinding.withHelp(['b'], 'b', 'sidebar'),
-      ),
-      tui.KeyChordBinding(
-        id: AppChord.models.id,
-        prefix: tui.KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
-        key: tui.KeyBinding.withHelp(['m'], 'm', 'models'),
-      ),
-    ],
-    timeout: null,
-    inner: replayPlan?.interceptor,
+  final app = w.WidgetApp(
+    OpenCodeApp(hub: hub),
+    backgroundColorBuilder: currentOpenCodeRouteBackground,
   );
 
   try {
@@ -119,7 +107,7 @@ void main(List<String> args) async {
         mouse: true,
         mouseMode: tui.MouseMode.allMotion,
         replay: replayPlan?.replay,
-        interceptor: chordInterceptor,
+        interceptor: hub,
         blockInputWhileReplay: replayPlan?.blockInput ?? false,
       ),
     );

@@ -16,6 +16,7 @@ import '../animation/curves.dart' show Curves;
 import '../components/overlay.dart' show OverlayEntry;
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/widget.dart';
+import '../focus/focus.dart' show FocusScope;
 import '../layout/layout.dart';
 import '../theme/theme.dart' show Theme;
 import '../theme/theme_scope.dart' show ThemeScope;
@@ -262,6 +263,10 @@ class _DialogFrameState<T> extends State<_DialogFrame<T>> with AnimationMixin {
       );
     }
     dialog = Align(alignment: widget.alignment, child: dialog);
+
+    // Trap focus inside the dialog so search/prompt TextFields with autofocus
+    // claim the caret instead of the field behind the modal (e.g. home prompt).
+    dialog = FocusScope(isTrapped: true, child: dialog);
 
     // -- Assemble stack --
     return Stack(fit: StackFit.expand, children: <Widget>[barrier, dialog]);

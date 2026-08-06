@@ -56,6 +56,7 @@ class SessionListDialog extends w.StatefulWidget {
     required this.sessions,
     this.onSelect,
     this.onDelete,
+    this.onDismiss,
     super.key,
   });
 
@@ -67,6 +68,9 @@ class SessionListDialog extends w.StatefulWidget {
 
   /// Called when a session should be deleted.
   final void Function(SessionSummary session)? onDelete;
+
+  /// Called when esc dismisses the picker (overlay host).
+  final void Function()? onDismiss;
 
   @override
   w.State createState() => _SessionListDialogState();
@@ -330,6 +334,11 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
     if (msg is! tui.KeyMsg) return null;
     final key = msg.key;
     final filtered = _filteredSessions;
+
+    if (key.isEscape) {
+      widget.onDismiss?.call();
+      return tui.Cmd.none();
+    }
 
     if (key.type == tui.KeyType.enter && filtered.isNotEmpty) {
       widget.onSelect?.call(filtered[_selectedIndex]);

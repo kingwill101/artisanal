@@ -43,6 +43,9 @@ export 'msg.dart'
         ColorPaletteMsg,
         KeyChordCancelledMsg,
         KeyChordPrefixMsg,
+        KeymapActionMsg,
+        KeymapSequenceCancelledMsg,
+        KeymapSequencePrefixMsg,
         PasteTextMsg,
         TerminalColorKind,
         KeyChordResolvedMsg,
@@ -170,6 +173,7 @@ export 'program.dart'
         ProgramHostBinding,
         ProgramHost,
         ProgramInterceptor,
+        ResettableInterceptor,
         ProgramMacro,
         ProgramReplay,
         ProgramReplayStep,
@@ -184,7 +188,35 @@ export 'program.dart'
 export 'key_chord.dart'
     show KeyChordInterceptor, KeyChordBinding, chordBindings;
 
-export 'key_binding.dart' show Help, KeyBinding, KeyMap, CommonKeyBindings;
+export 'keymap_hub.dart'
+    show
+        KeymapHub,
+        KeymapLayerClaim,
+        KeymapLayerDrop,
+        KeymapLayerPass,
+        KeymapLayerResult,
+        ShortcutSurface;
+
+export 'shortcut_binding.dart'
+    show
+        KeymapPendingSequence,
+        ShortcutBinding,
+        ShortcutContinuation,
+        formatShortcutKeys,
+        keyMapFromShortcutBindings,
+        shortcutBindingsFromChords,
+        shortcutHelpActionId;
+
+export 'key_binding.dart'
+    show
+        Help,
+        KeyBinding,
+        KeyMap,
+        CommonKeyBindings,
+        keyMatches,
+        keyMatchesSingle,
+        KeyMatchExtension,
+        KeyMsgMatchExtension;
 
 export 'bubbles/spinner.dart'
     show

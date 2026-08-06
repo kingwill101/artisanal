@@ -36,12 +36,14 @@ class ThemeListDialog extends w.StatefulWidget {
     required this.themes,
     required this.currentTheme,
     this.onSelect,
+    this.onDismiss,
     super.key,
   });
 
   final List<String> themes;
   final String currentTheme;
   final void Function(String themeName)? onSelect;
+  final void Function()? onDismiss;
 
   @override
   w.State createState() => _ThemeListDialogState();
@@ -286,6 +288,11 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
     if (msg is! tui.KeyMsg) return null;
     final key = msg.key;
     final filtered = _filteredThemes;
+
+    if (key.isEscape) {
+      widget.onDismiss?.call();
+      return tui.Cmd.none();
+    }
 
     if (key.type == tui.KeyType.enter && filtered.isNotEmpty) {
       widget.onSelect?.call(filtered[_selectedIndex]);

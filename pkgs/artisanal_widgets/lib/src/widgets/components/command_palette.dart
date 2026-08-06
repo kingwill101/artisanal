@@ -486,8 +486,8 @@ class _CommandPaletteState extends State<CommandPalette> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open) return widget.child;
-
+    // Always keep a stable Stack so [child] (often a Navigator) is never
+    // remounted when the palette opens/closes.
     final theme = ThemeScope.of(context);
     final cpTheme = theme.commandPaletteTheme;
     final media = MediaQuery.of(context);
@@ -641,6 +641,7 @@ class _CommandPaletteState extends State<CommandPalette> {
             ),
           );
 
+    // FocusScope trap (via Modal) + autofocus so search steals from prompt.
     final dialog = ClipRect(
       child: SizedBox(
         width: paletteWidth,
@@ -689,12 +690,38 @@ class _CommandPaletteState extends State<CommandPalette> {
       ),
     );
 
-    return Modal(
-      open: true,
-      onDismiss: widget.onDismiss,
-      backdropOpacity: widget.backdropOpacity,
-      child: widget.child,
-      dialog: dialog,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Opacity(
+          opacity: widget.open ? (1.0 - widget.backdropOpacity).clamp(0.2, 1.0) : 1.0,
+          child: IgnorePointer(
+            ignoring: widget.open,
+            child: widget.child,
+          ),
+        ),
+        if (widget.open) ...[
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: () => widget.onDismiss?.call(),
+              child: Container(),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: FocusScope(isTrapped: true, child: dialog),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

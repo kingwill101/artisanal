@@ -5,12 +5,28 @@ import '../widgets/state/build_mode.dart';
 import '../widgets/state/open_code_ui_state.dart';
 import 'message.dart';
 
+/// Leader-chord action ids (`ctrl+x` then key) — OpenCode keybind parity.
 enum AppChord {
   sidebar('toggle-sidebar'),
-  models('toggle-models');
+  sessions('session-list'),
+  models('toggle-models'),
+  theme('theme-list'),
+  newSession('session-new'),
+  agents('agent-overview'),
+  review('diff-review'),
+  status('go-session');
 
   final String id;
   const AppChord(this.id);
+}
+
+/// OpenCode-style sidebar policy (`session/index.tsx`).
+///
+/// - [auto]: show when terminal is wide (`width > [wideBreakpoint]`)
+/// - [hide]: stay hidden unless force-opened via [ChatModel.sidebarOpen]
+enum SidebarVisibilityMode {
+  auto,
+  hide,
 }
 
 /// Collapsible section expansion state.
@@ -174,6 +190,21 @@ class SessionSummary {
   }
 }
 
+/// A single agent option for the agent list dialog.
+class AgentOption {
+  const AgentOption({
+    required this.name,
+    required this.description,
+    this.mode = 'primary',
+  });
+
+  final String name;
+  final String description;
+
+  /// OpenCode-style role tag (primary / subagent / …).
+  final String mode;
+}
+
 /// A single item in the model list dialog.
 class ModelOption {
   const ModelOption({
@@ -200,6 +231,12 @@ class ModelOption {
 
 /// Full app state.
 class ChatModel {
+  /// Terminal width above which auto sidebar is shown (OpenCode uses 120).
+  static const int sidebarWideBreakpoint = 120;
+
+  /// Fixed sidebar column width (OpenCode `sidebar.tsx` uses 42).
+  static const int sidebarWidth = 42;
+
   ChatModel({
     this.route = AppRoute.home,
     this.messages = const [],
@@ -212,7 +249,8 @@ class ChatModel {
     this.contextPercentage = 0,
     this.cost = 0.0,
     this.sidebar = const SidebarState(),
-    this.sidebarOpen = true,
+    this.sidebarMode = SidebarVisibilityMode.auto,
+    this.sidebarOpen = false,
     this.todos = const [],
     this.modifiedFiles = const [],
     this.mcpServers = const [],
@@ -234,6 +272,12 @@ class ChatModel {
   final int contextPercentage;
   final double cost;
   final SidebarState sidebar;
+
+  /// Preference when not force-opened: auto-show on wide terminals, or hide.
+  final SidebarVisibilityMode sidebarMode;
+
+  /// Force-open flag (OpenCode `sidebarOpen` signal). When true the sidebar
+  /// is visible even on narrow terminals.
   final bool sidebarOpen;
   final List<TodoItem> todos;
   final List<ModifiedFile> modifiedFiles;
@@ -245,17 +289,45 @@ class ChatModel {
 
   final EnterBehavior enterBehavior;
 
+  /// Whether the sidebar should paint for [terminalWidth], matching OpenCode.
+  bool isSidebarVisible(int terminalWidth) {
+    if (sidebarOpen) return true;
+    if (sidebarMode == SidebarVisibilityMode.auto &&
+        terminalWidth > sidebarWideBreakpoint) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Toggle visibility using OpenCode's batch update:
+  /// hide → mode=hide, open=false; show → mode=auto, open=true.
+  ChatModel toggleSidebar(int terminalWidth) {
+    final visible = isSidebarVisible(terminalWidth);
+    if (visible) {
+      return copyWith(
+        sidebarMode: SidebarVisibilityMode.hide,
+        sidebarOpen: false,
+      );
+    }
+    return copyWith(
+      sidebarMode: SidebarVisibilityMode.auto,
+      sidebarOpen: true,
+    );
+  }
+
   ChatModel copyWith({
     AppRoute? route,
     List<ChatMessage>? messages,
     String? inputText,
     String? modelName,
     String? providerName,
+    String? agentName,
     String? sessionTitle,
     int? contextTokens,
     int? contextPercentage,
     double? cost,
     SidebarState? sidebar,
+    SidebarVisibilityMode? sidebarMode,
     bool? sidebarOpen,
     List<TodoItem>? todos,
     List<ModifiedFile>? modifiedFiles,
@@ -272,11 +344,13 @@ class ChatModel {
       inputText: inputText ?? this.inputText,
       modelName: modelName ?? this.modelName,
       providerName: providerName ?? this.providerName,
+      agentName: agentName ?? this.agentName,
       sessionTitle: sessionTitle ?? this.sessionTitle,
       contextTokens: contextTokens ?? this.contextTokens,
       contextPercentage: contextPercentage ?? this.contextPercentage,
       cost: cost ?? this.cost,
       sidebar: sidebar ?? this.sidebar,
+      sidebarMode: sidebarMode ?? this.sidebarMode,
       sidebarOpen: sidebarOpen ?? this.sidebarOpen,
       todos: todos ?? this.todos,
       modifiedFiles: modifiedFiles ?? this.modifiedFiles,
@@ -290,4 +364,11 @@ class ChatModel {
   }
 }
 
-enum AppRoute { home, session, agentOverview }
+enum AppRoute { home, session, agentOverview, review }
+
+/// Which agent chrome dock is staged above the session prompt.
+enum SessionAgentDock {
+  none,
+  permission,
+  question,
+}

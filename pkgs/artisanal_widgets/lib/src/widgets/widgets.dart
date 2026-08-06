@@ -1,6 +1,7 @@
 export 'animation/animations.dart';
 export 'app/app.dart';
 export 'charting/charting.dart';
+export 'chords/chords.dart';
 export 'components/components.dart';
 export 'core/core.dart';
 export 'element.dart';

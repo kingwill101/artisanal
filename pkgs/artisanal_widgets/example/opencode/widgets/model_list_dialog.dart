@@ -38,12 +38,14 @@ class ModelListDialog extends w.StatefulWidget {
     required this.models,
     required this.currentModelName,
     this.onSelect,
+    this.onDismiss,
     super.key,
   });
 
   final List<ModelOption> models;
   final String currentModelName;
   final void Function(ModelOption model)? onSelect;
+  final void Function()? onDismiss;
 
   @override
   w.State createState() => _ModelListDialogState();
@@ -280,6 +282,11 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
     if (msg is! tui.KeyMsg) return null;
     final key = msg.key;
     final filtered = _filteredModels;
+
+    if (key.isEscape) {
+      widget.onDismiss?.call();
+      return tui.Cmd.none();
+    }
 
     if (key.type == tui.KeyType.enter && filtered.isNotEmpty) {
       widget.onSelect?.call(filtered[_selectedIndex]);

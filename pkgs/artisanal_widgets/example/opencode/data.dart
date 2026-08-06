@@ -14,7 +14,9 @@ ChatModel initialModel() {
     contextPercentage: 42,
     cost: 1.87,
     workingDirectory: '~/code/artisanal',
-    sidebarOpen: true,
+    // OpenCode defaults: auto policy, not force-opened — shows only when wide.
+    sidebarMode: SidebarVisibilityMode.auto,
+    sidebarOpen: false,
     mcpServers: const [
       McpServer('filesystem', status: 'connected'),
       McpServer('git', status: 'connected'),
@@ -361,44 +363,72 @@ String _largeSyntheticDiff(int seed) {
   return b.toString();
 }
 
+/// Command panel items. Shortcuts match OpenCode `keybind.ts` where possible.
+///
+/// Leader chords use `ctrl+x` then a letter (see [openCodeSessionBindings]).
 List<w.CommandPaletteItem> sampleCommands() {
   return const [
     w.CommandPaletteItem(
       label: 'New Session',
-      shortcut: 'ctrl+n',
+      shortcut: 'ctrl+x n',
       group: 'Session',
     ),
     w.CommandPaletteItem(
       label: 'Session List',
-      shortcut: 'ctrl+l',
+      shortcut: 'ctrl+x l',
       group: 'Session',
     ),
     w.CommandPaletteItem(label: 'Clear Messages', group: 'Session'),
     w.CommandPaletteItem(label: 'Exit', shortcut: 'ctrl+c', group: 'Session'),
     w.CommandPaletteItem(
       label: 'Toggle Sidebar',
-      shortcut: 'ctrl+b',
+      shortcut: 'ctrl+x b',
       group: 'View',
     ),
-    w.CommandPaletteItem(label: 'Toggle Theme', group: 'View'),
+    w.CommandPaletteItem(
+      label: 'Toggle Theme',
+      shortcut: 'ctrl+x t',
+      group: 'View',
+    ),
     w.CommandPaletteItem(
       label: 'Go to Home',
-      shortcut: 'ctrl+h',
+      shortcut: 'ctrl+x n',
       group: 'Navigate',
     ),
     w.CommandPaletteItem(
       label: 'Go to Session',
-      shortcut: 'ctrl+s',
+      shortcut: 'ctrl+x s',
       group: 'Navigate',
+    ),
+    w.CommandPaletteItem(
+      label: 'Switch Agent',
+      shortcut: 'ctrl+x a',
+      group: 'Model',
     ),
     w.CommandPaletteItem(
       label: 'Go to Agent Overview',
-      shortcut: 'ctrl+shift+a',
       group: 'Navigate',
     ),
     w.CommandPaletteItem(
+      label: 'Open Diff Review',
+      shortcut: 'ctrl+x d',
+      group: 'Navigate',
+    ),
+    w.CommandPaletteItem(
+      label: 'Demo Permission Dock',
+      group: 'Agent',
+    ),
+    w.CommandPaletteItem(
+      label: 'Demo Question Dock',
+      group: 'Agent',
+    ),
+    w.CommandPaletteItem(
+      label: 'Clear Agent Dock',
+      group: 'Agent',
+    ),
+    w.CommandPaletteItem(
       label: 'Switch Model',
-      shortcut: 'ctrl+k',
+      shortcut: 'ctrl+x m',
       group: 'Model',
     ),
     w.CommandPaletteItem(
@@ -406,20 +436,9 @@ List<w.CommandPaletteItem> sampleCommands() {
       shortcut: 'tab',
       group: 'Model',
     ),
-    w.CommandPaletteItem(label: 'Open File', shortcut: 'ctrl+o', group: 'File'),
     w.CommandPaletteItem(
-      label: 'Save Session',
-      shortcut: 'ctrl+s',
-      group: 'File',
-    ),
-    w.CommandPaletteItem(
-      label: 'Settings',
-      shortcut: 'ctrl+,',
-      group: 'Preferences',
-    ),
-    w.CommandPaletteItem(
-      label: 'Keyboard Shortcuts',
-      shortcut: 'ctrl+k ctrl+s',
+      label: 'Commands',
+      shortcut: 'ctrl+p',
       group: 'Preferences',
     ),
   ];
@@ -500,6 +519,40 @@ List<ModelOption> sampleModels() {
     ModelOption(modelName: 'gemini-2.5-pro-0325', providerName: 'Google'),
     ModelOption(modelName: 'gemini-2.5-flash-0325', providerName: 'Google'),
     ModelOption(modelName: 'deepseek-claude', providerName: 'DeepSeek'),
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// Sample agents (for agent list dialog)
+// ---------------------------------------------------------------------------
+
+List<AgentOption> sampleAgents() {
+  return const [
+    AgentOption(
+      name: 'build',
+      description: 'Full-access coding agent',
+      mode: 'primary',
+    ),
+    AgentOption(
+      name: 'plan',
+      description: 'Read-only planning and design',
+      mode: 'primary',
+    ),
+    AgentOption(
+      name: 'code',
+      description: 'Implementation-focused subagent',
+      mode: 'subagent',
+    ),
+    AgentOption(
+      name: 'general',
+      description: 'General-purpose assistant',
+      mode: 'subagent',
+    ),
+    AgentOption(
+      name: 'docs',
+      description: 'Documentation and comments',
+      mode: 'subagent',
+    ),
   ];
 }
 

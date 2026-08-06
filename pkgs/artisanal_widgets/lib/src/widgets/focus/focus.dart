@@ -21,7 +21,10 @@ class FocusController {
   final List<String> _focusableIds = [];
   String? _trapId;
 
-  /// Saved focus ID to restore when the current trap is cleared.
+  /// Nested focus traps (outer → inner). [trapId] is the last entry.
+  final List<String> _trapStack = <String>[];
+
+  /// Saved focus ID to restore when the outermost trap is cleared.
   String? _savedFocusId;
 
   /// The currently focused ID, if any.
@@ -102,47 +105,84 @@ class FocusController {
 
   /// Sets or clears the focus trap.
   ///
-  /// When a trap is set, focus requests for IDs outside the trap's subtree
-  /// will be ignored. The currently focused ID is saved so it can be
-  /// restored when the trap is cleared.
+  /// Traps nest: push with a non-null [id], pop with `null`. Only the
+  /// innermost trap is active. When a trap is pushed, focus that sits
+  /// outside it is cleared so dialog/palette fields with autofocus can
+  /// claim the caret. When the outermost trap is popped, the previously
+  /// focused ID is restored when still registered.
   void setTrap(String? id) {
     if (TuiTrace.enabled) {
       TuiTrace.log(
-        'focus.setTrap id=$id prev=$_trapId focusedId=$_focusedId savedFocus=$_savedFocusId',
+        'focus.setTrap id=$id prev=$_trapId stack=$_trapStack '
+        'focusedId=$_focusedId savedFocus=$_savedFocusId',
       );
     }
-    if (id != null && _trapId == null) {
-      _savedFocusId = _focusedId;
-      if (TuiTrace.enabled) {
-        TuiTrace.log('focus.setTrap saved=$_savedFocusId');
-      }
-    } else if (id == null && _trapId != null) {
-      final restore = _savedFocusId;
-      _savedFocusId = null;
-      _trapId = null;
-      if (TuiTrace.enabled) {
-        TuiTrace.log(
-          'focus.setTrap clearing restore=$restore ids=$_focusableIds focusedId=$_focusedId',
-        );
-      }
-      if (restore != null && _focusableIds.contains(restore)) {
-        _focusedId = restore;
+
+    if (id != null) {
+      if (_trapStack.isEmpty) {
+        _savedFocusId = _focusedId;
         if (TuiTrace.enabled) {
-          TuiTrace.log('focus.setTrap restored focusedId=$_focusedId');
+          TuiTrace.log('focus.setTrap saved=$_savedFocusId');
         }
-        _notify();
-        return;
       }
-      // Saved ID was stale (widget was recreated with a new ID) — clear
-      // focus so the next autofocus widget can claim it.
-      _focusedId = null;
+      // Re-pushing the same id is a no-op (rebuild of trapped scope).
+      if (_trapStack.isEmpty || _trapStack.last != id) {
+        _trapStack.add(id);
+      }
+      _trapId = id;
+      if (_focusedId != null && !isDescendant(_focusedId!, id)) {
+        if (TuiTrace.enabled) {
+          TuiTrace.log(
+            'focus.setTrap cleared-outside focusedId=$_focusedId trapId=$id',
+          );
+        }
+        _focusedId = null;
+        _notify();
+      }
+      return;
+    }
+
+    // Pop innermost trap.
+    if (_trapStack.isEmpty) {
+      _trapId = null;
+      return;
+    }
+    _trapStack.removeLast();
+    if (_trapStack.isNotEmpty) {
+      _trapId = _trapStack.last;
       if (TuiTrace.enabled) {
-        TuiTrace.log('focus.setTrap stale-restore, cleared focusedId');
+        TuiTrace.log('focus.setTrap pop → trapId=$_trapId');
+      }
+      if (_focusedId != null && !isDescendant(_focusedId!, _trapId!)) {
+        _focusedId = null;
       }
       _notify();
       return;
     }
-    _trapId = id;
+
+    // Outermost trap cleared — restore pre-trap focus when possible.
+    final restore = _savedFocusId;
+    _savedFocusId = null;
+    _trapId = null;
+    if (TuiTrace.enabled) {
+      TuiTrace.log(
+        'focus.setTrap clearing restore=$restore ids=$_focusableIds '
+        'focusedId=$_focusedId',
+      );
+    }
+    if (restore != null && _focusableIds.contains(restore)) {
+      _focusedId = restore;
+      if (TuiTrace.enabled) {
+        TuiTrace.log('focus.setTrap restored focusedId=$_focusedId');
+      }
+      _notify();
+      return;
+    }
+    _focusedId = null;
+    if (TuiTrace.enabled) {
+      TuiTrace.log('focus.setTrap stale-restore, cleared focusedId');
+    }
+    _notify();
   }
 
   /// Moves focus to the next focusable widget.

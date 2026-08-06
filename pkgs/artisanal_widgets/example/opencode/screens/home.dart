@@ -9,7 +9,6 @@
 library;
 
 import 'package:artisanal/style.dart' as style;
-import 'package:artisanal/tui.dart' as tui show Cmd, KeyMsg, Msg;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../models/chat_model.dart';
@@ -45,28 +44,6 @@ class HomeView extends w.StatefulWidget {
 }
 
 class _HomeViewState extends w.State<HomeView> {
-  bool _isSubmitEnter(tui.KeyMsg msg) {
-    final key = msg.key;
-    if (key.ctrl ||
-        key.shift ||
-        key.alt ||
-        key.meta ||
-        key.hyper ||
-        key.superKey) {
-      return false;
-    }
-    return key.isEnterLike;
-  }
-
-  @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is tui.KeyMsg && _isSubmitEnter(msg)) {
-      widget.onSubmit?.call(widget.promptController?.text ?? '');
-      return null;
-    }
-    return null;
-  }
-
   @override
   w.Widget build(w.BuildContext context) {
     final model = widget.model;
@@ -99,6 +76,9 @@ class _HomeViewState extends w.State<HomeView> {
                             modelName: model.modelName,
                             providerName: model.providerName,
                             onChanged: widget.onInputChanged,
+                            onSubmit: (text) {
+                              widget.onSubmit?.call(text);
+                            },
                           ),
                           w.SizedBox(height: 1),
                           _buildPromptHints(),
@@ -131,14 +111,14 @@ class _HomeViewState extends w.State<HomeView> {
       mainAxisAlignment: w.MainAxisAlignment.end,
       children: [
         w.Text(
-          'ctrl+t',
+          'ctrl+x t',
           style: style.Style()
             ..foreground(OC.text)
             ..dim(),
         ),
         w.SizedBox(width: 1),
         w.Text(
-          'variants',
+          'themes',
           style: style.Style()
             ..foreground(OC.textMuted)
             ..dim(),

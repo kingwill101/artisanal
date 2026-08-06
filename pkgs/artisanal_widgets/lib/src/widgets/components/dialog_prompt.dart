@@ -156,6 +156,7 @@ class _DialogPromptState extends State<DialogPrompt> {
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: TextField(
                 controller: _controller,
+                focusId: 'dialog-prompt-input',
                 prompt: widget.placeholder ?? 'Enter text',
                 autofocus: true,
                 maxLines: 3,

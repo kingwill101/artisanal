@@ -3,7 +3,7 @@ import 'dart:async';
 import 'bubbles/key_binding.dart' show KeyBinding, KeyMap, keyMatchesSingle;
 import 'key.dart';
 import 'msg.dart';
-import 'program.dart' show ProgramInterceptor;
+import 'program.dart' show ProgramInterceptor, ResettableInterceptor;
 
 /// A declarative chord binding made of a prefix key and a continuation key.
 final class KeyChordBinding {
@@ -12,6 +12,31 @@ final class KeyChordBinding {
     required this.prefix,
     required this.key,
   });
+
+  /// Convenience constructor using help-key strings (e.g. `ctrl+x`, `b`).
+  ///
+  /// ```dart
+  /// KeyChordBinding.simple(
+  ///   id: 'toggle-sidebar',
+  ///   leader: 'ctrl+x',
+  ///   key: 'b',
+  ///   description: 'toggle sidebar',
+  ///   group: 'session',
+  /// )
+  /// ```
+  factory KeyChordBinding.simple({
+    required String id,
+    required String leader,
+    required String key,
+    required String description,
+    String group = 'Commands',
+  }) {
+    return KeyChordBinding(
+      id: id,
+      prefix: KeyBinding.withHelp([leader], leader, group),
+      key: KeyBinding.withHelp([key], key, description),
+    );
+  }
 
   /// Stable identifier for the chord.
   final String id;
@@ -42,7 +67,8 @@ final class _ActiveChord {
 }
 
 /// Interceptor that turns prefix key sequences into chord messages.
-final class KeyChordInterceptor extends ProgramInterceptor {
+final class KeyChordInterceptor extends ProgramInterceptor
+    implements ResettableInterceptor {
   KeyChordInterceptor({
     required List<KeyChordBinding> bindings,
     this.timeout,
@@ -54,6 +80,19 @@ final class KeyChordInterceptor extends ProgramInterceptor {
 
   /// Chord definitions to recognize.
   final List<KeyChordBinding> _bindings;
+
+  /// Read-only view of configured chord bindings.
+  List<KeyChordBinding> get bindings => _bindings;
+
+  /// Whether a chord prefix is currently pending.
+  bool get isPending => _active != null;
+
+  /// Active prefix key while a chord is pending, otherwise `null`.
+  Key? get activePrefix => _active?.prefix;
+
+  /// Bindings that match the currently pending prefix (empty when idle).
+  List<KeyChordBinding> get activeBindings =>
+      _active == null ? const [] : List.unmodifiable(_active!.bindings);
 
   /// How long to wait for the continuation key before cancelling.
   ///
@@ -132,6 +171,10 @@ final class KeyChordInterceptor extends ProgramInterceptor {
     _clearActive();
     inner?.onStop();
   }
+
+  /// Clear pending chord state (e.g. when [KeymapHub] pops this surface).
+  @override
+  void reset() => _clearActive();
 
   bool _matchesAnyPrefix(Key key) {
     for (final binding in _bindings) {

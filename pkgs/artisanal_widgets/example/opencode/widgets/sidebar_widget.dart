@@ -33,8 +33,9 @@ class SidebarWidget extends w.StatelessWidget {
 
   @override
   w.Widget build(w.BuildContext context) {
+    // OpenCode keeps a fixed 42-col sidebar; visibility is gated by width.
     return w.SizedBox(
-      width: 42,
+      width: ChatModel.sidebarWidth.toDouble(),
       child: w.Container(
         color: OC.backgroundPanel,
         padding: const w.EdgeInsets.only(top: 1, bottom: 1, left: 2, right: 2),
@@ -119,65 +120,31 @@ class SidebarWidget extends w.StatelessWidget {
   // ─────────────────────────────────────────────────────────────────────────
 
   w.Widget _buildMcpSection() {
-    final expanded = _sidebar.mcpExpanded;
     final servers = model.mcpServers;
-
-    return w.Column(
-      crossAxisAlignment: w.CrossAxisAlignment.stretch,
-      gap: 0,
-      children: [
-        w.GestureDetector(
-          onTap: () {
-            onToggleMcp?.call();
-            return null;
-          },
-          child: w.Row(
-            gap: 1,
-            children: [
-              if (servers.length > 2)
-                w.Text(
-                  expanded ? '\u25bc' : '\u25b6',
-                  style: style.Style()..foreground(OC.text),
-                ),
-              w.Text(
-                'MCP',
-                style: style.Style()
-                  ..foreground(OC.text)
-                  ..bold(),
-              ),
-            ],
-          ),
-        ),
-        if (expanded || servers.length <= 2) ...servers.map((s) => _mcpItem(s)),
-      ],
+    final forceOpen = servers.length <= 2;
+    return w.StatusSection(
+      title: 'MCP',
+      count: servers.length,
+      expanded: forceOpen || _sidebar.mcpExpanded,
+      showChevronWhenCountAbove: 2,
+      onToggle: forceOpen ? null : onToggleMcp,
+      items: [for (final s in servers) _mcpItem(s)],
     );
   }
 
   w.Widget _mcpItem(McpServer server) {
-    final color = switch (server.status) {
-      'connected' => OC.success,
-      'failed' => OC.error,
-      'disabled' => OC.textMuted,
-      _ => OC.textMuted,
+    final status = switch (server.status) {
+      'connected' => w.ConnectionStatus.connected,
+      'failed' => w.ConnectionStatus.offline,
+      'disabled' => w.ConnectionStatus.disabled,
+      _ => w.ConnectionStatus.unknown,
     };
-    final statusText = switch (server.status) {
-      'connected' => 'Connected',
-      'failed' => 'Failed',
-      'disabled' => 'Disabled',
-      _ => server.status,
-    };
-
-    return w.Row(
-      gap: 1,
-      children: [
-        w.Text('\u2022', style: style.Style()..foreground(color)),
-        w.Text(
-          server.name,
-          style: style.Style()..foreground(OC.text),
-          softWrap: false,
-        ),
-        w.Text(statusText, style: style.Style()..foreground(OC.textMuted)),
-      ],
+    return w.ConnectionBadge(
+      label: server.name,
+      status: status,
+      connectedColor: OC.success,
+      offlineColor: OC.error,
+      mutedColor: OC.textMuted,
     );
   }
 
@@ -186,60 +153,29 @@ class SidebarWidget extends w.StatelessWidget {
   // ─────────────────────────────────────────────────────────────────────────
 
   w.Widget _buildLspSection() {
-    final expanded = _sidebar.lspExpanded;
     final servers = model.lspServers;
-
-    return w.Column(
-      crossAxisAlignment: w.CrossAxisAlignment.stretch,
-      gap: 0,
-      children: [
-        w.GestureDetector(
-          onTap: () {
-            onToggleLsp?.call();
-            return null;
-          },
-          child: w.Row(
-            gap: 1,
-            children: [
-              if (servers.length > 2)
-                w.Text(
-                  expanded ? '\u25bc' : '\u25b6',
-                  style: style.Style()..foreground(OC.text),
-                ),
-              w.Text(
-                'LSP',
-                style: style.Style()
-                  ..foreground(OC.text)
-                  ..bold(),
-              ),
-            ],
-          ),
-        ),
-        if (expanded || servers.length <= 2) ...[
-          if (servers.isEmpty)
-            w.Text(
-              'LSPs will activate as files are read',
-              style: style.Style()..foreground(OC.textMuted),
-            )
-          else
-            ...servers.map((s) => _lspItem(s)),
-        ],
-      ],
+    final forceOpen = servers.length <= 2;
+    return w.StatusSection(
+      title: 'LSP',
+      count: servers.isEmpty ? null : servers.length,
+      expanded: forceOpen || _sidebar.lspExpanded,
+      showChevronWhenCountAbove: 2,
+      onToggle: forceOpen ? null : onToggleLsp,
+      emptyLabel: 'LSPs will activate as files are read',
+      items: [for (final s in servers) _lspItem(s)],
     );
   }
 
   w.Widget _lspItem(LspServer server) {
-    final color = server.status == 'connected' ? OC.success : OC.error;
-    return w.Row(
-      gap: 1,
-      children: [
-        w.Text('\u2022', style: style.Style()..foreground(color)),
-        w.Text(
-          server.name,
-          style: style.Style()..foreground(OC.text),
-          softWrap: false,
-        ),
-      ],
+    final status = server.status == 'connected'
+        ? w.ConnectionStatus.connected
+        : w.ConnectionStatus.offline;
+    return w.ConnectionBadge(
+      label: server.name,
+      status: status,
+      detail: '',
+      connectedColor: OC.success,
+      offlineColor: OC.error,
     );
   }
 
@@ -252,37 +188,15 @@ class SidebarWidget extends w.StatelessWidget {
   }
 
   w.Widget _buildTodoSection() {
-    final expanded = _sidebar.todoExpanded;
     final todos = model.todos;
-
-    return w.Column(
-      crossAxisAlignment: w.CrossAxisAlignment.stretch,
-      gap: 0,
-      children: [
-        w.GestureDetector(
-          onTap: () {
-            onToggleTodo?.call();
-            return null;
-          },
-          child: w.Row(
-            gap: 1,
-            children: [
-              if (todos.length > 2)
-                w.Text(
-                  expanded ? '\u25bc' : '\u25b6',
-                  style: style.Style()..foreground(OC.text),
-                ),
-              w.Text(
-                'Todo',
-                style: style.Style()
-                  ..foreground(OC.text)
-                  ..bold(),
-              ),
-            ],
-          ),
-        ),
-        if (expanded || todos.length <= 2) ...todos.map((t) => _todoItem(t)),
-      ],
+    final forceOpen = todos.length <= 2;
+    return w.StatusSection(
+      title: 'Todo',
+      count: todos.length,
+      expanded: forceOpen || _sidebar.todoExpanded,
+      showChevronWhenCountAbove: 2,
+      onToggle: forceOpen ? null : onToggleTodo,
+      items: [for (final t in todos) _todoItem(t)],
     );
   }
 
@@ -320,36 +234,15 @@ class SidebarWidget extends w.StatelessWidget {
   // ─────────────────────────────────────────────────────────────────────────
 
   w.Widget _buildFilesSection() {
-    final expanded = _sidebar.filesExpanded;
     final files = model.modifiedFiles;
-
-    return w.Column(
-      gap: 0,
-      children: [
-        w.GestureDetector(
-          onTap: () {
-            onToggleFiles?.call();
-            return null;
-          },
-          child: w.Row(
-            gap: 1,
-            children: [
-              if (files.length > 2)
-                w.Text(
-                  expanded ? '\u25bc' : '\u25b6',
-                  style: style.Style()..foreground(OC.text),
-                ),
-              w.Text(
-                'Modified Files',
-                style: style.Style()
-                  ..foreground(OC.text)
-                  ..bold(),
-              ),
-            ],
-          ),
-        ),
-        if (expanded || files.length <= 2) ...files.map((f) => _fileItem(f)),
-      ],
+    final forceOpen = files.length <= 2;
+    return w.StatusSection(
+      title: 'Modified Files',
+      count: files.length,
+      expanded: forceOpen || _sidebar.filesExpanded,
+      showChevronWhenCountAbove: 2,
+      onToggle: forceOpen ? null : onToggleFiles,
+      items: [for (final f in files) _fileItem(f)],
     );
   }
 

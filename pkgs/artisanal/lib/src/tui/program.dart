@@ -148,6 +148,13 @@ abstract class ProgramInterceptor {
   void onStop() {}
 }
 
+/// Interceptors that hold multi-step state (chords, macros) implement this so
+/// [KeymapHub] can clear them when a surface is popped or deactivated.
+abstract interface class ResettableInterceptor {
+  /// Clear pending multi-key / modal capture state.
+  void reset();
+}
+
 /// One replay step for [ProgramReplay.script].
 final class ProgramReplayStep {
   const ProgramReplayStep({required this.after, required this.msg});

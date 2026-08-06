@@ -11,21 +11,18 @@ import '../theme.dart';
 
 /// A curated selection of tips (subset of the ~100 in the real app).
 const _tips = [
-  'Press ctrl+p to open the command palette',
-  'Press ctrl+b to toggle the sidebar',
-  'Press ctrl+l to view your session list',
-  'Press ctrl+n to start a new session',
-  'Use @ to mention files in your prompt',
-  'Start with ! for shell mode — run commands directly',
-  'Press ctrl+k to switch models mid-conversation',
-  'Use tab to switch between agents',
-  'Type / for slash command autocomplete',
-  'Press ctrl+x e to open an external editor',
-  'Use up/down arrows to navigate prompt history',
-  'Press esc twice to interrupt a running response',
-  'Click on a user message to see message actions',
-  'Use ctrl+x f to fork from any message',
-  'Press ctrl+x t to open the timeline',
+  'Press ctrl+p for the command panel',
+  'Press ctrl+x then b to toggle the sidebar',
+  'Press ctrl+x then l for the session list',
+  'Press ctrl+x then m to switch models',
+  'Press ctrl+x then t for themes',
+  'Press ctrl+x then a for agent overview',
+  'Press ctrl+x then d for diff review',
+  'Press ctrl+x then n to go home / new session',
+  'Type / for slash commands or @ to mention files',
+  'Use tab to switch between build and plan',
+  'Use up/down arrows for prompt history',
+  'Press esc to dismiss dialogs and autocomplete',
 ];
 
 /// Displays a random tip with a bullet prefix.

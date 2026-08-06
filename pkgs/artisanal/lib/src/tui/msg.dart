@@ -130,6 +130,58 @@ final class KeyChordCancelledMsg extends Msg {
   final bool timedOut;
 }
 
+// ---------------------------------------------------------------------------
+// KeymapHub sequence / action messages (OpenTUI-keymap inspired)
+// ---------------------------------------------------------------------------
+
+/// A shortcut action was resolved by [KeymapHub] / a [ShortcutSurface].
+final class KeymapActionMsg extends Msg {
+  const KeymapActionMsg({
+    required this.id,
+    required this.surfaceId,
+    required this.sequence,
+    this.key,
+  });
+
+  /// Action id from [ShortcutBinding.id].
+  final String id;
+
+  /// Surface that owned the binding.
+  final String surfaceId;
+
+  /// Full key-spec path that matched (e.g. `['ctrl+x', 'b']`).
+  final List<String> sequence;
+
+  /// Last key of the sequence, when available.
+  final Key? key;
+}
+
+/// A multi-key sequence prefix was recognized (which-key should show).
+final class KeymapSequencePrefixMsg extends Msg {
+  const KeymapSequencePrefixMsg({
+    required this.surfaceId,
+    required this.matchedKeys,
+    required this.matchedLabels,
+  });
+
+  final String surfaceId;
+  final List<String> matchedKeys;
+  final List<String> matchedLabels;
+}
+
+/// A pending multi-key sequence was cancelled or timed out.
+final class KeymapSequenceCancelledMsg extends Msg {
+  const KeymapSequenceCancelledMsg({
+    required this.surfaceId,
+    this.key,
+    this.timedOut = false,
+  });
+
+  final String surfaceId;
+  final Key? key;
+  final bool timedOut;
+}
+
 /// Message used by the runtime to deliver collapsed large rune bursts as a
 /// single text payload (paste-like behavior).
 class PasteTextMsg extends Msg {
