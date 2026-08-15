@@ -72,21 +72,122 @@ Future<void> main() async {
 
 ## Demo Captures
 
-Raycast maze:
+Every example in [`pkgs/ultraviolet/example/`](example/) has a VHS recording
+regenerated from the tapes in [`pkgs/ultraviolet/example/.vhs/`](example/.vhs/README.md):
 
-![Raycast maze demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/raycast.gif)
+```sh
+task uv-demos   # compiles each example, then records all GIFs into assets/
+```
 
-Conway's Game of Life:
+### 3D & raytracing
 
-![Conway demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/conway.gif)
+**Raycast maze** (`example/raycast_maze.dart`):
 
-Metaballs / marching squares:
+![Raycast maze demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/raycast_maze.gif)
 
-![Metaballs demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/metaballs.gif)
+**SDF raymarcher** (`example/sdf_raymarcher.dart`):
 
-Layout example (`example/layout.dart`):
+![SDF raymarcher demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/sdf_raymarcher.gif)
 
-![Layout demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/layout.png)
+**Path tracer** (`example/path_tracer.dart`):
+
+![Path tracer demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/path_tracer.gif)
+
+### Simulations
+
+**Conway's Game of Life** (`example/conway_life.dart`):
+
+![Conway demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/conway_life.gif)
+
+**Metaballs / marching squares** (`example/metaballs_marching_squares.dart`):
+
+![Metaballs demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/metaballs_marching_squares.gif)
+
+**Boids swarm** (`example/boids_swarm.dart`):
+
+![Boids swarm demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/boids_swarm.gif)
+
+**N-body gravity** (`example/nbody_gravity.dart`):
+
+![N-body gravity demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/nbody_gravity.gif)
+
+**Network topology** (`example/network_topology_sim.dart`):
+
+![Network topology demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/network_topology_sim.gif)
+
+**Wave function collapse** (`example/wave_function_collapse.dart`):
+
+![Wave function collapse demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/wave_function_collapse.gif)
+
+### Games & interactive
+
+**Pong** (`example/pong.dart`):
+
+![Pong demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/pong.gif)
+
+**Mouse drawing** (`example/draw.dart`):
+
+![Draw demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/draw.gif)
+
+### Effects & shaders
+
+**Shader toy** (`example/terminal_shader_toy.dart`):
+
+![Shader toy demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/terminal_shader_toy.gif)
+
+**Post effects** (`example/effects.dart`):
+
+![Effects demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/effects.gif)
+
+**TV test pattern** (`example/tv.dart`):
+
+![TV demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/tv.gif)
+
+### Layout & UI
+
+**Layout** (`example/layout.dart`):
+
+![Layout demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/layout.gif)
+
+**Splits** (`example/splits.dart`):
+
+![Splits demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/splits.gif)
+
+**Hello world** (`example/main.dart`, `example/helloworld.dart`):
+
+![Main demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/main.gif)
+
+![Hello world demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/helloworld.gif)
+
+**Alternate screen toggle** (`example/altscreen.dart`):
+
+![Alt screen demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/altscreen.gif)
+
+**Space** (`example/space.dart`):
+
+![Space demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/space.gif)
+
+**Terminal demo** (`example/uv_demo.dart`):
+
+![UV demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/uv_demo.gif)
+
+**Image protocols** (`example/image.dart`, `example/uv_graphics_parity.dart`):
+
+![Image demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/image.gif)
+
+![Graphics parity demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/uv_graphics_parity.gif)
+
+**File pager** (`example/bat.dart`):
+
+![Bat demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/bat.gif)
+
+**Panic recovery** (`example/panic.dart`):
+
+![Panic demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/panic.gif)
+
+**Prepend line** (`example/prependline.dart`):
+
+![Prepend line demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/prependline.gif)
 
 ## Performance Tips
 

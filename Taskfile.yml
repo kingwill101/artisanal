@@ -4,6 +4,8 @@ vars:
   core_dir: ./pkgs/artisanal
   widgets_dir: ./pkgs/artisanal_widgets
   uv_dir: ./pkgs/ultraviolet
+  demo_build_dir: ./build/demos
+  demo_output_dir: ./build/vhs
 
 tasks:
   default:
@@ -43,3 +45,66 @@ tasks:
     desc: Run the ultraviolet layout example
     cmds:
       - dart run pkgs/ultraviolet/example/uv/layout.dart
+
+  demos-build:
+    desc: Build the examples used by VHS and startup benchmarks
+    cmds:
+      - mkdir -p "{{.demo_build_dir}}"
+      - dart compile kernel pkgs/artisanal/example/tui/examples/simple/main.dart -o "{{.demo_build_dir}}/simple.dill"
+      - dart compile kernel pkgs/artisanal/example/tui/examples/spinner/main.dart -o "{{.demo_build_dir}}/spinner.dill"
+      - dart compile kernel pkgs/artisanal_widgets/example/artisanal_app/main.dart -o "{{.demo_build_dir}}/widget-app.dill"
+
+  demos:
+    desc: Record all terminal demos (requires VHS)
+    deps: [demos-build]
+    cmds:
+      - mkdir -p "{{.demo_output_dir}}"
+      - |
+        for tape in tool/demos/*.tape; do
+          vhs "$tape"
+        done
+
+  demo:
+    desc: Record one terminal demo, for example task demo NAME=simple
+    deps: [demos-build]
+    requires:
+      vars: [NAME]
+    cmds:
+      - mkdir -p "{{.demo_output_dir}}"
+      - vhs "tool/demos/{{.NAME}}.tape"
+
+  uv-demos-build:
+    desc: Compile the ultraviolet examples used by the VHS tapes
+    cmds:
+      - mkdir -p build/vhs/uv
+      - |
+        for example in pkgs/ultraviolet/example/*.dart; do
+          name="$(basename "$example" .dart)"
+          dart compile kernel "$example" -o "build/vhs/uv/$name.dill"
+        done
+
+  uv-demos:
+    desc: Record GIFs for every ultraviolet example (requires VHS)
+    deps: [uv-demos-build]
+    cmds:
+      - mkdir -p pkgs/ultraviolet/assets
+      - |
+        for tape in pkgs/ultraviolet/example/.vhs/*.tape; do
+          vhs "$tape"
+        done
+
+  benchmark-demos:
+    desc: Measure demo startup time for source and kernel snapshots
+    deps: [demos-build]
+    cmds:
+      - mkdir -p ./build/benchmarks
+      - dart run tool/startup_benchmark.dart --json=build/benchmarks/demo-startup.json
+
+  benchmark-uv:
+    desc: Run the existing Ultraviolet renderer microbenchmarks
+    dir: "{{.uv_dir}}"
+    cmds:
+      - |
+        for benchmark in benchmark/*.dart; do
+          dart run "$benchmark"
+        done

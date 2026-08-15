@@ -4,6 +4,7 @@ pubspec.lock
 .agent/
 .gemini/
 #third_party/
+# Generated builds, demo recordings, and benchmark reports.
 build/
 orm_bootstrap_test/
 .github/prompts/
