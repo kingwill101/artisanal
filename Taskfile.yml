@@ -4,8 +4,6 @@ vars:
   core_dir: ./pkgs/artisanal
   widgets_dir: ./pkgs/artisanal_widgets
   uv_dir: ./pkgs/ultraviolet
-  demo_build_dir: ./build/demos
-  demo_output_dir: ./build/vhs
 
 tasks:
   default:
@@ -46,32 +44,55 @@ tasks:
     cmds:
       - dart run pkgs/ultraviolet/example/uv/layout.dart
 
-  demos-build:
-    desc: Build the examples used by VHS and startup benchmarks
+  artisanal-demos-build:
+    desc: Compile the artisanal examples used by the VHS tapes
     cmds:
-      - mkdir -p "{{.demo_build_dir}}"
-      - dart compile kernel pkgs/artisanal/example/tui/examples/simple/main.dart -o "{{.demo_build_dir}}/simple.dill"
-      - dart compile kernel pkgs/artisanal/example/tui/examples/spinner/main.dart -o "{{.demo_build_dir}}/spinner.dill"
-      - dart compile kernel pkgs/artisanal_widgets/example/artisanal_app/main.dart -o "{{.demo_build_dir}}/widget-app.dill"
+      - mkdir -p build/vhs/artisanal
+      - dart compile kernel pkgs/artisanal/example/main.dart -o build/vhs/artisanal/main.dill
+      - dart compile kernel pkgs/artisanal/example/markdown_demo.dart -o build/vhs/artisanal/markdown_demo.dill
+      - dart compile kernel pkgs/artisanal/example/glamour_demo.dart -o build/vhs/artisanal/glamour_demo.dill
+      - dart compile kernel pkgs/artisanal/example/spinner_demo.dart -o build/vhs/artisanal/spinner_demo.dill
+      - dart compile kernel pkgs/artisanal/example/lipgloss_tui.dart -o build/vhs/artisanal/lipgloss_tui.dill
+      - dart compile kernel pkgs/artisanal/example/log_viewer_demo.dart -o build/vhs/artisanal/log_viewer_demo.dill
+      - dart compile kernel pkgs/artisanal/example/split_dashboard_demo.dart -o build/vhs/artisanal/split_dashboard_demo.dill
+      - dart compile kernel pkgs/artisanal/example/command_center_demo.dart -o build/vhs/artisanal/command_center_demo.dill
+      - dart compile kernel pkgs/artisanal/example/data_table_demo.dart -o build/vhs/artisanal/data_table_demo.dill
+      - dart compile kernel pkgs/artisanal/example/sequence_diagram_demo.dart -o build/vhs/artisanal/sequence_diagram_demo.dill
 
-  demos:
-    desc: Record all terminal demos (requires VHS)
-    deps: [demos-build]
+  artisanal-demos:
+    desc: Record GIFs for the artisanal examples (requires VHS)
+    deps: [artisanal-demos-build]
     cmds:
-      - mkdir -p "{{.demo_output_dir}}"
+      - mkdir -p pkgs/artisanal/assets
       - |
-        for tape in tool/demos/*.tape; do
+        for tape in pkgs/artisanal/example/.vhs/*.tape; do
           vhs "$tape"
         done
 
-  demo:
-    desc: Record one terminal demo, for example task demo NAME=simple
-    deps: [demos-build]
-    requires:
-      vars: [NAME]
+  widgets-demos-build:
+    desc: Compile the artisanal_widgets examples used by the VHS tapes
     cmds:
-      - mkdir -p "{{.demo_output_dir}}"
-      - vhs "tool/demos/{{.NAME}}.tape"
+      - mkdir -p build/vhs/widgets
+      - dart compile kernel pkgs/artisanal_widgets/example/artisanal_app/main.dart -o build/vhs/widgets/artisanal_app.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/charting/main.dart -o build/vhs/widgets/charting.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/git-diff/main.dart -o build/vhs/widgets/git-diff.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/data_table/main.dart -o build/vhs/widgets/data_table.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/command_palette/main.dart -o build/vhs/widgets/command_palette.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/code-editor/main.dart -o build/vhs/widgets/code-editor.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/markdown-editor/main.dart -o build/vhs/widgets/markdown-editor.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/dataviz/main.dart -o build/vhs/widgets/dataviz.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/debug_console/main.dart -o build/vhs/widgets/debug_console.dill
+      - dart compile kernel pkgs/artisanal_widgets/example/opencode/main.dart -o build/vhs/widgets/opencode.dill
+
+  widgets-demos:
+    desc: Record GIFs for the artisanal_widgets examples (requires VHS)
+    deps: [widgets-demos-build]
+    cmds:
+      - mkdir -p pkgs/artisanal_widgets/assets
+      - |
+        for tape in pkgs/artisanal_widgets/example/.vhs/*.tape; do
+          vhs "$tape"
+        done
 
   uv-demos-build:
     desc: Compile the ultraviolet examples used by the VHS tapes
@@ -91,20 +112,4 @@ tasks:
       - |
         for tape in pkgs/ultraviolet/example/.vhs/*.tape; do
           vhs "$tape"
-        done
-
-  benchmark-demos:
-    desc: Measure demo startup time for source and kernel snapshots
-    deps: [demos-build]
-    cmds:
-      - mkdir -p ./build/benchmarks
-      - dart run tool/startup_benchmark.dart --json=build/benchmarks/demo-startup.json
-
-  benchmark-uv:
-    desc: Run the existing Ultraviolet renderer microbenchmarks
-    dir: "{{.uv_dir}}"
-    cmds:
-      - |
-        for benchmark in benchmark/*.dart; do
-          dart run "$benchmark"
         done

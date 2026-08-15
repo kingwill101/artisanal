@@ -297,3 +297,48 @@ See the `example/` directory for comprehensive demos:
 - `command_center_demo.dart` – Multi-panel layouts
 - `tui/examples/uv-effects/main.dart` – Applying UV effects to a canvas buffer
 - Additional engine-specific demos live in `pkgs/ultraviolet/example/`
+
+### Demo captures
+
+Recordings of the more consequential examples, regenerated from the VHS tapes
+in [`example/.vhs/`](example/.vhs/README.md) with `task artisanal-demos`:
+
+**Markdown renderer** (`example/markdown_demo.dart`):
+
+![Markdown demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/markdown_demo.gif)
+
+**Glamour themes** (`example/glamour_demo.dart`):
+
+![Glamour demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/glamour_demo.gif)
+
+**CLI runner showcase** (`example/main.dart`):
+
+![Main demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/main.gif)
+
+**Lip Gloss TUI** (`example/lipgloss_tui.dart`):
+
+![Lip Gloss TUI](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/lipgloss_tui.gif)
+
+**Spinners** (`example/spinner_demo.dart`):
+
+![Spinner demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/spinner_demo.gif)
+
+**Log viewer** (`example/log_viewer_demo.dart`):
+
+![Log viewer demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/log_viewer_demo.gif)
+
+**Split dashboard** (`example/split_dashboard_demo.dart`):
+
+![Split dashboard demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/split_dashboard_demo.gif)
+
+**Command center** (`example/command_center_demo.dart`):
+
+![Command center demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/command_center_demo.gif)
+
+**Data table** (`example/data_table_demo.dart`):
+
+![Data table demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/data_table_demo.gif)
+
+**Sequence diagram** (`example/sequence_diagram_demo.dart`):
+
+![Sequence diagram demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/sequence_diagram_demo.gif)

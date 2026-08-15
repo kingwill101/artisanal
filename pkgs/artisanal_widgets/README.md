@@ -178,3 +178,49 @@ When combining commands that include runtime-managed commands (`EveryCmd`,
 are started by `Program`.
 
 Use `Cmd.batch(...)` for finite commands that only need `execute()`.
+
+## Demo captures
+
+Recordings of some of the more consequential examples, regenerated from the
+VHS tapes in [`example/.vhs/`](example/.vhs/README.md) with
+`task widgets-demos`:
+
+**Widget app shell** (`example/artisanal_app/main.dart`):
+
+![Widget app demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/widget-app.gif)
+
+**Charting** (`example/charting/main.dart`):
+
+![Charting demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/charting.gif)
+
+**Git diff viewer** (`example/git-diff/main.dart`):
+
+![Git diff demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/git-diff.gif)
+
+**Data table** (`example/data_table/main.dart`):
+
+![Data table demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/data_table.gif)
+
+**Command palette** (`example/command_palette/main.dart`):
+
+![Command palette demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/command_palette.gif)
+
+**Code editor** (`example/code-editor/main.dart`):
+
+![Code editor demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/code-editor.gif)
+
+**Markdown editor** (`example/markdown-editor/main.dart`):
+
+![Markdown editor demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/markdown-editor.gif)
+
+**Data visualization** (`example/dataviz/main.dart`):
+
+![DataViz demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/dataviz.gif)
+
+**Debug console** (`example/debug_console/main.dart`):
+
+![Debug console demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/debug_console.gif)
+
+**OpenCode chat UI** (`example/opencode/main.dart`):
+
+![OpenCode demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/opencode.gif)
