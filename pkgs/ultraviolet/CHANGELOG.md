@@ -24,6 +24,8 @@
   benchmark JSON report.
 - Retained exact truecolor style-transition pairs to eliminate repeated SGR
   construction during dense styled rendering.
+- Wrote truecolor SGR channel fragments directly to the renderer buffer to
+  avoid constructing an interpolated string for each RGB component.
 
 ### Fixed
 

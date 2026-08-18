@@ -1294,7 +1294,12 @@ final class UvTerminalRenderer extends TerminalRenderer {
     final r = _sgrByte[color_utils.clampRgbChannel(color.r)];
     final g = _sgrByte[color_utils.clampRgbChannel(color.g)];
     final b = _sgrByte[color_utils.clampRgbChannel(color.b)];
-    _buf.write(fg ? '38;2;$r;$g;$b' : '48;2;$r;$g;$b');
+    _buf.write(fg ? '38;2;' : '48;2;');
+    _buf.write(r);
+    _buf.write(';');
+    _buf.write(g);
+    _buf.write(';');
+    _buf.write(b);
   }
 
   void _wrapCursor() {
