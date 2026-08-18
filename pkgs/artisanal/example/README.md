@@ -25,6 +25,36 @@ Run all demos at once:
 dart run main.dart ui:all --ansi
 ```
 
+## Widget Catalog and Theme Showcase
+
+Use the focused catalog entry point to browse the complete Bubbles and display
+component surface without learning the larger demo command first:
+
+```bash
+# Open the interactive widget catalog
+dart run widget_catalog.dart
+
+# List every widget and built-in ComponentTheme preset
+dart run widget_catalog.dart --list
+
+# Render all presets as a static snapshot-friendly showcase
+dart run widget_catalog.dart --showcase --no-ansi
+
+# Render one preset
+dart run widget_catalog.dart --showcase --preset ocean --ansi
+```
+
+In interactive mode, type to fuzzy-search widgets, press `Esc` to choose a
+category filter, and press `Esc` again to close the catalog. Applications can
+reuse the metadata without importing the example renderer:
+
+```dart
+import 'package:artisanal/artisanal.dart';
+
+final displayWidgets = filterWidgetCatalog(category: 'Display');
+final progressWidgets = filterWidgetCatalog(query: 'progress');
+```
+
 ## Available Commands
 
 ### Basic Output

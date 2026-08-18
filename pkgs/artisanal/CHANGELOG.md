@@ -4,6 +4,14 @@
 
 ### Added
 
+- Added `ComponentTheme` presets and semantic style bundles for built-in
+  console prompts and display components, configurable through `Console`.
+- Added the standalone `example/widget_catalog.dart` CLI for browsing every
+  built-in Bubble/display component and rendering preset showcases.
+- Added the public `widgetCatalogEntries` registry and `filterWidgetCatalog()`
+  helper for application-owned catalogs, command palettes, and help screens.
+- Added category-aware keyboard search to the widget catalog, plus VHS tapes
+  and golden snapshots covering the preset showcase.
 - Added `ScreenMode.fixed` and `FixedViewport` for rendering into an arbitrary
   primary-screen rectangle without clearing surrounding terminal content.
 - Added world-coordinate canvas shapes (`CanvasLine`,
