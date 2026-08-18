@@ -1271,6 +1271,11 @@ final class UvTerminalRenderer extends TerminalRenderer {
       return true;
     }
 
+    if (fgChanged && bgChanged && newFg != null && newBg != null) {
+      _writeSimpleRgbPair(newFg, newBg);
+      return true;
+    }
+
     _buf.write('\x1b[');
     var wrote = false;
     if (fgChanged) {
@@ -1286,6 +1291,19 @@ final class UvTerminalRenderer extends TerminalRenderer {
     return true;
   }
 
+  void _writeSimpleRgbPair(UvRgb fg, UvRgb bg) {
+    final fr = _sgrByte[color_utils.clampRgbChannel(fg.r)];
+    final fgGreen = _sgrByte[color_utils.clampRgbChannel(fg.g)];
+    final fb = _sgrByte[color_utils.clampRgbChannel(fg.b)];
+    final br = _sgrByte[color_utils.clampRgbChannel(bg.r)];
+    final bgGreen = _sgrByte[color_utils.clampRgbChannel(bg.g)];
+    final bb = _sgrByte[color_utils.clampRgbChannel(bg.b)];
+    _buf.write(
+      '\x1b[38;2;$fr;$fgGreen;$fb;48;2;$br;$bgGreen;$bb'
+      'm',
+    );
+  }
+
   void _writeSimpleRgbDiffCode(UvRgb? color, bool fg) {
     if (color == null) {
       _buf.write(fg ? '39' : '49');
@@ -1294,12 +1312,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     final r = _sgrByte[color_utils.clampRgbChannel(color.r)];
     final g = _sgrByte[color_utils.clampRgbChannel(color.g)];
     final b = _sgrByte[color_utils.clampRgbChannel(color.b)];
-    _buf.write(fg ? '38;2;' : '48;2;');
-    _buf.write(r);
-    _buf.write(';');
-    _buf.write(g);
-    _buf.write(';');
-    _buf.write(b);
+    _buf.write(fg ? '38;2;$r;$g;$b' : '48;2;$r;$g;$b');
   }
 
   void _wrapCursor() {
