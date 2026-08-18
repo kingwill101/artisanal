@@ -1,20 +1,38 @@
 # Artisanal
 
-> **About this project:**
->
-> This library is a faithful port of Charm's TUI libraries (Lip Gloss, Bubble Tea, Bubbles) to Dart. We aim to port as much functionality as possible. In some scenarios, things may not work as expected—please report any issues you discover so we can adjust where necessary.
->
-> Many of the included examples were generated and may contain issues or not reflect the latest API. If you find a broken or outdated example, please let us know!
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-ormed.vercel.app-blue)](https://ormed.vercel.app/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kingwill101)
 
-A full-stack terminal toolkit for Dart, inspired by popular Go terminal libraries: [Lip Gloss](https://github.com/charmbracelet/lipgloss) (styling), [Bubble Tea](https://github.com/charmbracelet/bubbletea) (TUI framework), and [Bubbles](https://github.com/charmbracelet/bubbles) (reusable widgets).
+Build polished command-line tools and interactive terminal applications in
+Dart with one consistent toolkit.
 
-Build everything from rich command-line tools to complex interactive TUI applications with a consistent, idiomatic Dart API.
+Artisanal brings together high-level CLI output, Lip Gloss-inspired styling, a
+Bubble Tea-style runtime, reusable Bubbles, a widget framework, and the
+Ultraviolet cell-buffer renderer.
 
-## Features
+## Table of contents
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+  - [CLI output](#cli-output)
+  - [Styling](#styling)
+  - [Interactive TUI](#interactive-tui)
+- [Toolkit](#toolkit)
+  - [Console helpers](#console-helpers)
+  - [Command runner](#command-runner)
+  - [Bubbles](#bubbles)
+  - [Ultraviolet renderer](#ultraviolet-renderer)
+  - [Replay and trace debugging](#replay-and-trace-debugging)
+- [Library entrypoints](#library-entrypoints)
+- [Examples and gallery](#examples-and-gallery)
+  - [CLI walkthroughs](#cli-walkthroughs)
+  - [Full demo captures](#full-demo-captures)
+  - [Static screenshots](#static-screenshots)
+- [Documentation and support](#documentation-and-support)
+
+## Overview
 
 | Feature | Description |
 |---------|-------------|
@@ -29,67 +47,27 @@ Build everything from rich command-line tools to complex interactive TUI applica
 
 ## Installation
 
+Add Artisanal to your project:
+
+```bash
+dart pub add artisanal
+```
+
+Or add it to `pubspec.yaml`:
+
 ```yaml
 dependencies:
   artisanal: ^0.5.0
 ```
 
-> **Note**: This package uses workspace resolution. Use a path or git reference in standalone projects.
+For widget-only applications, depend on `artisanal_widgets` directly. Use
+`artisanal` when you want the broader CLI, style, runtime, and rendering stack.
 
-If you are building a widget app and do not need the rest of the CLI/style/runtime
-toolkit from this package, prefer depending on `artisanal_widgets` directly.
-Use `package:artisanal/...` as the umbrella convenience surface when you want
-the broader stack from a single package.
+## Quick start
 
+### CLI output
 
-
-## 🖼️ Screenshots
-
-![Log Viewer](images/log_viewer.png)
-
-![Console Tags](images/console_tags.png)
-
-![Layout](images/layout.png)
-
-
-## Library Exports
-
-| Import | Purpose |
-|--------|---------|
-| `package:artisanal/artisanal.dart` | Full CLI kit (Console, Style, Terminal, Layout) |
-| `package:artisanal/args.dart` | Command runner utilities (`CommandRunner`, `Command`) |
-| `package:artisanal/style.dart` | Styling, Layout, Colors, Borders, Themes |
-| `package:artisanal/runtime.dart` | Focused TEA runtime surface (`Model`, `Msg`, `Cmd`, `Program`, `StringTerminal`, runtime messages) |
-| `package:artisanal/hosts.dart` | Terminal backends, bridges, browser/socket hosts |
-| `package:artisanal/plugins.dart` | Stable remote-surface plugin protocol, transport, sessions, and host surface state |
-| `package:artisanal/tui.dart` | TUI runtime: Model, Msg, Cmd, Program |
-| `package:artisanal/bubbles.dart` | Reusable interactive widgets |
-| `package:artisanal/terminal.dart` | Terminal abstraction, ANSI codes, Keys |
-| `package:artisanal/app.dart` | Stable widget app shells, runners, and hosted wrappers |
-| `package:artisanal/editors.dart` | Stable widget text inputs and editors |
-| `package:artisanal/selection.dart` | Stable widget text selection |
-| `package:artisanal/testing.dart` | Stable widget testing helpers |
-| `package:artisanal/widgets.dart` | Stable re-export of the widget framework, including shortcut and zone-hit message support |
-| `package:ultraviolet/ultraviolet.dart` | Low-level cell-buffer renderer |
-| `package:artisanal/uv.dart` | Compatibility re-export for UV (`package:ultraviolet/ultraviolet.dart`) |
-| `package:artisanal/markdown.dart` | Markdown to ANSI renderer |
-| `package:artisanal/glamour.dart` | High-fidelity Markdown renderer |
-| `package:artisanal/charting.dart` | Charting primitives |
-
-For widget work, the `package:artisanal/...` widget entrypoints are convenience
-re-exports of the primary `package:artisanal_widgets/...` libraries. Prefer the
-direct `artisanal_widgets` imports when that is the only package your app
-needs.
-
-## Documentation
-
-See the in-repo docs for full coverage:
-
-- `docs/docs_index.md`
-
-## Quick Start: CLI Output
-
-### Minimal CLI
+#### Minimal example
 
 ```dart
 import 'package:artisanal/artisanal.dart';
@@ -103,7 +81,7 @@ void main() {
 }
 ```
 
-Run it with:
+Run the included example from the repository root:
 
 ```bash
 dart run pkgs/artisanal/example/minimal_cli.dart
@@ -111,7 +89,7 @@ dart run pkgs/artisanal/example/minimal_cli.dart
 
 ![Minimal Artisanal CLI](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/minimal_cli.gif)
 
-### A complete CLI flow
+#### Complete CLI flow
 
 ```dart
 import 'package:artisanal/artisanal.dart';
@@ -145,8 +123,7 @@ Future<void> main() async {
 
 ![CLI Output](images/console_quickstart.png)
 
-
-## Quick Start: Styling (Lip Gloss)
+### Styling
 
 ```dart
 import 'package:artisanal/style.dart';
@@ -160,10 +137,9 @@ final style = Style()
 print(style.render('Hello, Artisanal!'));
 ```
 
-
 ![Hello artisanal](images/hello.png)
 
-### Style Capabilities
+#### Style capabilities
 
 - **Text effects**: `bold()`, `italic()`, `underline()`, `strikethrough()`, `dim()`, `inverse()`, `blink()`
 - **Colors**: ANSI 16, ANSI 256, TrueColor (RGB), `AdaptiveColor` (light/dark aware)
@@ -173,10 +149,10 @@ print(style.render('Hello, Artisanal!'));
 - **Dimensions**: `width()`, `height()`, `maxWidth()`, `maxHeight()`
 - **Themes**: `ThemePalette` with presets (dark, light, ocean, nord, dracula, monokai, solarized)
 
-## Quick Start: TUI (Elm Architecture)
+### Interactive TUI
 
 ```dart
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 class CounterModel implements Model {
   final int count;
@@ -196,7 +172,7 @@ class CounterModel implements Model {
   }
 
   @override
-  String view() => 'Count: \$count\n\nUse ↑/↓ to change, q to quit';
+  String view() => 'Count: $count\n\nUse ↑/↓ to change, q to quit';
 }
 
 Future<void> main() async {
@@ -204,25 +180,48 @@ Future<void> main() async {
 }
 ```
 
-## Replay + Trace Debugging
+## Toolkit
 
-The TUI runtime supports deterministic replay (`ProgramReplay`) and built-in
-file tracing (`TuiTrace`) for debugging and profiling.
+### Console helpers
 
-Enable tracing for any TUI app:
+| Category | Methods |
+|----------|---------|
+| **Output** | `writeln()`, `write()`, `title()`, `section()` |
+| **Messages** | `line()`, `info()`, `comment()`, `question()`, `warn()`, `error()`, `note()`, `caution()`, `alert()`, `verbose()`, `debug()` |
+| **Layout** | `table()`, `tree()`, `listing()`, `twoColumnDetail()`, `text()` |
+| **Interactive** | `ask()`, `confirm()`, `choice()`, `secret()`, `selectChoice()`, `multiSelectChoice()`, `menu()`, `search()` |
+| **Progress** | `task()`, `spin()`, `progress()`, `progressIterate()` |
 
-```bash
-ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_CAPTURE=1 \
-ARTISANAL_TUI_TRACE_PATH=traces/my-run.log \
-dart run your_app.dart
+### Command runner
+
+Build CLI tools with styled help and nested commands:
+
+```dart
+import 'package:artisanal/args.dart';
+
+class HelloCommand extends Command {
+  @override
+  String get name => 'hello';
+
+  @override
+  String get description => 'Say hello';
+
+  @override
+  void run() {
+    io.success('Hello, world!');
+  }
+}
+
+void main(List<String> args) async {
+  final runner = CommandRunner('my-cli', 'A great CLI');
+  runner.addCommand(HelloCommand());
+  await runner.run(args);
+}
 ```
 
-Structured app/domain events can be emitted via `TuiTrace.event(...)` and are
-preserved in replay conversion when they use stable typed `type` names.
+![Command Runner](images/command_runner.png)
 
-Full replay and tracing documentation: `docs/tui.md`.
-
-## Bubbles (Reusable Widgets)
+### Bubbles
 
 | Widget | Description |
 |--------|-------------|
@@ -244,38 +243,10 @@ Full replay and tracing documentation: `docs/tui.md`.
 | `PaginatorModel` | Pagination controls |
 | `HelpModel` | Key binding help views |
 
-## Command Runner
+### Ultraviolet renderer
 
-Build CLI tools with styled help and nested commands:
-
-```dart
-import 'package:artisanal/args.dart';
-
-class HelloCommand extends Command {
-  @override
-  String get name => 'hello';
-  
-  @override
-  String get description => 'Say hello';
-
-  @override
-  void run() {
-    io.success('Hello, world!');
-  }
-}
-
-void main(List<String> args) async {
-  final runner = CommandRunner('my-cli', 'A great CLI');
-  runner.addCommand(HelloCommand());
-  await runner.run(args);
-}
-```
-
-![Command Runner](images/command_runner.png)
-
-## Ultraviolet Renderer
-
-High-performance rendering with diff-based updates for flicker-free TUI applications:
+High-performance rendering with diff-based updates for flicker-free TUI
+applications:
 
 ```dart
 await runProgram(
@@ -289,7 +260,7 @@ await runProgram(
 );
 ```
 
-### UV Features
+#### UV features
 
 - 2D cell buffer with styled cells
 - Diff-based terminal updates (minimal redraws)
@@ -299,22 +270,55 @@ await runProgram(
 - Mouse support and focus events
 - Graphics: Kitty, Sixel, iTerm2, half-block drawing
 
-## Console Methods
+### Replay and trace debugging
 
-| Category | Methods |
-|----------|---------|
-| **Output** | `writeln()`, `write()`, `title()`, `section()` |
-| **Messages** | `line()`, `info()`, `comment()`, `question()`, `warn()`, `error()`, `note()`, `caution()`, `alert()`, `verbose()`, `debug()` |
-| **Layout** | `table()`, `tree()`, `listing()`, `twoColumnDetail()`, `text()` |
-| **Interactive** | `ask()`, `confirm()`, `choice()`, `secret()`, `selectChoice()`, `multiSelectChoice()`, `menu()`, `search()` |
-| **Progress** | `task()`, `spin()`, `progress()`, `progressIterate()` |
+The TUI runtime supports deterministic replay (`ProgramReplay`) and built-in
+file tracing (`TuiTrace`) for debugging and profiling.
 
-## Examples
+Enable tracing for any TUI app:
+
+```bash
+ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_CAPTURE=1 \
+ARTISANAL_TUI_TRACE_PATH=traces/my-run.log \
+dart run your_app.dart
+```
+
+Structured app/domain events can be emitted via `TuiTrace.event(...)` and are
+preserved in replay conversion when they use stable typed `type` names.
+
+See the [TUI documentation](../../docs/tui.md) for replay and tracing details.
+
+## Library entrypoints
+
+Choose the smallest public library that covers your use case:
+
+| Import | Purpose |
+|--------|---------|
+| `package:artisanal/artisanal.dart` | Umbrella API for CLI output, styling, charting, Markdown, app runners, hosts, plugins, and common terminal types |
+| `package:artisanal/args.dart` | Command runner utilities (`CommandRunner`, `Command`) |
+| `package:artisanal/bubbles.dart` | Reusable TEA widgets |
+| `package:artisanal/catalog.dart` | Public metadata registry for Bubbles and display components |
+| `package:artisanal/style.dart` | Styles, colors, borders, layout, and themes |
+| `package:artisanal/tui.dart` | TEA runtime (`Model`, `Msg`, `Cmd`, `Program`) plus replay and tracing |
+| `package:artisanal/terminal.dart` | Terminal abstraction, ANSI helpers, keys, backends, and bridges |
+| `package:artisanal/widgets.dart` | Convenience re-export of the widget framework |
+| `package:artisanal/testing.dart` | Widget testing helpers |
+| `package:artisanal/editor_core.dart` | Low-level text document, editor state, and viewport primitives |
+| `package:artisanal/glamour.dart` | High-fidelity Markdown rendering |
+| `package:artisanal/uv.dart` | Compatibility re-export of Ultraviolet types |
+| `package:artisanal/compat.dart` | Backward-compatible API shims |
+
+Widget-first applications can import `package:artisanal_widgets/...` directly.
+Renderer-level applications can import
+`package:ultraviolet/ultraviolet.dart` directly.
+
+## Examples and gallery
 
 See the `example/` directory for comprehensive demos:
 
 - `main.dart` – Full feature showcase
 - `minimal_cli.dart` – Minimal CLI output example
+- `widget_catalog.dart` – Searchable component catalog and theme showcase
 - `fluent_style_example.dart` – Style API patterns
 - `spinner_demo.dart` – Various spinner types
 - `lipgloss_table.dart` – Styled tables
@@ -322,6 +326,8 @@ See the `example/` directory for comprehensive demos:
 - `command_center_demo.dart` – Multi-panel layouts
 - `tui/examples/uv-effects/main.dart` – Applying UV effects to a canvas buffer
 - Additional engine-specific demos live in `pkgs/ultraviolet/example/`
+
+Commands in this gallery assume the repository root as the working directory.
 
 ### CLI walkthroughs
 
@@ -360,7 +366,7 @@ dart run pkgs/artisanal/example/main.dart ui:progress --count 40 --ansi
 
 ![CLI progress](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/cli_progress.gif)
 
-### Demo captures
+### Full demo captures
 
 Recordings of the more consequential examples, regenerated from the VHS tapes
 in [`example/.vhs/`](example/.vhs/README.md) with `task artisanal-demos`:
@@ -404,3 +410,31 @@ in [`example/.vhs/`](example/.vhs/README.md) with `task artisanal-demos`:
 **Sequence diagram** (`example/sequence_diagram_demo.dart`):
 
 ![Sequence diagram demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/sequence_diagram_demo.gif)
+
+### Static screenshots
+
+**Log viewer**
+
+![Log Viewer](images/log_viewer.png)
+
+**Console tags**
+
+![Console Tags](images/console_tags.png)
+
+**Layout**
+
+![Layout](images/layout.png)
+
+## Documentation and support
+
+- Start with the [documentation index](../../docs/docs_index.md).
+- Browse the runnable examples in [`example/`](example/README.md).
+- Report bugs or outdated examples in the
+  [issue tracker](https://github.com/kingwill101/artisanal/issues).
+
+Artisanal is a Dart port of Charm's
+[Lip Gloss](https://github.com/charmbracelet/lipgloss),
+[Bubble Tea](https://github.com/charmbracelet/bubbletea), and
+[Bubbles](https://github.com/charmbracelet/bubbles). The project aims for broad
+parity, but some behavior may still differ from the Go originals. Reports with
+small reproductions are especially helpful.
