@@ -20,3 +20,4 @@ third_party/
 .kilo/
 .tmp/
 traces/
+.freebuff/
