@@ -14,6 +14,7 @@ import '../style/style.dart';
 import '../style/tag_parser.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
+import 'component_theme.dart';
 import 'inline_animation.dart';
 import 'output_theme.dart';
 import 'validators.dart';
@@ -176,6 +177,8 @@ class Console {
   ///
   /// The [outputTheme] parameter allows customizing the colors used for
   /// different message types (info, warning, error, etc.).
+  /// The [componentTheme] parameter styles interactive prompts and built-in
+  /// display components.
   Console({
     WriteLine? out,
     WriteLine? err,
@@ -190,6 +193,7 @@ class Console {
     int? terminalWidth,
     Renderer? renderer,
     OutputTheme? outputTheme,
+    ComponentTheme? componentTheme,
   }) : _stdout = stdout ?? io.stdout,
        _stdin = stdin ?? io.stdin,
        _out = out ?? ((line) => (stdout ?? io.stdout).writeln(line)),
@@ -200,6 +204,7 @@ class Console {
        _secretReader = secretReader,
        terminalWidth = terminalWidth ?? 120,
        _renderer = renderer ?? defaultRenderer,
+       _componentTheme = componentTheme ?? ComponentTheme.dark,
        _outputTheme = outputTheme ?? const OutputTheme(),
        _tagParser = ConsoleTagParser(
          colorProfile: (renderer ?? defaultRenderer).colorProfile,
@@ -217,6 +222,18 @@ class Console {
   }
 
   OutputTheme _outputTheme;
+
+  /// The theme used by interactive prompts and built-in components.
+  ComponentTheme get componentTheme => _componentTheme;
+
+  set componentTheme(ComponentTheme value) {
+    _componentTheme = value;
+    if (_components != null) {
+      _components = Components(io: this);
+    }
+  }
+
+  ComponentTheme _componentTheme;
 
   void _applyOutputTheme() {
     for (final entry in _outputTheme.toStyles().entries) {
@@ -1361,9 +1378,7 @@ class Console {
     if (!interactive) return defaultValue;
 
     final suffix = defaultValue ? '[Y/n]' : '[y/N]';
-    write(
-      '${(getStyle('question') ?? _style.bold().foreground(Colors.warning)).render(question)} $suffix ',
-    );
+    write('${_promptStyle().render(question)} $suffix ');
     final input = (_readLine?.call() ?? '').trim().toLowerCase();
     if (input.isEmpty) return defaultValue;
     if (input == 'y' || input == 'yes') return true;
@@ -1385,15 +1400,16 @@ class Console {
 
     for (var i = 0; i < attempts; i++) {
       final suffix = defaultValue == null ? '' : ' [$defaultValue]';
-      write(
-        '${(getStyle('question') ?? _style.bold().foreground(Colors.warning)).render(question)}$suffix: ',
-      );
+      write('${_promptStyle().render(question)}$suffix: ');
       final raw = _readLine?.call();
       final value = (raw == null || raw.isEmpty) ? (defaultValue ?? '') : raw;
       final error = validator?.call(value);
       if (error == null) return value;
       writelnErr(
-        _style.bold().foreground(Colors.error).render('Error: $error'),
+        _componentStyle(
+          componentTheme.errorStyle(renderConfig),
+          'error',
+        ).render('Error: $error'),
       );
     }
 
@@ -1412,7 +1428,10 @@ class Console {
     }
 
     final terminal = promptTerminal;
-    final model = PasswordModel(prompt: question);
+    final model = PasswordModel(
+      prompt: question,
+      styles: componentTheme.passwordStyles(renderConfig),
+    );
     final result = await runPasswordPrompt(model, terminal);
     if (result != null) return result;
     if (fallback != null) return fallback;
@@ -1437,11 +1456,7 @@ class Console {
       throw StateError('Cannot prompt in non-interactive mode.');
     }
 
-    writeln(
-      (getStyle('question') ?? _style.bold().foreground(Colors.warning)).render(
-        question,
-      ),
-    );
+    writeln(_promptStyle().render(question));
     for (var i = 0; i < choices.length; i++) {
       writeln('  [$i] ${choices[i]}');
     }
@@ -1523,6 +1538,7 @@ class Console {
       max: max,
       step: step,
       hint: hint,
+      styles: componentTheme.numberInputStyles(renderConfig),
     );
     final result = await runNumberInputPrompt(model, terminal);
     if (result != null) return result;
@@ -1552,10 +1568,7 @@ class Console {
       title: question,
       initialIndex: defaultIndex ?? 0,
       display: display,
-      styles: SelectStyles(
-        title: getStyle('question') ?? Style().bold(),
-        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
-      ),
+      styles: _selectStyles(),
     );
     return await runSelectPrompt(model, terminal);
   }
@@ -1581,10 +1594,7 @@ class Console {
       initialIndex: validDefaults.isNotEmpty ? validDefaults.first : 0,
       initialSelected: validDefaults,
       display: display,
-      styles: MultiSelectStyles(
-        title: getStyle('question') ?? Style().bold(),
-        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
-      ),
+      styles: _multiSelectStyles(),
     );
     final result = await runMultiSelectPrompt(model, terminal);
     return result ?? [];
@@ -1646,10 +1656,7 @@ class Console {
       display: display,
       placeholder: placeholder,
       noResultsText: noResultsText,
-      styles: SearchStyles(
-        title: getStyle('question') ?? Style().bold(),
-        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
-      ),
+      styles: _searchStyles(),
     );
     return await runSearchPrompt(model, terminal);
   }
@@ -1694,10 +1701,7 @@ class Console {
       placeholder: placeholder,
       noResultsText: noResultsText,
       hint: hint ?? '(Space to toggle, ^a to toggle all, Enter to confirm)',
-      styles: SearchStyles(
-        title: getStyle('question') ?? Style().bold(),
-        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
-      ),
+      styles: _searchStyles(),
     );
     final result = await runMultiSearchPrompt(model, terminal);
     return result ?? [];
@@ -1739,19 +1743,7 @@ class Console {
 
     final terminal = promptTerminal;
 
-    // Build header style: always keep bold + padding, optionally apply theme color.
-    final headerBase = Style().bold().padding(0, 1);
-    final infoColor = outputTheme.info;
-    final headerStyle = infoColor != null
-        ? (headerBase.copy()..foreground(infoColor))
-        : headerBase;
-
-    // Build selected-row style: always keep bold, apply theme color if available.
-    final selectedBase = Style().bold();
-    final alertColor = outputTheme.alert;
-    final selectedStyle = alertColor != null
-        ? (selectedBase.copy()..foreground(alertColor))
-        : (selectedBase.copy()..foreground(AnsiColor(212)));
+    final themedStyles = componentTheme.dataTableStyles(renderConfig);
 
     final model = DataTableModel<T>(
       items: items,
@@ -1760,11 +1752,13 @@ class Console {
       title: question,
       pageSize: pageSize,
       styles: DataTableStyles(
-        title: getStyle('question') ?? Style().bold(),
-        prompt: getStyle('info') ?? Style().foreground(AnsiColor(11)),
-        tableHeader: headerStyle,
-        tableSelected: selectedStyle,
-        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+        title: _componentStyle(themedStyles.title, 'question'),
+        prompt: _componentStyle(themedStyles.prompt, 'info'),
+        tableHeader: _componentStyle(themedStyles.tableHeader, 'info'),
+        tableCell: themedStyles.tableCell,
+        tableSelected: _componentStyle(themedStyles.tableSelected, 'alert'),
+        dimmed: _componentStyle(themedStyles.dimmed, 'muted'),
+        noResults: themedStyles.noResults,
       ),
     );
     return await runDataTablePrompt<T>(model, terminal);
@@ -1808,11 +1802,7 @@ class Console {
       defaultValue: defaultValue ?? '',
       scroll: scroll,
       hint: hint,
-      styles: SuggestStyles(
-        title: getStyle('question') ?? Style().bold(),
-        highlighted: getStyle('info') ?? Style().foreground(AnsiColor(11)),
-        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
-      ),
+      styles: _suggestStyles(),
     );
     return await runSuggestPrompt(model, terminal);
   }
@@ -1820,6 +1810,77 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
+
+  Style _promptStyle() =>
+      _componentStyle(componentTheme.promptStyle(renderConfig), 'question');
+
+  Style _componentStyle(Style themed, String role) {
+    final override = getStyle(role);
+    if (override == null) return themed;
+    return themed.copy()..inherit(override);
+  }
+
+  SelectStyles _selectStyles() {
+    final themed = componentTheme.selectStyles(renderConfig);
+    return SelectStyles(
+      title: _componentStyle(themed.title, 'question'),
+      item: themed.item,
+      selectedItem: themed.selectedItem,
+      cursor: themed.cursor,
+      dimmed: _componentStyle(themed.dimmed, 'muted'),
+      cursorPrefix: themed.cursorPrefix,
+      itemPrefix: themed.itemPrefix,
+    );
+  }
+
+  MultiSelectStyles _multiSelectStyles() {
+    final themed = componentTheme.multiSelectStyles(renderConfig);
+    return MultiSelectStyles(
+      title: _componentStyle(themed.title, 'question'),
+      item: themed.item,
+      highlightedItem: themed.highlightedItem,
+      selectedIcon: themed.selectedIcon,
+      unselectedIcon: themed.unselectedIcon,
+      dimmed: _componentStyle(themed.dimmed, 'muted'),
+      cursorPrefix: themed.cursorPrefix,
+      selectedIconChar: themed.selectedIconChar,
+      unselectedIconChar: themed.unselectedIconChar,
+    );
+  }
+
+  SearchStyles _searchStyles() {
+    final themed = componentTheme.searchStyles(renderConfig);
+    return SearchStyles(
+      title: _componentStyle(themed.title, 'question'),
+      prompt: _componentStyle(themed.prompt, 'info'),
+      item: themed.item,
+      selectedItem: themed.selectedItem,
+      matchHighlight: themed.matchHighlight,
+      cursor: themed.cursor,
+      dimmed: _componentStyle(themed.dimmed, 'muted'),
+      noResults: themed.noResults,
+      selectedIcon: themed.selectedIcon,
+      unselectedIcon: themed.unselectedIcon,
+      selectedIconChar: themed.selectedIconChar,
+      unselectedIconChar: themed.unselectedIconChar,
+      cursorPrefix: themed.cursorPrefix,
+      itemPrefix: themed.itemPrefix,
+    );
+  }
+
+  SuggestStyles _suggestStyles() {
+    final themed = componentTheme.suggestStyles(renderConfig);
+    return SuggestStyles(
+      title: _componentStyle(themed.title, 'question'),
+      value: themed.value,
+      placeholder: themed.placeholder,
+      highlighted: themed.highlighted,
+      suggestion: themed.suggestion,
+      hint: themed.hint,
+      dimmed: _componentStyle(themed.dimmed, 'muted'),
+      pointer: themed.pointer,
+    );
+  }
 
   List<String> _normalizeLines(Object message) {
     if (message is Iterable) {

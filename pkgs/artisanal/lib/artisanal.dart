@@ -90,6 +90,8 @@ export 'src/glamour/renderer.dart';
 export 'src/glamour/theme.dart';
 export 'src/io/components.dart' show Components;
 // I/O
+export 'src/io/component_theme.dart'
+    show ComponentTheme, componentThemeForName, componentThemePresetNames;
 export 'src/io/console.dart';
 export 'src/io/inline_animation.dart'
     show InlineAnimation, InlineAnimationResult;
@@ -130,6 +132,7 @@ export 'src/style/color.dart'
         Colors,
         ColorProfile;
 export 'src/style/style.dart';
+export 'src/style/theme.dart';
 // Style - Verbosity
 export 'src/style/verbosity.dart' show Verbosity;
 export 'src/terminal/backend_io_impl.dart'

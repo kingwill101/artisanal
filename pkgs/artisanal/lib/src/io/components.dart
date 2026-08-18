@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import '../style/chars.dart';
-import '../style/color.dart';
 import '../style/style.dart';
 import '../tui/bubbles/components/alert.dart' show Alert, AlertDisplayStyle;
 import '../tui/bubbles/components/base.dart'
@@ -49,7 +48,8 @@ class Components {
 
   /// Helper to apply muted styling.
   String muted(String text) =>
-      (io.getStyle('muted') ?? style.foreground(Colors.muted)).render(text);
+      (io.getStyle('muted') ?? io.componentTheme.mutedStyle(_renderConfig))
+          .render(text);
 
   void _writeComponent(DisplayComponent component) {
     final output = component.render();
@@ -80,7 +80,7 @@ class Components {
   void bulletList(Iterable<Object> items) {
     final bullet = _renderConfig
         .configureStyle(
-          io.getStyle('muted') ?? Style().foreground(Colors.muted),
+          io.getStyle('muted') ?? io.componentTheme.mutedStyle(_renderConfig),
         )
         .render(DotChars.bullet);
     _writeComponent(
@@ -102,10 +102,11 @@ class Components {
       ..message(message.toString())
       ..width(_renderConfig.terminalWidth);
 
-    final style = io.getStyle('alert') ?? io.getStyle('warning');
-    if (style != null) {
-      component.prefixStyle(style.bold()).borderStyle(style);
-    }
+    final style =
+        io.getStyle('alert') ??
+        io.getStyle('warning') ??
+        io.componentTheme.warningStyle(_renderConfig);
+    component.prefixStyle(style.bold()).borderStyle(style);
 
     _writeComponent(component);
     io.newLine();
@@ -117,7 +118,8 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle: io.getStyle('info') ?? Style().foreground(Colors.info),
+        titleStyle:
+            io.getStyle('info') ?? io.componentTheme.infoStyle(_renderConfig),
         renderConfig: _renderConfig,
       ),
     );
@@ -131,7 +133,8 @@ class Components {
         title: title,
         message: message,
         titleStyle:
-            io.getStyle('success') ?? Style().foreground(Colors.success),
+            io.getStyle('success') ??
+            io.componentTheme.successStyle(_renderConfig),
         renderConfig: _renderConfig,
       ),
     );
@@ -145,7 +148,8 @@ class Components {
         title: title,
         message: message,
         titleStyle:
-            io.getStyle('warning') ?? Style().foreground(Colors.warning),
+            io.getStyle('warning') ??
+            io.componentTheme.warningStyle(_renderConfig),
         renderConfig: _renderConfig,
       ),
     );
@@ -158,7 +162,8 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle: io.getStyle('error') ?? Style().foreground(Colors.error),
+        titleStyle:
+            io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig),
         renderConfig: _renderConfig,
       ),
     );
@@ -173,7 +178,7 @@ class Components {
       TwoColumnDetailList(renderConfig: _renderConfig)
         ..width(_renderConfig.terminalWidth)
         ..fillChar('.')
-        ..fillStyle(Style().dim())
+        ..fillStyle(io.componentTheme.mutedStyle(_renderConfig))
         ..rows(definitions.map((k, v) => MapEntry(k, v?.toString() ?? ''))),
     );
     io.newLine();
@@ -240,9 +245,9 @@ class Components {
         watch.stop();
         if (showResult && !clearOnDone) {
           io.writeln(
-            (io.getStyle('success') ?? style.foreground(Colors.success)).render(
-                  '✓',
-                ) +
+            (io.getStyle('success') ??
+                        io.componentTheme.successStyle(_renderConfig))
+                    .render('✓') +
                 muted(' ${_formatDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
@@ -253,9 +258,9 @@ class Components {
         watch.stop();
         if (showResult && !clearOnDone) {
           io.writeln(
-            (io.getStyle('error') ?? style.foreground(Colors.error)).render(
-                  '✗',
-                ) +
+            (io.getStyle('error') ??
+                        io.componentTheme.errorStyle(_renderConfig))
+                    .render('✗') +
                 muted(' ${_formatDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
@@ -276,7 +281,7 @@ class Components {
         spinner: spinner,
         clearOnDone: clearOnDone,
         doneMessage: showResult && !clearOnDone
-            ? '${(io.getStyle('success') ?? style.foreground(Colors.success)).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
+            ? '${(io.getStyle('success') ?? io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
             : null,
       );
       return result;
@@ -285,7 +290,7 @@ class Components {
       if (showResult && !clearOnDone) {
         io.promptTerminal.clearLine();
         io.promptTerminal.writeln(
-          '${(io.getStyle('error') ?? style.foreground(Colors.error)).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
+          '${(io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
         );
       }
       rethrow;
