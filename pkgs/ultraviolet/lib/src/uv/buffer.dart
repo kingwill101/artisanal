@@ -840,12 +840,29 @@ final class Buffer {
       dirtyBits = <Uint32List>[];
       return;
     }
-    touched = List<LineData?>.filled(lines.length, LineData.clean);
-    dirtyRows = List<bool>.filled(lines.length, false);
-    dirtyBits = List<Uint32List>.generate(
-      lines.length,
-      (_) => Uint32List(_dirtyWordCount(width())),
-    );
+    final height = lines.length;
+    final wordCount = _dirtyWordCount(width());
+    if (touched.length != height) {
+      touched = List<LineData?>.filled(height, LineData.clean);
+    } else {
+      touched.fillRange(0, height, LineData.clean);
+    }
+    if (dirtyRows.length != height) {
+      dirtyRows = List<bool>.filled(height, false);
+    } else {
+      dirtyRows.fillRange(0, height, false);
+    }
+    if (dirtyBits.length != height ||
+        (height > 0 && dirtyBits.first.length != wordCount)) {
+      dirtyBits = List<Uint32List>.generate(
+        height,
+        (_) => Uint32List(wordCount),
+      );
+    } else {
+      for (final bits in dirtyBits) {
+        bits.fillRange(0, bits.length, 0);
+      }
+    }
   }
 
   bool _isOutsideScissor(int x, int y, int width) {
@@ -894,6 +911,12 @@ final class Buffer {
   }
 
   List<DirtySpan> dirtyBitSpans(int y) {
+    if (y >= 0 && y < touched.length) {
+      final tracked = touched[y];
+      if (tracked != null && tracked.isDirty && tracked.spans.isNotEmpty) {
+        return tracked.spans;
+      }
+    }
     if (y < 0 || y >= dirtyBits.length) return const <DirtySpan>[];
     final bits = dirtyBits[y];
     if (bits.isEmpty) return const <DirtySpan>[];

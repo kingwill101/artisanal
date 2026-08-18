@@ -241,6 +241,35 @@ void main() {
     },
   );
 
+  test('UvTerminalRenderer notices sixel removal in a reused buffer', () {
+    const sixel = '\x1bPq#0;2;0;0;0!1~\x1b\\';
+    final out = _TestSink();
+    final renderer = UvTerminalRenderer(
+      out,
+      env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+    );
+
+    renderer
+      ..setFullscreen(true)
+      ..setRelativeCursor(false)
+      ..erase()
+      ..resize(8, 1);
+    final buffer = Buffer.create(8, 1)
+      ..setCell(0, 0, Cell(content: sixel, width: 1));
+    renderer
+      ..render(buffer)
+      ..flush();
+
+    out.reset();
+    buffer.setCell(0, 0, Cell(content: 'A', width: 1));
+    renderer
+      ..render(buffer)
+      ..flush();
+
+    expect(out.value, contains(UvAnsi.eraseEntireScreen));
+    expect(out.value, contains('A'));
+  });
+
   test('UvTerminalRenderer wraps sixel payloads for tmux passthrough', () {
     const sixel = 'Pq#0;2;0;0;0!1~\\';
     final out = _TestSink();

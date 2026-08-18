@@ -12,6 +12,15 @@
 - Added row-level routing for cells that require explicit diff semantics while
   preserving the tile-based fast path for ordinary dirty rows.
 
+### Performance
+
+- Reused dirty-span and dirty-tracking storage, consolidated renderer Sixel
+  and stale-cell scans, cached attribute-rich SGR transitions, and removed
+  per-frame renderer metrics timing allocations.
+- Replaced CSI parameter substring/split parsing with direct byte parsing and
+  a compact flattened parameter representation.
+- Added repeatable JIT/AOT benchmarks with named DevTools CPU/memory regions.
+
 ### Fixed
 
 - Fixed wide-cell trailing cleanup in the line-oriented diff traversal,

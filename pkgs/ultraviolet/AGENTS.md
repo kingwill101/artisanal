@@ -23,12 +23,15 @@ dart pub get            # workspace: run once from repo root is also fine
 dart analyze            # lint (root analysis_options.yaml: package:lints/recommended.yaml)
 dart test               # full test suite
 dart test test/foo_test.dart   # single file
-dart run benchmark/     # run all microbenchmarks (also `task benchmark-uv` from root)
+task benchmark-uv       # from root: compile and run the AOT baseline
+task benchmark-uv-profile # from root: profile named JIT benchmark regions
+dart run benchmark/baseline.dart  # JIT smoke run only
 dart run example/layout.dart   # run an example (most are interactive/demo apps)
 ```
 
 Root `Taskfile.yml` shortcuts: `task test-uv`, `task run-uv-layout`,
-`task benchmark-uv`.
+`task benchmark-uv`, `task benchmark-uv-jit`, and
+`task benchmark-uv-profile`.
 
 CI (`.github/workflows/ci.yaml`) runs `dart test pkgs/ultraviolet -r compact`
 on Ubuntu and Windows (Windows uses `--concurrency=1`). Tests must pass on both

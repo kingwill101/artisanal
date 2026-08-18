@@ -28,16 +28,16 @@ final class RenderMetrics {
   ///
   /// [sampleSize] determines how many frames are kept for averaging (default: 60).
   RenderMetrics({int sampleSize = 60}) : _sampleSize = sampleSize {
-    _frameTimes = List<Duration>.filled(sampleSize, Duration.zero);
-    _renderTimes = List<Duration>.filled(sampleSize, Duration.zero);
+    _frameTimesMicros = List<int>.filled(sampleSize, 0);
+    _renderTimesMicros = List<int>.filled(sampleSize, 0);
     _clock.start();
   }
 
   final int _sampleSize;
 
   // Circular buffers for frame/render timing — O(1) insert, no allocations.
-  late final List<Duration> _frameTimes;
-  late final List<Duration> _renderTimes;
+  late final List<int> _frameTimesMicros;
+  late final List<int> _renderTimesMicros;
   int _frameTimeCount = 0; // total items written to _frameTimes
   int _renderTimeCount = 0; // total items written to _renderTimes
   int _frameTimeIndex = 0; // next write position in _frameTimes
@@ -45,14 +45,14 @@ final class RenderMetrics {
 
   // Monotonic clock — immune to wall-clock adjustments / NTP jumps.
   final Stopwatch _clock = Stopwatch();
-  Duration? _lastFrameElapsed;
+  int? _lastFrameElapsedMicros;
 
   int _frameCount = 0;
   int _skippedFrames = 0;
 
   // Render timing (how long render() takes)
-  Stopwatch? _renderStopwatch;
-  Duration _lastRenderDuration = Duration.zero;
+  final Stopwatch _renderStopwatch = Stopwatch();
+  int _lastRenderDurationMicros = 0;
 
   /// When true, the next [beginFrame]/[endFrame] cycle is treated as a
   /// bookkeeping render (e.g. triggered by the metrics timer) and will **not**
@@ -66,8 +66,9 @@ final class RenderMetrics {
   /// Whether there has been any real (non-metrics-only) rendering activity
   /// within the idle timeout window.
   bool get _isIdle {
-    if (_lastFrameElapsed == null) return true;
-    return (_clock.elapsed - _lastFrameElapsed!) > _idleTimeout;
+    final lastFrame = _lastFrameElapsedMicros;
+    if (lastFrame == null) return true;
+    return _clock.elapsedMicroseconds - lastFrame > _idleTimeout.inMicroseconds;
   }
 
   /// Total number of frames rendered since creation or last reset.
@@ -81,7 +82,7 @@ final class RenderMetrics {
     if (_frameTimeCount == 0) return Duration.zero;
     // Last written entry is at (_frameTimeIndex - 1) wrapped.
     final idx = (_frameTimeIndex - 1 + _sampleSize) % _sampleSize;
-    return _frameTimes[idx];
+    return Duration(microseconds: _frameTimesMicros[idx]);
   }
 
   /// Number of valid entries in the frame-time circular buffer.
@@ -93,7 +94,8 @@ final class RenderMetrics {
       _renderTimeCount < _sampleSize ? _renderTimeCount : _sampleSize;
 
   /// Duration of the last render() call.
-  Duration get lastRenderDuration => _lastRenderDuration;
+  Duration get lastRenderDuration =>
+      Duration(microseconds: _lastRenderDurationMicros);
 
   /// Average frame time over the sample window.
   Duration get averageFrameTime {
@@ -101,7 +103,7 @@ final class RenderMetrics {
     if (n == 0) return Duration.zero;
     int total = 0;
     for (int i = 0; i < n; i++) {
-      total += _frameTimes[i].inMicroseconds;
+      total += _frameTimesMicros[i];
     }
     return Duration(microseconds: total ~/ n);
   }
@@ -112,7 +114,7 @@ final class RenderMetrics {
     if (n == 0) return Duration.zero;
     int total = 0;
     for (int i = 0; i < n; i++) {
-      total += _renderTimes[i].inMicroseconds;
+      total += _renderTimesMicros[i];
     }
     return Duration(microseconds: total ~/ n);
   }
@@ -143,7 +145,7 @@ final class RenderMetrics {
     if (n == 0) return 0.0;
     int maxUs = 0;
     for (int i = 0; i < n; i++) {
-      final us = _frameTimes[i].inMicroseconds;
+      final us = _frameTimesMicros[i];
       if (us > maxUs) maxUs = us;
     }
     if (maxUs == 0) return 0.0;
@@ -154,9 +156,9 @@ final class RenderMetrics {
   double get maxFps {
     final n = _frameTimeLength;
     if (n == 0) return 0.0;
-    int minUs = _frameTimes[0].inMicroseconds;
+    int minUs = _frameTimesMicros[0];
     for (int i = 1; i < n; i++) {
-      final us = _frameTimes[i].inMicroseconds;
+      final us = _frameTimesMicros[i];
       if (us < minUs) minUs = us;
     }
     if (minUs == 0) return double.infinity;
@@ -172,10 +174,10 @@ final class RenderMetrics {
 
   /// Call this at the start of each frame (before render).
   void beginFrame() {
-    final now = _clock.elapsed;
-    if (!metricsOnlyFrame && _lastFrameElapsed != null) {
-      final frameTime = now - _lastFrameElapsed!;
-      _frameTimes[_frameTimeIndex] = frameTime;
+    final nowMicros = _clock.elapsedMicroseconds;
+    final lastFrame = _lastFrameElapsedMicros;
+    if (!metricsOnlyFrame && lastFrame != null) {
+      _frameTimesMicros[_frameTimeIndex] = nowMicros - lastFrame;
       _frameTimeIndex = (_frameTimeIndex + 1) % _sampleSize;
       _frameTimeCount++;
     }
@@ -183,10 +185,12 @@ final class RenderMetrics {
     // real frame measures the gap from the previous real frame, not from
     // the metrics-only render.
     if (!metricsOnlyFrame) {
-      _lastFrameElapsed = now;
+      _lastFrameElapsedMicros = nowMicros;
     }
 
-    _renderStopwatch = Stopwatch()..start();
+    _renderStopwatch
+      ..reset()
+      ..start();
   }
 
   /// Call this at the end of render().
@@ -198,14 +202,12 @@ final class RenderMetrics {
       }
     }
 
-    if (_renderStopwatch != null) {
-      _renderStopwatch!.stop();
-      _lastRenderDuration = _renderStopwatch!.elapsed;
-      if (!metricsOnlyFrame) {
-        _renderTimes[_renderTimeIndex] = _lastRenderDuration;
-        _renderTimeIndex = (_renderTimeIndex + 1) % _sampleSize;
-        _renderTimeCount++;
-      }
+    _renderStopwatch.stop();
+    _lastRenderDurationMicros = _renderStopwatch.elapsedMicroseconds;
+    if (!metricsOnlyFrame) {
+      _renderTimesMicros[_renderTimeIndex] = _lastRenderDurationMicros;
+      _renderTimeIndex = (_renderTimeIndex + 1) % _sampleSize;
+      _renderTimeCount++;
     }
 
     // Auto-reset so callers don't need to remember to clear it.
@@ -214,16 +216,16 @@ final class RenderMetrics {
 
   /// Resets all metrics to initial state.
   void reset() {
-    _frameTimes.fillRange(0, _sampleSize, Duration.zero);
-    _renderTimes.fillRange(0, _sampleSize, Duration.zero);
+    _frameTimesMicros.fillRange(0, _sampleSize, 0);
+    _renderTimesMicros.fillRange(0, _sampleSize, 0);
     _frameTimeIndex = 0;
     _renderTimeIndex = 0;
     _frameTimeCount = 0;
     _renderTimeCount = 0;
-    _lastFrameElapsed = null;
+    _lastFrameElapsedMicros = null;
     _frameCount = 0;
     _skippedFrames = 0;
-    _lastRenderDuration = Duration.zero;
+    _lastRenderDurationMicros = 0;
   }
 
   /// Returns a summary string of current metrics.
@@ -376,6 +378,11 @@ final class UvTerminalRenderer extends TerminalRenderer {
   final Set<int> _alwaysUpdateCells = <int>{};
   int _alwaysUpdateWidth = 0;
   Buffer? _curbuf;
+  Buffer? _lastRenderedInput;
+  List<bool> _sixelRows = const <bool>[];
+  bool _curbufContainsSixel = false;
+  final Cell _emptyCell = Cell.emptyCell();
+  _StyleTransitionCache? _styleTransitionCache;
   String _lastFlushedOutput = '';
   late final Screen _screen;
 
@@ -707,7 +714,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     _profile = profile;
   }
 
-  /// Marks cells in [newbuf] as dirty wherever [_curbuf] disagrees.
+  /// Finds Sixel rows while marking cells where [newbuf] and [_curbuf] differ.
   ///
   /// When content is removed between frames (e.g. an overlay disappears), the
   /// new buffer's default empty cells are never explicitly written via
@@ -715,45 +722,59 @@ final class UvTerminalRenderer extends TerminalRenderer {
   /// frame's buffer ([_curbuf]) and, for every cell that differs from the
   /// corresponding cell in [newbuf] but is not already dirty in [newbuf],
   /// marks it dirty with `newbuf.touch()`.
-  void _markStaleCells(Buffer newbuf) {
+  bool _scanFrameAndMarkStaleCells(Buffer newbuf) {
     final cur = _curbuf;
-    if (cur == null) return;
-    // Only mark stale cells when buffer dimensions haven't changed. Size
-    // changes already trigger different handling in render() (resize +
-    // _clearBottom / _clearUpdate), and injecting extra dirty bits here would
-    // interfere with the cursor-movement optimizations used during those
-    // transitions.
-    if (cur.width() != newbuf.width() || cur.height() != newbuf.height()) {
-      return;
-    }
-    final w = cur.width();
-    final h = cur.height();
-
-    // Fast bail-out: if every row in newbuf is dirty, all content was
-    // explicitly written this frame so there can be no stale cells.
-    if (newbuf.dirtyRows.length >= h &&
-        !newbuf.dirtyRows.take(h).contains(false)) {
-      return;
+    final width = newbuf.width();
+    final height = newbuf.height();
+    if (_sixelRows.length != height) {
+      _sixelRows = List<bool>.filled(height, false);
     }
 
-    final empty = Cell.emptyCell();
-    for (var y = 0; y < h; y++) {
-      final curLine = cur.line(y);
-      if (curLine == null) continue;
+    final sameInput = identical(newbuf, _lastRenderedInput);
+    if (sameInput && newbuf.dirtyRows.isNotEmpty && !_hasDirtyRows(newbuf)) {
+      return _curbufContainsSixel;
+    }
+
+    var containsSixel = false;
+    final sameSize =
+        cur != null && cur.width() == width && cur.height() == height;
+    for (var y = 0; y < height; y++) {
+      if (sameInput && y < newbuf.dirtyRows.length && !newbuf.dirtyRows[y]) {
+        containsSixel = containsSixel || _sixelRows[y];
+        continue;
+      }
+
       final newLine = newbuf.line(y);
       if (newLine == null) continue;
-      for (var x = 0; x < w; x++) {
-        // Skip cells already tracked as dirty in newbuf.
-        if (newbuf.isCellDirty(x, y)) continue;
-        final curCell = curLine.at(x);
-        // Skip cells in _curbuf that are already empty — nothing stale.
-        if (curCell == null || curCell == empty) continue;
+      var rowContainsSixel = false;
+      for (var x = 0; x < newLine.length; x++) {
         final newCell = newLine.at(x);
+        if (newCell != null &&
+            newCell.asciiCodeUnit == null &&
+            terminal_graphics.mayContainTerminalGraphics(newCell.content) &&
+            terminal_graphics.containsSixelDisplay(newCell.content)) {
+          rowContainsSixel = true;
+        }
+
+        if (sameInput || !sameSize || newbuf.isCellDirty(x, y)) continue;
+        final curCell = cur.line(y)?.at(x);
+        if (curCell == null || curCell.isEmpty) continue;
         if (!_cellEqual(curCell, newCell)) {
           newbuf.touch(x, y);
         }
       }
+      _sixelRows[y] = rowContainsSixel;
+      containsSixel = containsSixel || rowContainsSixel;
     }
+    _lastRenderedInput = newbuf;
+    return containsSixel;
+  }
+
+  bool _hasDirtyRows(Buffer buffer) {
+    for (final dirty in buffer.dirtyRows) {
+      if (dirty) return true;
+    }
+    return false;
   }
 
   void _markAlwaysUpdateCells(Buffer newbuf) {
@@ -762,6 +783,12 @@ final class UvTerminalRenderer extends TerminalRenderer {
     if (_alwaysUpdateWidth != width) {
       _alwaysUpdateCells.clear();
       _alwaysUpdateWidth = width;
+    }
+
+    if (_alwaysUpdateCells.isEmpty &&
+        newbuf.dirtyRows.isNotEmpty &&
+        !_hasDirtyRows(newbuf)) {
+      return;
     }
 
     // Previously discovered cells must dirty their row on every frame. This
@@ -849,6 +876,9 @@ final class UvTerminalRenderer extends TerminalRenderer {
   /// surface for normal renderer parity.
   void resetForResize(int width, int height) {
     _curbuf = Buffer.create(width, height);
+    _lastRenderedInput = null;
+    _sixelRows = List<bool>.filled(height, false);
+    _curbufContainsSixel = false;
     _cur = _Cursor(x: -1, y: -1);
     _saved = _cur.clone();
     _clear = true;
@@ -982,8 +1012,8 @@ final class UvTerminalRenderer extends TerminalRenderer {
 
     _curbuf ??= Buffer.create(newbuf.width(), newbuf.height());
 
-    if (_bufferContainsSixelDisplay(newbuf) ||
-        (_curbuf != null && _bufferContainsSixelDisplay(_curbuf!))) {
+    final newbufContainsSixel = _scanFrameAndMarkStaleCells(newbuf);
+    if (newbufContainsSixel || _curbufContainsSixel) {
       erase();
     }
 
@@ -993,11 +1023,11 @@ final class UvTerminalRenderer extends TerminalRenderer {
     // positions but never explicitly wrote them, so they lack dirty bits.
     // Without this pass the tile-based diff would skip those cells, leaving
     // artifacts on screen.
-    _markStaleCells(newbuf);
     _markAlwaysUpdateCells(newbuf);
 
     final touchedLines = _touched(newbuf);
     if (!_clear && touchedLines == 0) {
+      _curbufContainsSixel = newbufContainsSixel;
       metrics.endFrame(skipped: true);
       return;
     }
@@ -1098,6 +1128,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
       _buf.write(UvAnsi.endSynchronizedUpdate);
     }
 
+    _curbufContainsSixel = newbufContainsSixel;
     metrics.endFrame();
   }
 
@@ -1194,7 +1225,14 @@ final class UvTerminalRenderer extends TerminalRenderer {
         final newStyle = cell.style;
         final oldStyle = _cur.style;
         if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
-          final seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+          final oldStyleId = _cur.styleId;
+          final newStyleId = cell.styleId;
+          final cache = _styleTransitionCache ??= _StyleTransitionCache();
+          var seq = cache.get(oldStyleId, newStyleId);
+          if (seq == null) {
+            seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+            cache.put(oldStyleId, newStyleId, seq);
+          }
           _buf.write(seq);
         }
         _cur.style = newStyle;
@@ -1604,6 +1642,8 @@ final class UvTerminalRenderer extends TerminalRenderer {
     const tileHeight = 8;
     final maxY = nonEmpty < newbuf.height() ? nonEmpty : newbuf.height();
     final wholeRowHandled = _arena.acquireBoolList(maxY);
+    final cellDiffChecked = _arena.acquireBoolList(maxY);
+    final cellDiffRequired = _arena.acquireBoolList(maxY);
 
     for (var tileY = 0; tileY < maxY; tileY += tileHeight) {
       final height = (tileY + tileHeight) > maxY ? maxY - tileY : tileHeight;
@@ -1616,7 +1656,11 @@ final class UvTerminalRenderer extends TerminalRenderer {
         for (var y = tile.minY; y < tile.maxY; y++) {
           if (wholeRowHandled[y]) continue;
           if (y >= newbuf.dirtyRows.length || !newbuf.dirtyRows[y]) continue;
-          if (_requiresCellDiff(newbuf, y)) {
+          if (!cellDiffChecked[y]) {
+            cellDiffRequired[y] = _requiresCellDiff(newbuf, y);
+            cellDiffChecked[y] = true;
+          }
+          if (cellDiffRequired[y]) {
             _transformLineWithCellDiff(newbuf, y);
             wholeRowHandled[y] = true;
             continue;
@@ -1733,7 +1777,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     var x = 0;
     while (x < length) {
       final current = newLine.at(x)!;
-      final previous = oldLine?.at(x) ?? Cell.emptyCell();
+      final previous = oldLine?.at(x) ?? _emptyCell;
       final option = current.diffOption;
       final currentWidth = current.outputWidth > 0 ? current.outputWidth : 1;
 
@@ -1816,7 +1860,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     // UV represents the covered half of a wide glyph as a zero-width cell.
     // A diff emission at that position must be a real blank so the terminal
     // clears the physical column.
-    _putCell(newbuf, cell.isZero ? Cell.emptyCell() : cell);
+    _putCell(newbuf, cell.isZero ? _emptyCell : cell);
   }
 
   static bool _styleIsVisibleOnBlank(UvStyle style) {
@@ -1866,7 +1910,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
     final newLine = newbuf.line(y);
     if (newLine == null) return;
 
-    var blank = newLine.at(0) ?? Cell.emptyCell();
+    var blank = newLine.at(0) ?? _emptyCell;
     if (_canClearWith(blank)) {
       var oFirstCell = 0;
       for (; oFirstCell < _curbuf!.width(); oFirstCell++) {
@@ -2968,32 +3012,27 @@ String debugDirectRelativeMoveSeq(
   return (seq: seq, scrollHeight: scrollHeight);
 }
 
-/// Cache: the same buffer object is reused across frames and its graphics
-/// content rarely changes.  Avoids re-scanning every cell on every frame.
-Buffer? _lastSixelCheckBuffer;
-bool _lastSixelCheckResult = false;
+final class _StyleTransitionCache {
+  static const _size = 4096;
+  final List<int> _from = List<int>.filled(_size, -1);
+  final List<int> _to = List<int>.filled(_size, -1);
+  final List<String?> _sequence = List<String?>.filled(_size, null);
 
-bool _bufferContainsSixelDisplay(Buffer buffer) {
-  if (_lastSixelCheckBuffer == buffer) return _lastSixelCheckResult;
-  _lastSixelCheckBuffer = buffer;
-  _lastSixelCheckResult = _scanBufferForSixel(buffer);
-  return _lastSixelCheckResult;
-}
-
-bool _scanBufferForSixel(Buffer buffer) {
-  for (var y = 0; y < buffer.height(); y++) {
-    final line = buffer.line(y);
-    if (line == null) continue;
-    for (final cell in line.cells) {
-      // Printable ASCII cells can never contain terminal graphics sequences.
-      if (cell.asciiCodeUnit != null) continue;
-      if (!terminal_graphics.mayContainTerminalGraphics(cell.content)) {
-        continue;
-      }
-      if (terminal_graphics.containsSixelDisplay(cell.content)) return true;
-    }
+  String? get(int from, int to) {
+    final index = _index(from, to);
+    if (_from[index] != from || _to[index] != to) return null;
+    return _sequence[index];
   }
-  return false;
+
+  void put(int from, int to, String sequence) {
+    final index = _index(from, to);
+    _from[index] = from;
+    _to[index] = to;
+    _sequence[index] = sequence;
+  }
+
+  int _index(int from, int to) =>
+      ((from ^ (from >>> 16)) * 31 ^ to ^ (to >>> 16)) & (_size - 1);
 }
 
 final class _DeferredRetainedGraphic {

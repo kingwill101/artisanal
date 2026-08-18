@@ -112,6 +112,7 @@ final class EventDecoder {
 
   LegacyKeyEncoding legacy;
   bool useTerminfo;
+  final _AnsiParams _paramsScratch = _AnsiParams();
 
   /// Decode the first event in [buf].
   ///
@@ -469,11 +470,11 @@ final class EventDecoder {
     final finalByte = buf[i];
     // Parse private + params + intermediates.
     var idx = 2;
-    final priv = StringBuffer();
+    final privStart = idx;
     while (idx < i && buf[idx] >= 0x3c && buf[idx] <= 0x3f) {
-      priv.writeCharCode(buf[idx]);
       idx++;
     }
+    final privEnd = idx;
 
     final paramsStart = idx;
     while (idx < i &&
@@ -482,24 +483,32 @@ final class EventDecoder {
             (buf[idx] >= 0x30 && buf[idx] <= 0x39))) {
       idx++;
     }
-    final paramsBytes = buf.sublist(paramsStart, idx);
-    final inter = StringBuffer();
+    final paramsEnd = idx;
+    final interStart = idx;
     while (idx < i && (buf[idx] >= 0x20 && buf[idx] <= 0x2f)) {
-      inter.writeCharCode(buf[idx]);
       idx++;
     }
 
-    final params = _parseParams(paramsBytes);
-    final cmd = '$priv$inter${String.fromCharCode(finalByte)}';
+    final params = _parseParams(buf, paramsStart, paramsEnd, _paramsScratch);
+    var command = 0;
+    for (var j = privStart; j < privEnd; j++) {
+      command = (command << 8) | buf[j];
+    }
+    for (var j = interStart; j < idx; j++) {
+      command = (command << 8) | buf[j];
+    }
+    command = (command << 8) | finalByte;
 
     // Handle SGR mouse: CSI < ... (M|m)
-    if (priv.toString() == '<' && (finalByte == 0x4d || finalByte == 0x6d)) {
+    if (privEnd - privStart == 1 &&
+        buf[privStart] == 0x3c &&
+        (finalByte == 0x4d || finalByte == 0x6d)) {
       final release = finalByte == 0x6d;
       return (i + 1, _parseSgrMouseEvent(params, release));
     }
 
     // Handle X10 mouse: CSI M <3bytes>
-    if (finalByte == 0x4d && cmd == 'M') {
+    if (command == 0x4d) {
       // Upstream treats short X10 sequences as an unknown CSI introducer and
       // continues parsing the remaining bytes (no "need more data" stall).
       if (i + 3 >= buf.length) {
@@ -513,20 +522,20 @@ final class EventDecoder {
     }
 
     // Key and other CSI handling (subset ported from upstream).
-    switch (cmd) {
-      case '?c':
+    switch (command) {
+      case 0x3f63: // ?c
         return (i + 1, parsePrimaryDevAttrs(_paramsToInts(params)));
-      case '>c':
+      case 0x3e63: // >c
         return (i + 1, parseSecondaryDevAttrs(_paramsToInts(params)));
-      case '?u':
+      case 0x3f75: // ?u
         final flags = params.param(0, 0).value;
         return (i + 1, KeyboardEnhancementsEvent(flags));
-      case '?R':
+      case 0x3f52: // ?R
         final row = params.param(0, 1).value;
         final colResult = params.param(1, 1);
         if (!colResult.ok) break;
         return (i + 1, CursorPositionEvent(x: colResult.value - 1, y: row - 1));
-      case '?n':
+      case 0x3f6e: // ?n
         final report = params.param(0, -1).value;
         final darkLight = params.param(1, -1).value;
         if (report == 997) {
@@ -534,14 +543,14 @@ final class EventDecoder {
           if (darkLight == 2) return (i + 1, const LightColorSchemeEvent());
         }
         break;
-      case '>m':
+      case 0x3e6d: // >m
         // XTerm modifyOtherKeys response: CSI > 4 ; <mode> m
         final mok = params.param(0, 0);
         final val = params.param(1, -1);
         if (!mok.ok || mok.value != 4) break;
         if (!val.ok || val.value == -1) break;
         return (i + 1, ModifyOtherKeysEvent(val.value));
-      case 'u':
+      case 0x75: // u
         // Kitty keyboard protocol / CSI u (fixterms).
         if (params.length == 0) {
           return (
@@ -550,11 +559,11 @@ final class EventDecoder {
           );
         }
         return (i + 1, _parseKittyKeyboard(params));
-      case 'I':
+      case 0x49: // I
         return (i + 1, const FocusEvent());
-      case 'O':
+      case 0x4f: // O
         return (i + 1, const BlurEvent());
-      case 'R':
+      case 0x52: // R
         // Cursor position report OR modified F3.
         if (params.length == 2) {
           final row = params.param(0, 1);
@@ -580,32 +589,32 @@ final class EventDecoder {
           return (i + 1, KeyPressEvent(Key(code: keyF3)));
         }
         break;
-      case 'A':
-      case 'B':
-      case 'C':
-      case 'D':
-      case 'E':
-      case 'F':
-      case 'H':
-      case 'P':
-      case 'Q':
-      case 'S':
-      case 'Z':
-      case 'a':
-      case 'b':
-      case 'c':
-      case 'd':
-        final event = _parseArrowAndFunctionCSI(cmd, params);
+      case 0x41: // A
+      case 0x42: // B
+      case 0x43: // C
+      case 0x44: // D
+      case 0x45: // E
+      case 0x46: // F
+      case 0x48: // H
+      case 0x50: // P
+      case 0x51: // Q
+      case 0x53: // S
+      case 0x5a: // Z
+      case 0x61: // a
+      case 0x62: // b
+      case 0x63: // c
+      case 0x64: // d
+        final event = _parseArrowAndFunctionCSI(finalByte, params);
         if (event != null) return (i + 1, event);
         break;
-      case '~':
-      case '^':
-      case '@':
-        final event = _parseTildeCSI(cmd, params);
+      case 0x7e: // ~
+      case 0x5e: // ^
+      case 0x40: // @
+        final event = _parseTildeCSI(finalByte, params);
         if (event != null) return (i + 1, event);
         break;
-      case r'?$y':
-      case r'$y':
+      case 0x3f2479: // ?$y
+      case 0x2479: // $y
         final mode = params.param(0, -1);
         if (!mode.ok) break;
         // Require a second param (even if missing) to match upstream:
@@ -617,7 +626,7 @@ final class EventDecoder {
             ? _modeSettingFromInt(val.value)
             : ModeSetting.notRecognized;
         return (i + 1, ModeReportEvent(mode: mode.value, value: setting));
-      case 't':
+      case 0x74: // t
         // Window operation reports (xterm):
         final op = params.param(0, 0);
         if (!op.ok) break;
@@ -681,7 +690,7 @@ final class EventDecoder {
           if (v.ok) args.add(v.value);
         }
         return (i + 1, WindowOpEvent(op: op.value, args: args));
-      case '_':
+      case 0x5f: // _
         if (params.length != 6) break;
         final vk = params.param(0, 0).value;
         final sc = params.param(1, 0).value;
@@ -703,36 +712,35 @@ final class EventDecoder {
     );
   }
 
-  Event? _parseArrowAndFunctionCSI(String cmd, _AnsiParams params) {
+  Event? _parseArrowAndFunctionCSI(int codeUnit, _AnsiParams params) {
     Key? base;
-    final codeUnit = cmd.codeUnitAt(0);
     if (codeUnit >= 0x61 && codeUnit <= 0x64) {
       // a..d => shift+arrows
       base = Key(code: keyUp + (codeUnit - 0x61), mod: KeyMod.shift);
     } else {
-      switch (cmd) {
-        case 'A':
-        case 'B':
-        case 'C':
-        case 'D':
+      switch (codeUnit) {
+        case 0x41:
+        case 0x42:
+        case 0x43:
+        case 0x44:
           base = Key(code: keyUp + (codeUnit - 0x41));
           break;
-        case 'E':
+        case 0x45:
           base = const Key(code: keyBegin);
           break;
-        case 'F':
+        case 0x46:
           base = const Key(code: keyEnd);
           break;
-        case 'H':
+        case 0x48:
           base = const Key(code: keyHome);
           break;
-        case 'P':
-        case 'Q':
-        case 'R':
-        case 'S':
+        case 0x50:
+        case 0x51:
+        case 0x52:
+        case 0x53:
           base = Key(code: keyF1 + (codeUnit - 0x50));
           break;
-        case 'Z':
+        case 0x5a:
           base = const Key(code: keyTab, mod: KeyMod.shift);
           break;
       }
@@ -743,7 +751,7 @@ final class EventDecoder {
     final id = params.param(0, 1).value;
     final mod = params.param(1, 1).value;
 
-    if ((params.length > 2 && !params.params[1].hasMore) || id != 1) {
+    if ((params.length > 2 && !params.hasMore(1)) || id != 1) {
       return null;
     }
 
@@ -761,11 +769,11 @@ final class EventDecoder {
     return _parseKittyKeyboardExt(params, KeyPressEvent(base));
   }
 
-  Event? _parseTildeCSI(String cmd, _AnsiParams params) {
+  Event? _parseTildeCSI(int command, _AnsiParams params) {
     if (params.length == 0) return null;
     final p = params.param(0, 0).value;
 
-    if (cmd == '~') {
+    if (command == 0x7e) {
       if (p == 200) return const PasteStartEvent();
       if (p == 201) return const PasteEndEvent();
       // XTerm modifyOtherKeys:
@@ -1077,7 +1085,7 @@ final class EventDecoder {
     while (i < buf.length && buf[i] >= 0x30 && buf[i] <= 0x3f) {
       i++;
     }
-    final params = _parseParams(buf.sublist(paramsStart, i));
+    final params = _parseParams(buf, paramsStart, i, _paramsScratch);
 
     // Intermediates (0x20..0x2f) - keep the last one.
     var inter = '';
@@ -1340,10 +1348,8 @@ final class EventDecoder {
     // In our params model, sub-parameters are stored on the same param.
     // For CSI A / CSI ~ extensions, the event type lives in the second
     // sub-parameter of the 2nd param: `CSI 1 ; <mods>:<type> <final>`.
-    if (params.length >= 2 &&
-        params.params[0].param(1) == 1 &&
-        params.params[1].hasMore) {
-      final type = params.params[1].param(1, 1);
+    if (params.length >= 2 && params.valueAt(0, 1) == 1 && params.hasMore(1)) {
+      final type = params.valueAt(1, 1, 1);
       if (type == 2) {
         final key = k.key();
         return KeyPressEvent(
@@ -1368,15 +1374,17 @@ final class EventDecoder {
 
     Key key = const Key(code: 0);
 
-    var paramIdx = 0;
-    var subIdx = 0;
-    for (final p in params.params) {
-      for (var sub = 0; sub < p.values.length; sub++) {
+    for (var paramIdx = 0; paramIdx < params.length; paramIdx++) {
+      for (
+        var subIdx = 0;
+        subIdx < params.subparameterCount(paramIdx);
+        subIdx++
+      ) {
         final v = switch ((paramIdx, subIdx)) {
-          (0, 0) => p.param(1, sub), // codepoint defaults to 1
-          (1, 0) => p.param(1, sub), // modifiers defaults to 1
-          (1, 1) => p.param(1, sub), // event type defaults to 1
-          _ => p.param(0, sub),
+          (0, 0) => params.valueAt(paramIdx, 1, subIdx),
+          (1, 0) => params.valueAt(paramIdx, 1, subIdx),
+          (1, 1) => params.valueAt(paramIdx, 1, subIdx),
+          _ => params.valueAt(paramIdx, 0, subIdx),
         };
         switch (paramIdx) {
           case 0:
@@ -1465,7 +1473,7 @@ final class EventDecoder {
             }
           default:
             // Text-as-codepoints (optional 3rd component).
-            final cp = p.param(0, sub);
+            final cp = params.valueAt(paramIdx, 0, subIdx);
             if (cp != 0) {
               key = Key(
                 code: key.code,
@@ -1477,12 +1485,7 @@ final class EventDecoder {
               );
             }
         }
-
-        subIdx++;
       }
-
-      paramIdx++;
-      subIdx = 0;
     }
 
     var keyMod = key.mod;
@@ -1901,61 +1904,97 @@ ModeSetting _modeSettingFromInt(int v) {
   }
 }
 
-final class _AnsiParam {
-  _AnsiParam(this.values);
-  final List<int?> values;
-  bool get hasMore => values.length > 1;
-  int param(int defaultValue, [int subIndex = 0]) {
-    if (subIndex >= values.length) return defaultValue;
-    final v = values[subIndex];
-    return v ?? defaultValue;
-  }
-}
-
 final class _AnsiParams {
-  _AnsiParams(this.params);
-  final List<_AnsiParam> params;
+  _AnsiParams();
 
-  int get length => params.length;
+  List<int?> _values = <int?>[];
+  List<int> _offsets = <int>[0];
+  int _length = 0;
+
+  int get length => _length;
+
+  void prepare(int maximumSlots) {
+    if (_values.length < maximumSlots) {
+      _values = List<int?>.filled(maximumSlots, null, growable: false);
+    }
+    final offsetCount = maximumSlots + 1;
+    if (_offsets.length < offsetCount) {
+      _offsets = List<int>.filled(offsetCount, 0, growable: false);
+    }
+    _offsets[0] = 0;
+  }
+
+  int subparameterCount(int index) {
+    if (index < 0 || index >= length) return 0;
+    return _offsets[index + 1] - _offsets[index];
+  }
+
+  bool hasMore(int index) => subparameterCount(index) > 1;
+
+  int valueAt(int index, int defaultValue, [int subIndex = 0]) {
+    if (index < 0 || index >= length) return defaultValue;
+    final start = _offsets[index];
+    final valueIndex = start + subIndex;
+    if (subIndex < 0 || valueIndex >= _offsets[index + 1]) {
+      return defaultValue;
+    }
+    return _values[valueIndex] ?? defaultValue;
+  }
 
   ({int value, bool ok}) param(
     int index,
     int defaultValue, {
     int subIndex = 0,
   }) {
-    if (index < 0 || index >= params.length) {
+    if (index < 0 || index >= length) {
       return (value: defaultValue, ok: false);
     }
-    final p = params[index];
-    if (subIndex >= p.values.length) return (value: defaultValue, ok: false);
-    final v = p.values[subIndex];
+    final start = _offsets[index];
+    final valueIndex = start + subIndex;
+    if (subIndex < 0 || valueIndex >= _offsets[index + 1]) {
+      return (value: defaultValue, ok: false);
+    }
+    final v = _values[valueIndex];
     if (v == null) return (value: defaultValue, ok: false);
     return (value: v, ok: true);
   }
 }
 
-_AnsiParams _parseParams(List<int> bytes) {
-  if (bytes.isEmpty) return _AnsiParams(const []);
-  final s = String.fromCharCodes(bytes);
-  final parts = s.split(';');
-  final out = <_AnsiParam>[];
-  for (final part in parts) {
-    if (part.isEmpty) {
-      out.add(_AnsiParam([null]));
+_AnsiParams _parseParams(
+  List<int> bytes,
+  int start,
+  int end,
+  _AnsiParams target,
+) {
+  if (start >= end) {
+    target._length = 0;
+    return target;
+  }
+  target.prepare(end - start + 1);
+  final values = target._values;
+  final offsets = target._offsets;
+  var valueIndex = 0;
+  var paramIndex = 0;
+  var value = 0;
+  var hasDigits = false;
+  for (var i = start; i < end; i++) {
+    final byte = bytes[i];
+    if (byte >= 0x30 && byte <= 0x39) {
+      value = value * 10 + byte - 0x30;
+      hasDigits = true;
       continue;
     }
-    final sub = part.split(':');
-    final vals = <int?>[];
-    for (final item in sub) {
-      if (item.isEmpty) {
-        vals.add(null);
-      } else {
-        vals.add(int.tryParse(item));
-      }
+    values[valueIndex++] = hasDigits ? value : null;
+    value = 0;
+    hasDigits = false;
+    if (byte == 0x3b) {
+      offsets[++paramIndex] = valueIndex;
     }
-    out.add(_AnsiParam(vals));
   }
-  return _AnsiParams(out);
+  values[valueIndex++] = hasDigits ? value : null;
+  target._length = paramIndex + 1;
+  offsets[target._length] = valueIndex;
+  return target;
 }
 
 // --- Device attributes helpers ---

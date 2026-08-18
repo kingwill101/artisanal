@@ -614,13 +614,34 @@ void main() {
       expect(b.isCellDirty(3, 0), isTrue);
       expect(b.isCellDirty(4, 0), isFalse);
       expect(b.isCellDirty(7, 0), isTrue);
-      expect(b.dirtyBitSpans(0), [
+      final trackedSpans = b.touched[0]!.spans;
+      expect(identical(b.dirtyBitSpans(0), trackedSpans), isTrue);
+      expect(trackedSpans, [
         DirtySpan(start: 2, end: 4),
         DirtySpan(start: 7, end: 8),
       ]);
 
       b.clearDirtyLine(0);
       expect(b.isCellDirty(2, 0), isFalse);
+      expect(b.dirtyBitSpans(0), isEmpty);
+    });
+
+    test('clearDirtyTracking reuses its tracking storage', () {
+      final b = Buffer.create(40, 2);
+      final touched = b.touched;
+      final dirtyRows = b.dirtyRows;
+      final dirtyBits = b.dirtyBits;
+      final firstRowBits = dirtyBits.first;
+
+      b.touchLine(2, 0, 4);
+      b.clearDirtyTracking();
+
+      expect(identical(b.touched, touched), isTrue);
+      expect(identical(b.dirtyRows, dirtyRows), isTrue);
+      expect(identical(b.dirtyBits, dirtyBits), isTrue);
+      expect(identical(b.dirtyBits.first, firstRowBits), isTrue);
+      expect(b.touched, everyElement(LineData.clean));
+      expect(b.dirtyRows, everyElement(isFalse));
       expect(b.dirtyBitSpans(0), isEmpty);
     });
 

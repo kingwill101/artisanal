@@ -34,6 +34,23 @@ tasks:
     cmds:
       - dart test
 
+  benchmark-uv:
+    desc: Run the repeatable Ultraviolet AOT performance baseline
+    cmds:
+      - mkdir -p build/benchmarks
+      - dart compile exe pkgs/ultraviolet/benchmark/baseline.dart -o build/benchmarks/uv_baseline
+      - build/benchmarks/uv_baseline {{.CLI_ARGS}}
+
+  benchmark-uv-jit:
+    desc: Smoke-run the Ultraviolet performance baseline under the JIT
+    cmds:
+      - dart run pkgs/ultraviolet/benchmark/baseline.dart {{.CLI_ARGS}}
+
+  benchmark-uv-profile:
+    desc: Profile named Ultraviolet benchmark regions under the JIT
+    cmds:
+      - devtools-profiler run --hide-sdk --hide-runtime-helpers --include-package ultraviolet -- dart run pkgs/ultraviolet/benchmark/baseline.dart {{.CLI_ARGS}}
+
   run-opencode:
     desc: Run the artisanal_widgets OpenCode example
     cmds:
