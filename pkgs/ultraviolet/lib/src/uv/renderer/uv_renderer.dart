@@ -1224,15 +1224,17 @@ final class UvTerminalRenderer extends TerminalRenderer {
       if (cell.styleId != _cur.styleId) {
         final newStyle = cell.style;
         final oldStyle = _cur.style;
-        final oldStyleId = _cur.styleId;
-        final newStyleId = cell.styleId;
-        final cache = _styleTransitionCache ??= _StyleTransitionCache();
-        var seq = cache.get(oldStyleId, newStyleId);
-        if (seq == null) {
-          seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
-          cache.put(oldStyleId, newStyleId, seq);
+        if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
+          final oldStyleId = _cur.styleId;
+          final newStyleId = cell.styleId;
+          final cache = _styleTransitionCache ??= _StyleTransitionCache();
+          var seq = cache.get(oldStyleId, newStyleId);
+          if (seq == null) {
+            seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+            cache.put(oldStyleId, newStyleId, seq);
+          }
+          _buf.write(seq);
         }
-        _buf.write(seq);
         _cur.style = newStyle;
         _cur.styleId = cell.styleId;
       }
@@ -1289,12 +1291,10 @@ final class UvTerminalRenderer extends TerminalRenderer {
       _buf.write(fg ? '39' : '49');
       return;
     }
-    _buf.write(fg ? '38;2;' : '48;2;');
-    _buf.write(_sgrByte[color_utils.clampRgbChannel(color.r)]);
-    _buf.write(';');
-    _buf.write(_sgrByte[color_utils.clampRgbChannel(color.g)]);
-    _buf.write(';');
-    _buf.write(_sgrByte[color_utils.clampRgbChannel(color.b)]);
+    final r = _sgrByte[color_utils.clampRgbChannel(color.r)];
+    final g = _sgrByte[color_utils.clampRgbChannel(color.g)];
+    final b = _sgrByte[color_utils.clampRgbChannel(color.b)];
+    _buf.write(fg ? '38;2;$r;$g;$b' : '48;2;$r;$g;$b');
   }
 
   void _wrapCursor() {

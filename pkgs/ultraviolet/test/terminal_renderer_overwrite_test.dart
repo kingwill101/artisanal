@@ -203,6 +203,56 @@ void main() {
     expect(out.value, contains('Z'));
   });
 
+  test('UvTerminalRenderer uses direct truecolor transitions', () {
+    final out = _TestSink();
+    final renderer =
+        UvTerminalRenderer(
+            out,
+            env: const [
+              'TERM=xterm-256color',
+              'COLORTERM=truecolor',
+              'TTY_FORCE=1',
+            ],
+          )
+          ..setFullscreen(true)
+          ..setRelativeCursor(false)
+          ..resize(2, 1);
+    final first = Buffer.create(2, 1, tracksDirty: false);
+    final second = Buffer.create(2, 1, tracksDirty: false);
+    first.setCell(
+      0,
+      0,
+      Cell.asciiStyled(
+        0x41,
+        style: const UvStyle(
+          fg: UvColor.rgb(10, 20, 30),
+          bg: UvColor.rgb(40, 50, 60),
+        ),
+      ),
+    );
+    second.setCell(
+      0,
+      0,
+      Cell.asciiStyled(
+        0x42,
+        style: const UvStyle(
+          fg: UvColor.rgb(70, 80, 90),
+          bg: UvColor.rgb(100, 110, 120),
+        ),
+      ),
+    );
+
+    renderer
+      ..render(first)
+      ..flush();
+    out.reset();
+    renderer
+      ..render(second)
+      ..flush();
+
+    expect(out.value, contains('\x1b[38;2;70;80;90;48;2;100;110;120m'));
+  });
+
   test('UvTerminalRenderer advances after Kitty no-cursor display cells', () {
     const kitty = '\x1b_Ga=T,f=100,i=7,c=3,r=1,C=1,q=2,m=0;AAAA\x1b\\';
     final out = _TestSink();
