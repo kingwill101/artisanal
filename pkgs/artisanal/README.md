@@ -89,6 +89,30 @@ See the in-repo docs for full coverage:
 
 ## Quick Start: CLI Output
 
+### Minimal CLI
+
+```dart
+import 'package:artisanal/artisanal.dart';
+
+void main() {
+  final io = Console();
+
+  io.title('Minimal Artisanal CLI');
+  io.info('Starting up...');
+  io.success('Ready to ship.');
+}
+```
+
+Run it with:
+
+```bash
+dart run pkgs/artisanal/example/minimal_cli.dart
+```
+
+![Minimal Artisanal CLI](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/minimal_cli.gif)
+
+### A complete CLI flow
+
 ```dart
 import 'package:artisanal/artisanal.dart';
 
@@ -290,6 +314,7 @@ await runProgram(
 See the `example/` directory for comprehensive demos:
 
 - `main.dart` – Full feature showcase
+- `minimal_cli.dart` – Minimal CLI output example
 - `fluent_style_example.dart` – Style API patterns
 - `spinner_demo.dart` – Various spinner types
 - `lipgloss_table.dart` – Styled tables

@@ -59,6 +59,7 @@ tasks:
       - dart compile kernel pkgs/artisanal/example/data_table_demo.dart -o build/vhs/artisanal/data_table_demo.dill
       - dart compile kernel pkgs/artisanal/example/sequence_diagram_demo.dart -o build/vhs/artisanal/sequence_diagram_demo.dill
       - dart compile kernel pkgs/artisanal/example/widget_catalog.dart -o build/vhs/artisanal/widget_catalog.dill
+      - dart compile kernel pkgs/artisanal/example/minimal_cli.dart -o build/vhs/artisanal/minimal_cli.dill
 
   artisanal-demos:
     desc: Record GIFs for the artisanal examples (requires VHS)
