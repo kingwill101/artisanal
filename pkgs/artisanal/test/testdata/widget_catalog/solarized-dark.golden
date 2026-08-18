@@ -61,17 +61,17 @@
 
 <ESC>[38;5;32m<ESC>[1mDeployments<ESC>[m
 <ESC>[38;5;7m🔍 <ESC>[mT<ESC>[38;5;240mype to filter...<ESC>[m
- <ESC>[38;5;32m<ESC>[1mService         <ESC>[m  <ESC>[38;5;32m<ESC>[1mState       <ESC>[m 
+ <ESC>[38;5;32m<ESC>[1mService         <ESC>[m  <ESC>[38;5;32m<ESC>[1mState       <ESC>[m
 <ESC>[38;5;32m<ESC>[1m <ESC>[38;5;246mapi             <ESC>[m  <ESC>[38;5;246mready       <ESC>[m <ESC>[m
- <ESC>[38;5;246mworker          <ESC>[m  <ESC>[38;5;246mready       <ESC>[m 
-                                
-                                
-                                
-                                
-                                
-                                
-                                
-                                
+ <ESC>[38;5;246mworker          <ESC>[m  <ESC>[38;5;246mready       <ESC>[m
+
+
+
+
+
+
+
+
                                 <ESC>[0m
 <ESC>[38;5;242m↑/↓ navigate  ↵ select  esc cancel<ESC>[m
 <ESC>[1mFilePickerModel<ESC>[m
@@ -116,5 +116,4 @@
 │       └── component_theme.dart
 └── <ESC>[38;5;69mtest<ESC>[m
     └── component_theme_test.dart
-
 

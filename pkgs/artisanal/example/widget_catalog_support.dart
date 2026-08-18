@@ -529,7 +529,12 @@ String renderPresetShowcaseSnapshot(
     err: (_) {},
   );
   renderPresetShowcase(io, presetName, theme, terminalWidth: terminalWidth);
-  return output.toString();
+  return output
+      .toString()
+      .split('\n')
+      .map((line) => line.trimRight())
+      .join('\n')
+      .trimRight();
 }
 
 /// Renders the interactive catalog menu.
