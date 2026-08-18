@@ -1,0 +1,120 @@
+<ESC>[1mArtisanal ComponentTheme — monokai<ESC>[m
+<ESC>[1m==================================<ESC>[m
+
+ The same built-in widgets rendered with the monokai palette.
+
+<ESC>[38;5;41m  Prompt widgets<ESC>[m
+  These are render-only snapshots of interactive Bubbles.
+
+<ESC>[1mTextInputModel<ESC>[m
+<ESC>[1m--------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1m› <ESC>[m<ESC>[38;5;255md<ESC>[m<ESC>[38;5;255me<ESC>[m<ESC>[38;5;255mp<ESC>[m<ESC>[38;5;255ml<ESC>[m<ESC>[38;5;255mo<ESC>[m<ESC>[38;5;255my<ESC>[m<ESC>[38;5;255m <ESC>[m<ESC>[38;5;255m-<ESC>[m<ESC>[38;5;255m-<ESC>[m<ESC>[38;5;255me<ESC>[m<ESC>[38;5;255mn<ESC>[m<ESC>[38;5;255mv<ESC>[m<ESC>[38;5;255m <ESC>[m<ESC>[38;5;255m <ESC>[m
+<ESC>[1mPasswordModel<ESC>[m
+<ESC>[1m-------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mPassword: <ESC>[m<ESC>[38;5;255m<ESC>[m
+<ESC>[1mConfirmModel<ESC>[m
+<ESC>[1m------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mDeploy now?<ESC>[m [<ESC>[38;5;197m<ESC>[1mYes<ESC>[m] / <ESC>[38;5;255mNo<ESC>[m
+<ESC>[1mNumberInputModel<ESC>[m
+<ESC>[1m----------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mWorkers: <ESC>[m <ESC>[38;5;255m4<ESC>[m
+<ESC>[38;5;242m  Use ↑/↓ to adjust<ESC>[m
+<ESC>[38;5;242m  ↑ increment  ↓ decrement  ↵ submit  esc cancel<ESC>[m
+<ESC>[1mSelectModel<ESC>[m
+<ESC>[1m-----------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mChoose an environment<ESC>[m
+<ESC>[38;5;197m<ESC>[1m❯ <ESC>[m<ESC>[38;5;197mstaging<ESC>[m
+  <ESC>[38;5;255mproduction<ESC>[m
+  <ESC>[38;5;255mlocal<ESC>[m
+<ESC>[38;5;242m↑/k up  ↓/j down  ↵ select  esc cancel<ESC>[m
+<ESC>[1mMultiSelectModel<ESC>[m
+<ESC>[1m----------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mSelect services<ESC>[m
+<ESC>[38;5;242m  (Space to toggle, Enter to confirm)<ESC>[m
+  ❯ <ESC>[38;5;148m✓<ESC>[m <ESC>[38;5;197m<ESC>[1mapi<ESC>[m
+    <ESC>[38;5;242m○<ESC>[m <ESC>[38;5;255mworker<ESC>[m
+    <ESC>[38;5;148m✓<ESC>[m <ESC>[38;5;255mweb<ESC>[m
+<ESC>[38;5;242m↑/k up  ↓/j down  space toggle  ↵ confirm  esc cancel<ESC>[m
+<ESC>[1mSearchModel<ESC>[m
+<ESC>[1m-----------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mFind a package<ESC>[m
+<ESC>[38;5;7m🔍 <ESC>[mT<ESC>[38;5;240mype to search...<ESC>[m
+<ESC>[38;5;197m<ESC>[1m❯ <ESC>[m<ESC>[38;5;197martisanal<ESC>[m
+  <ESC>[38;5;255multraviolet<ESC>[m
+  <ESC>[38;5;255martisanal_widgets<ESC>[m
+<ESC>[38;5;242m↑ up  ↓ down  ↵ select  esc cancel<ESC>[m
+<ESC>[1mSuggestModel<ESC>[m
+<ESC>[1m------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mLanguage: <ESC>[m <ESC>[38;5;255mDa<ESC>[m
+    <ESC>[38;5;255mDart<ESC>[m
+<ESC>[38;5;242m  ↑ up  ↓ down  ↵ accept  esc cancel<ESC>[m
+<ESC>[1mDataTableModel<ESC>[m
+<ESC>[1m--------------<ESC>[m
+
+<ESC>[38;5;197m<ESC>[1mDeployments<ESC>[m
+<ESC>[38;5;7m🔍 <ESC>[mT<ESC>[38;5;240mype to filter...<ESC>[m
+ <ESC>[38;5;197m<ESC>[1mService         <ESC>[m  <ESC>[38;5;197m<ESC>[1mState       <ESC>[m 
+<ESC>[38;5;197m<ESC>[1m <ESC>[38;5;255mapi             <ESC>[m  <ESC>[38;5;255mready       <ESC>[m <ESC>[m
+ <ESC>[38;5;255mworker          <ESC>[m  <ESC>[38;5;255mready       <ESC>[m 
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                <ESC>[0m
+<ESC>[38;5;242m↑/↓ navigate  ↵ select  esc cancel<ESC>[m
+<ESC>[1mFilePickerModel<ESC>[m
+<ESC>[1m---------------<ESC>[m
+
+<ESC>[38;5;242m<ESC>[3mBummer. No Files Found.<ESC>[m
+<ESC>[38;5;41m  Display components<ESC>[m
+  The same palette carried into static CLI output.
+
+<ESC>[1mBox<ESC>[m
+<ESC>[1m---<ESC>[m
+
+╭─ Box ────────────╮
+│ <ESC>[38;5;255mBordered content<ESC>[m │
+╰──────────────────╯
+<ESC>[1mPanelComponent<ESC>[m
+<ESC>[1m--------------<ESC>[m
+
+<ESC>[38;5;242m╭─ <ESC>[1mPanel<ESC>[m ───────────────────╮<ESC>[m
+<ESC>[38;5;242m│<ESC>[m Aligned dashboard content <ESC>[38;5;242m│<ESC>[m
+<ESC>[38;5;242m╰───────────────────────────╯<ESC>[m
+<ESC>[1mTableComponent<ESC>[m
+<ESC>[1m--------------<ESC>[m
+
++---------+-------+
+| <ESC>[38;5;255mService<ESC>[m | <ESC>[38;5;148mState<ESC>[m |
++---------+-------+
+| <ESC>[38;5;255mapi<ESC>[m     | <ESC>[38;5;148mready<ESC>[m |
+| <ESC>[38;5;255mworker<ESC>[m  | <ESC>[38;5;148midle<ESC>[m  |
++---------+-------+
+<ESC>[1mProgressBarComponent<ESC>[m
+<ESC>[1m--------------------<ESC>[m
+
+[===========================             ] <ESC>[2m68/100<ESC>[m <ESC>[2m68%<ESC>[m
+<ESC>[1mTreeComponent<ESC>[m
+<ESC>[1m-------------<ESC>[m
+
+<ESC>[38;5;69m.<ESC>[m
+├── <ESC>[38;5;69mlib<ESC>[m
+│   └── <ESC>[38;5;69msrc<ESC>[m
+│       ├── console.dart
+│       └── component_theme.dart
+└── <ESC>[38;5;69mtest<ESC>[m
+    └── component_theme_test.dart
+
+

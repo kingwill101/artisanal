@@ -85,6 +85,8 @@ export 'package:forge2d/forge2d.dart' show Joint, RevoluteJoint, DistanceJoint;
 export 'args.dart' show Command, CommandRunner;
 // Charting
 export 'src/charting/charting.dart';
+// Public component/widget registry
+export 'catalog.dart';
 export 'src/glamour/renderer.dart';
 // Glamour (GitHub-style markdown rendering)
 export 'src/glamour/theme.dart';
