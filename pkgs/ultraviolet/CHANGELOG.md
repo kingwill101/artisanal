@@ -20,6 +20,10 @@
 - Replaced CSI parameter substring/split parsing with direct byte parsing and
   a compact flattened parameter representation.
 - Added repeatable JIT/AOT benchmarks with named DevTools CPU/memory regions.
+- Added DevTools-backed allocation bytes and instances per operation to the
+  benchmark JSON report.
+- Retained exact truecolor style-transition pairs to eliminate repeated SGR
+  construction during dense styled rendering.
 
 ### Fixed
 

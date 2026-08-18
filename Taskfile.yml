@@ -51,6 +51,11 @@ tasks:
     cmds:
       - devtools-profiler run --hide-sdk --hide-runtime-helpers --include-package ultraviolet -- dart run pkgs/ultraviolet/benchmark/baseline.dart {{.CLI_ARGS}}
 
+  benchmark-uv-allocations:
+    desc: Report Ultraviolet allocation bytes and instances per operation
+    cmds:
+      - dart run pkgs/ultraviolet/benchmark/allocation_profile.dart {{.CLI_ARGS}}
+
   run-opencode:
     desc: Run the artisanal_widgets OpenCode example
     cmds:

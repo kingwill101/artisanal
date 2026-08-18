@@ -37,14 +37,20 @@ Future<void> main(List<String> arguments) async {
   }
 
   final report = <String, Object?>{
-    'schema_version': 1,
+    'schema_version': 2,
     'metadata': _metadata(options),
     'benchmarks': results.map((result) => result.toJson()).toList(),
     'checksum': checksum,
   };
 
+  final encoded = const JsonEncoder.withIndent('  ').convert(report);
+  if (options.jsonOutput != null) {
+    final output = File(options.jsonOutput!);
+    output.parent.createSync(recursive: true);
+    output.writeAsStringSync('$encoded\n');
+  }
   if (options.json) {
-    stdout.writeln(const JsonEncoder.withIndent('  ').convert(report));
+    stdout.writeln(encoded);
   } else {
     _printHumanReport(report, results);
   }
@@ -56,6 +62,7 @@ List<_Benchmark> _benchmarkCases() {
     _sparseRenderer(),
     _denseRenderer(styled: false),
     _denseRenderer(styled: true),
+    _shaderToyRenderer(),
     _bufferWrites(),
     _asciiWidth(),
     _unicodeWidthCacheHit(),
@@ -187,6 +194,78 @@ _Benchmark _denseRenderer({required bool styled}) {
       for (var frame = 0; frame < framesPerBatch; frame++) {
         renderer.render(frameNumber.isEven ? b : a);
         renderer.flush();
+        frameNumber++;
+      }
+      return _mix(sink.codeUnitsWritten, frameNumber);
+    },
+  );
+}
+
+_Benchmark _shaderToyRenderer() {
+  final sink = _CountingSink();
+  final terminal = Terminal(
+    output: sink,
+    env: const <String>['TERM=xterm-256color', 'COLORTERM=truecolor'],
+    isTty: true,
+  )..resize(_width, _height);
+  terminal
+    ..setFullscreen(true)
+    ..setRelativeCursor(false)
+    ..setScrollOptim(false)
+    ..setSynchronizedOutput(true)
+    ..draw();
+
+  const fieldHeight = _height - 2;
+  const framesPerBatch = 4;
+  const glyphRamp = ' .,:;irsXA253hMHGS#9B&@';
+  var frameNumber = 0;
+
+  return _Benchmark(
+    name: 'renderer.shader_toy_120x40',
+    unit: 'frame',
+    operationsPerBatch: framesPerBatch,
+    context: const <String, Object?>{
+      'cells_per_frame': _cellsPerFrame,
+      'changed_cells_per_frame': fieldHeight * _width,
+      'cleared_cells_per_frame': _cellsPerFrame,
+      'field_height': fieldHeight,
+      'clear_before_rebuild': true,
+      'tracks_dirty': true,
+      'uses_terminal_api': true,
+      'synchronized_output': true,
+      'includes_frame_cell_construction': true,
+      'includes_flush': true,
+    },
+    runBatch: () {
+      for (var frame = 0; frame < framesPerBatch; frame++) {
+        // Mirrors Terminal.clear(): clear the retained screen buffer before
+        // rebuilding the animated field in place.
+        terminal.clear();
+        for (var y = 0; y < fieldHeight; y++) {
+          for (var x = 0; x < _width; x++) {
+            final value = (x * 17 + y * 31 + frameNumber * 13) & 0xff;
+            final glyph = glyphRamp[(value * glyphRamp.length) >> 8];
+            final fg = UvColor.rgb(
+              (value * 3 + frameNumber * 5) & 0xff,
+              (value * 5 + x * 7) & 0xff,
+              (value * 7 + y * 11) & 0xff,
+            );
+            final bg = UvColor.rgb(
+              (value + frameNumber * 2) & 0xff,
+              (value * 2 + x * 3) & 0xff,
+              (value * 4 + y * 5) & 0xff,
+            );
+            terminal.setCell(
+              x,
+              y,
+              Cell.asciiStyled(
+                glyph.codeUnitAt(0),
+                style: UvStyle(fg: fg, bg: bg),
+              ),
+            );
+          }
+        }
+        terminal.draw();
         frameNumber++;
       }
       return _mix(sink.codeUnitsWritten, frameNumber);
@@ -529,12 +608,15 @@ Future<_Result> _run(_Benchmark benchmark, _Options options) async {
   }
 
   if (_profilerRegionsEnabled) {
+    final measuredOperations =
+        options.samples * batchesPerSample * benchmark.operationsPerBatch;
     await profileRegion(
       'ultraviolet.${benchmark.name}',
       attributes: <String, String>{
         'package': 'ultraviolet',
         'unit': benchmark.unit,
         'samples': '${options.samples}',
+        'operations': '$measuredOperations',
       },
       () async => measureSamples(),
     );
@@ -861,6 +943,10 @@ final class _Result {
     'operations_per_second': 1e9 / medianNs,
     'samples_ns_per_operation': samplesNsPerOperation,
     'checksum': checksum,
+    'allocation': const <String, Object?>{
+      'status': 'not_measured',
+      'reason': 'Run benchmark/allocation_profile.dart for allocation data.',
+    },
   };
 }
 
@@ -880,6 +966,7 @@ final class _Options {
     required this.warmupMs,
     required this.sampleMs,
     required this.json,
+    required this.jsonOutput,
     required this.only,
   });
 
@@ -888,11 +975,14 @@ final class _Options {
     var warmupMs = 750;
     var sampleMs = 200;
     var json = false;
+    String? jsonOutput;
     String? only;
 
     for (final argument in arguments) {
       if (argument == '--json') {
         json = true;
+      } else if (argument.startsWith('--json-output=')) {
+        jsonOutput = argument.substring('--json-output='.length);
       } else if (argument.startsWith('--samples=')) {
         samples = int.parse(argument.substring('--samples='.length));
       } else if (argument.startsWith('--warmup-ms=')) {
@@ -903,8 +993,9 @@ final class _Options {
         only = argument.substring('--only='.length);
       } else if (argument == '--help' || argument == '-h') {
         stdout.writeln(
-          'Usage: baseline [--json] [--only=substring] [--samples=15] '
-          '[--warmup-ms=750] [--sample-ms=200]',
+          'Usage: baseline [--json] [--json-output=path] '
+          '[--only=substring] [--samples=15] [--warmup-ms=750] '
+          '[--sample-ms=200]',
         );
         exit(0);
       } else {
@@ -922,6 +1013,7 @@ final class _Options {
       warmupMs: warmupMs,
       sampleMs: sampleMs,
       json: json,
+      jsonOutput: jsonOutput,
       only: only,
     );
   }
@@ -930,5 +1022,6 @@ final class _Options {
   final int warmupMs;
   final int sampleMs;
   final bool json;
+  final String? jsonOutput;
   final String? only;
 }

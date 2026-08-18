@@ -1224,17 +1224,15 @@ final class UvTerminalRenderer extends TerminalRenderer {
       if (cell.styleId != _cur.styleId) {
         final newStyle = cell.style;
         final oldStyle = _cur.style;
-        if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
-          final oldStyleId = _cur.styleId;
-          final newStyleId = cell.styleId;
-          final cache = _styleTransitionCache ??= _StyleTransitionCache();
-          var seq = cache.get(oldStyleId, newStyleId);
-          if (seq == null) {
-            seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
-            cache.put(oldStyleId, newStyleId, seq);
-          }
-          _buf.write(seq);
+        final oldStyleId = _cur.styleId;
+        final newStyleId = cell.styleId;
+        final cache = _styleTransitionCache ??= _StyleTransitionCache();
+        var seq = cache.get(oldStyleId, newStyleId);
+        if (seq == null) {
+          seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+          cache.put(oldStyleId, newStyleId, seq);
         }
+        _buf.write(seq);
         _cur.style = newStyle;
         _cur.styleId = cell.styleId;
       }
@@ -3013,26 +3011,21 @@ String debugDirectRelativeMoveSeq(
 }
 
 final class _StyleTransitionCache {
-  static const _size = 4096;
-  final List<int> _from = List<int>.filled(_size, -1);
-  final List<int> _to = List<int>.filled(_size, -1);
-  final List<String?> _sequence = List<String?>.filled(_size, null);
+  static const _maxEntries = 16384;
+  final Map<int, Map<int, String>> _rows = <int, Map<int, String>>{};
+  int _entries = 0;
 
   String? get(int from, int to) {
-    final index = _index(from, to);
-    if (_from[index] != from || _to[index] != to) return null;
-    return _sequence[index];
+    return _rows[from]?[to];
   }
 
   void put(int from, int to, String sequence) {
-    final index = _index(from, to);
-    _from[index] = from;
-    _to[index] = to;
-    _sequence[index] = sequence;
+    if (_entries >= _maxEntries) return;
+    final row = _rows.putIfAbsent(from, () => <int, String>{});
+    if (row.containsKey(to)) return;
+    row[to] = sequence;
+    _entries++;
   }
-
-  int _index(int from, int to) =>
-      ((from ^ (from >>> 16)) * 31 ^ to ^ (to >>> 16)) & (_size - 1);
 }
 
 final class _DeferredRetainedGraphic {

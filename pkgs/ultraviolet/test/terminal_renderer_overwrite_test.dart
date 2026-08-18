@@ -135,6 +135,74 @@ void main() {
     },
   );
 
+  test('UvTerminalRenderer cached style transitions preserve output', () {
+    final out = _TestSink();
+    final renderer =
+        UvTerminalRenderer(
+            out,
+            env: const [
+              'TERM=xterm-256color',
+              'COLORTERM=truecolor',
+              'TTY_FORCE=1',
+            ],
+          )
+          ..setFullscreen(true)
+          ..setRelativeCursor(false)
+          ..erase()
+          ..resize(4, 1);
+    final first = Buffer.create(4, 1, tracksDirty: false);
+    final second = Buffer.create(4, 1, tracksDirty: false);
+    for (var x = 0; x < 4; x++) {
+      first.setCell(
+        x,
+        0,
+        Cell.asciiStyled(
+          0x41 + x,
+          style: UvStyle(
+            fg: UvColor.rgb(20 + x, 40 + x, 60 + x),
+            bg: UvColor.rgb(80 + x, 100 + x, 120 + x),
+            attrs: x.isEven ? Attr.bold : Attr.italic,
+          ),
+        ),
+      );
+      second.setCell(
+        x,
+        0,
+        Cell.asciiStyled(
+          0x57 + x,
+          style: UvStyle(
+            fg: UvColor.rgb(140 + x, 160 + x, 180 + x),
+            bg: UvColor.rgb(200 + x, 220 + x, 240 + x),
+            attrs: x.isEven ? Attr.italic : 0,
+          ),
+        ),
+      );
+    }
+
+    renderer
+      ..render(first)
+      ..flush();
+    out.reset();
+    renderer
+      ..render(second)
+      ..flush();
+    final uncachedOutput = out.value;
+
+    out.reset();
+    renderer
+      ..render(first)
+      ..flush();
+    out.reset();
+    renderer
+      ..render(second)
+      ..flush();
+
+    expect(out.value, uncachedOutput);
+    expect(out.value, contains('\x1b['));
+    expect(out.value, contains('W'));
+    expect(out.value, contains('Z'));
+  });
+
   test('UvTerminalRenderer advances after Kitty no-cursor display cells', () {
     const kitty = '\x1b_Ga=T,f=100,i=7,c=3,r=1,C=1,q=2,m=0;AAAA\x1b\\';
     final out = _TestSink();

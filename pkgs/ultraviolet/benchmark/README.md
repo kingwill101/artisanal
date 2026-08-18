@@ -14,6 +14,8 @@ The harness provides:
 - JSON output for storing and comparing runs.
 - one explicit DevTools CPU/memory region named `ultraviolet.<workload>` for
   every measured workload when launched by `devtools-profiler`.
+- allocation bytes and instances per operation from VM allocation accumulator
+  deltas captured by `devtools-profiler`.
 
 ## Reference run
 
@@ -36,6 +38,28 @@ build/benchmarks/uv_baseline --json > build/benchmarks/uv-baseline.json
 
 The `build/` directory is intentionally ignored by Git. Keep a baseline JSON
 file outside the source tree while testing a patch.
+
+## Allocation accounting
+
+Run the benchmark under `devtools-profiler` and enrich its timing JSON with
+per-operation allocation data:
+
+```sh
+task benchmark-uv-allocations -- \
+  --only=renderer.dense_style_churn \
+  --output=build/benchmarks/uv-dense-style-allocations.json
+```
+
+Each benchmark entry reports `allocated_bytes`, `allocated_instances`,
+`bytes_per_operation`, `instances_per_operation`, and its ten largest class
+deltas. The operation count is recorded in the named region itself, so the
+allocation denominator exactly matches the measured sample loop.
+
+Allocation accounting is JIT-only because it requires the VM service. The
+reported totals are observed VM allocation-accumulator deltas and include the
+small fixed profiler-control overhead; use identical harness settings and
+compare before/after reports. Continue to use the AOT executable for the
+throughput gate.
 
 ## Comparison protocol
 
@@ -81,4 +105,7 @@ and allocation attribution from the JIT run and confirm speed with AOT.
 
 The renderer cases call `flush()` every frame. This bounds the internal output
 buffer and measures ANSI materialization into a no-I/O counting sink without
-adding terminal or filesystem latency.
+adding terminal or filesystem latency. `renderer.shader_toy_120x40` additionally
+models the retained `Terminal` buffer used by the shader-toy example: it clears
+the dirty-tracked buffer, constructs a new styled cell for every field position,
+diffs it, and flushes it on every frame.
