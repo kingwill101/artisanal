@@ -323,6 +323,43 @@ See the `example/` directory for comprehensive demos:
 - `tui/examples/uv-effects/main.dart` – Applying UV effects to a canvas buffer
 - Additional engine-specific demos live in `pkgs/ultraviolet/example/`
 
+### CLI walkthroughs
+
+The small CLI tapes focus on one interaction at a time and keep the matching
+command immediately beside its recording.
+
+**Tables** (`example/.vhs/cli_table.tape`):
+
+```bash
+dart run pkgs/artisanal/example/main.dart ui:table --ansi
+```
+
+![CLI table](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/cli_table.gif)
+
+**Prompts** (`example/.vhs/cli_prompts.tape`):
+
+```bash
+dart run pkgs/artisanal/example/main.dart ui:prompts --defaults --no-interaction --ansi
+```
+
+![CLI prompts](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/cli_prompts.gif)
+
+**Display components** (`example/.vhs/cli_components.tape`):
+
+```bash
+dart run pkgs/artisanal/example/main.dart ui:components --ansi
+```
+
+![CLI components](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/cli_components.gif)
+
+**Progress** (`example/.vhs/cli_progress.tape`):
+
+```bash
+dart run pkgs/artisanal/example/main.dart ui:progress --count 40 --ansi
+```
+
+![CLI progress](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/cli_progress.gif)
+
 ### Demo captures
 
 Recordings of the more consequential examples, regenerated from the VHS tapes
