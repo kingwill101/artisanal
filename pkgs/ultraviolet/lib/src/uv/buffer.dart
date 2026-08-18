@@ -220,6 +220,21 @@ final class Line {
     _cells[x].copyFrom(cell);
   }
 
+  /// Resets the cell at [x] to a plain space without copying a source cell.
+  void resetToEmpty(int x) {
+    if (x < 0 || x >= _cells.length) return;
+    final cachedHash = _renderHash;
+    final cell = _cells[x];
+    final previousFingerprint = cachedHash == null ? 0 : cell.renderFingerprint;
+    cell.resetToEmptyCell();
+    if (cachedHash != null) {
+      _renderHash =
+          cachedHash ^
+          _slotHash(x, previousFingerprint) ^
+          _slotHash(x, cell.renderFingerprint);
+    }
+  }
+
   /// Returns a cached hash of the line's rendered content.
   int renderHash() {
     final cached = _renderHash;
@@ -546,11 +561,19 @@ final class Buffer {
         (cell == null || !_hasTranslucentOverlay(cell.style)) &&
         (cell == null || cell.width <= 1);
     if (opaqueSingleWidth) {
-      final fillCell = cell ?? Cell.emptyCell();
-      for (var y = clipped.minY; y < clipped.maxY; y++) {
-        touchLine(clipped.minX, y, clipped.width);
-        for (var x = clipped.minX; x < clipped.maxX; x++) {
-          lines[y].replaceWithClone(x, fillCell);
+      if (cell == null) {
+        for (var y = clipped.minY; y < clipped.maxY; y++) {
+          touchLine(clipped.minX, y, clipped.width);
+          for (var x = clipped.minX; x < clipped.maxX; x++) {
+            lines[y].resetToEmpty(x);
+          }
+        }
+      } else {
+        for (var y = clipped.minY; y < clipped.maxY; y++) {
+          touchLine(clipped.minX, y, clipped.width);
+          for (var x = clipped.minX; x < clipped.maxX; x++) {
+            lines[y].replaceWithClone(x, cell);
+          }
         }
       }
       return;

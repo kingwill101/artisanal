@@ -645,6 +645,36 @@ void main() {
       expect(b.dirtyBitSpans(0), isEmpty);
     });
 
+    test(
+      'clear resets styled and pooled cells while preserving line hashes',
+      () {
+        final b = Buffer.create(2, 1);
+        final source = Cell(
+          content: '\u007A\u0307',
+          width: 1,
+          style: const UvStyle(fg: UvRgb(20, 30, 40)),
+          link: const Link(url: 'https://clear.example'),
+        );
+        b.setCell(0, 0, source);
+        source.dispose();
+
+        final line = b.line(0)!;
+        final before = line.renderHash();
+        final pooledId = line.at(0)!.pooledContentId!;
+        expect(debugGraphemeRefCount(pooledId), 1);
+
+        b.clear();
+
+        final cleared = b.cellAt(0, 0)!;
+        expect(cleared.isEmpty, isTrue);
+        expect(cleared.style, const UvStyle());
+        expect(cleared.link, const Link());
+        expect(line.renderHash(), isNot(before));
+        expect(line.renderHash(), equals(Line.filled(2).renderHash()));
+        expect(debugGraphemeRefCount(pooledId), 0);
+      },
+    );
+
     test('line overwrite releases pooled graphemes', () {
       final line = Line.filled(4);
       final source = Cell(content: '\u007A\u0307', width: 1);
