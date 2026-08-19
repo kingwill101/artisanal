@@ -15,7 +15,6 @@ import '../../uv/cursor.dart';
 import '../../uv/geometry.dart';
 import '../editor_core/editor_core.dart' as commands;
 import 'cursor.dart';
-import 'key_binding.dart';
 import 'runeutil.dart';
 import '../../unicode/grapheme.dart' as uni;
 import 'text_layout.dart' as layout;

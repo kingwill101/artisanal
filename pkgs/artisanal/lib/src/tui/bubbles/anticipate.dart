@@ -6,7 +6,6 @@
 /// Based on the Bubble Tea anticipate component.
 library;
 
-import 'package:artisanal/src/tui/bubbles/key_binding.dart';
 import 'package:artisanal/src/tui/tui.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/src/unicode/grapheme.dart' as uni;

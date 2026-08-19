@@ -92,8 +92,10 @@ void main() {
         final actual = renderPresetShowcaseSnapshot(
           preset,
           componentThemeForName(preset),
-        ).replaceAll('\x1b', '<ESC>').trimRight();
-        final golden = _goldenFile(preset).readAsStringSync().trimRight();
+        ).replaceAll('\r\n', '\n').replaceAll('\x1b', '<ESC>').trimRight();
+        final golden = _goldenFile(
+          preset,
+        ).readAsStringSync().replaceAll('\r\n', '\n').trimRight();
 
         expect(actual, golden, reason: preset);
       }
