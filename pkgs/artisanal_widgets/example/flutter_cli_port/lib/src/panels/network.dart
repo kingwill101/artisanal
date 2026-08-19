@@ -8,14 +8,20 @@ import '../utils.dart';
 import 'panel.dart';
 
 class NetworkPanel extends w.StatelessWidget {
-  NetworkPanel({required this.state, required this.flTheme, super.key});
+  NetworkPanel({
+    required this.state,
+    required this.flTheme,
+    required this.panelWidth,
+    super.key,
+  });
 
   final FlutterCliState state;
   final FlutterCliTheme flTheme;
+  final int panelWidth;
 
   @override
   w.Widget build(w.BuildContext context) {
-    final width = w.MediaQuery.of(context).size.width.round();
+    final width = panelWidth;
     final urlWidth = math.max(8, width - 31);
     final rows = <w.Widget>[
       w.Text(

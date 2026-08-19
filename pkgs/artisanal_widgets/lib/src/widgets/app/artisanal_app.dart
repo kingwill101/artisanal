@@ -54,7 +54,7 @@ final class ArtisanalApp extends WidgetApp {
     this.darkTheme,
     this.themeMode = ThemeMode.system,
     this.themeBuilder,
-    ImageAutoMode imageAutoMode = ImageAutoMode.environment,
+    super.imageAutoMode = ImageAutoMode.environment,
     this.child,
     this.home,
     this.routes,
@@ -114,7 +114,6 @@ final class ArtisanalApp extends WidgetApp {
            themeMode: themeMode,
            themeBuilder: themeBuilder,
          ).background,
-         imageAutoMode: imageAutoMode,
        );
 
   /// Terminal window title published via [View.windowTitle].

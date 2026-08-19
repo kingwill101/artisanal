@@ -324,7 +324,7 @@ class NetworkImage extends ImageProvider {
         builder.add(chunk);
       }
       final bytes = builder.takeBytes();
-      return _decodeImageData(bytes, 'image: $url', frame: decodeFrame);
+      return await _decodeImageData(bytes, 'image: $url', frame: decodeFrame);
     } finally {
       client.close(force: true);
     }
@@ -1116,7 +1116,8 @@ T withImageAutoConfiguration<T>({
       _imageAutoModeZoneKey: mode,
       _imageCapabilitiesZoneKey: ?capabilities,
       if (cellPixelWidth != null) _imageCellPixelWidthZoneKey: cellPixelWidth,
-      if (cellPixelHeight != null) _imageCellPixelHeightZoneKey: cellPixelHeight,
+      if (cellPixelHeight != null)
+        _imageCellPixelHeightZoneKey: cellPixelHeight,
     },
   );
 }

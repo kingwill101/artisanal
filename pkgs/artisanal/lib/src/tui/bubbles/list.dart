@@ -11,7 +11,6 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart';
 
 import '../tui.dart';
-import 'key_binding.dart';
 import 'paginator.dart';
 import 'textinput.dart';
 import 'help.dart';

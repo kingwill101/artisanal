@@ -8,7 +8,6 @@ library;
 
 import 'package:artisanal/style.dart';
 import '../tui.dart';
-import 'key_binding.dart';
 import 'runeutil.dart';
 import 'viewport.dart';
 import 'help.dart';

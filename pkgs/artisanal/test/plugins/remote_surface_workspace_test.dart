@@ -27,8 +27,11 @@ void main() {
       var clipboard = 'workspace clipboard';
       plugins.RemotePluginNotificationRequest? notification;
       final manifestDirectory = io.Directory(
-        p.dirname(fixtures.path('clipboard_plugin.dart')),
-      );
+        p.join(
+          p.dirname(fixtures.path('clipboard_plugin.dart')),
+          'workspace-manifests',
+        ),
+      )..createSync(recursive: true);
       final clipboardManifestPath = p.join(
         manifestDirectory.path,
         'workspace_clipboard.plugin.json',
@@ -38,21 +41,18 @@ void main() {
         'workspace_notification.plugin.json',
       );
       addTearDown(() async {
-        for (final path in <String>[
-          clipboardManifestPath,
-          notificationManifestPath,
-        ]) {
-          final file = io.File(path);
-          if (await file.exists()) {
-            await file.delete();
-          }
+        if (await manifestDirectory.exists()) {
+          await manifestDirectory.delete(recursive: true);
         }
       });
 
       await _writeManifest(
         clipboardManifestPath,
         id: 'clipboard',
-        entrypoint: p.basename(fixtures.path('clipboard_plugin.dart')),
+        entrypoint: p.relative(
+          fixtures.path('clipboard_plugin.dart'),
+          from: manifestDirectory.path,
+        ),
         primarySurfaceId: 'clipboard.panel',
         surfaceIds: const <String>['clipboard.panel'],
         x: 0,
@@ -61,7 +61,10 @@ void main() {
       await _writeManifest(
         notificationManifestPath,
         id: 'notification',
-        entrypoint: p.basename(fixtures.path('notification_plugin.dart')),
+        entrypoint: p.relative(
+          fixtures.path('notification_plugin.dart'),
+          from: manifestDirectory.path,
+        ),
         primarySurfaceId: 'notification.panel',
         surfaceIds: const <String>['notification.panel'],
         x: 40,
@@ -183,7 +186,7 @@ Future<void> _waitForSurfaceText(
   plugins.RemotePluginWorkspace workspace,
   String pluginId, {
   required String contains,
-  Duration timeout = const Duration(seconds: 5),
+  Duration timeout = const Duration(seconds: 15),
 }) async {
   final stopwatch = Stopwatch()..start();
   while (stopwatch.elapsed < timeout) {

@@ -41,7 +41,9 @@ Future<Map<String, _RegionArtifact>> _readRegions(
   if (!sessionDirectory.existsSync()) return regions;
 
   await for (final entity in sessionDirectory.list(recursive: true)) {
-    if (entity is! File || !entity.path.endsWith('/summary.json')) continue;
+    if (entity is! File || entity.uri.pathSegments.last != 'summary.json') {
+      continue;
+    }
     final decoded = jsonDecode(await entity.readAsString());
     if (decoded is! Map) continue;
     final summary = decoded.cast<String, Object?>();

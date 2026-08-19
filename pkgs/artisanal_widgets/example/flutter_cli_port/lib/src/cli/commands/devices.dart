@@ -108,7 +108,7 @@ void printDevicesTable(List<FlutterCliDevice> devices) {
 
 Future<ProcessResult?> _run(String executable, List<String> args) async {
   try {
-    return Process.run(executable, args);
+    return await Process.run(executable, args);
   } on ProcessException {
     return null;
   }

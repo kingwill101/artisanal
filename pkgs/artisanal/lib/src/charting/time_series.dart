@@ -114,7 +114,7 @@ final class MultiSeriesBuffer {
 
   final Map<String, TimeSeriesBuffer> _buffers = {};
   int _windowMs;
-  int _maxPoints;
+  final int _maxPoints;
 
   TimeSeriesBuffer series(String name) {
     return _buffers.putIfAbsent(

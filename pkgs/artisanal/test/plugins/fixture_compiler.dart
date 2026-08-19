@@ -3,7 +3,7 @@ import 'dart:io' as io;
 import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
 import 'package:path/path.dart' as p;
 
-final String _artisanalRootDirectory = io.Directory.current.path;
+final String _artisanalRootDirectory = _resolveArtisanalPackageRoot();
 final _kernelCache = RemotePluginKernelCache(
   packageRoot: _artisanalRootDirectory,
 );
@@ -40,12 +40,13 @@ Future<CompiledPluginFixtures> compilePluginFixtures(
 ) async {
   final compiledPaths = <String, String>{};
   for (final fixtureFileName in fixtureFileNames.toSet()) {
-    final sourcePath = _resolveArtisanalPath(<String>[
+    final sourcePath = p.join(
+      _artisanalRootDirectory,
       'test',
       'plugins',
       'fixtures',
       fixtureFileName,
-    ]);
+    );
     compiledPaths[fixtureFileName] = await _kernelCache.ensureKernelSnapshot(
       entrypointPath: sourcePath,
       outputPath: p.join(
@@ -57,23 +58,18 @@ Future<CompiledPluginFixtures> compilePluginFixtures(
   return CompiledPluginFixtures._(compiledPaths);
 }
 
-String _resolveArtisanalPath(List<String> relativeSegments) {
-  final candidates = <String>[
-    p.joinAll(<String>[_artisanalRootDirectory, ...relativeSegments]),
-    p.joinAll(<String>[
-      _artisanalRootDirectory,
-      'pkgs',
-      'artisanal',
-      ...relativeSegments,
-    ]),
-  ];
+String _resolveArtisanalPackageRoot() {
+  final current = io.Directory.current.path;
+  final candidates = <String>[current, p.join(current, 'pkgs', 'artisanal')];
   for (final candidate in candidates) {
-    if (io.FileSystemEntity.typeSync(candidate) !=
-        io.FileSystemEntityType.notFound) {
+    final packageFile = p.join(candidate, 'pubspec.yaml');
+    final fixtureDirectory = p.join(candidate, 'test', 'plugins', 'fixtures');
+    if (io.File(packageFile).existsSync() &&
+        io.Directory(fixtureDirectory).existsSync()) {
       return candidate;
     }
   }
   throw StateError(
-    'Could not resolve artisanal path: ${p.joinAll(relativeSegments)}',
+    'Could not resolve the artisanal package root from $current.',
   );
 }

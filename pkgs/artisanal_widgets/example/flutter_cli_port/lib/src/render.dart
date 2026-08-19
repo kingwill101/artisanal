@@ -134,9 +134,18 @@ class _StatusPanels extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) {
     final width = w.MediaQuery.of(context).size.width.round();
+    final leftPanelWidth = width < narrowWidth ? width : width * 3 ~/ 5;
     final left = state.showNetwork
-        ? NetworkPanel(state: state, flTheme: flTheme)
-        : PerformancePanel(state: state, flTheme: flTheme);
+        ? NetworkPanel(
+            state: state,
+            flTheme: flTheme,
+            panelWidth: leftPanelWidth,
+          )
+        : PerformancePanel(
+            state: state,
+            flTheme: flTheme,
+            panelWidth: leftPanelWidth,
+          );
     final devices = DevicesPanel(state: state, flTheme: flTheme);
     if (width < narrowWidth) {
       return w.Column(
@@ -205,6 +214,7 @@ String _packFooterBinds(int width) {
     '[r] reload',
     '[R] restart',
     '[q] quit',
+    '[P] perf',
     '[e] error ↗',
     '[c] copy 📋',
     '[/] filter',
@@ -214,12 +224,16 @@ String _packFooterBinds(int width) {
     '[d] devtools',
     '[o] platform',
     '[p] paint',
-    '[P] perf',
   ];
   final out = StringBuffer(' ');
   for (final bind in binds) {
     final next = out.length == 1 ? bind : '  $bind';
-    if (out.length + next.length + 1 > width) break;
+    if (style.Layout.visibleLength(out.toString()) +
+            style.Layout.visibleLength(next) +
+            1 >
+        width) {
+      break;
+    }
     out.write(next);
   }
   if (out.length == 1) return ' r reload · q quit ';
