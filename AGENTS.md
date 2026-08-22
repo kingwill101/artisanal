@@ -45,20 +45,24 @@ Run from the repo root unless noted. Workspace resolution means
 `dart pub get` at the root resolves all packages.
 
 ```sh
-dart pub get             # resolve the whole workspace
-dart analyze             # analyze the workspace (lints: package:lints/recommended.yaml)
-dart test pkgs/ultraviolet -r compact    # test one package (also flutter test for widgets)
-dart test pkgs/artisanal_test -r compact # test PTY harness primitives
-dart run pkgs/artisanal/example/main.dart          # run an example
+dart pub get                  # resolve the whole workspace
+dart analyze                  # analyze the workspace (lints: package:lints/recommended.yaml)
+dart test pkgs/ultraviolet -r compact       # test one package (also flutter test for widgets)
+dart test pkgs/artisanal_test/test -r compact # test PTY harness primitives
+dart run pkgs/artisanal/example/main.dart   # run an example
 dart run tool/startup_benchmark.dart --json=build/benchmarks/demo-startup.json
 ```
+
+The explicit `test/` suffix for `artisanal_test` is intentional. Its package
+directory name itself ends in `_test`, so passing the package root to the test
+runner can make `lib/artisanal_test.dart` look like a test target.
 
 `Taskfile.yml` shortcuts (`task <name>`):
 
 | Task | Purpose |
 |---|---|
 | `analyze` | `dart analyze` on the workspace |
-| `test-core` / `test-widgets` / `test-uv` | `dart test` inside the respective package |
+| `test-core` / `test-harness` / `test-widgets` / `test-uv` | Run tests inside the respective package |
 | `run-opencode` / `run-uv-layout` | run a specific example |
 | `demos-build` | compile example kernels (`.dill`) into `build/demos/` |
 | `demos` / `demo NAME=...` | record terminal demos with VHS (`tool/demos/*.tape`) |
@@ -79,10 +83,12 @@ tests (CI sets up Flutter stable).
    `pkgs/artisanal_widgets`):
    - `dart run tool/precompile_remote_plugins.dart` (in `pkgs/artisanal`)
      runs before the tests.
-   - Dart packages on Ubuntu: `dart test pkgs/<pkg> -r compact`.
+   - Dart packages on Ubuntu: `dart test pkgs/<pkg> -r compact`; the PTY
+     harness targets `pkgs/artisanal_test/test` explicitly.
    - `artisanal_widgets`: `flutter test pkgs/artisanal_widgets -r compact`
      (Ubuntu only — there is no Windows job for it).
-   - Dart packages on Windows: `dart test pkgs/<pkg> --concurrency=1 -r compact`.
+   - Dart packages on Windows use `--concurrency=1`; the PTY harness again
+     targets its explicit `test/` directory.
 
 Changes must pass on both Ubuntu and Windows where the platform matrix
 applies; Windows differs in ANSI/wrap behavior and needs `--concurrency=1`.

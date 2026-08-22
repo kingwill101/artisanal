@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   core_dir: ./pkgs/artisanal
+  test_dir: ./pkgs/artisanal_test
   widgets_dir: ./pkgs/artisanal_widgets
   uv_dir: ./pkgs/ultraviolet
 
@@ -19,6 +20,12 @@ tasks:
   test-core:
     desc: Run tests for artisanal core
     dir: "{{.core_dir}}"
+    cmds:
+      - dart test
+
+  test-harness:
+    desc: Run tests for the PTY harness
+    dir: "{{.test_dir}}"
     cmds:
       - dart test
 

@@ -17,9 +17,21 @@ backends can implement the same contract.
 
 ## Testing
 
+From the workspace root:
+
 ```sh
-dart test pkgs/artisanal_test -r compact
+dart test pkgs/artisanal_test/test -r compact
 ```
+
+Or from this package directory:
+
+```sh
+dart test -r compact
+```
+
+Do not pass `pkgs/artisanal_test` itself as the test target. Because the
+package directory ends in `_test`, the runner may also try to load the public
+library barrel as a test file.
 
 Use fake backends for unit tests. Native backend integration tests should be
 separately tagged so ordinary workspace tests stay deterministic.
