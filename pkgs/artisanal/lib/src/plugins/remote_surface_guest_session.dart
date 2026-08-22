@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'remote_surface_channel.dart';
 import 'remote_surface_guest_services.dart';
 import 'remote_surface_protocol.dart';
+import 'remote_surface_sink_line_writer.dart';
 
 /// Plugin-side session wrapper around a remote plugin channel.
 ///
@@ -53,12 +54,7 @@ final class RemotePluginGuestSession {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final channel = RemotePluginJsonChannel(
-      sendLine:
-          sendLine ??
-          (line) async {
-            io.stdout.write(line);
-            await io.stdout.flush();
-          },
+      sendLine: sendLine ?? RemotePluginSinkLineWriter(io.stdout).send,
       validator: validator,
     );
     channel.bindBytes(input ?? io.stdin);

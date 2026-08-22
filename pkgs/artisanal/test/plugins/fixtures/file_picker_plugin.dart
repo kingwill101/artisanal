@@ -47,6 +47,10 @@ Future<void> main() async {
     status = 'pick:error:${error.message}';
   }
   await publish();
+  // Serve until the host hangs up instead of exiting after the final frame;
+  // a self-exit races the host's service replies into dead-stdin errors on
+  // Windows.
+  await session.messages.drain<void>();
   await session.dispose();
 }
 

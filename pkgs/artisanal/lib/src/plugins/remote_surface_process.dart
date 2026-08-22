@@ -5,6 +5,7 @@ import 'dart:io' as io;
 import 'remote_surface_channel.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_session.dart';
+import 'remote_surface_sink_line_writer.dart';
 
 /// Running out-of-process plugin connected over stdio.
 final class RemotePluginProcess {
@@ -35,10 +36,7 @@ final class RemotePluginProcess {
     );
 
     final channel = RemotePluginJsonChannel(
-      sendLine: (line) async {
-        process.stdin.write(line);
-        await process.stdin.flush();
-      },
+      sendLine: RemotePluginSinkLineWriter(process.stdin).send,
       validator: validator,
     );
     channel.bindBytes(process.stdout);
