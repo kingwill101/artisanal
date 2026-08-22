@@ -4,7 +4,7 @@ import 'dart:typed_data';
 /// A timestamped interaction observed during a PTY session.
 sealed class PtyEvent {
   /// Creates an event at [elapsed] time since the session was attached.
-  const PtyEvent(this.elapsed);
+  const PtyEvent({required this.elapsed});
 
   /// Monotonic time elapsed since session attachment.
   final Duration elapsed;
