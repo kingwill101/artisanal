@@ -50,6 +50,7 @@ jobs:
         package:
           - pkgs/ultraviolet
           - pkgs/artisanal
+          - pkgs/artisanal_test
           - pkgs/artisanal_widgets
     steps:
       - uses: actions/checkout@v4
