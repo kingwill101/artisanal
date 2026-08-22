@@ -45,7 +45,7 @@ void main() {
             wrap: const [],
             relative: true,
             altscreen: false,
-            expected: ['\rABC\r\n\n\n\n', '\x1b[4AXXX'],
+            expected: ['\rABC\r\n\r\n\r\n\r\n', '\x1b[4AXXX'],
           ),
           (
             name: 'scroll one line',
@@ -55,11 +55,11 @@ void main() {
             altscreen: true,
             expected: isWindows
                 ? [
-                    '\x1b[H\x1b[2JLorem ipsu\r\nm dolor si\r\nt amet, co\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
-                    '\x1b[Hm dolor si\r\nt amet, co\r\nnsectetur\x1b[K\r\nadipiscing\r\n elit. Vi\x1b[?7lv\x1b[?7h',
+                    '\x1b[H\x1b[2JLorem ipsu\r\r\nm dolor si\r\r\nt amet, co\r\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
+                    '\x1b[Hm dolor si\r\r\nt amet, co\r\r\nnsectetur\x1b[K\r\nadipiscing\r\r\n elit. Vi\x1b[?7lv\x1b[?7h',
                   ]
                 : [
-                    '\x1b[H\x1b[2JLorem ipsu\r\nm dolor si\r\nt amet, co\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
+                    '\x1b[H\x1b[2JLorem ipsu\r\r\nm dolor si\r\r\nt amet, co\r\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
                     '\r\n elit. Vi\x1b[?7lv\x1b[?7h',
                   ],
           ),
@@ -71,12 +71,12 @@ void main() {
             altscreen: true,
             expected: isWindows
                 ? [
-                    '\x1b[H\x1b[2JLorem ipsu\r\nm dolor si\r\nt amet, co\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
-                    '\x1b[Ht amet, co\r\nnsectetur\x1b[K\r\nadipiscing\r\n elit. Viv\r\namus at o\x1b[?7lr\x1b[?7h',
+                    '\x1b[H\x1b[2JLorem ipsu\r\r\nm dolor si\r\r\nt amet, co\r\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
+                    '\x1b[Ht amet, co\r\r\nnsectetur\x1b[K\r\nadipiscing\r\r\n elit. Viv\r\r\namus at o\x1b[?7lr\x1b[?7h',
                   ]
                 : [
-                    '\x1b[H\x1b[2JLorem ipsu\r\nm dolor si\r\nt amet, co\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
-                    '\r\x1b[2S\x1bM elit. Viv\r\namus at o\x1b[?7lr\x1b[?7h',
+                    '\x1b[H\x1b[2JLorem ipsu\r\r\nm dolor si\r\r\nt amet, co\r\r\nnsectetur\r\nadipiscin\x1b[?7lg\x1b[?7h',
+                    '\r\x1b[2S\x1bM elit. Viv\r\r\namus at o\x1b[?7lr\x1b[?7h',
                   ],
           ),
           (
@@ -88,7 +88,7 @@ void main() {
             expected: isWindows
                 ? [
                     '\x1b[H\x1b[2JABC\r\nDEF\r\nGHI',
-                    '\r\x1bM\x1b[K\nDEF\r\nGHI',
+                    '\r\x1bM\x1b[K\r\nDEF\r\nGHI',
                   ]
                 : ['\x1b[H\x1b[2JABC\r\nDEF\r\nGHI', '\r\x1bM\x1b[L'],
           ),
@@ -98,7 +98,7 @@ void main() {
             wrap: const [],
             relative: false,
             altscreen: false,
-            expected: ['\x1b[2;1HABCEFGHIJK\r\n\n\n', '\x1b[2;5H\x1b[K'],
+            expected: ['\x1b[2;1HABCEFGHIJK\r\x1b[5;1H', '\x1b[2;5H\x1b[K\x1b[5;1H'],
           ),
         ];
 
