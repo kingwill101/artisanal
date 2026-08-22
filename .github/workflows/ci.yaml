@@ -70,16 +70,24 @@ jobs:
         run: dart run tool/precompile_remote_plugins.dart
 
       - name: Test Dart package ${{ matrix.package }}
-        if: matrix.package != 'pkgs/artisanal_widgets' && matrix.os != 'windows-latest'
+        if: matrix.package != 'pkgs/artisanal_widgets' && matrix.package != 'pkgs/artisanal_test' && matrix.os != 'windows-latest'
         run: dart test ${{ matrix.package }} -r compact
+
+      - name: Test PTY harness package
+        if: matrix.package == 'pkgs/artisanal_test' && matrix.os != 'windows-latest'
+        run: dart test pkgs/artisanal_test/test -r compact
 
       - name: Test Flutter package ${{ matrix.package }}
         if: matrix.package == 'pkgs/artisanal_widgets' && matrix.os != 'windows-latest'
         run: flutter test ${{ matrix.package }} -r compact
 
       - name: Test Dart package on Windows ${{ matrix.package }}
-        if: matrix.package != 'pkgs/artisanal_widgets' && matrix.os == 'windows-latest'
+        if: matrix.package != 'pkgs/artisanal_widgets' && matrix.package != 'pkgs/artisanal_test' && matrix.os == 'windows-latest'
         run: dart test ${{ matrix.package }} --concurrency=1 -r compact
+
+      - name: Test PTY harness package on Windows
+        if: matrix.package == 'pkgs/artisanal_test' && matrix.os == 'windows-latest'
+        run: dart test pkgs/artisanal_test/test --concurrency=1 -r compact
 
       - name: Test Flutter package on Windows ${{ matrix.package }}
         if: matrix.package == 'pkgs/artisanal_widgets' && matrix.os == 'windows-latest'
