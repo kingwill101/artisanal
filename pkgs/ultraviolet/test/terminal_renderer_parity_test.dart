@@ -51,7 +51,10 @@ void main() {
     r.render(buf);
     r.flush();
 
-    expect(out.value, '\x1b[H\x1b[2JX\nX\nX');
+    // Downward moves emit explicit CR+LF: a lone LF keeps the column only on
+    // a raw-mode tty, and cooked consoles (Windows among them) expand it to
+    // CR+LF, which resets the column (upstream issue #8).
+    expect(out.value, '\x1b[H\x1b[2JX\r\n X\r\n  X');
   });
 
   test('UvTerminalRenderer parity: inline renderer output', () {
@@ -72,7 +75,7 @@ void main() {
     r.render(buf);
     r.flush();
 
-    expect(out.value, '\rHello, World!\r\n\n');
+    expect(out.value, '\rHello, World!\r\n\r\n');
   });
 
   test('UvTerminalRenderer parity: color profile setter', () {
@@ -218,7 +221,7 @@ void main() {
     r.render(large);
     r.flush();
 
-    expect(out.value, '\x1b[HX\r\n\n\x1b[J\x1bMX\x1b[K\r\n\n\n\n');
+    expect(out.value, '\x1b[HX\r\n\r\n\x1b[J\x1bMX\x1b[K\x1b[6;1H');
   });
 
   test('UvTerminalRenderer parity: phantom cursor', () {
@@ -237,7 +240,7 @@ void main() {
     r.render(buf);
     r.flush();
 
-    expect(out.value, '\x1b[1;5HX\r\n\x1b[5GX\r\n\x1b[5G\x1b[?7lX\x1b[?7h');
+    expect(out.value, '\x1b[1;5HX\r\r\n    X\r\r\n    \x1b[?7lX\x1b[?7h');
   });
 
   test('UvTerminalRenderer parity: updates (upstream frames)', () {
@@ -245,7 +248,7 @@ void main() {
       (
         name: 'simple style change',
         frames: ['A', '\x1b[1mA'],
-        expected: ['\rA\r\n\n', '\x1b[2A\x1b[1mA\x1b[m'],
+        expected: ['\rA\r\n\r\n', '\x1b[2A\x1b[1mA\x1b[m'],
       ),
       (
         name: 'style and link change',
@@ -254,7 +257,7 @@ void main() {
           '\x1b[31m\x1b]8;;https://example.com\x1b\\A\x1b]8;;\x1b\\',
         ],
         expected: [
-          '\rA\r\n\n',
+          '\rA\r\n\r\n',
           '\x1b[2A\x1b[31m\x1b]8;;https://example.com\x07A\x1b[m\x1b]8;;\x07',
         ],
       ),
@@ -310,7 +313,7 @@ void main() {
 
     expect(
       out.value,
-      '\x1b[HThis-is-a\r\n\n\n\n\n\n\x1b[H\x1b[2LPrepended-a-new-line\r\n',
+      '\x1b[HThis-is-a\x1b[5;1H\n\n\x1b[H\x1b[2LPrepended-a-new-line\r\n\x1b[5;1H',
     );
   });
 
@@ -359,7 +362,7 @@ void main() {
     r.render(cellbuf);
     r.flush();
 
-    expect(out.value, '\x1b[1;5HX\r\n\x1b[5GX\r\n\x1b[5G\x1b[?7lX\x1b[?7h');
+    expect(out.value, '\x1b[1;5HX\r\r\n    X\r\r\n    \x1b[?7lX\x1b[?7h');
   });
 
   test('UvTerminalRenderer parity: resize with clear does not crash', () {

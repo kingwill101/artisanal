@@ -2573,11 +2573,14 @@ String debugDirectRelativeMoveSeq(
       final shouldScroll =
           (s._flags & _Flag.fullscreen) == 0 && ty > s._scrollHeight;
       if (shouldScroll || n < yseq.length) {
-        yseq = List.filled(n, '\n').join();
+        // A lone LF keeps the column only when the tty's output processing is
+        // off (raw mode). Cooked consoles, Windows among them, expand LF to
+        // CR+LF and reset the column. Emitting CR+LF explicitly and planning
+        // the rest of the move from column 0 lands identically under either
+        // reading.
+        yseq = List.filled(n, '\r\n').join();
         scrollHeight = ty;
-        if ((s._flags & _Flag.mapNewline) != 0) {
-          fx = 0;
-        }
+        fx = 0;
       }
     } else {
       final n = fy - ty;
