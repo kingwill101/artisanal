@@ -13,8 +13,12 @@ final class RemotePluginKernelCache {
   }) async {
     final cachedFile = io.File(outputPath);
     final fingerprintFile = io.File('$outputPath.sdk-fingerprint');
+    final sourceStat = await io.File(entrypointPath).stat();
+    // The cached kernel must track its source too, or fixture edits keep
+    // silently running the previously compiled binary.
     final fingerprint =
-        '${io.Platform.resolvedExecutable}\n${io.Platform.version}';
+        '${io.Platform.resolvedExecutable}\n${io.Platform.version}\n'
+        '${sourceStat.modified.toIso8601String()}:${sourceStat.size}';
     if (await cachedFile.exists() &&
         await fingerprintFile.exists() &&
         await fingerprintFile.readAsString() == fingerprint) {

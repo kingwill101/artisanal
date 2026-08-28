@@ -90,7 +90,15 @@ void main() {
             ),
             timeout: const Duration(seconds: 60),
           );
-      addTearDown(() => workspace.dispose(kill: true));
+      addTearDown(() async {
+        await workspace.dispose(kill: true);
+        // Windows cannot delete a directory a dying child still holds as its
+        // working directory, so wait for every plugin process to be gone.
+        await Future.wait(<Future<int>>[
+          for (final connection in workspace.connections.values)
+            connection.process.exitCode,
+        ]);
+      });
 
       expect(
         workspace.manifests.map((manifest) => manifest.id).toList(),
@@ -102,9 +110,8 @@ void main() {
         'notification',
       );
 
-      // Focus while the notification fixture is still servicing requests.
-      // The fixture exits after publishing its final frame, so focusing it
-      // after the frame assertions races the child process closing stdin.
+      // Both fixtures serve until the host hangs up, so focusing the
+      // already-published notification surface cannot race its process exit.
       await workspace.focusPlugin('notification');
       expect(workspace.router.focusedSurfaceId, 'notification.panel');
 
