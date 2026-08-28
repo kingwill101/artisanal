@@ -112,6 +112,12 @@ export 'src/uv/key.dart';
 export 'src/uv/key_table.dart';
 export 'src/uv/ansi.dart' show UvAnsi;
 export 'src/ansi.dart' show Ansi;
+// Windows-only CONIN$ native reader; lets the TUI bypass Dart's stdin so
+// Ctrl+Z (0x1A) does not latch the stream into EOF when
+// ENABLE_VIRTUAL_TERMINAL_INPUT is active. Imported by the stdin stream
+// source on Windows.
+export 'src/uv/terminal_windows_native.dart'
+    show NativeWindowsInputStream, sharedWindowsInputStream;
 export 'src/uv/style_ops.dart';
 export 'src/uv/progress_bar.dart';
 export 'src/uv/wrap.dart';
