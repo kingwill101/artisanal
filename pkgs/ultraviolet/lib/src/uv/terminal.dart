@@ -270,6 +270,9 @@ class Terminal
     await _winch.stop();
     await _reader.close();
 
+    // Shut down input streams (shared stdin on all platforms, native CONIN$ on Windows).
+    await shutdownInput();
+
     // Close the event controller to release any listeners.
     if (!_eventController.isClosed) {
       await _eventController.close();

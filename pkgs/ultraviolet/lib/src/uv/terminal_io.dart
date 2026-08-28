@@ -2,8 +2,43 @@ import 'dart:async';
 import 'dart:io';
 
 import 'terminal_windows_io.dart';
+import 'stdin_stream_io.dart';
 
-Stream<List<int>> get defaultInput => stdin;
+Stream<List<int>>? _defaultInput;
+NativeWindowsInputStream? _nativeInputStream;
+bool _usingNativeInput = false;
+
+Stream<List<int>> get defaultInput {
+  if (_defaultInput != null) return _defaultInput!;
+  if (!Platform.isWindows) {
+    _defaultInput = stdin;
+    return _defaultInput!;
+  }
+  // On Windows, use the native CONIN$ reader to avoid the Ctrl+Z → EOF bug
+  // when ENABLE_VIRTUAL_TERMINAL_INPUT is active.
+  _nativeInputStream = NativeWindowsInputStream();
+  _defaultInput = _nativeInputStream!.start();
+  _usingNativeInput = true;
+  return _defaultInput!;
+}
+
+/// Shuts down the native Windows input stream if it was created.
+/// Should be called during terminal shutdown on Windows.
+Future<void> shutdownNativeInputStream() async {
+  if (_nativeInputStream != null) {
+    await _nativeInputStream!.close();
+    _nativeInputStream = null;
+    _defaultInput = null;
+    _usingNativeInput = false;
+  }
+}
+
+/// Shuts down all input streams (shared stdin and native Windows).
+/// Called from Terminal.stop() to ensure clean process exit.
+Future<void> shutdownInput() async {
+  await shutdownNativeInputStream();
+  await shutdownSharedStdinStream();
+}
 
 StringSink get defaultOutput => stdout;
 
@@ -21,18 +56,25 @@ StreamSubscription<Object?>? watchSigint(void Function() handler) =>
 
 void exitProcess() => exit(0);
 
-bool isStdin(Stream<List<int>> input) => input == stdin;
+bool isStdin(Stream<List<int>> input) => input == stdin || _usingNativeInput;
 
 bool get stdinHasTerminal => stdin.hasTerminal;
 
 void enterRawMode() {
-  stdin.echoMode = false;
-  stdin.lineMode = false;
-  enableWindowsVtInput();
+  if (_usingNativeInput) {
+    // Native reader handles input directly; only configure console mode.
+    enableWindowsVtInput();
+  } else {
+    stdin.echoMode = false;
+    stdin.lineMode = false;
+    enableWindowsVtInput();
+  }
 }
 
 void exitRawMode() {
   restoreWindowsVtInput();
-  stdin.echoMode = true;
-  stdin.lineMode = true;
+  if (!_usingNativeInput) {
+    stdin.echoMode = true;
+    stdin.lineMode = true;
+  }
 }

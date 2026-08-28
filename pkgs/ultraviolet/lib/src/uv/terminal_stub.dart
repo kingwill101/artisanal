@@ -24,3 +24,6 @@ bool get stdinHasTerminal => false;
 void enterRawMode() {}
 
 void exitRawMode() {}
+
+/// No-op on non-Windows platforms.
+Future<void> shutdownInput() async {}

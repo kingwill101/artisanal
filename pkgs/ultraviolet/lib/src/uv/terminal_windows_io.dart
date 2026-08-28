@@ -3,6 +3,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
+export 'terminal_windows_native.dart' show NativeWindowsInputStream;
+
 // Console input-mode flags (consoleapi / wincon.h).
 const int _enableLineInput = 0x0002;
 const int _enableEchoInput = 0x0004;
