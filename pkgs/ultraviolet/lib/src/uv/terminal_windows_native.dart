@@ -2,8 +2,8 @@
 // Bypasses Dart's stdin (which uses ReadFile) to avoid the Ctrl+Z → EOF
 // conversion that occurs when ENABLE_VIRTUAL_TERMINAL_INPUT is active.
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
-import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -210,30 +210,15 @@ class NativeWindowsInputStream {
   /// them as one INPUT_RECORD per byte. The EventDecoder downstream of
   /// this stream already knows how to parse the resulting byte stream,
   /// so we just forward it verbatim.
+  ///
+  /// [KeyEventRecord.unicodeChar] is a 16-bit code unit (BMP only), so
+  /// [String.fromCharCode] — and not `String.fromCharCodes` with surrogate
+  /// pairing — is the right input to [utf8.encode].
   static void _forwardRecord(_InputRecord rec, List<int> out) {
     if (rec.eventType != _keyEvent) return;
     if (rec.event.keyDown == 0) return; // key-up only
     final codePoint = rec.event.unicodeChar;
     if (codePoint == 0) return; // modifier-only record
-    _writeUtf8(codePoint, out);
-  }
-
-  /// Writes a Unicode code point as UTF-8 bytes.
-  static void _writeUtf8(int codePoint, List<int> out) {
-    if (codePoint <= 0x7F) {
-      out.add(codePoint);
-    } else if (codePoint <= 0x7FF) {
-      out.add(0xC0 | (codePoint >> 6));
-      out.add(0x80 | (codePoint & 0x3F));
-    } else if (codePoint <= 0xFFFF) {
-      out.add(0xE0 | (codePoint >> 12));
-      out.add(0x80 | ((codePoint >> 6) & 0x3F));
-      out.add(0x80 | (codePoint & 0x3F));
-    } else {
-      out.add(0xF0 | (codePoint >> 18));
-      out.add(0x80 | ((codePoint >> 12) & 0x3F));
-      out.add(0x80 | ((codePoint >> 6) & 0x3F));
-      out.add(0x80 | (codePoint & 0x3F));
-    }
+    out.addAll(utf8.encode(String.fromCharCode(codePoint)));
   }
 }

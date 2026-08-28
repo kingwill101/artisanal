@@ -5,6 +5,8 @@ import 'terminal_windows_io.dart';
 import 'stdin_stream_io.dart';
 
 Stream<List<int>>? _defaultInput;
+// On Windows, holds the only strong reference to the native CONIN$ reader
+// so its worker isolate and FFI handle can be torn down on [shutdownInput].
 NativeWindowsInputStream? _nativeInputStream;
 bool _usingNativeInput = false;
 
@@ -22,21 +24,15 @@ Stream<List<int>> get defaultInput {
   return _defaultInput!;
 }
 
-/// Shuts down the native Windows input stream if it was created.
-/// Should be called during terminal shutdown on Windows.
-Future<void> shutdownNativeInputStream() async {
+/// Shuts down all input streams (shared stdin and native Windows).
+/// Called from Terminal.stop() to ensure clean process exit.
+Future<void> shutdownInput() async {
   if (_nativeInputStream != null) {
     await _nativeInputStream!.close();
     _nativeInputStream = null;
     _defaultInput = null;
     _usingNativeInput = false;
   }
-}
-
-/// Shuts down all input streams (shared stdin and native Windows).
-/// Called from Terminal.stop() to ensure clean process exit.
-Future<void> shutdownInput() async {
-  await shutdownNativeInputStream();
   await shutdownSharedStdinStream();
 }
 

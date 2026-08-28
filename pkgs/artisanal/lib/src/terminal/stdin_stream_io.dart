@@ -9,28 +9,13 @@ import 'stdin_stream_shared.dart';
 /// reader (bypasses Dart's stdin so Ctrl+Z does not latch the stream into
 /// EOF when ENABLE_VIRTUAL_TERMINAL_INPUT is active). On other platforms,
 /// plain [stdin].
+///
+/// [NativeWindowsInputStream.start] only builds a [StreamController] — the
+/// worker isolate is spawned from the controller's `onListen` callback, so
+/// no side effect occurs before the first subscriber.
 final Stream<List<int>> _stdinSource = Platform.isWindows
-    ? _NativeSource()
+    ? NativeWindowsInputStream().start()
     : stdin;
-
-class _NativeSource extends Stream<List<int>> {
-  final NativeWindowsInputStream _stream = NativeWindowsInputStream();
-
-  @override
-  StreamSubscription<List<int>> listen(
-    void Function(List<int> event)? onData, {
-    Function? onError,
-    void Function()? onDone,
-    bool? cancelOnError,
-  }) {
-    return _stream.start().listen(
-      onData,
-      onError: onError,
-      onDone: onDone,
-      cancelOnError: cancelOnError,
-    );
-  }
-}
 
 final SharedInputStream _sharedStdin = SharedInputStream(_stdinSource);
 
