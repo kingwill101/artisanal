@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:io';
-
 /// Shared broadcast input stream wrapper.
 ///
 /// Dart's `stdin` is a single-subscription stream: once listened to, it cannot
@@ -13,87 +10,14 @@ import 'dart:io';
 /// started. This enables re-listening within the same process, but it can also
 /// keep the Dart event loop alive on real TTYs. Call [shutdownSharedStdinStream]
 /// when the process should be allowed to exit cleanly.
-class SharedInputStream {
-  SharedInputStream(this._source);
-
-  final Stream<List<int>> _source;
-
-  StreamController<List<int>>? _controller;
-  StreamSubscription<List<int>>? _subscription;
-  bool _shutdown = false;
-
-  bool get isStarted => _subscription != null;
-  bool get isShutdown => _shutdown;
-
-  Stream<List<int>> get stream {
-    if (_shutdown) {
-      throw StateError(
-        'SharedInputStream is shut down (this usually means a previous TUI '
-        'closed stdin for process exit).',
-      );
-    }
-    _controller ??= StreamController<List<int>>.broadcast(
-      onListen: _ensureStarted,
-      onCancel: _onCancel,
-    );
-    return _controller!.stream;
-  }
-
-  void _ensureStarted() {
-    if (_shutdown || _subscription != null) return;
-
-    final controller = _controller;
-    if (controller == null || controller.isClosed) return;
-
-    _subscription = _source.listen(
-      controller.add,
-      onError: controller.addError,
-      onDone: () {
-        // When stdin closes (e.g. piped input), close the broadcast stream too.
-        controller.close();
-      },
-      cancelOnError: false,
-    );
-  }
-
-  Future<void>? _onCancel() {
-    // We intentionally do NOT cancel the source subscription here.
-    // If we are listening to stdin, canceling the subscription would make
-    // it impossible to listen again later (since stdin is a single-subscription stream).
-    // Instead, we rely on the explicit shutdown() call to clean up.
-    return null;
-  }
-
-  Future<void> shutdown() async {
-    if (_shutdown) return;
-    _shutdown = true;
-
-    try {
-      await _subscription?.cancel();
-    } catch (_) {
-      // Subscription may already be closed or in error state.
-    }
-    _subscription = null;
-
-    try {
-      await _controller?.close();
-    } catch (_) {
-      // Controller may already be closed.
-    }
-    _controller = null;
-  }
-}
-
-/// Shared broadcast stream for [stdin] to allow multiple listeners and restarts.
-Stream<List<int>> get sharedStdinStream => _sharedStdin.stream;
-
-/// Returns true if the shared stdin stream has started listening to [stdin].
-bool get isSharedStdinStreamStarted => _sharedStdin.isStarted;
-
-/// Shuts down the shared stdin stream so the process can exit cleanly.
 ///
-/// This cancels the underlying subscription to [stdin]. After this is called,
-/// [sharedStdinStream] should not be used again within the same process.
-Future<void> shutdownSharedStdinStream() => _sharedStdin.shutdown();
+/// The actual byte source is platform-conditional: on Windows it is the native
+/// CONIN$ reader (so Ctrl+Z does not latch the stream into EOF when
+/// ENABLE_VIRTUAL_TERMINAL_INPUT is active); on other platforms it is plain
+/// [stdin].
+library;
 
-final SharedInputStream _sharedStdin = SharedInputStream(stdin);
+export 'stdin_stream_shared.dart' show SharedInputStream;
+
+export 'stdin_stream_stub.dart'
+    if (dart.library.io) 'stdin_stream_io.dart';
