@@ -14,9 +14,31 @@ String _nativeReaderLogPath() {
 }
 
 void _logNativeReader(String msg) {
+  // Two paths: the %TEMP% one, and a C:\Temp fallback. The C:\Temp write
+  // also tells us whether the first path failed.
+  final primary = _nativeReaderLogPath();
+  final fallback = 'C:\\Temp\\uv_native_reader.log';
+  String? wrotePath;
   try {
-    File(_nativeReaderLogPath()).writeAsStringSync('$msg\n', mode: FileMode.append);
-  } catch (_) {}
+    File(primary).writeAsStringSync('$msg\n', mode: FileMode.append);
+    wrotePath = primary;
+  } catch (_) {
+    try {
+      File(fallback).writeAsStringSync('$msg\n', mode: FileMode.append);
+      wrotePath = fallback;
+    } catch (_) {
+      wrotePath = null;
+    }
+  }
+  if (wrotePath != null && wrotePath != primary) {
+    // First write to fallback — make it discoverable.
+    try {
+      File(fallback).writeAsStringSync(
+        'LOG-NOTE: primary log path failed, falling back here\n',
+        mode: FileMode.append,
+      );
+    } catch (_) {}
+  }
 }
 
 void _logNativeReaderToPort(SendPort port, String msg) {
@@ -125,38 +147,61 @@ class NativeWindowsInputStream {
 
   /// Starts the native input reader and returns a broadcast stream of bytes.
   Stream<List<int>> start() {
+    _logNativeReader('[main] NativeWindowsInputStream.start() called');
     if (_closed) {
+      _logNativeReader('[main] start() rejected: stream already closed');
       throw StateError('NativeWindowsInputStream has been closed');
     }
     _controller ??= StreamController<List<int>>.broadcast(
       onListen: _ensureIsolate,
       onCancel: () {},
     );
+    _logNativeReader('[main] start() returning broadcast stream');
     return _controller!.stream;
   }
 
   void _ensureIsolate() async {
-    if (_isolate != null) return;
+    if (_isolate != null) {
+      _logNativeReader('[main] _ensureIsolate: isolate already running');
+      return;
+    }
 
+    _logNativeReader('[main] _ensureIsolate: opening ReceivePort');
     _receivePort = ReceivePort();
-    _isolate = await Isolate.spawn<_StartReading>(
-      _readerIsolateEntry,
-      _StartReading(_receivePort!.sendPort),
-    );
+
+    _logNativeReader('[main] _ensureIsolate: calling Isolate.spawn');
+    try {
+      _isolate = await Isolate.spawn<_StartReading>(
+        _readerIsolateEntry,
+        _StartReading(_receivePort!.sendPort),
+      );
+      _logNativeReader('[main] _ensureIsolate: Isolate.spawn resolved');
+    } catch (e, st) {
+      _logNativeReader('[main] _ensureIsolate: Isolate.spawn threw: $e\n$st');
+      rethrow;
+    }
 
     _receivePort!.listen((message) {
       if (message is SendPort) {
+        _logNativeReader('[main] receivePort: got worker SendPort');
         _sendPort = message;
       } else if (message is Uint8List) {
+        _logNativeReader('[main] receivePort: got ${message.length} bytes');
         _controller?.add(message);
       } else if (message is String) {
+        _logNativeReader('[main] receivePort: string msg: $message');
         _controller?.addError(Exception(message));
       } else if (message == 'closed') {
+        _logNativeReader('[main] receivePort: closed');
         _controller?.close();
+      } else {
+        _logNativeReader('[main] receivePort: unknown message type ${message.runtimeType}');
       }
     }, onError: (err) {
+      _logNativeReader('[main] receivePort.onError: $err');
       _controller?.addError(err);
     }, onDone: () {
+      _logNativeReader('[main] receivePort.onDone fired');
       _controller?.close();
     });
   }

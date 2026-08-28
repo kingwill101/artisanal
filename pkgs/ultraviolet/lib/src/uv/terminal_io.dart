@@ -8,17 +8,40 @@ Stream<List<int>>? _defaultInput;
 NativeWindowsInputStream? _nativeInputStream;
 bool _usingNativeInput = false;
 
+void _logTerminalIo(String msg) {
+  // Mirror the same TEMP/C:\Temp fallback as the native reader so we get
+  // main-isolate visibility even when the worker isolate never logs.
+  final tempDir =
+      Platform.environment['TEMP'] ?? Platform.environment['TMP'] ?? 'C:\\Temp';
+  for (final p in ['$tempDir\\uv_native_reader.log', 'C:\\Temp\\uv_native_reader.log']) {
+    try {
+      File(p).writeAsStringSync('[$msg]\n', mode: FileMode.append);
+    } catch (_) {}
+  }
+}
+
 Stream<List<int>> get defaultInput {
-  if (_defaultInput != null) return _defaultInput!;
+  if (_defaultInput != null) {
+    _logTerminalIo('defaultInput: returning cached stream (usingNative=$_usingNativeInput)');
+    return _defaultInput!;
+  }
   if (!Platform.isWindows) {
+    _logTerminalIo('defaultInput: not Windows, using stdin');
     _defaultInput = stdin;
     return _defaultInput!;
   }
+  _logTerminalIo('defaultInput: Windows, creating NativeWindowsInputStream');
   // On Windows, use the native CONIN$ reader to avoid the Ctrl+Z → EOF bug
   // when ENABLE_VIRTUAL_TERMINAL_INPUT is active.
-  _nativeInputStream = NativeWindowsInputStream();
-  _defaultInput = _nativeInputStream!.start();
-  _usingNativeInput = true;
+  try {
+    _nativeInputStream = NativeWindowsInputStream();
+    _defaultInput = _nativeInputStream!.start();
+    _usingNativeInput = true;
+    _logTerminalIo('defaultInput: native stream created, usingNative=true');
+  } catch (e, st) {
+    _logTerminalIo('defaultInput: native stream creation FAILED: $e\n$st');
+    rethrow;
+  }
   return _defaultInput!;
 }
 
