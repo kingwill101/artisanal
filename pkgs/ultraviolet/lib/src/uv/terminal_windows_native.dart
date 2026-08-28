@@ -42,7 +42,13 @@ void _logNativeReader(String msg) {
 }
 
 void _logNativeReaderToPort(SendPort port, String msg) {
-  port.send('LOG: $msg');
+  // Reserved for future use. Strings sent through the port surface as
+  // addError(Exception) on the broadcast controller and crash the TUI, so
+  // the in-isolate file log is the only diagnostic path. The previous
+  // attempt routed the file log through this port; that was wrong, and the
+  // silence was a dead end for debugging. Kept as a no-op so any stray
+  // caller compiles and runs without sending anything.
+  // Intentionally empty.
 }
 
 // Win32 constants
@@ -189,11 +195,15 @@ class NativeWindowsInputStream {
         _logNativeReader('[main] receivePort: got ${message.length} bytes');
         _controller?.add(message);
       } else if (message is String) {
+        // Diagnostic / shutdown signalling from the worker. Logged to file
+        // and dropped, never converted to an Exception — earlier versions
+        // called addError here, which crashed the TUI on the very first
+        // port message before the reader could deliver a single byte.
         _logNativeReader('[main] receivePort: string msg: $message');
-        _controller?.addError(Exception(message));
-      } else if (message == 'closed') {
-        _logNativeReader('[main] receivePort: closed');
-        _controller?.close();
+        if (message == 'closed') {
+          _logNativeReader('[main] receivePort: closed');
+          _controller?.close();
+        }
       } else {
         _logNativeReader('[main] receivePort: unknown message type ${message.runtimeType}');
       }
@@ -240,11 +250,9 @@ class NativeWindowsInputStream {
 
   static void _runReaderLoop(SendPort port) {
     _logNativeReader('[_runReaderLoop] Starting');
-    _logNativeReaderToPort(port, '[_runReaderLoop] Starting');
 
     final k32 = DynamicLibrary.open('kernel32.dll');
     _logNativeReader('[_runReaderLoop] kernel32 loaded');
-    _logNativeReaderToPort(port, '[_runReaderLoop] kernel32 loaded');
 
     final createFileW = k32.lookupFunction<_CreateFileWC, _CreateFileWD>('CreateFileW');
     final readConsoleInputW = k32.lookupFunction<_ReadConsoleInputWC, _ReadConsoleInputWD>('ReadConsoleInputW');
@@ -252,14 +260,12 @@ class NativeWindowsInputStream {
     final localAlloc = k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
     final localFree = k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
     _logNativeReader('[_runReaderLoop] FFI functions loaded');
-    _logNativeReaderToPort(port, '[_runReaderLoop] FFI functions loaded');
 
     // Open CONIN$ directly
     final name = 'CONIN\$'.codeUnits;
     final nameBuf = localAlloc(_lmemZeroInit, (name.length + 1) * 2);
     if (nameBuf == 0) {
       _logNativeReader('[_runReaderLoop] Failed to allocate name buffer');
-      port.send('Failed to allocate memory for CONIN\$ name');
       return;
     }
     final namePtr = Pointer<Uint16>.fromAddress(nameBuf);
@@ -271,11 +277,9 @@ class NativeWindowsInputStream {
     final hConIn = createFileW(namePtr, _genericRead | _genericWrite, _fileShareRead | _fileShareWrite, 0, _openExisting, 0, 0);
     localFree(nameBuf);
     _logNativeReader('[_runReaderLoop] CreateFileW returned hConIn=$hConIn');
-    _logNativeReaderToPort(port, '[_runReaderLoop] CreateFileW returned hConIn=$hConIn');
 
     if (hConIn == -1 || hConIn == 0 || hConIn == _invalidHandleValue) {
       _logNativeReader('[_runReaderLoop] CreateFileW failed');
-      port.send('CreateFileW(CONIN\$) failed');
       return;
     }
 
@@ -286,28 +290,21 @@ class NativeWindowsInputStream {
     if (recBuf == 0) {
       closeHandle(hConIn);
       _logNativeReader('[_runReaderLoop] Failed to allocate record buffer');
-      port.send('Failed to allocate INPUT_RECORD buffer');
       return;
     }
     final recPtr = Pointer<_InputRecord>.fromAddress(recBuf);
     final readBuf = localAlloc(_lmemZeroInit, 4);
     final readPtr = Pointer<Uint32>.fromAddress(readBuf);
     _logNativeReader('[_runReaderLoop] Buffers allocated, entering read loop');
-    _logNativeReaderToPort(port, '[_runReaderLoop] Buffers allocated, entering read loop');
 
     while (true) {
       final result = readConsoleInputW(hConIn, recPtr.cast<Void>(), recordCount, readPtr);
-      _logNativeReader('[_runReaderLoop] ReadConsoleInputW returned result=$result');
-      _logNativeReaderToPort(port, '[_runReaderLoop] ReadConsoleInputW returned result=$result');
       if (result == 0) {
         // Read failed - likely handle closed
-        _logNativeReader('[_runReaderLoop] Read failed, breaking');
-        _logNativeReaderToPort(port, '[_runReaderLoop] Read failed, breaking');
+        _logNativeReader('[_runReaderLoop] ReadConsoleInputW returned 0, breaking');
         break;
       }
       final count = readPtr.value;
-      _logNativeReader('[_runReaderLoop] count=$count');
-      _logNativeReaderToPort(port, '[_runReaderLoop] count=$count');
       if (count == 0) continue;
 
       final bytes = <int>[];
@@ -317,14 +314,12 @@ class NativeWindowsInputStream {
       }
 
       if (bytes.isNotEmpty) {
-        _logNativeReader('[_runReaderLoop] Sending ${bytes.length} bytes: ${bytes.map((b) => '0x${b.toRadixString(16)}').join(' ')}');
-        _logNativeReaderToPort(port, '[_runReaderLoop] Sending ${bytes.length} bytes');
+        _logNativeReader('[_runReaderLoop] sending ${bytes.length} bytes: ${bytes.map((b) => '0x${b.toRadixString(16)}').join(' ')}');
         port.send(Uint8List.fromList(bytes));
       }
     }
 
     _logNativeReader('[_runReaderLoop] Cleaning up');
-    _logNativeReaderToPort(port, '[_runReaderLoop] Cleaning up');
     localFree(recBuf);
     localFree(readBuf);
     closeHandle(hConIn);
