@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'terminal_windows_io.dart';
+import 'terminal_windows_native.dart' show sharedWindowsInputStream;
 import 'stdin_stream_io.dart';
 
 Stream<List<int>>? _defaultInput;
-// On Windows, holds the only strong reference to the native CONIN$ reader
-// so its worker isolate and FFI handle can be torn down on [shutdownInput].
+// On Windows, holds the only strong reference to the shared native CONIN$
+// reader so its worker isolate and FFI handle can be torn down on
+// [shutdownInput]. The reader is process-singleton, so this is the one
+// and only handle the process should ever hold.
 NativeWindowsInputStream? _nativeInputStream;
 bool _usingNativeInput = false;
 
@@ -17,9 +20,11 @@ Stream<List<int>> get defaultInput {
     return _defaultInput!;
   }
   // On Windows, use the native CONIN$ reader to avoid the Ctrl+Z → EOF bug
-  // when ENABLE_VIRTUAL_TERMINAL_INPUT is active.
-  _nativeInputStream = NativeWindowsInputStream();
-  _defaultInput = _nativeInputStream!.start();
+  // when ENABLE_VIRTUAL_TERMINAL_INPUT is active. The reader is shared
+  // process-wide; see [sharedWindowsInputStream].
+  final stream = sharedWindowsInputStream;
+  _nativeInputStream = stream;
+  _defaultInput = stream.start();
   _usingNativeInput = true;
   return _defaultInput!;
 }
