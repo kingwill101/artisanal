@@ -13,6 +13,9 @@ const int _fileShareRead = 0x00000001;
 const int _fileShareWrite = 0x00000002;
 const int _openExisting = 3;
 const int _lmemZeroInit = 0x0040;
+const int _invalidHandleValue = -1;
+const int _waitTimeout = 0x00000102;
+const int _waitObject0 = 0x00000000;
 
 // Console input event types
 const int _keyEvent = 0x0001;
@@ -62,6 +65,8 @@ typedef _LocalAllocC = IntPtr Function(Uint32, IntPtr);
 typedef _LocalAllocD = int Function(int, int);
 typedef _LocalFreeC = IntPtr Function(IntPtr);
 typedef _LocalFreeD = int Function(int);
+typedef _WaitForSingleObjectC = Uint32 Function(IntPtr, Uint32);
+typedef _WaitForSingleObjectD = int Function(int, int);
 
 // INPUT_RECORD structure (matches Win32 on x64)
 final class _KeyEventRecord extends Struct {
@@ -182,6 +187,7 @@ class NativeWindowsInputStream {
     final closeHandle = k32.lookupFunction<_CloseHandleC, _CloseHandleD>('CloseHandle');
     final localAlloc = k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
     final localFree = k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
+    final waitForSingleObject = k32.lookupFunction<_WaitForSingleObjectC, _WaitForSingleObjectD>('WaitForSingleObject');
 
     // Open CONIN$ directly
     final name = 'CONIN\$'.codeUnits;
@@ -199,7 +205,7 @@ class NativeWindowsInputStream {
     final hConIn = createFileW(namePtr, _genericRead | _genericWrite, _fileShareRead | _fileShareWrite, 0, _openExisting, 0, 0);
     localFree(nameBuf);
 
-    if (hConIn == -1 || hConIn == 0) {
+    if (hConIn == -1 || hConIn == 0 || hConIn == _invalidHandleValue) {
       port.send('CreateFileW(CONIN\$) failed');
       return;
     }
@@ -219,6 +225,13 @@ class NativeWindowsInputStream {
 
     try {
       while (true) {
+        // Wait for input to be available (INFINITE wait)
+        final waitResult = waitForSingleObject(hConIn, 0xFFFFFFFF);
+        if (waitResult != _waitObject0 && waitResult != _waitTimeout) {
+          // Handle closed or error
+          break;
+        }
+
         final result = readConsoleInputW(hConIn, recPtr.cast<Void>(), recordCount, readPtr);
         if (result == 0) {
           // Read failed - likely handle closed
@@ -237,6 +250,9 @@ class NativeWindowsInputStream {
           port.send(Uint8List.fromList(bytes));
         }
       }
+    } catch (e) {
+      // Any exception in the isolate should be reported, not crash silently
+      port.send('Reader isolate error: $e');
     } finally {
       localFree(recBuf);
       localFree(readBuf);
