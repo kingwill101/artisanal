@@ -3,8 +3,21 @@
 // conversion that occurs when ENABLE_VIRTUAL_TERMINAL_INPUT is active.
 import 'dart:async';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
+
+/// Debug log file path for the native reader.
+String _nativeReaderLogPath() {
+  final tempDir = Platform.environment['TEMP'] ?? Platform.environment['TMP'] ?? '';
+  return '$tempDir\\uv_native_reader.log';
+}
+
+void _logNativeReader(String msg) {
+  try {
+    File(_nativeReaderLogPath()).writeAsStringSync('$msg\n', mode: FileMode.append);
+  } catch (_) {}
+}
 
 // Win32 constants
 const int _genericRead = 0x80000000;
@@ -14,8 +27,6 @@ const int _fileShareWrite = 0x00000002;
 const int _openExisting = 3;
 const int _lmemZeroInit = 0x0040;
 const int _invalidHandleValue = -1;
-const int _waitTimeout = 0x00000102;
-const int _waitObject0 = 0x00000000;
 
 // Console input event types
 const int _keyEvent = 0x0001;
@@ -65,8 +76,6 @@ typedef _LocalAllocC = IntPtr Function(Uint32, IntPtr);
 typedef _LocalAllocD = int Function(int, int);
 typedef _LocalFreeC = IntPtr Function(IntPtr);
 typedef _LocalFreeD = int Function(int);
-typedef _WaitForSingleObjectC = Uint32 Function(IntPtr, Uint32);
-typedef _WaitForSingleObjectD = int Function(int, int);
 
 // INPUT_RECORD structure (matches Win32 on x64)
 final class _KeyEventRecord extends Struct {
@@ -176,23 +185,28 @@ class NativeWindowsInputStream {
       }
     });
 
+    _logNativeReader('[_readerIsolateEntry] Starting reader loop');
     _runReaderLoop(port);
   }
 
   static void _runReaderLoop(SendPort port) {
+    _logNativeReader('[_runReaderLoop] Starting');
+
     final k32 = DynamicLibrary.open('kernel32.dll');
+    _logNativeReader('[_runReaderLoop] kernel32 loaded');
 
     final createFileW = k32.lookupFunction<_CreateFileWC, _CreateFileWD>('CreateFileW');
     final readConsoleInputW = k32.lookupFunction<_ReadConsoleInputWC, _ReadConsoleInputWD>('ReadConsoleInputW');
     final closeHandle = k32.lookupFunction<_CloseHandleC, _CloseHandleD>('CloseHandle');
     final localAlloc = k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
     final localFree = k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
-    final waitForSingleObject = k32.lookupFunction<_WaitForSingleObjectC, _WaitForSingleObjectD>('WaitForSingleObject');
+    _logNativeReader('[_runReaderLoop] FFI functions loaded');
 
     // Open CONIN$ directly
     final name = 'CONIN\$'.codeUnits;
     final nameBuf = localAlloc(_lmemZeroInit, (name.length + 1) * 2);
     if (nameBuf == 0) {
+      _logNativeReader('[_runReaderLoop] Failed to allocate name buffer');
       port.send('Failed to allocate memory for CONIN\$ name');
       return;
     }
@@ -204,8 +218,10 @@ class NativeWindowsInputStream {
 
     final hConIn = createFileW(namePtr, _genericRead | _genericWrite, _fileShareRead | _fileShareWrite, 0, _openExisting, 0, 0);
     localFree(nameBuf);
+    _logNativeReader('[_runReaderLoop] CreateFileW returned hConIn=$hConIn');
 
     if (hConIn == -1 || hConIn == 0 || hConIn == _invalidHandleValue) {
+      _logNativeReader('[_runReaderLoop] CreateFileW failed');
       port.send('CreateFileW(CONIN\$) failed');
       return;
     }
@@ -216,48 +232,43 @@ class NativeWindowsInputStream {
     final recBuf = localAlloc(_lmemZeroInit, recordCount * recordSize);
     if (recBuf == 0) {
       closeHandle(hConIn);
+      _logNativeReader('[_runReaderLoop] Failed to allocate record buffer');
       port.send('Failed to allocate INPUT_RECORD buffer');
       return;
     }
     final recPtr = Pointer<_InputRecord>.fromAddress(recBuf);
     final readBuf = localAlloc(_lmemZeroInit, 4);
     final readPtr = Pointer<Uint32>.fromAddress(readBuf);
+    _logNativeReader('[_runReaderLoop] Buffers allocated, entering read loop');
 
-    try {
-      while (true) {
-        // Wait for input to be available (INFINITE wait)
-        final waitResult = waitForSingleObject(hConIn, 0xFFFFFFFF);
-        if (waitResult != _waitObject0 && waitResult != _waitTimeout) {
-          // Handle closed or error
-          break;
-        }
-
-        final result = readConsoleInputW(hConIn, recPtr.cast<Void>(), recordCount, readPtr);
-        if (result == 0) {
-          // Read failed - likely handle closed
-          break;
-        }
-        final count = readPtr.value;
-        if (count == 0) continue;
-
-        final bytes = <int>[];
-        for (var i = 0; i < count; i++) {
-          final rec = recPtr[i];
-          _translateRecord(rec, bytes);
-        }
-
-        if (bytes.isNotEmpty) {
-          port.send(Uint8List.fromList(bytes));
-        }
+    while (true) {
+      final result = readConsoleInputW(hConIn, recPtr.cast<Void>(), recordCount, readPtr);
+      _logNativeReader('[_runReaderLoop] ReadConsoleInputW returned result=$result');
+      if (result == 0) {
+        // Read failed - likely handle closed
+        _logNativeReader('[_runReaderLoop] Read failed, breaking');
+        break;
       }
-    } catch (e) {
-      // Any exception in the isolate should be reported, not crash silently
-      port.send('Reader isolate error: $e');
-    } finally {
-      localFree(recBuf);
-      localFree(readBuf);
-      closeHandle(hConIn);
+      final count = readPtr.value;
+      _logNativeReader('[_runReaderLoop] count=$count');
+      if (count == 0) continue;
+
+      final bytes = <int>[];
+      for (var i = 0; i < count; i++) {
+        final rec = recPtr[i];
+        _translateRecord(rec, bytes);
+      }
+
+      if (bytes.isNotEmpty) {
+        _logNativeReader('[_runReaderLoop] Sending ${bytes.length} bytes: ${bytes.map((b) => '0x${b.toRadixString(16)}').join(' ')}');
+        port.send(Uint8List.fromList(bytes));
+      }
     }
+
+    _logNativeReader('[_runReaderLoop] Cleaning up');
+    localFree(recBuf);
+    localFree(readBuf);
+    closeHandle(hConIn);
   }
 
   /// Translates a single INPUT_RECORD into VT escape sequence bytes.
