@@ -1,5 +1,7 @@
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg;
 import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/style.dart' as style;
+import 'package:artisanal/uv.dart' as uv;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
@@ -51,6 +53,51 @@ void main() {
       expect(tester.view, contains('\x1b[1m'));
     });
 
+    test('keeps TextStyle underline active across spaces', () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 2);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Text(
+          'two words',
+          textStyle: const TextStyle(decoration: TextDecoration.underline),
+        ),
+      );
+
+      final screen = uv.ScreenBuffer(20, 2);
+      (uv.StyledString(
+        tester.view,
+      )..wrap = false).draw(screen, screen.bounds());
+      final interiorSpace = screen.cellAt(3, 0);
+      expect(interiorSpace?.content, ' ');
+      expect(interiorSpace?.style.underline, uv.UnderlineStyle.single);
+    });
+
+    test('preserves textStyle across soft-wrapped lines', () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 6);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Container(
+          width: 10,
+          child: Text(
+            'styled text wraps',
+            textStyle: const TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.locateText('styled'), isNotNull);
+      expect(tester.locateText('text wraps'), isNotNull);
+      expect(
+        RegExp(r'38;2;34;197;94').allMatches(tester.view).length,
+        greaterThanOrEqualTo(2),
+      );
+    });
+
     test('textStyle overlays text properties while preserving Style', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -66,6 +113,98 @@ void main() {
       expect(tester.find.text('Overlay'), isTrue);
       expect(tester.view, contains('\x1b[3m'));
       expect(tester.view, isNot(contains('\x1b[1m')));
+    });
+
+    test('wraps content before resizing a Style border', () async {
+      final tester = WidgetTester(screenWidth: 24, screenHeight: 10);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Container(
+          width: 18,
+          child: Text(
+            'border follows wrapped content',
+            style: Style().padding(0, 1).border(style.Border.rounded),
+            textStyle: const TextStyle(color: Colors.green),
+          ),
+        ),
+      );
+
+      final lines = Style.stripAnsi(
+        tester.view,
+      ).split('\n').where((line) => line.contains(RegExp(r'[╭╮╰╯│]'))).toList();
+      expect(lines, hasLength(5));
+      expect(lines.first, startsWith('╭'));
+      expect(lines.first, endsWith('╮'));
+      expect(lines.last, startsWith('╰'));
+      expect(lines.last, endsWith('╯'));
+      expect(lines.map(Layout.getWidth), everyElement(18));
+      for (final line in lines.skip(1).take(lines.length - 2)) {
+        expect(line, startsWith('│'));
+        expect(line, endsWith('│'));
+      }
+    });
+
+    test('wraps rich content before rebuilding its Style border', () async {
+      final tester = WidgetTester(screenWidth: 24, screenHeight: 10);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Container(
+          width: 18,
+          child: Text.rich(
+            TextSpan(
+              text: 'border follows ',
+              children: [
+                TextSpan(text: 'rich wrapped content', style: Style().bold()),
+              ],
+            ),
+            style: Style().padding(0, 1).border(style.Border.rounded),
+            textStyle: const TextStyle(color: Colors.green),
+          ),
+        ),
+      );
+
+      final lines = Style.stripAnsi(
+        tester.view,
+      ).split('\n').where((line) => line.contains(RegExp(r'[╭╮╰╯│]'))).toList();
+      expect(lines, hasLength(5));
+      expect(lines.first, startsWith('╭'));
+      expect(lines.first, endsWith('╮'));
+      expect(lines.last, startsWith('╰'));
+      expect(lines.last, endsWith('╯'));
+      expect(lines.map(Layout.getWidth), everyElement(18));
+      for (final line in lines.skip(1).take(lines.length - 2)) {
+        expect(line, startsWith('│'));
+        expect(line, endsWith('│'));
+      }
+      expect(tester.view, contains('\x1b[1m'));
+    });
+
+    test('rebuilds a Style border when the terminal width changes', () async {
+      final tester = WidgetTester(screenWidth: 24, screenHeight: 10);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Text(
+          'border follows wrapped content across terminal resizes',
+          style: Style().padding(0, 1).border(style.Border.rounded),
+        ),
+      );
+
+      List<String> borderLines() => Style.stripAnsi(
+        tester.view,
+      ).split('\n').where((line) => line.contains(RegExp(r'[╭╮╰╯│]'))).toList();
+
+      final wide = borderLines();
+      expect(wide.map(Layout.getWidth), everyElement(24));
+
+      tester.resize(18, 10);
+      final narrow = borderLines();
+      expect(narrow.map(Layout.getWidth), everyElement(18));
+      expect(narrow.length, greaterThan(wide.length));
+      expect(narrow.first, startsWith('╭'));
+      expect(narrow.last, startsWith('╰'));
     });
 
     test('respects textAlign left', () async {

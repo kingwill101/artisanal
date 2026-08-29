@@ -845,6 +845,11 @@ and alignment from `style`. Nested `TextSpan` values inherit both layers;
 nullable `TextStyle` properties inherit, while `normal` and `none` explicitly
 disable inherited presentation.
 
+When `softWrap` is enabled, `Text` measures the `Style` box model against its
+layout constraint, wraps the content inside the available border and padding,
+then rebuilds the block around the resulting lines. Borders therefore remain
+rectangular and resize with wrapped text instead of being wrapped themselves.
+
 **Properties:**
 
 | Property | Type | Description |
@@ -855,6 +860,14 @@ disable inherited presentation.
 
 `SelectableText` and `SelectableRichText` accept the same `textStyle`
 overlay, including nested `TextSpan` inheritance.
+
+Run the complete showcase to see immutable updates, `Style` composition,
+nested inheritance and resets, selectable spans, decorations, and ASCII-art
+fonts together:
+
+```sh
+dart run pkgs/artisanal_widgets/example/text_style/main.dart
+```
 
 ### ASCII text and selectable fonts
 

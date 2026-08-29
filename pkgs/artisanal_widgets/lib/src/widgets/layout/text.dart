@@ -76,14 +76,24 @@ class Text extends LeafRenderObjectWidget {
 
   @override
   RenderObject createRenderObject() {
-    return RenderText(text: _render(), softWrap: softWrap);
+    return RenderText(
+      text: _render(),
+      softWrap: softWrap,
+      constrainedTextBuilder: _usesConstraintAwareBoxStyle
+          ? _renderWithin
+          : null,
+    );
   }
 
   @override
   void updateRenderObject(RenderObject renderObject) {
     final rt = renderObject as RenderText;
-    rt.text = _render();
-    rt.softWrap = softWrap;
+    rt
+      ..text = _render()
+      ..softWrap = softWrap
+      ..constrainedTextBuilder = _usesConstraintAwareBoxStyle
+          ? _renderWithin
+          : null;
   }
 
   @override
@@ -91,18 +101,24 @@ class Text extends LeafRenderObjectWidget {
 
   String _render() {
     return buildCachedView<String>(() {
+      final resolvedStyle = _resolveTextPresentation(
+        style: style,
+        textStyle: textStyle,
+      );
       String content;
       if (textSpan != null) {
-        content = renderSpan(
-          textSpan!,
-          _resolveTextPresentation(style: style, textStyle: textStyle),
-        );
+        if (_hasBoxLayout(resolvedStyle)) {
+          final richContent = renderSpan(
+            textSpan!,
+            _withoutBoxLayout(resolvedStyle!),
+          );
+          resolvedStyle.hasDarkBackground = hasDarkBackground;
+          content = resolvedStyle.render(richContent);
+        } else {
+          content = renderSpan(textSpan!, resolvedStyle);
+        }
       } else {
         content = data ?? '';
-        final resolvedStyle = _resolveTextPresentation(
-          style: style,
-          textStyle: textStyle,
-        );
         if (resolvedStyle != null) {
           final s = resolvedStyle.copy();
           s.hasDarkBackground = hasDarkBackground;
@@ -158,7 +174,64 @@ class Text extends LeafRenderObjectWidget {
     maxWidth,
     hasDarkBackground,
   );
+
+  bool get _usesConstraintAwareBoxStyle {
+    if (style == null || !softWrap) return false;
+    final resolved = _resolveTextPresentation(
+      style: style,
+      textStyle: textStyle,
+    );
+    return _hasBoxLayout(resolved);
+  }
+
+  String _renderWithin(int maxWidth) {
+    final unconstrained = _render();
+    if (maxWidth <= 0 || Layout.getWidth(unconstrained) <= maxWidth) {
+      return unconstrained;
+    }
+
+    final resolved = _resolveTextPresentation(
+      style: style,
+      textStyle: textStyle,
+    )!;
+    final borderWidth =
+        resolved.getHorizontalFrameSize - resolved.getHorizontalPadding;
+    final styleWidth = maxWidth - resolved.getHorizontalMargins - borderWidth;
+    if (styleWidth <= 0) {
+      return Layout.truncateLines(unconstrained, maxWidth, ellipsis: '');
+    }
+
+    final constrained = resolved.copy()..width(styleWidth);
+    constrained.hasDarkBackground = hasDarkBackground;
+    final content = textSpan == null
+        ? data ?? ''
+        : renderSpan(textSpan!, _withoutBoxLayout(resolved));
+    return constrained.render(content);
+  }
 }
+
+bool _hasBoxLayout(Style? style) {
+  if (style == null) return false;
+  return style.getHorizontalFrameSize > 0 ||
+      style.getVerticalFrameSize > 0 ||
+      style.getHorizontalMargins > 0 ||
+      style.getVerticalMargins > 0 ||
+      style.getWidth > 0 ||
+      style.getHeight > 0 ||
+      style.getMaxWidth > 0 ||
+      style.getMaxHeight > 0;
+}
+
+Style _withoutBoxLayout(Style style) => style.copy()
+  ..unsetWidth()
+  ..unsetHeight()
+  ..unsetMaxWidth()
+  ..unsetMaxHeight()
+  ..unsetPadding()
+  ..unsetMargin()
+  ..unsetBorder()
+  ..unsetAlignHorizontal()
+  ..unsetAlignVertical();
 
 String renderSpan(TextSpan span, Style? baseStyle) {
   final buffer = StringBuffer();

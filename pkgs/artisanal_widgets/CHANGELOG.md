@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.1
+
+### Added
+
+- Added `example/text_style`, a runnable catalog covering immutable updates,
+  `Style` composition, span inheritance and resets, selectable text,
+  decorations, and the separate ASCII-art font model.
+
+### Fixed
+
+- Preserved `TextStyle` presentation across soft-wrapped continuation lines
+  and made plain and rich `Text` wrap content before resizing `Style` borders
+  and padding.
+- Made the text-style ASCII-font comparison compact and responsive.
+- Kept dividers as single-row structural elements when their requested width
+  exceeds the available layout width.
+
 ## 0.3.0
 
 ### Added

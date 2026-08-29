@@ -114,6 +114,13 @@ expand each character into a multi-cell glyph. That matches Nocterm's
 selectable ASCII-font model without treating an ASCII glyph map as a terminal
 typeface or `TextStyle` property.
 
+For a runnable comparison of these APIs, including nested and selectable text,
+run:
+
+```sh
+dart run pkgs/artisanal_widgets/example/text_style/main.dart
+```
+
 ---
 
 ## Color System

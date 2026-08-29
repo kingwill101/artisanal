@@ -9,8 +9,11 @@ import 'dart:math' as math;
 import 'render_object.dart';
 import '../layout/geometry.dart' show BoxConstraints, Size, Offset;
 import 'package:artisanal/style.dart'
-    show Layout, HorizontalAlign, VerticalAlign;
+    show Layout, Style, HorizontalAlign, VerticalAlign;
 import 'package:artisanal/tui.dart' show TuiTrace, TraceTag;
+
+/// Produces text after accounting for the width available during layout.
+typedef ConstrainedTextBuilder = String Function(int maxWidth);
 
 /// Horizontal/vertical alignment policy along the main axis for flex layouts.
 enum RenderMainAxisAlignment {
@@ -40,16 +43,25 @@ class _RenderChildPaintCache {
 
 /// Renders a text string with constraints.
 class RenderText extends RenderBox {
-  RenderText({required this.text, this.softWrap = true});
+  RenderText({
+    required this.text,
+    this.softWrap = true,
+    this.constrainedTextBuilder,
+  });
 
   String text;
   bool softWrap;
+
+  /// Optional renderer for text whose structure must be rebuilt around
+  /// wrapped content, such as a [Style] border or padding box.
+  ConstrainedTextBuilder? constrainedTextBuilder;
 
   /// Text after wrapping to constraint width (computed during layout).
   String? _wrappedText;
   String? _lastText;
   bool? _lastSoftWrap;
   int? _lastWrapWidth;
+  ConstrainedTextBuilder? _lastConstrainedTextBuilder;
 
   @override
   void layout(BoxConstraints constraints) {
@@ -64,15 +76,19 @@ class RenderText extends RenderBox {
     if (_wrappedText == null ||
         _lastText != text ||
         _lastSoftWrap != softWrap ||
-        _lastWrapWidth != wrapWidth) {
+        _lastWrapWidth != wrapWidth ||
+        _lastConstrainedTextBuilder != constrainedTextBuilder) {
       if (wrapWidth != null && wrapWidth > 0) {
-        _wrappedText = Layout.wrapLines(text, wrapWidth);
+        _wrappedText =
+            constrainedTextBuilder?.call(wrapWidth) ??
+            Layout.wrapLines(text, wrapWidth);
       } else {
         _wrappedText = text;
       }
       _lastText = text;
       _lastSoftWrap = softWrap;
       _lastWrapWidth = wrapWidth;
+      _lastConstrainedTextBuilder = constrainedTextBuilder;
     }
 
     final width = Layout.getWidth(_wrappedText!).toDouble();
