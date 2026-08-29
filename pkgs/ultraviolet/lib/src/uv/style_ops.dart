@@ -87,7 +87,7 @@ UvBasic16 _basic16FromIdx16(int idx16) {
 }
 
 /// LRU-style cache for [styleToSgr] results (≤64 entries).
-final _styleSgrCache = <int, String>{};
+final _styleSgrCache = <UvStyle, String>{};
 const _styleSgrCacheMax = 64;
 
 /// Returns the SGR sequence for [style].
@@ -95,13 +95,12 @@ const _styleSgrCacheMax = 64;
 String styleToSgr(UvStyle style) {
   if (style.isZero) return UvAnsi.resetStyle;
 
-  final key = style.packedKey;
-  final cached = _styleSgrCache[key];
+  final cached = _styleSgrCache[style];
   if (cached != null) return cached;
 
   final simple = _simpleRgbStyleToSgr(style);
   if (simple != null) {
-    _cacheSgr(key, simple);
+    _cacheSgr(style, simple);
     return simple;
   }
 
@@ -146,19 +145,19 @@ String styleToSgr(UvStyle style) {
   if (ul != null) add(ul);
 
   if (!sep) {
-    _cacheSgr(key, UvAnsi.resetStyle);
+    _cacheSgr(style, UvAnsi.resetStyle);
     return UvAnsi.resetStyle;
   }
   final result = '\x1b[${sb.toString()}m';
-  _cacheSgr(key, result);
+  _cacheSgr(style, result);
   return result;
 }
 
-void _cacheSgr(int key, String value) {
+void _cacheSgr(UvStyle style, String value) {
   if (_styleSgrCache.length >= _styleSgrCacheMax) {
     _styleSgrCache.clear();
   }
-  _styleSgrCache[key] = value;
+  _styleSgrCache[style] = value;
 }
 
 /// Returns the SGR diff needed to transition from [from] to [to].

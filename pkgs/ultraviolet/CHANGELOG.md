@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.1
+
+### Fixed
+
+- Preserved SGR attributes, underline variants and colors (including explicit
+  color-space slots), and complete grapheme widths across ANSI-aware wrapped
+  lines; oversized graphemes now make progress at narrower wrap widths.
+- Prevented style-cache fingerprint collisions from leaking underline and
+  other decorations into later text with the same foreground color.
+
 ## 0.5.0
 
 ### Added
