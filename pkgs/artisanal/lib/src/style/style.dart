@@ -1685,6 +1685,7 @@ class Style {
     s._blink = _blink;
     s._foreground = _foreground;
     s._background = _background;
+    s._underlineColor = _underlineColor;
     s._borderForeground = _borderForeground;
     s._borderBackground = _borderBackground;
     s._borderTopForeground = _borderTopForeground;

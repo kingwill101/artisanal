@@ -10,6 +10,7 @@
 
 ### Fixed
 
+- Preserved `TextStyle` decoration colors through text rendering copies.
 - Preserved `TextStyle` presentation across soft-wrapped continuation lines
   and made plain and rich `Text` wrap content before resizing `Style` borders
   and padding.

@@ -73,6 +73,30 @@ void main() {
       expect(interiorSpace?.style.underline, uv.UnderlineStyle.single);
     });
 
+    test('preserves TextStyle underline color while rendering', () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 2);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Text(
+          'colored underline',
+          textStyle: const TextStyle(
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.red,
+          ),
+        ),
+      );
+
+      final screen = uv.ScreenBuffer(20, 2);
+      (uv.StyledString(
+        tester.view,
+      )..wrap = false).draw(screen, screen.bounds());
+      expect(
+        screen.cellAt(0, 0)?.style.underlineColor,
+        const uv.UvRgb(239, 68, 68),
+      );
+    });
+
     test('preserves textStyle across soft-wrapped lines', () async {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 6);
       addTearDown(() => tester.dispose());

@@ -276,24 +276,28 @@ final class TextStyle {
     final decorationColor = this.decorationColor;
     if (decorationColor != null) target.underlineColor(decorationColor);
 
-    switch (decorationStyle) {
-      case TextDecorationStyle.solid:
-        target.underlineStyle(UnderlineStyle.single);
-      case TextDecorationStyle.double:
-        target.underlineStyle(UnderlineStyle.double);
-      case TextDecorationStyle.dotted:
-        target.underlineStyle(UnderlineStyle.dotted);
-      case TextDecorationStyle.dashed:
-        target.underlineStyle(UnderlineStyle.dashed);
-      case TextDecorationStyle.wavy:
-        target.underlineStyle(UnderlineStyle.curly);
-      case null:
-        break;
+    final decoration = this.decoration;
+    final stylesUnderline =
+        decoration?.contains(TextDecoration.underline) ?? target.isUnderline;
+    if (stylesUnderline) {
+      switch (decorationStyle) {
+        case TextDecorationStyle.solid:
+          target.underlineStyle(UnderlineStyle.single);
+        case TextDecorationStyle.double:
+          target.underlineStyle(UnderlineStyle.double);
+        case TextDecorationStyle.dotted:
+          target.underlineStyle(UnderlineStyle.dotted);
+        case TextDecorationStyle.dashed:
+          target.underlineStyle(UnderlineStyle.dashed);
+        case TextDecorationStyle.wavy:
+          target.underlineStyle(UnderlineStyle.curly);
+        case null:
+          break;
+      }
     }
 
-    // Apply the decoration set last because Style.underlineStyle() enables an
-    // underline. An explicit TextDecoration.none must still win.
-    final decoration = this.decoration;
+    // Apply the decoration set last because Style.underlineStyle() also
+    // enables an underline. An explicit TextDecoration.none must still win.
     if (decoration != null) {
       final hasUnderline = decoration.contains(TextDecoration.underline);
       final hasLineThrough = decoration.contains(TextDecoration.lineThrough);

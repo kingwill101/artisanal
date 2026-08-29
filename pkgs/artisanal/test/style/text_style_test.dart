@@ -218,5 +218,24 @@ void main() {
       expect(style.getUnderlineSpaces, isFalse);
       expect(style.getStrikethroughSpaces, isFalse);
     });
+
+    test('decoration style alone does not enable underline', () {
+      final style = const TextStyle(
+        decorationStyle: TextDecorationStyle.double,
+      ).toStyle();
+
+      expect(style.isUnderline, isFalse);
+    });
+
+    test('decoration style updates an inherited underline', () {
+      final style = Style().underline();
+
+      const TextStyle(
+        decorationStyle: TextDecorationStyle.double,
+      ).applyTo(style);
+
+      expect(style.isUnderline, isTrue);
+      expect(style.getUnderlineStyle, UnderlineStyle.double);
+    });
   });
 }

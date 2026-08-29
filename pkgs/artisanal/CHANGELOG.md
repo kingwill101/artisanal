@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Preserved underline colors when copying `Style` and kept a standalone
+  `TextStyle.decorationStyle` from enabling an otherwise unspecified underline.
 - Kept `TextStyle` underline and line-through decorations continuous across
   interior spaces while preserving `Style`'s explicit whitespace controls.
 - Preserved ANSI styling and hyperlinks across `Layout.wrap()` continuation
