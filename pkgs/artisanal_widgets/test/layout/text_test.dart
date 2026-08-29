@@ -33,6 +33,41 @@ void main() {
       expect(view, contains('['));
     });
 
+    test('applies immutable textStyle to text', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Text(
+          'Styled Text',
+          textStyle: const TextStyle(
+            color: Colors.green,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+
+      expect(tester.find.text('Styled Text'), isTrue);
+      expect(tester.view, contains('\x1b[1m'));
+    });
+
+    test('textStyle overlays text properties while preserving Style', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Text(
+          'Overlay',
+          style: Style().bold().italic().padding(0, 1),
+          textStyle: const TextStyle(fontWeight: FontWeight.normal),
+        ),
+      );
+
+      expect(tester.find.text('Overlay'), isTrue);
+      expect(tester.view, contains('\x1b[3m'));
+      expect(tester.view, isNot(contains('\x1b[1m')));
+    });
+
     test('respects textAlign left', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -166,6 +201,36 @@ void main() {
       );
       expect(tester.find.text('ABC'), isTrue);
     });
+
+    test(
+      'inherits and explicitly disables nested TextSpan textStyle',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(
+          Text.rich(
+            const TextSpan(
+              text: 'A',
+              textStyle: TextStyle(fontWeight: FontWeight.bold),
+              children: [
+                TextSpan(
+                  text: 'B',
+                  textStyle: TextStyle(
+                    fontWeight: FontWeight.normal,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        expect(tester.locateText('AB'), isNotNull);
+        expect(tester.view, contains('\x1b[1m'));
+        expect(tester.view, contains('\x1b[3m'));
+      },
+    );
 
     test('renders TextSpan with base style', () async {
       final tester = WidgetTester();

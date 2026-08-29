@@ -4,6 +4,10 @@
 
 ### Added
 
+- Added immutable, value-equal `TextStyle` declarations with Flutter-shaped
+  `FontWeight`, `FontStyle`, and `TextDecoration` values, `copyWith()`,
+  parent/child `merge()`, and `Style` composition through `applyTo()` and
+  `toStyle()`.
 - Added `ComponentTheme` presets and semantic style bundles for built-in
   console prompts and display components, configurable through `Console`.
 - Added the standalone `example/widget_catalog.dart` CLI for browsing every

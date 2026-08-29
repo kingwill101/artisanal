@@ -816,17 +816,67 @@ A widget for styled text:
 ```dart
 Text('Hello, World!')
 Text('Error!', style: Style().foreground(theme.error))
+Text(
+  'Ready',
+  style: Style().padding(0, 1),
+  textStyle: const TextStyle(
+    color: Colors.green,
+    fontWeight: FontWeight.bold,
+  ),
+)
 Text.rich(
-  TextSpan(text: 'Success', style: theme.bodyLarge),
+  TextSpan(
+    text: 'Status: ',
+    textStyle: const TextStyle(fontWeight: FontWeight.dim),
+    children: [
+      TextSpan(
+        text: 'Success',
+        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+    ],
+  ),
 )
 ```
+
+`Style` remains the complete Artisanal style, including layout and block
+properties. The optional immutable `textStyle` is applied afterward, so it
+can override only text properties while preserving padding, borders, sizing,
+and alignment from `style`. Nested `TextSpan` values inherit both layers;
+nullable `TextStyle` properties inherit, while `normal` and `none` explicitly
+disable inherited presentation.
 
 **Properties:**
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `data` | `String` | Text content |
-| `style` | `Style?` | Optional style to apply |
+| `style` | `Style?` | Optional complete Artisanal style |
+| `textStyle` | `TextStyle?` | Optional immutable text-only overlay |
+
+`SelectableText` and `SelectableRichText` accept the same `textStyle`
+overlay, including nested `TextSpan` inheritance.
+
+### ASCII text and selectable fonts
+
+`AsciiText` renders each input character as a multi-line terminal glyph. Pick
+one of the built-in ASCII-art fonts or implement `AsciiFont` for custom glyphs:
+
+```dart
+AsciiText(
+  data: 'ARTISANAL',
+  font: AsciiFont.banner,
+)
+
+StyledAsciiText(
+  data: 'READY',
+  font: AsciiFont.slim,
+  style: Style().foreground(Colors.green),
+)
+```
+
+The built-in choices are `standard`, `banner`, `block`, and `slim`. These
+fonts expand text across terminal cells; the terminal host still controls the
+actual monospace typeface and cell size.
 
 ### Icon
 

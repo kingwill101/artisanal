@@ -70,6 +70,47 @@ print('Item 1$divider Item 2$divider Item 3');
 // Output: Item 1 | Item 2 | Item 3
 ```
 
+### Immutable text styles
+
+`TextStyle` is an immutable, value-equal companion to `Style` for text-only
+declarations and span inheritance. `Style` remains the complete fluent API for
+text, spacing, borders, sizing, alignment, and rendering.
+
+Like Flutter, terminal intensity, slant, and decoration use semantic values:
+`FontWeight`, `FontStyle`, and `TextDecoration`. A `null` property inherits;
+explicit `normal` or `none` values disable inherited presentation.
+
+```dart
+const headingText = TextStyle(
+  color: Colors.purple,
+  fontWeight: FontWeight.bold,
+  decoration: TextDecoration.underline,
+  decorationStyle: TextDecorationStyle.wavy,
+);
+
+final headingBlock = headingText.applyTo(
+  Style()
+      .padding(0, 2)
+      .border(Border.rounded),
+);
+
+print(headingBlock.render('Deployment complete'));
+```
+
+Use `copyWith()` for immutable updates and `merge()` to resolve a child style
+over a parent. Set `inherit: false` when a child should start from terminal
+text defaults instead of inheriting its parent.
+
+Font family and font size remain terminal-host settings rather than per-span
+properties: ANSI terminal cells can request bold, dim, or italic text, but
+they cannot select a typeface or glyph size for an individual cell.
+
+This is separate from ASCII-art fonts. Widget applications can use
+`AsciiText(font: AsciiFont.banner, ...)` or provide a custom `AsciiFont` to
+expand each character into a multi-cell glyph. That matches Nocterm's
+selectable ASCII-font model without treating an ASCII glyph map as a terminal
+typeface or `TextStyle` property.
+
 ---
 
 ## Color System

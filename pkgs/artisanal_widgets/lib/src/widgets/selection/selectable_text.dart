@@ -126,6 +126,7 @@ class SelectableText extends StatelessWidget {
     this.data, {
     super.key,
     this.style,
+    this.textStyle,
     this.selectionHighlightStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
@@ -135,7 +136,13 @@ class SelectableText extends StatelessWidget {
   });
 
   final String data;
+
+  /// Complete Artisanal style applied to the selectable text.
   final Style? style;
+
+  /// Immutable text-only declarations applied after [style].
+  final TextStyle? textStyle;
+
   final Style? selectionHighlightStyle;
   final TextAlign textAlign;
   final bool softWrap;
@@ -149,6 +156,7 @@ class SelectableText extends StatelessWidget {
       text: _renderPlainText(
         data,
         style: style,
+        textStyle: textStyle,
         textAlign: textAlign,
         softWrap: softWrap,
         overflow: overflow,
@@ -559,14 +567,16 @@ class _SelectableTextRender extends LeafRenderObjectWidget {
 String _renderPlainText(
   String data, {
   Style? style,
+  TextStyle? textStyle,
   required TextAlign textAlign,
   required bool softWrap,
   required TextOverflow overflow,
   int? maxWidth,
 }) {
   var content = data;
-  if (style != null) {
-    final resolved = style.copy();
+  if (style != null || textStyle != null) {
+    final resolved = style?.copy() ?? Style();
+    textStyle?.applyTo(resolved);
     content = resolved.render(content);
   }
   return _finalizeRenderedText(
@@ -581,13 +591,20 @@ String _renderPlainText(
 _SelectableRenderedContent _renderRichSpanContent(
   TextSpan text, {
   Style? baseStyle,
+  TextStyle? baseTextStyle,
   required TextAlign textAlign,
   required bool softWrap,
   required TextOverflow overflow,
   int? maxWidth,
 }) {
+  Style? resolvedBaseStyle;
+  if (baseStyle != null || baseTextStyle != null) {
+    resolvedBaseStyle = baseStyle?.copy() ?? Style();
+    baseTextStyle?.applyTo(resolvedBaseStyle);
+  }
+
   return _finalizeRenderedContent(
-    _renderSelectableSpanContent(text, baseStyle),
+    _renderSelectableSpanContent(text, resolvedBaseStyle),
     textAlign: textAlign,
     softWrap: softWrap,
     overflow: overflow,
@@ -720,11 +737,12 @@ _SelectableRenderedContent _renderSelectableSpanContent(
 }) {
   final contentBuilder = builder ?? _SelectableRenderedContentBuilder();
   Style? resolvedStyle;
-  if (baseStyle != null || span.style != null) {
+  if (baseStyle != null || span.style != null || span.textStyle != null) {
     resolvedStyle = (baseStyle ?? Style()).copy();
     if (span.style != null) {
       resolvedStyle.inherit(span.style!);
     }
+    span.textStyle?.applyTo(resolvedStyle);
   }
 
   final resolvedSelectionStyle =

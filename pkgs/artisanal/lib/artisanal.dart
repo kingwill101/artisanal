@@ -134,6 +134,7 @@ export 'src/style/color.dart'
         Colors,
         ColorProfile;
 export 'src/style/style.dart';
+export 'src/style/text_style.dart';
 export 'src/style/theme.dart';
 // Style - Verbosity
 export 'src/style/verbosity.dart' show Verbosity;

@@ -8,14 +8,25 @@ import 'enums.dart';
 class TextSpan {
   const TextSpan({
     this.style,
+    this.textStyle,
     this.selectionHighlightStyle,
     this.text,
     this.children = const [],
   });
 
+  /// Complete Artisanal style applied to this span.
   final Style? style;
+
+  /// Immutable text-only declarations applied after [style].
+  final TextStyle? textStyle;
+
+  /// Style used when this span is selected.
   final Style? selectionHighlightStyle;
+
+  /// Text owned by this span.
   final String? text;
+
+  /// Child spans that inherit this span's resolved presentation.
   final List<TextSpan> children;
 }
 
@@ -24,6 +35,7 @@ class Text extends LeafRenderObjectWidget {
     this.data, {
     super.key,
     this.style,
+    this.textStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -34,6 +46,7 @@ class Text extends LeafRenderObjectWidget {
     this.textSpan, {
     super.key,
     this.style,
+    this.textStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -42,7 +55,13 @@ class Text extends LeafRenderObjectWidget {
 
   final String? data;
   final TextSpan? textSpan;
+
+  /// Complete Artisanal style applied to the text.
   final Style? style;
+
+  /// Immutable text-only declarations applied after [style].
+  final TextStyle? textStyle;
+
   final TextAlign textAlign;
   final bool softWrap;
   final TextOverflow overflow;
@@ -74,11 +93,18 @@ class Text extends LeafRenderObjectWidget {
     return buildCachedView<String>(() {
       String content;
       if (textSpan != null) {
-        content = renderSpan(textSpan!, style);
+        content = renderSpan(
+          textSpan!,
+          _resolveTextPresentation(style: style, textStyle: textStyle),
+        );
       } else {
         content = data ?? '';
-        if (style != null) {
-          final s = style!.copy();
+        final resolvedStyle = _resolveTextPresentation(
+          style: style,
+          textStyle: textStyle,
+        );
+        if (resolvedStyle != null) {
+          final s = resolvedStyle.copy();
           s.hasDarkBackground = hasDarkBackground;
           content = s.render(content);
         }
@@ -125,6 +151,7 @@ class Text extends LeafRenderObjectWidget {
     data,
     textSpan,
     style,
+    textStyle,
     textAlign,
     softWrap,
     overflow,
@@ -135,12 +162,12 @@ class Text extends LeafRenderObjectWidget {
 
 String renderSpan(TextSpan span, Style? baseStyle) {
   final buffer = StringBuffer();
-  Style? resolvedStyle;
-  if (baseStyle != null || span.style != null) {
-    resolvedStyle = (baseStyle ?? Style()).copy();
-    if (span.style != null) {
-      resolvedStyle.inherit(span.style!);
-    }
+  final resolvedStyle = _resolveTextPresentation(
+    inheritedStyle: baseStyle,
+    style: span.style,
+    textStyle: span.textStyle,
+  );
+  if (resolvedStyle != null) {
     resolvedStyle.hasDarkBackground = hasDarkBackground;
   }
 
@@ -160,4 +187,23 @@ String renderSpan(TextSpan span, Style? baseStyle) {
   }
 
   return buffer.toString();
+}
+
+Style? _resolveTextPresentation({
+  Style? inheritedStyle,
+  Style? style,
+  TextStyle? textStyle,
+}) {
+  if (inheritedStyle == null && style == null && textStyle == null) {
+    return null;
+  }
+
+  final resolved = inheritedStyle?.copy() ?? Style();
+  if (style != null) {
+    resolved.inherit(style);
+  }
+  if (textStyle != null) {
+    textStyle.applyTo(resolved);
+  }
+  return resolved;
 }

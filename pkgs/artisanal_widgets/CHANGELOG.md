@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added optional immutable `textStyle` overlays to `Text`, `TextSpan`,
+  `SelectableText`, and `SelectableRichText`, with nested inheritance and
+  explicit attribute disabling while retaining the complete `Style` API.
 - Added `MonthlyCalendar` with selected, today, adjacent-month, and marker
   styling.
 - Added `Shadow` presets and `CellFilter` for applying UV buffer effects to a
