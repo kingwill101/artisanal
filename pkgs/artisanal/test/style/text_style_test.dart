@@ -172,8 +172,23 @@ void main() {
       expect(style.getForeground, Colors.green);
       expect(style.getUnderlineStyle, UnderlineStyle.double);
       expect(style.isUnderline, isTrue);
+      expect(style.getUnderlineSpaces, isTrue);
       expect(style.isItalic, isTrue);
       expect(style.isInverse, isTrue);
+    });
+
+    test('decorations remain continuous across interior spaces', () {
+      final underline = const TextStyle(
+        decoration: TextDecoration.underline,
+      ).toStyle();
+      final lineThrough = const TextStyle(
+        decoration: TextDecoration.lineThrough,
+      ).toStyle();
+
+      expect(underline.getUnderlineSpaces, isTrue);
+      expect(lineThrough.getStrikethroughSpaces, isTrue);
+      expect(underline.render('two words'), contains('\x1b[4m \x1b[24m'));
+      expect(lineThrough.render('two words'), contains('\x1b[9m \x1b[m'));
     });
 
     test('combined decorations materialize as one declaration', () {
@@ -188,6 +203,8 @@ void main() {
       final style = TextStyle(decoration: decoration).toStyle();
       expect(style.isUnderline, isTrue);
       expect(style.isStrikethrough, isTrue);
+      expect(style.getUnderlineSpaces, isTrue);
+      expect(style.getStrikethroughSpaces, isTrue);
     });
 
     test('decoration none overrides an accompanying decoration style', () {
@@ -198,6 +215,8 @@ void main() {
 
       expect(style.isUnderline, isFalse);
       expect(style.isStrikethrough, isFalse);
+      expect(style.getUnderlineSpaces, isFalse);
+      expect(style.getStrikethroughSpaces, isFalse);
     });
   });
 }

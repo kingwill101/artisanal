@@ -239,7 +239,9 @@ final class TextStyle {
         ..bold(false)
         ..italic(false)
         ..underline(false)
+        ..underlineSpaces(false)
         ..strikethrough(false)
+        ..strikethroughSpaces(false)
         ..dim(false)
         ..inverse(false)
         ..blink(false);
@@ -293,9 +295,13 @@ final class TextStyle {
     // underline. An explicit TextDecoration.none must still win.
     final decoration = this.decoration;
     if (decoration != null) {
+      final hasUnderline = decoration.contains(TextDecoration.underline);
+      final hasLineThrough = decoration.contains(TextDecoration.lineThrough);
       target
-        ..underline(decoration.contains(TextDecoration.underline))
-        ..strikethrough(decoration.contains(TextDecoration.lineThrough));
+        ..underline(hasUnderline)
+        ..underlineSpaces(hasUnderline)
+        ..strikethrough(hasLineThrough)
+        ..strikethroughSpaces(hasLineThrough);
     }
 
     final reverse = this.reverse;

@@ -39,6 +39,7 @@ import '../style/style.dart';
 import '../unicode/grapheme.dart' as uni;
 import '../unicode/width.dart' show runeWidth;
 import '../tui/trace.dart';
+import '../uv/wrap.dart' as uv_wrap;
 
 const int _layoutTraceThresholdUs = 1000;
 
@@ -1048,44 +1049,17 @@ class Layout {
 
   /// Wraps text to a maximum width.
   ///
-  /// Simple word wrapping that breaks on spaces.
+  /// Wraps at spaces when possible and hard-breaks text that cannot otherwise
+  /// fit. ANSI style and hyperlink state are preserved on continuation lines.
   static String wrap(String text, int maxWidth) {
     if (maxWidth <= 0) return text;
-
-    final words = text.split(' ');
-    final lines = <String>[];
-    var currentLine = StringBuffer();
-    var currentWidth = 0;
-
-    for (final word in words) {
-      final wordWidth = visibleLength(word);
-
-      if (currentWidth == 0) {
-        // Start of line
-        currentLine.write(word);
-        currentWidth = wordWidth;
-      } else if (currentWidth + 1 + wordWidth <= maxWidth) {
-        // Word fits on current line
-        currentLine.write(' $word');
-        currentWidth += 1 + wordWidth;
-      } else {
-        // Start new line
-        lines.add(currentLine.toString());
-        currentLine = StringBuffer(word);
-        currentWidth = wordWidth;
-      }
-    }
-
-    if (currentLine.isNotEmpty) {
-      lines.add(currentLine.toString());
-    }
-
-    return lines.join('\n');
+    return uv_wrap.wrapAnsiPreserving(text, maxWidth);
   }
 
-  /// Wraps each line of text to a maximum width.
+  /// Wraps text to a maximum width while preserving ANSI state across both
+  /// inserted and existing line breaks.
   static String wrapLines(String content, int maxWidth) {
-    return content.split('\n').map((l) => wrap(l, maxWidth)).join('\n');
+    return wrap(content, maxWidth);
   }
 
   /// Stacks multiple blocks of text on top of each other.

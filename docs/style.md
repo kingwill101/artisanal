@@ -79,6 +79,9 @@ text, spacing, borders, sizing, alignment, and rendering.
 Like Flutter, terminal intensity, slant, and decoration use semantic values:
 `FontWeight`, `FontStyle`, and `TextDecoration`. A `null` property inherits;
 explicit `normal` or `none` values disable inherited presentation.
+Text decorations cover the complete text run, including spaces between words.
+The fluent `Style` API retains its separate `underlineSpaces()` and
+`strikethroughSpaces()` controls for Lip Gloss-compatible rendering.
 
 ```dart
 const headingText = TextStyle(

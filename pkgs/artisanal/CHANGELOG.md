@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1
+
+### Fixed
+
+- Kept `TextStyle` underline and line-through decorations continuous across
+  interior spaces while preserving `Style`'s explicit whitespace controls.
+- Preserved ANSI styling and hyperlinks across `Layout.wrap()` continuation
+  lines and hard-wrapped overlong text to its requested cell width.
+
 ## 0.5.0
 
 ### Added
