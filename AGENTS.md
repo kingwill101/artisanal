@@ -8,8 +8,8 @@ A Dart **workspace** (`resolution: workspace` in the root `pubspec.yaml`)
 implementing a full-stack terminal toolkit: CLI I/O, terminal styling, a
 Bubble Tea-style TEA runtime, a Flutter-inspired widget framework, and a
 high-performance cell-buffer renderer. It is a faithful Dart port of Charm's
-Go libraries (Lip Gloss, Bubble Tea, Bubbles), plus renderer, markdown,
-charting, and remote-plugin layers of its own.
+Go libraries (Lip Gloss, Bubble Tea, Bubbles), plus renderer, markdown, and
+charting layers of its own.
 
 SDK: `>=3.10.0 <4.0.0`.
 
@@ -18,8 +18,8 @@ SDK: `>=3.10.0 <4.0.0`.
 | Path | Package | Role |
 |---|---|---|
 | `pkgs/ultraviolet` | `ultraviolet` 0.5.x | Low-level renderer: cells, buffers, diff-based `UvTerminalRenderer`, typed input decoding, terminal capabilities, image protocols (Kitty/iTerm2/Sixel/half-block). |
-| `pkgs/artisanal` | `artisanal` 0.5.x | Core toolkit: `Console` I/O, `Style` system, TEA runtime (`Program`/`Model`/`Msg`/`Cmd`), Bubbles widgets, `CommandRunner`, markdown/glamour, charting, editor core, remote plugin protocol. |
-| `pkgs/artisanal_widgets` | `artisanal_widgets` 0.3.x | Flutter-inspired widget framework (`Widget`/`Element`/`State`, layout, gestures, scroll, navigation, components). Primary package for widget-first apps. |
+| `pkgs/artisanal` | `artisanal` 0.6.x | Core toolkit: `Console` I/O, `Style` system, TEA runtime (`Program`/`Model`/`Msg`/`Cmd`), Bubbles widgets, `CommandRunner`, markdown/glamour, charting, and editor core. |
+| `pkgs/artisanal_widgets` | `artisanal_widgets` 0.4.x | Flutter-inspired widget framework (`Widget`/`Element`/`State`, layout, gestures, scroll, navigation, components). Primary package for widget-first apps. |
 | `pkgs/flutter_artisanal` | `flutter_artisanal` 0.2.x | Flutter rendering, input bridge, and app shell for UV terminal buffers (Flutter package, `publish_to: none`). |
 | `pkgs/artisanal_widgets/example/...` | example packages | `github_cli`, `flutter_cli_port` — app-level consumers. |
 
@@ -71,8 +71,6 @@ tests (CI sets up Flutter stable).
    workspace.
 2. **test** job, matrix over OS (ubuntu, windows) × package
    (`pkgs/ultraviolet`, `pkgs/artisanal`, `pkgs/artisanal_widgets`):
-   - `dart run tool/precompile_remote_plugins.dart` (in `pkgs/artisanal`)
-     runs before the tests.
    - Dart packages on Ubuntu: `dart test pkgs/<pkg> -r compact`.
    - `artisanal_widgets`: `flutter test pkgs/artisanal_widgets -r compact`
      (Ubuntu only — there is no Windows job for it).

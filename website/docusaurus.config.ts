@@ -16,8 +16,6 @@ const legacyDocRedirects = [
   'LAYOUT',
   'LIQUID',
   'MARKDOWN',
-  'PHYSICS',
-  'PLUGINS',
   'RENDERER',
   'REPLAY',
   'STYLE',

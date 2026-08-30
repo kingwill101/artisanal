@@ -242,47 +242,7 @@ dart run example/tui/socket_host_demo.dart --port=2323
 # Browser websocket host demo
 dart run example/tui/browser_websocket_demo.dart --port=8080
 
-# Remote plugin surface demo
-dart run example/tui/remote_plugin_host_demo.dart
-
-# Remote plugin popup/compositor demo
-dart run example/tui/remote_plugin_popup_host_demo.dart
-
-# Remote plugin generic service demo
-dart run example/tui/remote_plugin_generic_service_host_demo.dart
-
-# Dump remote plugin protocol and manifest schemas
-dart run example/tui/remote_plugin_schema_dump.dart
-dart run example/tui/remote_plugin_schema_dump.dart --manifest
-dart run example/tui/remote_plugin_schema_dump.dart --message-type=plugin.service.request
-dart run example/tui/remote_plugin_schema_dump.dart --built-in-services
-
-# Full remote plugin workspace
-dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
 ```
-
-The remote plugin workspace host discovers plugin processes from the
-`remote_plugin_workspace/plugins/*.plugin.json` manifests rather than
-hardcoding plugin entrypoints in the host app.
-
-The remote-plugin examples now follow the same bundled host path the package
-documents:
-
-- one-off hosts use `RemotePluginHostConnection.startProcess(...)`
-- manifest-backed multi-plugin hosts use
-  `RemotePluginWorkspace.startManifestDirectory(...)`
-- generic clipboard/URL/notification/file-picker capabilities travel through
-  the schema-backed `plugin.service.request` / `host.service.response` lane
-- custom generic services can attach their own request/result schemas with
-  `RemotePluginGenericServiceCatalog.register(...)`, as shown in
-  `example/tui/remote_plugin_generic_service_host_demo.dart`
-- `example/tui/remote_plugin_schema_dump.dart` prints the exact JSON schemas
-  exposed by `RemotePluginProtocolSchemas` and `RemotePluginManifestSchemas`
-  for non-Dart plugin tooling
-
-These focused host demos intentionally import the stable
-`package:artisanal/runtime.dart` and `package:artisanal/hosts.dart`
-entrypoints rather than the broader `package:artisanal/tui.dart` barrel.
 
 ## Global Options
 

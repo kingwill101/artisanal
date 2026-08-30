@@ -16,7 +16,7 @@ Rendering flows through the element tree into UV buffers:
 `Model`, so widget apps run on the same `Program` runtime as plain TEA apps.
 
 Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.10.0 <4.0.0`.
-Version 0.3.0. Depends on `artisanal ^0.5.0`, `image`, `meta`. This package
+Version 0.4.0. Depends on `artisanal ^0.6.0`, `image`, `meta`. This package
 has its own `analysis_options.yaml` (`package:lints/recommended.yaml`).
 
 ## Commands
@@ -71,7 +71,7 @@ lib/src/widgets/
   navigation/      # Navigator-style routing
   selection/       # shared text-selection surfaces
   charting/        # chart widgets and models
-  focus/ media/ plugins/ chords/ composer/
+  focus/ media/ chords/ composer/
   testing/         # widget_tester, widget_testing, widget_fuzzer,
                    # widget_gauntlet, widget_storm, flicker_analyzer, manual_clock
 test/              # mirrors lib structure (components/, input/, focus/, scroll/,
@@ -131,7 +131,7 @@ tool/              # ANSI dump helpers for debugging output
   `charting.dart`, `selection.dart`, `testing.dart`). `artisanal_widgets.dart`
   is the legacy broad surface — prefer stable entrypoints in new code and
   tests. Internal code uses relative imports within `lib/src/widgets`.
-- **API stability**: 0.3.0, depended on by `artisanal` (re-exports). Keep the
+- **API stability**: 0.4.0, depended on by `artisanal` (re-exports). Keep the
   stable entrypoints compiling (`test/stable_entrypoints_test.dart` covers
   them). Prefer additive changes; document changes in `CHANGELOG.md`.
 - **Widget style**: follow the Flutter naming conventions already in use

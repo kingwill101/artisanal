@@ -41,9 +41,9 @@
 /// - `package:artisanal/glamour.dart`: Glamour-style Markdown rendering.
 /// - `package:ultraviolet/ultraviolet.dart`: Low-level cell-buffer rendering engine.
 ///
-/// Charting, Liquify adapters, Markdown, physics, scoring, web helpers,
-/// widget testing, and the remote plugin protocol are exported directly from
-/// this library (`package:artisanal/artisanal.dart`).
+/// Charting, Liquify adapters, Markdown, scoring, web helpers, and widget
+/// testing are exported directly from this library
+/// (`package:artisanal/artisanal.dart`).
 ///
 /// {@template artisanal_io_overview}
 /// The [Console] class is the primary entry point for high-level CLI output.
@@ -79,8 +79,6 @@ export 'package:artisanal_widgets/app.dart'
 // Widget testing
 export 'package:artisanal_widgets/testing.dart';
 export 'package:artisanal_widgets/widgets.dart' show ImageAutoMode;
-export 'package:forge2d/forge2d.dart' show Joint, RevoluteJoint, DistanceJoint;
-
 // Args Aliases
 export 'args.dart' show Command, CommandRunner;
 // Charting
@@ -105,11 +103,6 @@ export 'src/layout/layout.dart'
     show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
 // Liquify adapters
 export 'src/liquid/liquid.dart';
-// Physics
-export 'src/physics/physics.dart';
-// Remote plugin protocol
-export 'src/plugins/plugins_impl.dart'
-    if (dart.library.html) 'src/plugins/plugins_stub.dart';
 // Renderer
 export 'src/renderer/renderer.dart'
     show

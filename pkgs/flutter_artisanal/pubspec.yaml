@@ -11,9 +11,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  artisanal: ^0.5.0
+  artisanal: ^0.6.0
   ultraviolet: ^0.5.0
-  artisanal_widgets: ^0.3.0
+  artisanal_widgets: ^0.4.0
 
 dev_dependencies:
   flutter_test:

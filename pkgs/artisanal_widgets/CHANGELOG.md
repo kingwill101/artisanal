@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+### Removed
+
+- Removed the unused slot registry, plugin mounting, mixed slot region, and
+  remote plugin surface widget APIs and examples.
+
 ## 0.3.1
 
 ### Added

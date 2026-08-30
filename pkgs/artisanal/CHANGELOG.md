@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+### Removed
+
+- Removed the unused out-of-process remote plugin protocol, process host,
+  manifest and schema APIs, examples, and CI precompiler.
+- Removed the unused Forge2D dependency, physics helpers, documentation, and
+  physics demo page.
+
 ## 0.5.1
 
 ### Fixed

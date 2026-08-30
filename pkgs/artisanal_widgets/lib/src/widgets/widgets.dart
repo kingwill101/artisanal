@@ -17,7 +17,6 @@ export 'layout_widgets.dart';
 export 'media/media.dart';
 export 'media_query.dart';
 export 'navigation/navigation.dart';
-export 'plugins/plugins.dart';
 export 'render_layout.dart';
 export 'render_object.dart';
 export 'rendering/rendering.dart';

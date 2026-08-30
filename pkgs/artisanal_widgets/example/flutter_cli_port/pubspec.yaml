@@ -11,8 +11,8 @@ executables:
   flutter_cli_port: main
 
 dependencies:
-  artisanal: ^0.5.0
-  artisanal_widgets: ^0.3.0
+  artisanal: ^0.6.0
+  artisanal_widgets: ^0.4.0
 
 dev_dependencies:
   test: ^1.28.0

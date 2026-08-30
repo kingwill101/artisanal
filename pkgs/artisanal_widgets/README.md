@@ -21,7 +21,7 @@ broader Artisanal toolkit from a single dependency.
 
 ```yaml
 dependencies:
-  artisanal_widgets: ^0.3.0
+  artisanal_widgets: ^0.4.0
 ```
 
 ## Import

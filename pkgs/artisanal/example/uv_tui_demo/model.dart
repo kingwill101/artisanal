@@ -155,13 +155,11 @@ import 'package:artisanal/bubbles.dart'
 import 'dart:math' as math;
 
 import 'package:artisanal/artisanal.dart' as chart;
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show Cell, Rectangle, Screen, UvStyle;
 
 import 'data.dart';
-import 'physics_scene.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -175,7 +173,7 @@ final class NexusTickMsg extends tui.Msg {
 
 enum FocusArea { nodes, logs, console }
 
-enum Page { nexus, physics, charts }
+enum Page { nexus, charts }
 
 final class ChartPaletteConfig {
   const ChartPaletteConfig({
@@ -241,10 +239,6 @@ final class NexusKeys extends tui.KeyMap {
       debug = tui.KeyBinding.withHelp(['d'], 'd', 'debug overlay'),
       clear = tui.KeyBinding.withHelp(['c'], 'c', 'clear logs'),
       reseed = tui.KeyBinding.withHelp(['r'], 'r', 'reseed'),
-      physicsReset = tui.KeyBinding.withHelp(['r'], 'r', 'reset physics'),
-      physicsSpawn = tui.KeyBinding.withHelp(['s'], 's', 'spawn body'),
-      physicsBlast = tui.KeyBinding.withHelp(['x'], 'x', 'blast'),
-      physicsGravity = tui.KeyBinding.withHelp(['g'], 'g', 'toggle gravity'),
       chartsPalette = tui.KeyBinding.withHelp(['m'], 'm', 'chart palette'),
       quit = tui.KeyBinding.withHelp(['esc', 'ctrl+c', 'q'], 'esc/q', 'quit'),
       enter = tui.KeyBinding.withHelp(['enter'], 'enter', 'run cmd') {
@@ -262,7 +256,7 @@ final class NexusKeys extends tui.KeyMap {
     fullHelp = [
       [next, prev, pagePrev, pageNext, toggleHelp, enter],
       [togglePause, toggleFollow, theme, reseed, clear, debug],
-      [physicsSpawn, physicsGravity, physicsBlast, physicsReset, chartsPalette],
+      [chartsPalette],
       [quit],
     ];
   }
@@ -278,10 +272,6 @@ final class NexusKeys extends tui.KeyMap {
   final tui.KeyBinding debug;
   final tui.KeyBinding clear;
   final tui.KeyBinding reseed;
-  final tui.KeyBinding physicsReset;
-  final tui.KeyBinding physicsSpawn;
-  final tui.KeyBinding physicsBlast;
-  final tui.KeyBinding physicsGravity;
   final tui.KeyBinding chartsPalette;
   final tui.KeyBinding quit;
   final tui.KeyBinding enter;
@@ -402,7 +392,6 @@ final class NexusModel implements tui.Model {
     required this.consoleLines,
     required this.heatmap,
     required this.chartPaletteIndex,
-    required this.physics,
     required this.nodeList,
     required this.nodeDelegate,
     required this.logViewport,
@@ -472,7 +461,6 @@ final class NexusModel implements tui.Model {
       ],
       heatmap: HeatmapState.seed(36, 14),
       chartPaletteIndex: 0,
-      physics: PhysicsScene.initial(),
       nodeList: list,
       nodeDelegate: delegate,
       logViewport: tui.ViewportModel(width: 64, height: 10, softWrap: true),
@@ -506,7 +494,6 @@ final class NexusModel implements tui.Model {
   final List<String> consoleLines;
   final HeatmapState heatmap;
   final int chartPaletteIndex;
-  final PhysicsScene physics;
   final tui.ListModel nodeList;
   final NodeDelegate nodeDelegate;
   final tui.ViewportModel logViewport;
@@ -537,7 +524,6 @@ final class NexusModel implements tui.Model {
     List<String>? consoleLines,
     HeatmapState? heatmap,
     int? chartPaletteIndex,
-    PhysicsScene? physics,
     tui.ListModel? nodeList,
     NodeDelegate? nodeDelegate,
     tui.ViewportModel? logViewport,
@@ -566,7 +552,6 @@ final class NexusModel implements tui.Model {
       consoleLines: consoleLines ?? this.consoleLines,
       heatmap: heatmap ?? this.heatmap,
       chartPaletteIndex: chartPaletteIndex ?? this.chartPaletteIndex,
-      physics: physics ?? this.physics,
       nodeList: nodeList ?? this.nodeList,
       nodeDelegate: nodeDelegate ?? this.nodeDelegate,
       logViewport: logViewport ?? this.logViewport,
@@ -645,7 +630,6 @@ final class NexusModel implements tui.Model {
     var nextPipeline = pipeline;
     var nextLogs = logs;
     var nextTopologyPhase = topologyPhase + 0.2;
-    var nextPhysics = physics;
     var nextHeatmap = heatmap;
 
     if (!paused) {
@@ -660,8 +644,6 @@ final class NexusModel implements tui.Model {
             nextLogs = nextLogs.sublist(nextLogs.length - _maxLogs);
           }
         }
-      } else if (page == Page.physics) {
-        nextPhysics = physics.step(_tickRate.inMilliseconds / 1000);
       }
       nextHeatmap = heatmap.evolve();
     }
@@ -690,7 +672,6 @@ final class NexusModel implements tui.Model {
         pipeline: nextPipeline,
         logs: nextLogs,
         heatmap: nextHeatmap,
-        physics: nextPhysics,
         nodeList: nextList,
         logViewport: nextViewport,
         pipelineProgress: progress,
@@ -736,22 +717,9 @@ final class NexusModel implements tui.Model {
       }
       if (char == '2') {
         return (
-          copyWith(page: Page.physics, debugOverlay: nextDebug),
-          _batch(cmds),
-        );
-      }
-      if (char == '3') {
-        return (
           copyWith(page: Page.charts, debugOverlay: nextDebug),
           _batch(cmds),
         );
-      }
-    }
-
-    if (page == Page.physics) {
-      final handled = _handlePhysicsKey(key, nextDebug);
-      if (handled != null) {
-        return (handled, _batch(cmds));
       }
     }
 
@@ -898,25 +866,6 @@ final class NexusModel implements tui.Model {
     );
   }
 
-  NexusModel? _handlePhysicsKey(tui.Key key, tui.DebugOverlayModel nextDebug) {
-    if (key.matchesSingle(keys.physicsGravity)) {
-      return copyWith(
-        physics: physics.toggleGravity(),
-        debugOverlay: nextDebug,
-      );
-    }
-    if (key.matchesSingle(keys.physicsSpawn)) {
-      return copyWith(physics: physics.spawnBurst(3), debugOverlay: nextDebug);
-    }
-    if (key.matchesSingle(keys.physicsBlast)) {
-      return copyWith(physics: physics.blast(), debugOverlay: nextDebug);
-    }
-    if (key.matchesSingle(keys.physicsReset)) {
-      return copyWith(physics: physics.reset(), debugOverlay: nextDebug);
-    }
-    return null;
-  }
-
   NexusModel? _handleChartsKey(tui.Key key, tui.DebugOverlayModel nextDebug) {
     if (key.matchesSingle(keys.chartsPalette)) {
       final nextIndex = (chartPaletteIndex + 1) % _chartPalettes.length;
@@ -1049,9 +998,7 @@ final class NexusModel implements tui.Model {
         if (args.isEmpty) {
           return (
             copyWith(debugOverlay: nextDebug),
-            [
-              'themes: ${demoThemes.map((t) => t.name.toLowerCase()).join(', ')}',
-            ],
+            ['themes: ${demoThemes.map((t) => t.name.toLowerCase()).join(', ')}'],
             null,
           );
         }
@@ -1250,7 +1197,6 @@ final class NexusModel implements tui.Model {
 
     final header = _renderHeader(theme, spec.width);
     final body = switch (page) {
-      Page.physics => _renderPhysicsPage(theme, spec),
       Page.charts => _renderChartsPage(theme, spec),
       _ =>
         spec.compact
@@ -1291,8 +1237,6 @@ final class NexusModel implements tui.Model {
       width,
     );
     final statusLine = switch (page) {
-      Page.physics =>
-        'bodies ${physics.bodies.length} ${DotChars.middle} gravity ${physics.gravityEnabled ? 'on' : 'off'} ${DotChars.middle} world ${physics.worldWidth.toStringAsFixed(0)}x${physics.worldHeight.toStringAsFixed(0)}',
       Page.charts =>
         'charts palette ${_chartPalettes[chartPaletteIndex].name} ${DotChars.middle} heatmap ${heatmap.width}x${heatmap.height} ${DotChars.middle} series ${telemetry.cpuSeries.values.length}',
       _ =>
@@ -1331,24 +1275,6 @@ final class NexusModel implements tui.Model {
       _buildPipelinePanel(theme, spec.leftWidth, spec.pipelineHeight),
       _buildConsolePanel(theme, spec.leftWidth, spec.consoleHeight),
     ], gap: 1);
-  }
-
-  String _renderPhysicsPage(DemoThemeData theme, LayoutSpec spec) {
-    final bodyHeight = math.max(
-      6,
-      spec.height - spec.headerHeight - spec.footerHeight - 2,
-    );
-
-    if (spec.width >= 110) {
-      final gap = 2;
-      final leftWidth = (spec.width * 0.72).floor();
-      final rightWidth = math.max(26, spec.width - leftWidth - gap);
-      final main = _buildPhysicsPanel(theme, leftWidth, bodyHeight);
-      final stats = _buildPhysicsStatsPanel(theme, rightWidth, bodyHeight);
-      return Layout.joinHorizontal(VerticalAlign.top, [main, stats], gap: gap);
-    }
-
-    return _buildPhysicsPanel(theme, spec.width, bodyHeight);
   }
 
   String _renderChartsPage(DemoThemeData theme, LayoutSpec spec) {
@@ -1748,60 +1674,6 @@ final class NexusModel implements tui.Model {
         screen.setCell(x, y, Cell(content: ' ', style: const UvStyle()));
       }
     }
-  }
-
-  String _buildPhysicsPanel(DemoThemeData theme, int width, int height) {
-    final innerWidth = math.max(10, width - 4);
-    final innerHeight = math.max(5, height - 2);
-    final lines = renderPhysicsScene(
-      scene: physics,
-      width: innerWidth,
-      height: innerHeight,
-      theme: theme,
-    );
-    return panelBox(
-      title: 'Physics Lab',
-      lines: lines,
-      width: width,
-      height: height,
-      borderStyle: Style().foreground(theme.palette.accentBold),
-      titleStyle: Style().foreground(theme.palette.accentBold),
-    );
-  }
-
-  String _buildPhysicsStatsPanel(DemoThemeData theme, int width, int height) {
-    var totalSpeed = 0.0;
-    var count = 0;
-    for (final body in physics.bodies) {
-      if (body.bodyType != BodyType.dynamic) continue;
-      totalSpeed += body.linearVelocity.length;
-      count++;
-    }
-    final avgSpeed = count == 0 ? 0.0 : totalSpeed / count;
-
-    final lines = <String>[
-      'Gravity: ${physics.gravityEnabled ? 'ON' : 'OFF'}',
-      'Bodies:  ${physics.bodies.length}',
-      'Avg v:   ${avgSpeed.toStringAsFixed(2)}',
-      '',
-      Style().foreground(theme.palette.textDim).render('Controls'),
-      'g  toggle gravity',
-      's  spawn bodies',
-      'x  blast impulse',
-      'r  reset world',
-      '',
-      Style().foreground(theme.palette.textDim).render('Pages'),
-      '[ / ] or 1 / 2 / 3',
-    ];
-
-    return panelBox(
-      title: 'Physics Control',
-      lines: lines,
-      width: width,
-      height: height,
-      borderStyle: Style().foreground(theme.palette.border),
-      titleStyle: Style().foreground(theme.palette.accentBold),
-    );
   }
 
   String _buildTelemetryPanel(DemoThemeData theme, int width, int height) {
