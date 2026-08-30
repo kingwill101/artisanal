@@ -240,7 +240,7 @@ import 'package:artisanal/args.dart';
 // Terminal abstraction
 import 'package:artisanal/terminal.dart';
 
-// Umbrella API: Console, Markdown, charting, plugins, Liquid, and physics
+// Umbrella API: Console, Markdown, charting, and Liquid
 import 'package:artisanal/artisanal.dart';
 
 // Focused high-fidelity Markdown renderer
@@ -253,7 +253,6 @@ import 'package:artisanal/glamour.dart';
 - **Markdown**: Lightweight ANSI renderer for inline docs.
 - **Glamour**: High-fidelity Markdown renderer with themes.
 - **Liquid**: Templating adapters for UI blocks (experimental).
-- **Physics**: Forge2D helpers for demos (experimental).
 
 ## Data Flow
 
@@ -338,7 +337,6 @@ pkgs/artisanal/lib/
 ├── widgets.dart        # Widget framework re-export
 └── src/
     ├── charting/       # Charting renderers
-    ├── plugins/        # Remote plugin protocol and surfaces
     ├── run/            # App and hosted runner support
     ├── style/          # Lip Gloss-inspired styling
     ├── tui/            # Bubble Tea-inspired TUI
@@ -356,8 +354,7 @@ pkgs/artisanal/lib/
     ├── runner/         # Command runner
     ├── tui/markdown/   # Markdown to ANSI
     ├── glamour/        # Glamour renderer
-    ├── liquid/         # Liquid adapters
-    └── physics/        # Forge2D helpers
+    └── liquid/         # Liquid adapters
 ```
 
 Standalone UV users should import `package:ultraviolet/ultraviolet.dart` directly;

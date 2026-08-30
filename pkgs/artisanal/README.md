@@ -294,7 +294,7 @@ Choose the smallest public library that covers your use case:
 
 | Import | Purpose |
 |--------|---------|
-| `package:artisanal/artisanal.dart` | Umbrella API for CLI output, styling, charting, Markdown, app runners, hosts, plugins, and common terminal types |
+| `package:artisanal/artisanal.dart` | Umbrella API for CLI output, styling, charting, Markdown, app runners, hosts, and common terminal types |
 | `package:artisanal/args.dart` | Command runner utilities (`CommandRunner`, `Command`) |
 | `package:artisanal/bubbles.dart` | Reusable TEA widgets |
 | `package:artisanal/catalog.dart` | Public metadata registry for Bubbles and display components |

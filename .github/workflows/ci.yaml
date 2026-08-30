@@ -64,10 +64,6 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Precompile remote plugins
-        working-directory: pkgs/artisanal
-        run: dart run tool/precompile_remote_plugins.dart
-
       - name: Test Dart package ${{ matrix.package }}
         if: matrix.package != 'pkgs/artisanal_widgets' && matrix.os != 'windows-latest'
         run: dart test ${{ matrix.package }} -r compact

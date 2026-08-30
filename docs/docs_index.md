@@ -67,6 +67,4 @@ Most applications can stay at the TUI or widget layer.
 - [Terminal access](terminal.md)
 - [Color detection](colorprofile.md)
 - [Unicode width and graphemes](unicode.md)
-- [Remote UI plugins](plugins.md)
 - [Liquid templates](liquid.md) (experimental)
-- [Physics helpers](physics.md) (experimental)

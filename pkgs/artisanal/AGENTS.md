@@ -16,7 +16,7 @@ faithful Dart port of Charm's Go libraries — Lip Gloss (styling), Bubble Tea
 - **CommandRunner** — Symfony/Laravel-style CLI commands with namespaces and
   shell completion (`package:artisanal/args.dart`).
 - **Markdown / Glamour** — ANSI markdown rendering and high-fidelity renderer.
-- **Charting, editor core, remote plugin protocol, Liquid, physics, scoring.**
+- **Charting, editor core, Liquid, and scoring.**
 
 Rendering is delegated to the `ultraviolet` package (cell buffers, diff-based
 `UvTerminalRenderer`, image protocols). The widget framework itself lives in
@@ -26,7 +26,7 @@ widget internals in `artisanal_widgets` — this package is the integration
 layer.
 
 Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.10.0 <4.0.0`.
-Version 0.5.0.
+Version 0.6.0.
 
 ## Commands
 
@@ -38,15 +38,12 @@ dart analyze            # lint (root analysis_options.yaml: package:lints/recomm
 dart test               # full test suite
 dart test test/tui/program_test.dart   # single file
 dart run example/main.dart             # run an example (most are interactive)
-dart run tool/precompile_remote_plugins.dart  # CI precompiles remote plugin kernels
 ```
 
 Root `Taskfile.yml` shortcut: `task test-core`.
 
 CI (`.github/workflows/ci.yaml`):
 - `flutter analyze` at the repo root.
-- `dart run tool/precompile_remote_plugins.dart` (from `pkgs/artisanal`) before
-  the test job.
 - `dart test pkgs/artisanal -r compact` from the repo root on Ubuntu;
   `--concurrency=1` on Windows. Tests must pass on both platforms.
 
@@ -55,7 +52,7 @@ CI (`.github/workflows/ci.yaml`):
 ```
 lib/
   artisanal.dart       # umbrella: Console, Style, Terminal, markdown, charting,
-                       # plugins, Liquid, physics, widget re-exports
+                       # Liquid, widget re-exports
   args.dart            # CommandRunner / Command
   style.dart           # Style system
   tui.dart             # TUI runtime: Model, Msg, Cmd, Program, replay/trace
@@ -89,13 +86,11 @@ lib/src/
   layout/              # Layout utilities
   charting/            # sparkline, line, ribbon, histogram, heatmap, pie
   glamour/             # glamour renderer + themes
-  plugins/             # remote plugin protocol (io/web split)
-  liquid/ physics/ scoring/ web/ platform/ compat/ run/
+  liquid/ scoring/ web/ platform/ compat/ run/
 test/                  # mirrors lib structure (tui/, style/, io/, runner/,
                        # terminal/, editor_core/, bubbles/, …)
 example/               # demo apps (log_viewer_demo, command_center_demo, args/,
                        # tui/, charting/, glamour_styles/, …)
-tool/precompile_remote_plugins.dart   # CI helper
 ```
 
 ## Key concepts
@@ -147,18 +142,18 @@ tool/precompile_remote_plugins.dart   # CI helper
   (`package:artisanal/artisanal.dart`, `tui.dart`, `style.dart`, `bubbles.dart`,
   `args.dart`, `terminal.dart`, …). Internal code uses relative imports within
   `lib/src`. Note: the README documents `runtime.dart`, `hosts.dart`,
-  `plugins.dart`, `app.dart`, etc. as separate entrypoints, but those files do
+  `app.dart`, etc. as separate entrypoints, but those files do
   **not** exist — that surface is exported through `artisanal.dart` and
   `tui.dart`. Trust the actual `lib/*.dart` files.
 - **Platform splitting**: io/web/stub splits via conditional imports, e.g.
   `export 'cmd_impl.dart' if (dart.library.html) 'cmd_stub.dart';`. Patterns:
   `cmd`, `writer`, `trace`, `evidence`, `hot_reload_mixin`, `filepicker`,
-  `plugins`, terminal backends, and hosts. Keep IO-specific behavior out of
+  terminal backends, and hosts. Keep IO-specific behavior out of
   shared code; web and stub variants must keep compiling.
 - **Doc comments**: public APIs get `///` docs; major types carry
   `{@category ...}` tags and `{@template}` / `{@macro}` blocks shared across
   the docs. Match that style for new public surface.
-- **API stability**: this is the flagship package (0.5.0, many dependents).
+- **API stability**: this is the flagship package (0.6.0, many dependents).
   Prefer additive, backwards-compatible changes; `compat.dart` exists for
   shims; keep the stable entrypoints covered by
   `test/stable_entrypoints_test.dart` compiling. Document changes in
@@ -199,7 +194,7 @@ tool/precompile_remote_plugins.dart   # CI helper
 - `print()` from application code corrupts a full-screen TUI; use
   `ProgramOptions.withCaptureOutput()` or `Cmd.println`.
 - The package already depends on many libraries (args, markdown, html,
-  highlight, forge2d, pure_svg, …) — add dependencies sparingly and only for
+  highlight, pure_svg, …) — add dependencies sparingly and only for
   real needs.
 - Hot reload (`hotReload`) is auto-detected via `package:hotreloader` and is
   disabled in production builds; tests should not rely on it.

@@ -38,7 +38,6 @@ const sidebars: SidebarsConfig = {
         { type: 'doc', id: 'animation', label: 'Add animation' },
         { type: 'doc', id: 'bubbles', label: 'Add interactive components' },
         { type: 'doc', id: 'io_components', label: 'Use console components' },
-        { type: 'doc', id: 'plugins', label: 'Connect remote UI plugins' },
         { type: 'doc', id: 'replay', label: 'Replay and trace sessions' },
       ],
     },
@@ -65,7 +64,6 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         { type: 'doc', id: 'liquid', label: 'Build with Liquid' },
-        { type: 'doc', id: 'physics', label: 'Add simple physics' },
       ],
     },
   ],

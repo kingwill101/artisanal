@@ -1,5 +1,4 @@
 import 'package:artisanal/artisanal.dart' as hosts;
-import 'package:artisanal/artisanal.dart' as plugins;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/artisanal.dart' as testing;
 import 'package:artisanal/widgets.dart' as widgets;
@@ -70,31 +69,6 @@ void main() {
       isA<Function>(),
     );
   });
-
-  test(
-    'stable plugins entrypoint exposes the remote plugin protocol surface',
-    () async {
-      const validator = plugins.RemotePluginProtocolValidator();
-      const message = plugins.RemotePluginBlurInput(surfaceId: 'sidebar');
-
-      final errors = await validator.validateMessage(message);
-
-      expect(plugins.remotePluginProtocolVersion, isNotEmpty);
-      expect(
-        plugins.RemotePluginProtocolSchemas.schemaForType(
-          plugins.RemotePluginMessageType.hostInputBlur,
-        ),
-        isA<plugins.Schema>(),
-      );
-      expect(plugins.RemotePluginJsonChannel, isA<Type>());
-      expect(plugins.RemotePluginGuestSession, isA<Type>());
-      expect(plugins.RemotePluginSession, isA<Type>());
-      expect(plugins.RemotePluginProcess, isA<Type>());
-      expect(plugins.RemotePluginSurfaceStore, isA<Type>());
-      expect(plugins.RemotePluginJsonTransport.encodeLine, isA<Function>());
-      expect(errors, isEmpty);
-    },
-  );
 
   test('stable widget re-export entrypoints stay available from artisanal', () {
     final shell = widgets.ArtisanalApp(

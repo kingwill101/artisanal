@@ -34,7 +34,6 @@ export 'src/widgets/layout/geometry.dart';
 export 'src/widgets/layout/layout.dart';
 export 'src/widgets/layout/keyboard_listener.dart';
 export 'src/widgets/layout/block_focus.dart';
-export 'src/widgets/plugins/slots.dart';
 export 'src/widgets/components/components_widgets.dart';
 export 'src/widgets/components/overlay.dart';
 export 'src/widgets/chords/chords.dart';
