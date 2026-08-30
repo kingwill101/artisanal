@@ -6,6 +6,10 @@ pubspec.lock
 #third_party/
 # Generated builds, demo recordings, and benchmark reports.
 build/
+*.dill
+pkgs/artisanal/.site/
+pkgs/artisanal_widgets/example/github_cli/site/
+pkgs/ultraviolet/benchmark/profiles/
 orm_bootstrap_test/
 .github/prompts/
 .ck

@@ -2,6 +2,11 @@
 
 ## 0.5.1
 
+### Changed
+
+- Removed the unused direct `meta` dependency and excluded generated DevTools
+  profiler sessions from the published package archive.
+
 ### Fixed
 
 - Preserved SGR attributes, underline variants and colors (including explicit

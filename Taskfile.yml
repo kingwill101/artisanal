@@ -64,7 +64,7 @@ tasks:
   run-uv-layout:
     desc: Run the ultraviolet layout example
     cmds:
-      - dart run pkgs/ultraviolet/example/uv/layout.dart
+      - dart run pkgs/ultraviolet/example/layout.dart
 
   artisanal-demos-build:
     desc: Compile the artisanal examples used by the VHS tapes

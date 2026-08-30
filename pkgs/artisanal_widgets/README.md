@@ -133,7 +133,7 @@ for any app (not OpenCode-specific):
 - `ProgramReplay` for deterministic event playback.
 
 ```dart
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal_widgets/app.dart';
 
 final replay = runtime.ProgramReplay.script([
@@ -155,7 +155,7 @@ await runtime.runProgram(
 );
 ```
 
-See the `package:artisanal/runtime.dart` API docs for full interceptor/replay
+See the `package:artisanal/tui.dart` API docs for full interceptor/replay
 details.
 
 ## Tests
