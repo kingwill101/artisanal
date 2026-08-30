@@ -208,11 +208,11 @@ final class UvStyle {
   final UnderlineStyle underline;
   final int attrs;
 
-  /// A packed metadata key for this style.
+  /// A compact metadata fingerprint for this style.
   ///
-  /// This folds colors, underline mode, and attributes into one stable integer
-  /// so callers can cheaply compare and cache style state.
-  int get packedKey => _packStyleExact(this);
+  /// Hash collisions are possible, so callers using this as a cache key must
+  /// still validate [UvStyle] equality before reusing a value.
+  int get packedKey => _styleFingerprint(this);
 
   /// Whether this style has no attributes or colors set.
   bool get isZero =>
@@ -246,13 +246,14 @@ final class UvStyle {
 
   @override
   bool operator ==(Object other) =>
+      identical(this, other) ||
       other is UvStyle &&
-      other.packedKey == packedKey &&
-      other.fg == fg &&
-      other.bg == bg &&
-      other.underlineColor == underlineColor &&
-      other.underline == underline &&
-      other.attrs == attrs;
+          other.packedKey == packedKey &&
+          other.fg == fg &&
+          other.bg == bg &&
+          other.underlineColor == underlineColor &&
+          other.underline == underline &&
+          other.attrs == attrs;
 
   @override
   int get hashCode => packedKey;
@@ -699,6 +700,7 @@ final class Cell {
       other._contentValue == _contentValue &&
       other._width == _width &&
       other._styleId == _styleId &&
+      (identical(other._style, _style) || other._style == _style) &&
       other._linkId == _linkId &&
       other.diffOption == diffOption;
 
@@ -799,24 +801,42 @@ abstract final class _CellContentKind {
 }
 
 final _GraphemePool _graphemePool = _GraphemePool();
+final _StyleRegistry _styleRegistry = _StyleRegistry();
 final _LinkRegistry _linkRegistry = _LinkRegistry();
 final List<String> _asciiScalarStrings = List<String>.generate(
   0x80,
   String.fromCharCode,
   growable: false,
 );
-UvStyle? _lastStyleIdStyle;
-int _lastStyleId = 0;
-
 int _styleIdFor(UvStyle style) {
   if (style.isZero) return 0;
-  final cachedStyle = _lastStyleIdStyle;
-  if (identical(cachedStyle, style)) return _lastStyleId;
-  final packed = style.packedKey;
-  final styleId = packed == 0 ? 1 : packed;
-  _lastStyleIdStyle = style;
-  _lastStyleId = styleId;
-  return styleId;
+  return _styleRegistry.intern(style);
+}
+
+final class _StyleRegistry {
+  // PackedCell snapshots may outlive their source Cell, so canonical style
+  // ids are stable for the isolate lifetime and are never recycled.
+  int intern(UvStyle style) {
+    if (identical(style, _lastStyle)) return _lastId;
+
+    final existing = _idsByStyle[style];
+    if (existing != null) {
+      _lastStyle = style;
+      _lastId = existing;
+      return existing;
+    }
+
+    final id = _nextId++;
+    _idsByStyle[style] = id;
+    _lastStyle = style;
+    _lastId = id;
+    return id;
+  }
+
+  final Map<UvStyle, int> _idsByStyle = <UvStyle, int>{};
+  UvStyle? _lastStyle;
+  int _lastId = 0;
+  int _nextId = 1;
 }
 
 final class _GraphemePool {
@@ -1132,24 +1152,10 @@ int? _trySingleScalar(String value) {
 
 int _mixHash(int a, int b) => 0x1fffffff & (a * 31 + b);
 
-int _packStyleExact(UvStyle style) {
-  const colorBits = 35;
-  const underlineShift = colorBits * 3;
-  const attrsShift = underlineShift + 3;
-  return _packColorExact(style.fg) |
-      (_packColorExact(style.bg) << colorBits) |
-      (_packColorExact(style.underlineColor) << (colorBits * 2)) |
-      (style.underline.index << underlineShift) |
-      (style.attrs << attrsShift);
-}
-
-int _packColorExact(UvColor? color) {
-  if (color == null) return 0;
-  return switch (color) {
-    UvBasic16(:final index, :final bright) =>
-      1 | (index << 3) | ((bright ? 1 : 0) << 7),
-    UvIndexed256(:final index) => 2 | (index << 3),
-    UvRgb(:final r, :final g, :final b, :final a) =>
-      3 | (r << 3) | (g << 11) | (b << 19) | (a << 27),
-  };
+int _styleFingerprint(UvStyle style) {
+  var hash = _mixHash(0, style.fg?.hashCode ?? 0);
+  hash = _mixHash(hash, style.bg?.hashCode ?? 0);
+  hash = _mixHash(hash, style.underlineColor?.hashCode ?? 0);
+  hash = _mixHash(hash, style.underline.index);
+  return _mixHash(hash, style.attrs);
 }

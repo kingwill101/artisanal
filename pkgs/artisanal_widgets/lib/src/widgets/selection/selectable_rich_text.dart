@@ -8,6 +8,7 @@ class SelectableRichText extends StatelessWidget {
     required this.text,
     super.key,
     this.style,
+    this.textStyle,
     this.selectionHighlightStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
@@ -17,7 +18,13 @@ class SelectableRichText extends StatelessWidget {
   });
 
   final TextSpan text;
+
+  /// Complete Artisanal base style inherited by the span tree.
   final Style? style;
+
+  /// Immutable text-only declarations applied after [style].
+  final TextStyle? textStyle;
+
   final Style? selectionHighlightStyle;
   final TextAlign textAlign;
   final bool softWrap;
@@ -30,6 +37,7 @@ class SelectableRichText extends StatelessWidget {
     final content = _renderRichSpanContent(
       text,
       baseStyle: style,
+      baseTextStyle: textStyle,
       textAlign: textAlign,
       softWrap: softWrap,
       overflow: overflow,

@@ -1,4 +1,5 @@
 import 'package:ultraviolet/src/uv/uv.dart';
+import 'package:ultraviolet/src/unicode/width.dart' show stringWidth;
 import 'package:test/test.dart';
 
 void main() {
@@ -161,6 +162,42 @@ void main() {
       // Should have color reapplied after newline
       final matches = RegExp(r'38;5;82').allMatches(wrapped).length;
       expect(matches, 2, reason: 'color reapplied after existing newline');
+    });
+
+    test('preserves double underline and underline color when wrapping', () {
+      const input = '\x1b[21m\x1b[58:2::10:20:30mAB CD\x1b[59m\x1b[24m';
+      final wrapped = wrapAnsiPreserving(input, 2);
+
+      expect(
+        RegExp(r'4:2|21').allMatches(wrapped).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(RegExp(r'58:2::10:20:30').allMatches(wrapped).length, equals(2));
+    });
+
+    test('skips a nonempty color-space slot in underline truecolor', () {
+      const input = '\x1b[4m\x1b[58:2:0:10:20:30mAB CD\x1b[0m';
+      final wrapped = wrapAnsiPreserving(input, 2);
+      final continuation = wrapped.split('\n')[1];
+
+      expect(continuation, contains('58:2::10:20:30'));
+      expect(continuation, isNot(contains('58:2::0:10:20')));
+    });
+
+    test('measures complete grapheme clusters when wrapping', () {
+      const input = 'A👨‍👩‍👧‍👦B';
+      final wrapped = wrapAnsiPreserving(input, 2);
+      final lines = wrapped.split('\n');
+
+      expect(lines, equals(const ['A', '👨‍👩‍👧‍👦', 'B']));
+      expect(lines.every((line) => stringWidth(line) <= 2), isTrue);
+    });
+
+    test('consumes a grapheme wider than the wrap width', () {
+      const input = '1️⃣';
+
+      expect(stringWidth(input), 2);
+      expect(wrapAnsiPreserving(input, 1), input);
     });
   });
 }

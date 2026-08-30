@@ -1221,17 +1221,17 @@ final class UvTerminalRenderer extends TerminalRenderer {
 
     // Fast path: compare pre-computed style IDs instead of full style objects.
     if (_profile == cp.Profile.trueColor) {
-      if (cell.styleId != _cur.styleId) {
+      if (cell.styleId != _cur.styleId || cell.style != _cur.style) {
         final newStyle = cell.style;
         final oldStyle = _cur.style;
         if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
           final oldStyleId = _cur.styleId;
           final newStyleId = cell.styleId;
           final cache = _styleTransitionCache ??= _StyleTransitionCache();
-          var seq = cache.get(oldStyleId, newStyleId);
+          var seq = cache.get(oldStyleId, newStyleId, oldStyle, newStyle);
           if (seq == null) {
             seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
-            cache.put(oldStyleId, newStyleId, seq);
+            cache.put(oldStyleId, newStyleId, oldStyle, newStyle, seq);
           }
           _buf.write(seq);
         }
@@ -3033,20 +3033,40 @@ String debugDirectRelativeMoveSeq(
 
 final class _StyleTransitionCache {
   static const _maxEntries = 16384;
-  final Map<int, Map<int, String>> _rows = <int, Map<int, String>>{};
+  final Map<int, Map<int, _StyleTransitionEntry>> _rows =
+      <int, Map<int, _StyleTransitionEntry>>{};
   int _entries = 0;
 
-  String? get(int from, int to) {
-    return _rows[from]?[to];
+  String? get(int from, int to, UvStyle fromStyle, UvStyle toStyle) {
+    final entry = _rows[from]?[to];
+    if (entry == null ||
+        entry.fromStyle != fromStyle ||
+        entry.toStyle != toStyle) {
+      return null;
+    }
+    return entry.sequence;
   }
 
-  void put(int from, int to, String sequence) {
+  void put(
+    int from,
+    int to,
+    UvStyle fromStyle,
+    UvStyle toStyle,
+    String sequence,
+  ) {
     if (_entries >= _maxEntries) return;
-    final row = _rows.putIfAbsent(from, () => <int, String>{});
-    if (row.containsKey(to)) return;
-    row[to] = sequence;
-    _entries++;
+    final row = _rows.putIfAbsent(from, () => <int, _StyleTransitionEntry>{});
+    if (!row.containsKey(to)) _entries++;
+    row[to] = _StyleTransitionEntry(fromStyle, toStyle, sequence);
   }
+}
+
+final class _StyleTransitionEntry {
+  const _StyleTransitionEntry(this.fromStyle, this.toStyle, this.sequence);
+
+  final UvStyle fromStyle;
+  final UvStyle toStyle;
+  final String sequence;
 }
 
 final class _DeferredRetainedGraphic {

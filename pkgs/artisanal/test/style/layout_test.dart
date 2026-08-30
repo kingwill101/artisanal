@@ -592,8 +592,14 @@ void main() {
       test('handles long words', () {
         final result = Layout.wrap('Supercalifragilisticexpialidocious', 10);
 
-        // Long word won't wrap, but shouldn't crash
-        expect(result, contains('Supercalifragilisticexpialidocious'));
+        expect(
+          Layout.stripAnsi(result).replaceAll('\n', ''),
+          equals('Supercalifragilisticexpialidocious'),
+        );
+        expect(
+          result.split('\n').every((line) => Layout.visibleLength(line) <= 10),
+          isTrue,
+        );
       });
 
       test('handles zero max width', () {
@@ -620,6 +626,19 @@ void main() {
         final lines = result.split('\n');
 
         expect(lines.length, equals(4));
+      });
+
+      test('preserves active ANSI styles on continuation lines', () {
+        const input = '\x1b[31;1mStyled text wraps safely\x1b[m';
+        final result = Layout.wrapLines(input, 7);
+        final lines = result.split('\n');
+
+        expect(lines.length, greaterThan(1));
+        expect(lines.every((line) => Layout.visibleLength(line) <= 7), isTrue);
+        expect(
+          RegExp(r'\x1b\[[^m]*31[^m]*m').allMatches(result).length,
+          equals(lines.length),
+        );
       });
     });
 

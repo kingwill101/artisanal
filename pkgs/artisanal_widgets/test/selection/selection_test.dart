@@ -515,6 +515,53 @@ void main() {
       }
     });
 
+    test('SelectableText applies a textStyle overlay', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          SelectableText(
+            'Hello',
+            style: Style().bold(),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.normal,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        );
+
+        expect(tester.view, contains('\x1b[3m'));
+        expect(tester.view, isNot(contains('\x1b[1m')));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableRichText inherits TextSpan textStyle', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          SelectableRichText(
+            textStyle: const TextStyle(fontWeight: FontWeight.dim),
+            text: const TextSpan(
+              text: 'A',
+              children: [
+                TextSpan(
+                  text: 'B',
+                  textStyle: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        expect(tester.locateText('AB'), isNotNull);
+        expect(tester.view, contains('\x1b[2m'));
+        expect(tester.view, contains('\x1b[1m'));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('SelectableView participates in selection', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       final ctrl = SelectionController();

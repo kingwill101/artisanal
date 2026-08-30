@@ -330,6 +330,14 @@ void main() {
         expect(original.getForeground, equals(Colors.green));
       });
 
+      test('copy preserves underline color', () {
+        final original = Style().underlineColor(Colors.red);
+
+        final copied = original.copy();
+
+        expect(copied.getUnderlineColor, Colors.red);
+      });
+
       test('copy preserves all properties', () {
         final original = Style()
             .bold()

@@ -1,9 +1,24 @@
 # Changelog
 
+## 0.5.1
+
+### Fixed
+
+- Preserved underline colors when copying `Style` and kept a standalone
+  `TextStyle.decorationStyle` from enabling an otherwise unspecified underline.
+- Kept `TextStyle` underline and line-through decorations continuous across
+  interior spaces while preserving `Style`'s explicit whitespace controls.
+- Preserved ANSI styling and hyperlinks across `Layout.wrap()` continuation
+  lines and hard-wrapped overlong text to its requested cell width.
+
 ## 0.5.0
 
 ### Added
 
+- Added immutable, value-equal `TextStyle` declarations with Flutter-shaped
+  `FontWeight`, `FontStyle`, and `TextDecoration` values, `copyWith()`,
+  parent/child `merge()`, and `Style` composition through `applyTo()` and
+  `toStyle()`.
 - Added `ComponentTheme` presets and semantic style bundles for built-in
   console prompts and display components, configurable through `Console`.
 - Added the standalone `example/widget_catalog.dart` CLI for browsing every

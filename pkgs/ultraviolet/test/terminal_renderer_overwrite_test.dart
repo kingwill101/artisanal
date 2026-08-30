@@ -203,6 +203,37 @@ void main() {
     expect(out.value, contains('Z'));
   });
 
+  test('style caches distinguish decorations on the same color', () {
+    const decorated = UvStyle(
+      fg: UvColor.indexed256(99),
+      underline: UnderlineStyle.single,
+      attrs: Attr.bold,
+    );
+    const plain = UvStyle(fg: UvColor.indexed256(99), attrs: Attr.bold);
+
+    final decoratedCell = Cell.asciiStyled(0x55, style: decorated);
+    final plainCell = Cell.asciiStyled(0x50, style: plain);
+    expect(decoratedCell, isNot(plainCell));
+    expect(decoratedCell.styleId, isNot(plainCell.styleId));
+
+    final out = _TestSink();
+    final renderer = UvTerminalRenderer(
+      out,
+      env: const ['TERM=xterm-256color', 'COLORTERM=truecolor', 'TTY_FORCE=1'],
+    )..setFullscreen(true);
+    renderer.resetForResize(4, 2);
+
+    final buffer = Buffer.create(4, 2)
+      ..setCell(0, 0, decoratedCell)
+      ..setCell(0, 1, plainCell);
+    renderer.render(buffer);
+    renderer.flush();
+
+    expect(out.value, contains('\x1b[1;4;38;5;99mU'));
+    expect(out.value, contains('\x1b[1;38;5;99mP'));
+    expect(out.value, isNot(contains('\x1b[1;4;38;5;99mP')));
+  });
+
   test('UvTerminalRenderer uses direct truecolor transitions', () {
     final out = _TestSink();
     final renderer =

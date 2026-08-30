@@ -816,17 +816,80 @@ A widget for styled text:
 ```dart
 Text('Hello, World!')
 Text('Error!', style: Style().foreground(theme.error))
+Text(
+  'Ready',
+  style: Style().padding(0, 1),
+  textStyle: const TextStyle(
+    color: Colors.green,
+    fontWeight: FontWeight.bold,
+  ),
+)
 Text.rich(
-  TextSpan(text: 'Success', style: theme.bodyLarge),
+  TextSpan(
+    text: 'Status: ',
+    textStyle: const TextStyle(fontWeight: FontWeight.dim),
+    children: [
+      TextSpan(
+        text: 'Success',
+        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+    ],
+  ),
 )
 ```
+
+`Style` remains the complete Artisanal style, including layout and block
+properties. The optional immutable `textStyle` is applied afterward, so it
+can override only text properties while preserving padding, borders, sizing,
+and alignment from `style`. Nested `TextSpan` values inherit both layers;
+nullable `TextStyle` properties inherit, while `normal` and `none` explicitly
+disable inherited presentation.
+
+When `softWrap` is enabled, `Text` measures the `Style` box model against its
+layout constraint, wraps the content inside the available border and padding,
+then rebuilds the block around the resulting lines. Borders therefore remain
+rectangular and resize with wrapped text instead of being wrapped themselves.
 
 **Properties:**
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `data` | `String` | Text content |
-| `style` | `Style?` | Optional style to apply |
+| `style` | `Style?` | Optional complete Artisanal style |
+| `textStyle` | `TextStyle?` | Optional immutable text-only overlay |
+
+`SelectableText` and `SelectableRichText` accept the same `textStyle`
+overlay, including nested `TextSpan` inheritance.
+
+Run the complete showcase to see immutable updates, `Style` composition,
+nested inheritance and resets, selectable spans, decorations, and ASCII-art
+fonts together:
+
+```sh
+dart run pkgs/artisanal_widgets/example/text_style/main.dart
+```
+
+### ASCII text and selectable fonts
+
+`AsciiText` renders each input character as a multi-line terminal glyph. Pick
+one of the built-in ASCII-art fonts or implement `AsciiFont` for custom glyphs:
+
+```dart
+AsciiText(
+  data: 'ARTISANAL',
+  font: AsciiFont.banner,
+)
+
+StyledAsciiText(
+  data: 'READY',
+  font: AsciiFont.slim,
+  style: Style().foreground(Colors.green),
+)
+```
+
+The built-in choices are `standard`, `banner`, `block`, and `slim`. These
+fonts expand text across terminal cells; the terminal host still controls the
+actual monospace typeface and cell size.
 
 ### Icon
 

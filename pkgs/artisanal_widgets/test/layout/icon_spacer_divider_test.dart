@@ -342,6 +342,24 @@ void main() {
       expect(pos, isNotNull);
     });
 
+    test(
+      'clips to one row instead of wrapping in narrow constraints',
+      () async {
+        final tester = WidgetTester(screenWidth: 8, screenHeight: 3);
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(Container(width: 5, child: Divider(width: 10)));
+
+        final dividerLines = tester.view
+            .split('\n')
+            .map(Layout.stripAnsi)
+            .where((line) => line.contains('─'))
+            .toList();
+        expect(dividerLines, hasLength(1));
+        expect(dividerLines.single, contains('─' * 5));
+      },
+    );
+
     test('custom char renders correctly', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());

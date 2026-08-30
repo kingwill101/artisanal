@@ -75,6 +75,7 @@
 library;
 
 export 'src/style/style.dart';
+export 'src/style/text_style.dart';
 export 'src/style/theme.dart';
 export 'src/style/style_model.dart'
     show BoxSizing, BoxMetrics, RenderContext, StyleData;

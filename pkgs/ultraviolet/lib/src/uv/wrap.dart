@@ -89,6 +89,15 @@ String wrapAnsiPreserving(String input, int width, {String breakpoints = ''}) {
     }
 
     if (lineWidth + w > width) {
+      // A grapheme is indivisible. If it is wider than an otherwise empty
+      // line, consume it as that line's content even though it exceeds the
+      // requested width. Retrying the same token would never make progress.
+      if (lineWidth == 0 && w > width) {
+        lineWidth = w;
+        i++;
+        continue;
+      }
+
       if (lastBreakToken != null &&
           widthAtBreak != null &&
           lastBreakToken >= lineStart) {
@@ -160,22 +169,35 @@ String _styleToSgr(UvStyle style) {
     if (c == null) return;
     switch (c) {
       case UvBasic16(:final index, :final bright):
-        final base = bright
-            ? (prefix == 'fg' ? 90 : 100)
-            : (prefix == 'fg' ? 30 : 40);
-        codes.add('${base + index}');
+        if (prefix == 'ul') {
+          codes.add('58:5:${index + (bright ? 8 : 0)}');
+        } else {
+          final base = bright
+              ? (prefix == 'fg' ? 90 : 100)
+              : (prefix == 'fg' ? 30 : 40);
+          codes.add('${base + index}');
+        }
       case UvIndexed256(:final index):
-        codes.add(prefix == 'fg' ? '38;5;$index' : '48;5;$index');
+        codes.add(switch (prefix) {
+          'fg' => '38;5;$index',
+          'bg' => '48;5;$index',
+          _ => '58:5:$index',
+        });
       case UvRgb(:final r, :final g, :final b):
         final rr = color_utils.clampRgbChannel(r);
         final gg = color_utils.clampRgbChannel(g);
         final bb = color_utils.clampRgbChannel(b);
-        codes.add(prefix == 'fg' ? '38;2;$rr;$gg;$bb' : '48;2;$rr;$gg;$bb');
+        codes.add(switch (prefix) {
+          'fg' => '38;2;$rr;$gg;$bb',
+          'bg' => '48;2;$rr;$gg;$bb',
+          _ => '58:2::$rr:$gg:$bb',
+        });
     }
   }
 
   addColor('fg', style.fg);
   addColor('bg', style.bg);
+  addColor('ul', style.underlineColor);
 
   return '\x1b[${codes.join(';')}m';
 }
@@ -254,7 +276,7 @@ List<_Token> _tokenize(String input) {
       _Token(
         kind: _TokenKind.text,
         raw: grapheme,
-        visibleWidth: runeWidth(rune),
+        visibleWidth: stringWidth(grapheme),
         rune: rune,
       ),
     );
@@ -373,6 +395,8 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
         out = out.copyWith(attrs: out.attrs | Attr.conceal);
       case 9:
         out = out.copyWith(attrs: out.attrs | Attr.strikethrough);
+      case 21:
+        out = out.copyWith(underline: UnderlineStyle.double);
       case 22:
         out = out.copyWith(attrs: out.attrs & ~(Attr.bold | Attr.faint));
       case 23:
@@ -413,6 +437,37 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
           out = out.copyWith(bg: color);
         }
         i += consumed;
+      case 58:
+        // Underline color supports both colon and semicolon forms.
+        if (sub.length >= 3) {
+          final mode = int.tryParse(sub[1]);
+          if (mode == 5) {
+            final index = int.tryParse(sub[2]);
+            if (index != null) {
+              out = out.copyWith(underlineColor: UvColor.indexed256(index));
+            }
+          } else if (mode == 2) {
+            // The six-field form includes a color-space slot, which may be
+            // empty or explicitly zero: 58:2:<cs>:r:g:b.
+            final channelStart = sub.length >= 6 ? 3 : 2;
+            if (sub.length >= channelStart + 3) {
+              final r = int.tryParse(sub[channelStart]);
+              final g = int.tryParse(sub[channelStart + 1]);
+              final b = int.tryParse(sub[channelStart + 2]);
+              if (r != null && g != null && b != null) {
+                out = out.copyWith(underlineColor: UvColor.rgb(r, g, b));
+              }
+            }
+          }
+        } else {
+          final (color, consumed) = _parseExtendedColor(params, i + 1);
+          if (color != null) {
+            out = out.copyWith(underlineColor: color);
+          }
+          i += consumed;
+        }
+      case 59:
+        out = out.copyWith(clearUnderlineColor: true);
     }
     i++;
   }

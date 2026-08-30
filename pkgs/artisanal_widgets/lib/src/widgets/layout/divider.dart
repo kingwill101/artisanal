@@ -15,6 +15,9 @@ class Divider extends StatelessWidget {
   Widget build(BuildContext context) {
     final resolvedStyle =
         style ?? Style().foreground(ThemeScope.of(context).border);
-    return Text(char * width, style: resolvedStyle);
+    // A divider is preformatted structure, not prose. When its requested
+    // width exceeds the available columns it should clip to one row rather
+    // than wrap into a stack of divider lines.
+    return Text(char * width, style: resolvedStyle, softWrap: false);
   }
 }

@@ -252,6 +252,22 @@ void main() {
       expect(base.packed, isNot(styleShift.packed));
     });
 
+    test('Packed cell tuple distinguishes colliding color representations', () {
+      const basicStyle = UvStyle(fg: UvColor.basic16(5));
+      const indexedStyle = UvStyle(fg: UvColor.indexed256(5));
+      expect(basicStyle.packedKey, indexedStyle.packedKey);
+
+      final basic = Cell(content: 'A', style: basicStyle);
+      final indexed = Cell(content: 'A', style: indexedStyle);
+
+      expect(basic.styleId, isNot(indexed.styleId));
+      expect(basic.packed, isNot(indexed.packed));
+      expect(basic, isNot(indexed));
+
+      basic.dispose();
+      indexed.dispose();
+    });
+
     test('empty keeps style and link while rewriting content to space', () {
       final cell = Cell(
         content: 'X',
