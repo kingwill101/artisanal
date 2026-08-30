@@ -1,0 +1,12 @@
+name: artisanal_test
+description: Backend-neutral PTY scenario and trace primitives for testing Dart terminal applications.
+version: 0.1.0-dev.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.28.0
