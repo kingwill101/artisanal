@@ -57,7 +57,7 @@ Or add it to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  artisanal: ^0.5.0
+  artisanal: ^0.6.0
 ```
 
 For widget-only applications, depend on `artisanal_widgets` directly. Use
