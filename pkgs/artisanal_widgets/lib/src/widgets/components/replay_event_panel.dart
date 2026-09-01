@@ -1,6 +1,6 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/runtime.dart';
+import '_component_foundation.dart';
+import 'panel.dart';
 
 class ReplayEventPanel extends StatelessWidget {
   ReplayEventPanel({

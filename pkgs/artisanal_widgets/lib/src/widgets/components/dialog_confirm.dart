@@ -1,7 +1,10 @@
 import 'dart:async';
+import '_component_foundation.dart';
+import '../navigation/navigator.dart';
+import 'action_button.dart';
+import 'frame.dart';
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/runtime.dart';
 

@@ -1,4 +1,7 @@
 import 'dart:math' as math;
+import '_component_foundation.dart';
+import 'frame.dart';
+import 'help_view.dart';
 // ignore_for_file: unused_shown_name
 
 import 'package:artisanal/text_editing.dart'
@@ -57,7 +60,6 @@ import 'package:artisanal/text_editing.dart'
 import 'package:artisanal/style.dart' show Color, Border;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/runtime.dart' show Cmd, KeyBinding, KeyMap, KeyMsg;
-import 'package:artisanal_widgets/widgets.dart';
 
 import 'text_area_controller_core_bridge.dart'
     show TextAreaControllerCoreBridge;

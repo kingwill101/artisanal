@@ -1,6 +1,6 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color, Border, Style;
+import '_component_foundation.dart';
+import 'frame.dart';
 
 /// A panel with an optional title bar and action buttons.
 ///

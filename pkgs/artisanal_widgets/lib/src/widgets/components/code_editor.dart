@@ -23,6 +23,10 @@ import 'package:artisanal/text_editing.dart'
         textSyntaxChangeWindow,
         textSyntaxDecorationLayerKey,
         textSyntaxDecorationLayerPriority;
+import '_component_foundation.dart';
+import 'frame.dart';
+import 'scroll_area.dart';
+import 'text_editor.dart';
 import 'package:artisanal/markdown.dart'
     show
         AdaptiveChromaTheme,
@@ -33,7 +37,6 @@ import 'package:artisanal/style.dart' show Border, Style;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/runtime.dart' show Cmd, KeyMsg, KeyBinding;
-import 'package:artisanal_widgets/widgets.dart';
 
 import 'text_area_controller_core_bridge.dart'
     show TextAreaControllerCoreBridge;

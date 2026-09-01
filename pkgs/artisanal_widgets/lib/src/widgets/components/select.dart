@@ -1,7 +1,8 @@
 import 'package:artisanal/runtime.dart';
+import '_component_foundation.dart';
+import 'button.dart';
 import 'package:artisanal/style.dart' show Style;
 import 'package:artisanal/runtime.dart' show Cmd;
-import 'package:artisanal_widgets/widgets.dart';
 
 /// An option for use with [Select] or [DropdownButton].
 class SelectOption<T> {

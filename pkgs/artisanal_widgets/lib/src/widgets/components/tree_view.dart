@@ -1,6 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Style;
+import '_component_foundation.dart';
 
 /// A node in a [TreeView] widget.
 ///

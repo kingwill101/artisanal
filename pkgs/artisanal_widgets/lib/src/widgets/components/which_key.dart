@@ -1,8 +1,9 @@
 import 'dart:math' as math;
+import '_component_foundation.dart';
+import 'frame.dart';
 
 import 'package:artisanal/style.dart' show Color, Border, Style;
 import 'package:artisanal/runtime.dart' show KeyChordBinding, ShortcutContinuation;
-import 'package:artisanal_widgets/widgets.dart';
 
 /// Layout mode for [WhichKeyPanel].
 enum WhichKeyLayout {

@@ -1,11 +1,10 @@
 import 'dart:math' as math;
+import '_component_foundation.dart';
 
 import 'package:artisanal/runtime.dart' show Cmd;
-import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Style;
-
 
 // ignore_for_file: unused_shown_name
 /// Predefined fill/track character sets for [ProgressIndicator].

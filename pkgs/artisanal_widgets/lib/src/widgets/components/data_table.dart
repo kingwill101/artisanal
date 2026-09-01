@@ -1,6 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color, Style;
+import '_component_foundation.dart';
 
 /// A simple data table widget that renders tabular data with column headers,
 /// row separators, and optional theming.

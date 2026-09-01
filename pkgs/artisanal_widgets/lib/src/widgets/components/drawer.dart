@@ -1,6 +1,6 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color;
+import '_component_foundation.dart';
+import 'sidebar.dart';
 
 /// A slide-out panel that overlays content from the left or right.
 ///

@@ -22,9 +22,16 @@ import 'package:artisanal/runtime.dart'
         MouseButton,
         HitTestMouseMsg,
         View;
-import 'package:artisanal_widgets/src/widgets/selection/selection_text_utils.dart';
-import 'package:artisanal_widgets/src/widgets/widgets.dart';
+import '../core/element.dart';
+import '../core/framework.dart';
+import '../core/widget.dart';
+import '../layout/_layout_core.dart';
+import '../layout/markdown_text.dart';
+import '../rendering/render_object.dart';
+import '../scroll/scroll_widgets.dart';
+import 'selection_text_utils.dart';
 import '../style.dart';
+import '../theme/theme_scope.dart';
 part 'selectable_markdown_text.dart';
 part 'selectable_rich_text.dart';
 part 'selectable_text.dart';

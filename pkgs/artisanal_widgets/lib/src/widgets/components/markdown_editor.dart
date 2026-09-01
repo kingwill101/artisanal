@@ -24,7 +24,11 @@ import 'package:artisanal/text_editing.dart'
         textSyntaxChangeWindow,
         textSyntaxDecorationLayerKey,
         textSyntaxDecorationLayerPriority;
-import 'package:artisanal_widgets/widgets.dart';
+import '_component_foundation.dart';
+import '../layout/markdown_text.dart';
+import 'panel.dart';
+import 'scroll_area.dart';
+import 'text_editor.dart';
 
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/markdown.dart' show AnsiRendererOptions;

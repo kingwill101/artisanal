@@ -1,6 +1,6 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color;
+import '_component_foundation.dart';
+import 'frame.dart';
 
 /// A footer bar for inline prompt panels and dialog bottoms.
 ///

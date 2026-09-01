@@ -1,6 +1,6 @@
 import 'package:artisanal/runtime.dart';
+import '_component_foundation.dart';
 import 'package:artisanal/style.dart' show Color, Style;
-import 'package:artisanal_widgets/widgets.dart';
 
 /// An animated spinner indicator for loading states.
 ///

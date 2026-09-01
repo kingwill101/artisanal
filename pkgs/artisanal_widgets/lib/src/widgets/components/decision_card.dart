@@ -1,6 +1,6 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color, Border;
+import '_component_foundation.dart';
+import 'frame.dart';
 
 /// Signal level for a [DecisionCard].
 ///
