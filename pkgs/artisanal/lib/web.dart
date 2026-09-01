@@ -4,6 +4,6 @@
 /// into an HTML canvas.
 library;
 
-import 'tui.dart' show Model;
+import 'src/tui/model.dart' show Model;
 
 export 'src/web/run_program_web.dart' show BrowserRunOptions, runBrowserProgram;

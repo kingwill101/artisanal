@@ -9,8 +9,8 @@
 /// {@macro artisanal_uv_compatibility}
 library;
 
-import '../../tui.dart';
 import '../terminal/keys.dart' as term;
+import '../tui/msg.dart';
 import '../unicode/grapheme.dart' as uni;
 import 'decoder.dart';
 import 'event.dart' as uvev;
