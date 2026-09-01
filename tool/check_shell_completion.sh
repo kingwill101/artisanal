@@ -34,10 +34,12 @@ printf '%s\n' "$completion_script" |
     'source /dev/stdin; complete -p "$BINARY_NAME" >/dev/null'
 
 expected_function="__${binary_name//./_}_completion"
+# The isolated process only inspects generated registration. Avoid compinit's
+# interactive security prompt for runner-owned completion directories.
 printf '%s\n' "$completion_script" |
   BINARY_NAME="$binary_name" EXPECTED_FUNCTION="$expected_function" \
     zsh -f -c \
-      'autoload -Uz compinit && compinit; source /dev/stdin; (( $+functions[$EXPECTED_FUNCTION] )) && (( $+_comps[$BINARY_NAME] ))'
+      'autoload -Uz compinit && compinit -u; source /dev/stdin; (( $+functions[$EXPECTED_FUNCTION] )) && (( $+_comps[$BINARY_NAME] ))'
 
 if ! grep -Fq "###-begin-$binary_name-completion-###" <<<"$completion_script"; then
   echo "Generated completion script does not target $binary_name." >&2
