@@ -12,7 +12,6 @@ import 'package:artisanal/runtime.dart';
 ///
 /// You may supply an external [ScrollController] to programmatically
 
-// ignore_for_file: unused_shown_name
 /// control the scroll position or to share it with other widgets.
 class ScrollArea extends StatefulWidget {
   ScrollArea({

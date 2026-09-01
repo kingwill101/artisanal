@@ -6,7 +6,6 @@ import 'package:artisanal/runtime.dart' show Cmd;
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Style;
 
-// ignore_for_file: unused_shown_name
 /// Predefined fill/track character sets for [ProgressIndicator].
 enum ProgressStyle {
   /// Hash fill, dash track: `[####----]`

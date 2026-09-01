@@ -8,7 +8,6 @@ import '_component_foundation.dart';
 ///
 /// Named `TreeViewNode` to avoid collision with the bubbles `TreeNode`
 
-// ignore_for_file: unused_shown_name
 /// interface from `package:artisanal`.
 class TreeViewNode {
   const TreeViewNode({

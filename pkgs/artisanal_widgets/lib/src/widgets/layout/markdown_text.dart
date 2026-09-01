@@ -1,30 +1,17 @@
-// ignore_for_file: unused_shown_name
 import 'dart:collection';
 import 'dart:math' as math;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/runtime.dart'
-    show
-        Cmd,
-        Msg,
-        KeyType,
-        KeyMsg,
-        MouseMsg,
-        MouseAction,
-        MouseButton,
-        HitTestMouseMsg,
-        View,
-        TuiTrace,
-        TraceTag;
+    show Cmd, Msg, MouseAction, MouseButton, HitTestMouseMsg;
 import 'package:artisanal/markdown.dart'
     show AnsiRendererOptions, MarkdownRenderer;
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
-import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 import '../core/widget.dart';
-import '../theme/theme.dart' show hasDarkBackground, currentTheme;
+import '../theme/theme.dart' show hasDarkBackground;
 
 typedef MarkdownLinkTapCallback = Cmd? Function(String url);
 

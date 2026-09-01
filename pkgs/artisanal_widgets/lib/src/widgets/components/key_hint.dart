@@ -10,7 +10,6 @@ import 'frame.dart';
 /// KeyHint(keyLabel: 'esc', description: 'interrupt')
 /// KeyHint(keyLabel: 'ctrl+p', description: 'commands')
 
-// ignore_for_file: unused_shown_name
 /// ```
 class KeyHint extends StatelessWidget {
   KeyHint({

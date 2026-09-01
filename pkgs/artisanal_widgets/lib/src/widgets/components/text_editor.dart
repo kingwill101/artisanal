@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import '_component_foundation.dart';
 import 'frame.dart';
 import 'help_view.dart';
-// ignore_for_file: unused_shown_name
 
 import 'package:artisanal/text_editing.dart'
     show
@@ -11,23 +10,8 @@ import 'package:artisanal/text_editing.dart'
         TextAreaModel,
         TextAreaStyles,
         TextDecorationRange,
-        TextSyntaxBuildResult,
-        TextSyntaxDecorationPatch,
-        TextSyntaxSession,
-        TextSyntaxSnapshot,
-        TextSyntaxProvider,
         TextDocument,
-        TextDocumentChange,
         keyMatchesSingle,
-        codeHandleClosingDelimiterAlignment,
-        codeHandlePairBackspace,
-        codeHandleAutoPair,
-        codeInsertIndentedNewline,
-        codeToggleBlockComments,
-        resolveCodeLanguageProfile,
-        textSyntaxChangeWindow,
-        textSyntaxDecorationLayerKey,
-        textSyntaxDecorationLayerPriority,
         TextHighlightRange,
         TextDiagnosticSeverity,
         TextOffsetStateSnapshot,

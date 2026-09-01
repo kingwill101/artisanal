@@ -1,23 +1,8 @@
-
-// ignore_for_file: unused_shown_name
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/runtime.dart'
-    show
-        Cmd,
-        Msg,
-        KeyType,
-        KeyMsg,
-        MouseMsg,
-        MouseAction,
-        MouseButton,
-        HitTestMouseMsg,
-        View,
-        TuiTrace,
-        TraceTag;
-import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+import 'package:artisanal/runtime.dart' show Cmd;
+import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
-import '../theme/theme.dart' show hasDarkBackground, currentTheme;
+import '../theme/theme.dart' show hasDarkBackground;
 import '../animation/animation_controller.dart';
 import '../animation/animation_mixin.dart';
 

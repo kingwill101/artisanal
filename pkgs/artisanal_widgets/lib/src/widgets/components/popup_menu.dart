@@ -9,7 +9,6 @@ import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style;
 
-// ignore_for_file: unused_shown_name
 /// Base class for entries used in [PopupMenuButton].
 abstract class PopupMenuEntry<T> extends StatelessWidget {
   PopupMenuEntry({super.key});

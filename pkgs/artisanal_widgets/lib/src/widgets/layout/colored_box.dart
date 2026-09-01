@@ -1,24 +1,5 @@
-
-// ignore_for_file: unused_shown_name
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/uv.dart'
-    show
-        Canvas,
-        Cell,
-        Drawable,
-        ITerm2ImageDrawable,
-        KittyImageDrawable,
-        SixelImageDrawable,
-        StyledString,
-        TerminalCapabilities,
-        UvStyle,
-        UvBasic16,
-        UvColor,
-        UvIndexed256,
-        UvRgb,
-        UnderlineStyle,
-        HalfBlockImageDrawable,
-        mayContainTerminalGraphics;
+import 'package:artisanal/uv.dart' show Canvas, Cell, UvStyle;
 import '_layout_utils.dart';
 import 'geometry.dart';
 import '../rendering/render_object.dart';
