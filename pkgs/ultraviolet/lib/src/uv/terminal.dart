@@ -61,9 +61,7 @@ import '../unicode/width.dart';
 import 'winch.dart';
 import 'ansi_slice.dart' as ranges;
 
-import 'terminal_stub.dart'
-    if (dart.library.io) 'terminal_io.dart'
-    if (dart.library.html) 'terminal_web.dart';
+import 'terminal_stub.dart' if (dart.library.io) 'terminal_io.dart';
 
 export 'buffer.dart';
 export 'capabilities.dart';
