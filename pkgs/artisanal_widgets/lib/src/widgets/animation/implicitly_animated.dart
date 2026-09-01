@@ -9,7 +9,7 @@
 /// animations automatically, without requiring manual controller management.
 library;
 
-import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/runtime.dart' show Cmd;
 
 import '../core/framework.dart' show StatefulWidget, State;
 import 'animation_controller.dart';

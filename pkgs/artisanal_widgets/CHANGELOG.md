@@ -4,6 +4,11 @@
 
 ### Changed
 
+- Routed framework internals through Artisanal's narrow runtime entrypoint so
+  widget app imports do not load unrelated native Markdown dependencies.
+- Kept both `app.dart` and the complete `widgets.dart` public surface
+  JavaScript-compilable, including Markdown text rendering with browser image
+  placeholders.
 - Reduced the published package archive by excluding repository-hosted demo
   media and generated GitHub CLI web artifacts.
 - Moved `runWidgetApp`, `serveWidgetApp`, `Transport`, and widget-oriented

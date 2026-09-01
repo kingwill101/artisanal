@@ -9,6 +9,8 @@
 
 ### Fixed
 
+- Kept the main `ultraviolet.dart` entrypoint browser-compatible by loading
+  the Windows native console reader only on `dart:io` platforms.
 - Preserved SGR attributes, underline variants and colors (including explicit
   color-space slots), and complete grapheme widths across ANSI-aware wrapped
   lines; oversized graphemes now make progress at narrower wrap widths.

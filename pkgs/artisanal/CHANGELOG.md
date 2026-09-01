@@ -2,8 +2,18 @@
 
 ## 0.6.0
 
+### Added
+
+- Added focused `charting.dart`, `git_diff.dart`, `layout.dart`,
+  `markdown.dart`, `runtime.dart`, `scoring.dart`, and `text_editing.dart`
+  entrypoints so reusable packages can import only the features they need.
+
 ### Changed
 
+- Added a narrow, platform-safe `runtime.dart` entrypoint for reusable and
+  browser-capable consumers of the core TEA runtime.
+- Kept Markdown text rendering browser-compatible while retaining native image
+  downloading and SVG rasterization on `dart:io` platforms.
 - Reduced the published package archive by excluding repository-hosted demo
   media.
 - Generalized the browser runner as `runBrowserProgram(Model)` and the shared

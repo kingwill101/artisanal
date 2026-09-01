@@ -8,12 +8,12 @@ import 'dart:async' show Completer;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 
-import '../components/components_widgets.dart'
-    show CmdCallback, FadeModalBarrier;
+import '../components/component_style.dart' show CmdCallback;
+import '../components/fade_modal_barrier.dart' show FadeModalBarrier;
 import '../components/overlay.dart';
 import '../core/framework.dart' show BuildContext;
 import '../core/widget.dart';
-import '../layout/layout.dart';
+import '../layout/_layout_core.dart';
 import 'route_settings.dart';
 
 /// A builder that creates a widget for a route.

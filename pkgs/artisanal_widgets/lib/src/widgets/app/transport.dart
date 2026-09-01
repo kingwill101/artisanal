@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show MouseMode, ProgramOptions;
+import 'package:artisanal/runtime.dart' show MouseMode, ProgramOptions;
 
 /// Transport selection for [serveWidgetApp].
 enum Transport {

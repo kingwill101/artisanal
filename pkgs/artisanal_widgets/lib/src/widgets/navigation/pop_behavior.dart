@@ -3,7 +3,7 @@
 /// Configures which keyboard keys trigger a pop action in the navigator.
 library;
 
-import 'package:artisanal/tui.dart' show KeyMsg;
+import 'package:artisanal/runtime.dart' show KeyMsg;
 import 'package:artisanal/terminal.dart' show KeyType;
 
 import 'route.dart';

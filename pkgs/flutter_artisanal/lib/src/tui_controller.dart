@@ -1,15 +1,14 @@
 import 'dart:async';
 
-import 'package:artisanal/artisanal.dart'
+import 'package:artisanal/runtime.dart'
     show
         BackendTerminal,
         EmbeddedTerminalBackend,
         ProgramHost,
         ProgramOptions,
         TerminalDimensions;
-import 'package:artisanal/tui.dart' show Model, runProgram;
-import 'package:artisanal/tui.dart'
-    show Msg, ProgramInterceptor, TuiRendererOptions;
+import 'package:artisanal/runtime.dart'
+    show Model, Msg, ProgramInterceptor, TuiRendererOptions, runProgram;
 import 'package:flutter/widgets.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 

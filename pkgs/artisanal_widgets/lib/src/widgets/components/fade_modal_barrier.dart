@@ -1,8 +1,23 @@
-import 'package:artisanal/tui.dart' show Cmd;
-import 'package:artisanal_widgets/widgets.dart';
-
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart' show Cmd;
 import 'package:artisanal/style.dart' show Color;
+
+import '../animation/animation_controller.dart' show AnimationController;
+import '../animation/animation_mixin.dart' show AnimationMixin;
+import '../core/framework.dart' show BuildContext, State, StatefulWidget;
+import '../core/widget.dart' show Widget;
+import '../layout/_layout_core.dart'
+    show
+        Container,
+        GestureDetector,
+        IgnorePointer,
+        Opacity,
+        Positioned,
+        SizedBox,
+        Stack,
+        StackFit,
+        Tint;
+import '../theme/theme_scope.dart' show ThemeScope;
+import 'component_style.dart' show CmdCallback;
 
 /// A modal barrier that fades in/out with an animated opacity.
 ///

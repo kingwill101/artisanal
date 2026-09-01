@@ -12,7 +12,7 @@ import 'dart:collection';
 
 import 'package:meta/meta.dart' show experimental;
 
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         DegradationLevel,
         ProgramInterceptor,

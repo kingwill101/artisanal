@@ -4,7 +4,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/tui.dart' show MouseButton;
+import 'package:artisanal/runtime.dart' show MouseButton;
 
 import 'widget_tester.dart';
 

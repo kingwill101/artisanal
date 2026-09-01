@@ -1,7 +1,7 @@
-import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/runtime.dart' show Cmd;
 import 'package:artisanal_widgets/widgets.dart';
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 /// A convenience widget that wraps [SingleChildScrollView] with optional
 /// sizing and an optional [Scrollbar].

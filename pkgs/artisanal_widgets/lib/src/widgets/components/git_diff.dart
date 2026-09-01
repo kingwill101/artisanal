@@ -1,17 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:artisanal/artisanal.dart' show Style;
-import 'package:artisanal/tui.dart';
-import 'package:artisanal/style.dart' show Color;
-import 'package:artisanal_widgets/src/widgets/core/widget.dart';
-import 'package:artisanal_widgets/src/widgets/core/element.dart';
-import 'package:artisanal_widgets/src/widgets/framework.dart';
-import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
-import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
-import 'package:artisanal_widgets/src/widgets/scroll_widgets.dart'
-    show ScrollController, WidgetScrollController, SingleChildScrollView;
-import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
-import 'package:artisanal/bubbles.dart'
+import 'package:artisanal/git_diff.dart'
     show
         DiffCommentAnchor,
         DiffCommentLineHighlight,
@@ -20,7 +9,16 @@ import 'package:artisanal/bubbles.dart'
         DiffStyles,
         DiffViewMode,
         GitDiffModel;
-
+import 'package:artisanal/runtime.dart';
+import 'package:artisanal/style.dart' show Color, Style;
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/core/element.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
+import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
+import 'package:artisanal_widgets/src/widgets/scroll_widgets.dart'
+    show ScrollController, WidgetScrollController, SingleChildScrollView;
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
 import 'package:artisanal_widgets/src/widgets/gestures/events.dart';
 import 'package:artisanal_widgets/src/widgets/gestures/hit_testing.dart';
 import 'package:artisanal_widgets/src/widgets/theme/theme.dart';

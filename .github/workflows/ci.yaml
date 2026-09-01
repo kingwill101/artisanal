@@ -37,6 +37,12 @@ jobs:
       - name: Analyze workspace
         run: flutter analyze
 
+      - name: Compile browser-safe public entrypoints
+        run: |
+          dart compile js pkgs/ultraviolet/tool/web_entrypoint_smoke.dart -o build/ultraviolet-web-entrypoint-smoke.js
+          dart compile js pkgs/artisanal/tool/web_entrypoints_smoke.dart -o build/artisanal-web-entrypoints-smoke.js
+          dart compile js pkgs/artisanal_widgets/tool/web_entrypoints_smoke.dart -o build/artisanal-widgets-web-entrypoints-smoke.js
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

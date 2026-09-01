@@ -1,6 +1,6 @@
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
-import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
 
 /// A two-pane view that arranges children along an axis.
 ///

@@ -7,7 +7,7 @@ library;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg;
+import 'package:artisanal/runtime.dart' show Cmd, KeyMsg, Msg;
 
 import '../animation/animation_controller.dart' show AnimationController;
 import '../animation/animation_mixin.dart' show AnimationMixin;
@@ -17,7 +17,7 @@ import '../components/overlay.dart' show OverlayEntry;
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/widget.dart';
 import '../focus/focus.dart' show FocusScope;
-import '../layout/layout.dart';
+import '../layout/_layout_core.dart';
 import '../theme/theme.dart' show Theme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'animation_style.dart' show AnimationStyle;

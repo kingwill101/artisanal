@@ -1,11 +1,11 @@
-import 'package:artisanal/src/tui/bubbles/bubbles.dart' show RenderConfig;
 import 'package:artisanal/style.dart' show Colors, Style;
-import 'package:artisanal/tui.dart' show Cmd;
 import 'package:artisanal/uv.dart' as uv;
 
+import '../cmd.dart' show Cmd;
 import '../devtools.dart' show DevToolsMessageEntry;
 import '../model.dart' show OutputLogEntry;
 import '../msg.dart';
+import 'components/base.dart' show RenderConfig;
 import 'components/panel.dart';
 
 /// Which sections the debug overlay displays.

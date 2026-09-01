@@ -5,7 +5,7 @@
 /// `Cmd?` to fit the TEA (The Elm Architecture) pattern.
 library;
 
-import 'package:artisanal/tui.dart' show Cmd, MouseMsg, MouseButton;
+import 'package:artisanal/runtime.dart' show Cmd, MouseMsg, MouseButton;
 
 import '../layout/geometry.dart' show Offset;
 

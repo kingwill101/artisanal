@@ -1,7 +1,7 @@
 /// Hosts a [ChordController]: feeds lifecycle messages and rebuilds the tree.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 import '../core/framework.dart' show State, StatefulWidget;
 import '../core/widget.dart' show Widget;

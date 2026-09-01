@@ -1,6 +1,6 @@
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
-import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
 import 'package:artisanal_widgets/src/widgets/style.dart' hide Padding;
 import 'package:artisanal_widgets/src/widgets/theme/theme.dart';
 import 'package:artisanal_widgets/src/widgets/theme_scope.dart';

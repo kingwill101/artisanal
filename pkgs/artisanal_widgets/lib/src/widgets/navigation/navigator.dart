@@ -6,7 +6,7 @@ library;
 
 import 'dart:async' show Completer;
 
-import 'package:artisanal/tui.dart' show Cmd, Msg, KeyMsg;
+import 'package:artisanal/runtime.dart' show Cmd, Msg, KeyMsg;
 import 'package:artisanal/style.dart' hide Padding, Align;
 
 import '../components/overlay.dart';
@@ -14,7 +14,7 @@ import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/key.dart' show Key, UniqueKey;
 import '../core/widget.dart';
 import '../focus/focus.dart' show FocusScope;
-import '../layout/layout.dart';
+import '../layout/_layout_core.dart';
 import 'navigator_observer.dart';
 import 'pop_behavior.dart';
 import 'route.dart';

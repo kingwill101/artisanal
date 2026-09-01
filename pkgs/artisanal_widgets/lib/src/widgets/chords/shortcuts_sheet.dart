@@ -2,7 +2,7 @@
 library;
 
 import 'package:artisanal/style.dart' as style show Border, Color;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 import '../components/frame.dart';
 import '../components/help_view.dart';

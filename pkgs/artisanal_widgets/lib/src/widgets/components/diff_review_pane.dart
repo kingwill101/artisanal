@@ -5,13 +5,13 @@
 library;
 
 import 'package:artisanal/style.dart' show Color, Border, Style;
-import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg, KeyType;
-import 'package:artisanal/bubbles.dart' show DiffViewMode;
+import 'package:artisanal/runtime.dart' show Cmd, KeyMsg, Msg, KeyType;
+import 'package:artisanal/git_diff.dart' show DiffViewMode;
 
 import '../core/framework.dart'
     show BuildContext, State, StatefulWidget, StatelessWidget;
 import '../core/widget.dart';
-import '../layout/layout.dart';
+import '../layout/_layout_core.dart';
 import '../media/media_query.dart' show MediaQuery;
 import '../scroll/scroll_widgets.dart' show SingleChildScrollView;
 import '../theme/theme_scope.dart' show ThemeScope;
@@ -273,10 +273,7 @@ class _FileList extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     if (files.isEmpty) {
-      return Text(
-        '—',
-        style: theme.bodySmall.copy()..foreground(muted),
-      );
+      return Text('—', style: theme.bodySmall.copy()..foreground(muted));
     }
 
     return SingleChildScrollView(

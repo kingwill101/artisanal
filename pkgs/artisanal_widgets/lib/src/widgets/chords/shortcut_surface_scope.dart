@@ -1,7 +1,7 @@
 /// Registers a [tui.ShortcutSurface] with the nearest [tui.KeymapHub] while mounted.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/widget.dart' show Widget;

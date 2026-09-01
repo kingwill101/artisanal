@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Msg;
+import 'package:artisanal/runtime.dart' show Msg;
 
 /// Message delivered on each animation frame tick.
 ///

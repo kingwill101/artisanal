@@ -300,8 +300,15 @@ Choose the smallest public library that covers your use case:
 | `package:artisanal/catalog.dart` | Public metadata registry for Bubbles and display components |
 | `package:artisanal/style.dart` | Styles, colors, borders, layout, and themes |
 | `package:artisanal/tui.dart` | TEA runtime (`Model`, `Msg`, `Cmd`, `Program`) plus replay and tracing |
+| `package:artisanal/runtime.dart` | Platform-safe TEA runtime for reusable and browser-capable packages |
 | `package:artisanal/terminal.dart` | Terminal abstraction, ANSI helpers, keys, backends, and bridges |
 | `package:artisanal/editor_core.dart` | Low-level text document, editor state, and viewport primitives |
+| `package:artisanal/text_editing.dart` | Focused cursor, text input, text area, and editor-core surface |
+| `package:artisanal/markdown.dart` | Markdown-to-ANSI renderer and options |
+| `package:artisanal/git_diff.dart` | Git diff model, styles, and review data types |
+| `package:artisanal/charting.dart` | Terminal chart painters and data primitives |
+| `package:artisanal/layout.dart` | String layout, wrapping, and responsive utilities |
+| `package:artisanal/scoring.dart` | Bayesian matching and conformal ranking utilities |
 | `package:artisanal/glamour.dart` | High-fidelity Markdown rendering |
 | `package:artisanal/uv.dart` | Compatibility re-export of Ultraviolet types |
 | `package:artisanal/compat.dart` | Backward-compatible API shims |

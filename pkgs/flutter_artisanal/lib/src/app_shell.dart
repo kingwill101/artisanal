@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:artisanal/artisanal.dart' show ProgramOptions;
-import 'package:artisanal/tui.dart' show Model;
-import 'package:artisanal/tui.dart' show TuiRendererOptions;
+import 'package:artisanal/runtime.dart'
+    show Model, ProgramOptions, TuiRendererOptions;
 import 'package:flutter_artisanal/src/tui_controller.dart' show TuiController;
 
 Future<void> runFlutterApp(Widget app) async {

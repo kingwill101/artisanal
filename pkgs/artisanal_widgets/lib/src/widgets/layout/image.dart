@@ -4,7 +4,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data' show BytesBuilder, Uint8List;
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal/uv.dart'
         // ignore_for_file: use_null_aware_elements
         show

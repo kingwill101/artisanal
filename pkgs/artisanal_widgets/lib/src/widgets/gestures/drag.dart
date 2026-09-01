@@ -4,7 +4,7 @@
 /// by movement beyond the drag slop threshold.
 library;
 
-import 'package:artisanal/tui.dart' show MouseMsg, MouseButton;
+import 'package:artisanal/runtime.dart' show MouseMsg, MouseButton;
 
 import '../layout/geometry.dart' show Offset;
 import 'events.dart';

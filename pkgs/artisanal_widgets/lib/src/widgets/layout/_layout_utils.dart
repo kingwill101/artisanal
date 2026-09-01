@@ -2,7 +2,7 @@ import 'dart:math' as math;
 // ignore_for_file: unused_shown_name
 
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         Cmd,
         Msg,

@@ -6,7 +6,7 @@
 /// pointer sequence.
 library;
 
-import 'package:artisanal/tui.dart' show Cmd, MouseMsg;
+import 'package:artisanal/runtime.dart' show Cmd, MouseMsg;
 
 import '../layout/geometry.dart' show Offset;
 

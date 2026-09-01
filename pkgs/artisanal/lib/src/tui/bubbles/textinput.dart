@@ -8,11 +8,13 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/src/tui/tui.dart';
 import 'package:artisanal/style.dart';
 
 import '../../uv/cursor.dart';
 import '../../uv/geometry.dart';
+import '../automation.dart' show TraceTag, TuiTrace;
+import '../editor_core/editor_core.dart';
+import '../runtime.dart';
 import '../editor_core/editor_core.dart' as commands;
 import 'cursor.dart';
 import 'runeutil.dart';

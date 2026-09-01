@@ -1,5 +1,5 @@
 import 'package:artisanal/style.dart';
-import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/runtime.dart' show Cmd;
 
 import '../theme/theme.dart' show hasDarkBackground;
 

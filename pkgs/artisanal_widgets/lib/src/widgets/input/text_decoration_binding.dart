@@ -1,6 +1,6 @@
 library;
 
-import 'package:artisanal/bubbles.dart'
+import 'package:artisanal/text_editing.dart'
     show
         TextDecorationRange,
         TextLineDecoration,

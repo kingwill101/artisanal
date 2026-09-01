@@ -1,15 +1,13 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:image/image.dart' as img;
-import 'package:pure_svg/svg.dart' show SvgStringLoader, renderSvgToPng;
 
 import '../../style/color.dart';
 import '../../style/style.dart';
 import '../../terminal/kitty.dart';
 import '../../terminal/iterm2.dart';
 import '../../terminal/sixel.dart';
+import 'image_renderer_platform_stub.dart'
+    if (dart.library.io) 'image_renderer_platform_io.dart'
+    as platform;
 
 /// Terminal image protocol for rendering images inline.
 enum ImageProtocol {
@@ -35,10 +33,10 @@ enum ImageProtocol {
 
 /// Auto-detect the best available terminal image protocol.
 ImageProtocol detectImageProtocol() {
-  final termProgram = Platform.environment['TERM_PROGRAM'] ?? '';
-  final term = Platform.environment['TERM'] ?? '';
-  final termEmulator = Platform.environment['TERMINAL_EMULATOR'] ?? '';
-  final kittyWindowId = Platform.environment['KITTY_WINDOW_ID'] ?? '';
+  final termProgram = platform.environmentValue('TERM_PROGRAM');
+  final term = platform.environmentValue('TERM');
+  final termEmulator = platform.environmentValue('TERMINAL_EMULATOR');
+  final kittyWindowId = platform.environmentValue('KITTY_WINDOW_ID');
 
   if (kittyWindowId.isNotEmpty || termProgram == 'Kitty') {
     return ImageProtocol.kitty;
@@ -63,7 +61,7 @@ ImageProtocol detectImageProtocol() {
     return ImageProtocol.sixel;
   }
   if (termProgram == 'Windows Terminal' ||
-      Platform.environment.containsKey('WT_SESSION')) {
+      platform.hasEnvironmentValue('WT_SESSION')) {
     return ImageProtocol.sixel;
   }
   // Fall back to none — _renderTerminalImage will try Kitty anyway.
@@ -74,45 +72,7 @@ ImageProtocol detectImageProtocol() {
 ///
 /// Returns `null` if the image could not be downloaded or decoded.
 Future<(img.Image image, String mimeType)?> downloadImage(String url) async {
-  try {
-    final uri = Uri.parse(url);
-    final client = HttpClient();
-    final request = await client.getUrl(uri);
-    final response = await request.close();
-
-    if (response.statusCode != 200) {
-      client.close();
-      return null;
-    }
-
-    final bytes = await response.fold<Uint8List>(Uint8List(0), (prev, chunk) {
-      final combined = Uint8List(prev.length + chunk.length);
-      combined.setRange(0, prev.length, prev);
-      combined.setRange(prev.length, combined.length, chunk);
-      return combined;
-    });
-    client.close();
-
-    final mimeType = response.headers.value('content-type') ?? '';
-
-    // Check for SVG
-    if (mimeType.contains('svg') || url.toLowerCase().endsWith('.svg')) {
-      final svgContent = utf8.decode(bytes);
-      final loader = SvgStringLoader(svgContent);
-      final pngBytes = await renderSvgToPng(loader, width: 200, height: 200);
-      if (pngBytes.isEmpty) return null;
-      final image = img.decodeImage(pngBytes);
-      if (image == null) return null;
-      return (image, mimeType);
-    }
-
-    final image = img.decodeImage(bytes);
-    if (image == null) return null;
-
-    return (image, mimeType);
-  } catch (_) {
-    return null;
-  }
+  return platform.downloadImage(url);
 }
 
 /// Converts an SVG string to a raster [img.Image] using pure_svg.
@@ -121,14 +81,7 @@ Future<img.Image?> svgToImage(
   int width = 200,
   int height = 200,
 }) async {
-  try {
-    final loader = SvgStringLoader(svgContent);
-    final pngBytes = await renderSvgToPng(loader, width: width, height: height);
-    if (pngBytes.isEmpty) return null;
-    return img.decodeImage(pngBytes);
-  } catch (_) {
-    return null;
-  }
+  return platform.svgToImage(svgContent, width: width, height: height);
 }
 
 const int _defaultMaxRows = 16;

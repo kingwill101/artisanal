@@ -1,7 +1,7 @@
 /// Provides a [tui.KeymapHub] to descendants and rebuilds on stack/pending.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 import '../core/framework.dart'
     show BuildContext, InheritedWidget, State, StatefulWidget;

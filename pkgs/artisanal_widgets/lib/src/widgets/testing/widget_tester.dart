@@ -18,7 +18,7 @@
 ///
 /// ```dart
 /// import 'package:artisanal_widgets/widgets.dart' as w;
-/// import 'package:artisanal/tui.dart' as tui;
+/// import 'package:artisanal/runtime.dart' as tui;
 /// import 'package:artisanal_widgets/testing.dart';
 ///
 /// void main() {
@@ -38,7 +38,7 @@ import 'dart:async';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/terminal.dart' show Terminal, RawModeGuard;
 import 'package:artisanal/style.dart' show ColorProfile, Layout;
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         Msg,
         KeyMsg,
@@ -58,7 +58,7 @@ import '../components/components_widgets.dart' show DebugOverlayPosition;
 import '../core/widget.dart';
 import '../core/key.dart' show Key;
 import '../core/element.dart' show HitTestElementEntry, Element;
-import '../layout/layout.dart' show ImageAutoMode;
+import '../layout/_layout_core.dart' show ImageAutoMode;
 import '../rendering/render_object.dart' show RenderObject;
 import 'manual_clock.dart';
 

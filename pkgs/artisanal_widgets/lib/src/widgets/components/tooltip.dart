@@ -1,10 +1,10 @@
-import 'package:artisanal/artisanal.dart' show Layout;
+import 'package:artisanal/layout.dart' show Layout;
 import 'package:artisanal_widgets/src/widgets/core/element.dart';
 import 'dart:math' as math;
 
 import 'package:artisanal_widgets/widgets.dart';
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style;
 
 // ignore_for_file: unused_shown_name
