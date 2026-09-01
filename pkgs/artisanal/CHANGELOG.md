@@ -2,12 +2,20 @@
 
 ## 0.6.0
 
+### Changed
+
+- Reduced the published package archive by excluding repository-hosted demo
+  media.
+
 ### Removed
 
 - Removed the unused out-of-process remote plugin protocol, process host,
   manifest and schema APIs, examples, and CI precompiler.
 - Removed the unused Forge2D dependency, physics helpers, documentation, and
   physics demo page.
+- Removed the unused `chalkdart` dependency, unreachable web bootstrap code,
+  obsolete color-profile forwarding files, and the abandoned duplicate
+  documentation site.
 
 ## 0.5.1
 

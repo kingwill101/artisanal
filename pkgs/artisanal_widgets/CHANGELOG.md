@@ -2,6 +2,11 @@
 
 ## 0.4.0
 
+### Changed
+
+- Reduced the published package archive by excluding repository-hosted demo
+  media and generated GitHub CLI web artifacts.
+
 ### Removed
 
 - Removed the unused slot registry, plugin mounting, mixed slot region, and

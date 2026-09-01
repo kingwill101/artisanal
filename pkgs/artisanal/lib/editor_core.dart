@@ -6,7 +6,7 @@
 ///
 /// It is intended for editor implementations, language tooling, and advanced
 /// integrations that need lower-level editing surfaces than
-/// `package:artisanal/editors.dart`.
+/// `package:artisanal_widgets/editors.dart`.
 library;
 
 import 'src/tui/editor_core/editor_core.dart'

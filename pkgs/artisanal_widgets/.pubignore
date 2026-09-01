@@ -2,5 +2,7 @@
 **/.vscode/
 **/build/
 example/**/traces/
+assets/
+example/github_cli/site/
 example/github_cli/web/*.dill
 example/github_cli/web/*.wasm
