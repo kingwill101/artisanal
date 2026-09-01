@@ -84,6 +84,7 @@ final class KittyImageDrawable implements Drawable {
       columns: cols,
       rows: rws,
       quiet: quiet,
+      suppressCursorMovement: true,
     );
     final sequence = clearBeforeDraw
         ? '${deleteSequence()}$imageSequence'

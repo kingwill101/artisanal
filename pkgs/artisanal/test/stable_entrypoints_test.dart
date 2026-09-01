@@ -1,4 +1,5 @@
 import 'package:artisanal/artisanal.dart' as hosts;
+import 'package:artisanal/terminal.dart' as terminal;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/uv.dart' as uv;
 import 'package:test/test.dart';
@@ -71,5 +72,11 @@ void main() {
     expect(uv.BufferFilter, isA<Type>());
     expect(uv.BufferRenderSink, isA<Type>());
     expect(uv.ScanlineFilter, isA<Type>());
+  });
+
+  test('stable terminal entrypoint exposes image protocol encoders', () {
+    expect(terminal.KittyImage, isA<Type>());
+    expect(terminal.ITerm2Image, isA<Type>());
+    expect(terminal.SixelImage, isA<Type>());
   });
 }

@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Made the raw Kitty, iTerm2, and Sixel image encoders available from the
+  public rendering entrypoints so protocol encoding has one package-owned
+  implementation. Raw Kitty encoding preserves normal cursor movement by
+  default, while retained drawables suppress it explicitly.
 - Added focused, browser-safe `core.dart`, `input.dart`, `rendering.dart`,
   `terminal.dart`, and `unicode.dart` entrypoints for consumers that do not
   need the full package surface.

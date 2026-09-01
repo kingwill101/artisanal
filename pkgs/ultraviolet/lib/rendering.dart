@@ -31,11 +31,14 @@ export 'src/uv/filters.dart'
         CrtFilter,
         AtmosphereFilter;
 export 'src/uv/halfblock_drawable.dart' show HalfBlockImageDrawable;
+export 'src/uv/iterm2.dart' show ITerm2Image;
 export 'src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
+export 'src/uv/kitty.dart' show KittyImage;
 export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
 export 'src/uv/progress_bar.dart';
 export 'src/uv/renderer/renderer.dart';
 export 'src/uv/screen_ops.dart';
+export 'src/uv/sixel.dart' show SixelImage;
 export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;
 export 'src/uv/style_ops.dart';
 export 'src/uv/terminal_graphics.dart';

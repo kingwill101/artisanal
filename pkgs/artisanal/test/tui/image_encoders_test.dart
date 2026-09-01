@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:artisanal/src/terminal/kitty.dart';
-import 'package:artisanal/src/terminal/sixel.dart';
-import 'package:artisanal/src/terminal/iterm2.dart';
+import 'package:artisanal/terminal.dart'
+    show ITerm2Image, KittyImage, SixelImage;
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
 
@@ -127,6 +126,16 @@ void main() {
         final result = KittyImage.encode(image);
 
         expect(result, contains('q=2'));
+      });
+
+      test('preserves normal cursor movement by default', () {
+        final image = _solidImage(2, 2);
+
+        expect(KittyImage.encode(image), isNot(contains('C=1')));
+        expect(
+          KittyImage.encode(image, suppressCursorMovement: true),
+          contains('C=1'),
+        );
       });
 
       test('omits quiet parameter when quiet=0', () {

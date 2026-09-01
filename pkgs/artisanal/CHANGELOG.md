@@ -10,6 +10,9 @@
 
 ### Changed
 
+- Delegated Kitty, iTerm2, and Sixel image protocol encoding to Ultraviolet,
+  removing three duplicated renderer implementations while preserving the
+  public terminal API.
 - Routed Ultraviolet integration through package-owned public entrypoints and
   removed duplicated one-line renderer, Unicode, and color-profile forwarding
   libraries.
