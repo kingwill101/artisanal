@@ -22,7 +22,6 @@ import 'package:artisanal/style.dart' show Color, Style;
 ///   onTap: () => navigate('/settings'),
 /// )
 
-// ignore_for_file: unused_shown_name
 /// ```
 class ListTile extends StatelessWidget {
   /// Creates a Material-style list tile.

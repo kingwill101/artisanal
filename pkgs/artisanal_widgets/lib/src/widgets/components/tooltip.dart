@@ -8,7 +8,6 @@ import 'dart:math' as math;
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style;
 
-// ignore_for_file: unused_shown_name
 /// Preferred position for tooltip placement relative to its child.
 enum TooltipPosition { above, below }
 

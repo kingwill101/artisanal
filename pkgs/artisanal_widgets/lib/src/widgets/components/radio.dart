@@ -4,8 +4,6 @@ import 'package:artisanal/runtime.dart' show Cmd, KeyMsg;
 
 import 'package:artisanal/runtime.dart';
 
-// ignore_for_file: unused_shown_name
-
 class Radio<T> extends StatefulWidget {
   Radio({
     required this.value,

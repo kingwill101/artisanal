@@ -40,7 +40,6 @@ import 'component_style.dart' show CmdCallback;
 ///   child: myContent,
 /// )
 
-// ignore_for_file: unused_shown_name
 /// ```
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '

@@ -1,29 +1,5 @@
-// ignore_for_file: unused_shown_name
 import 'package:artisanal/text_editing.dart'
-    show
-        CodeLanguageProfile,
-        CursorModel,
-        TextAreaKeyMap,
-        TextAreaModel,
-        TextAreaStyles,
-        TextDecorationRange,
-        TextSyntaxBuildResult,
-        TextSyntaxDecorationPatch,
-        TextSyntaxSession,
-        TextSyntaxSnapshot,
-        TextSyntaxProvider,
-        TextDocument,
-        TextDocumentChange,
-        keyMatchesSingle,
-        codeHandleClosingDelimiterAlignment,
-        codeHandlePairBackspace,
-        codeHandleAutoPair,
-        codeInsertIndentedNewline,
-        codeToggleBlockComments,
-        resolveCodeLanguageProfile,
-        textSyntaxChangeWindow,
-        textSyntaxDecorationLayerKey,
-        textSyntaxDecorationLayerPriority;
+    show CursorModel, TextAreaKeyMap, TextAreaModel, TextAreaStyles;
 import '_component_foundation.dart';
 import '../layout/markdown_text.dart';
 import 'panel.dart';

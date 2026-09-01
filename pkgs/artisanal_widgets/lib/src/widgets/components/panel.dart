@@ -14,7 +14,6 @@ import 'frame.dart';
 ///   child: Column(children: [Toggle('Auto-save'), Toggle('Dark mode')]),
 /// )
 
-// ignore_for_file: unused_shown_name
 /// ```
 class PanelBox extends StatelessWidget {
   PanelBox({

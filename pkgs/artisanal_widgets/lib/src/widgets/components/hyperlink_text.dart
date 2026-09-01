@@ -16,7 +16,6 @@ import '_component_foundation.dart';
 ///   showUrl: true, // renders: "Example Website (https://example.com)"
 /// )
 
-// ignore_for_file: unused_shown_name
 /// ```
 class HyperlinkText extends StatelessWidget {
   HyperlinkText({

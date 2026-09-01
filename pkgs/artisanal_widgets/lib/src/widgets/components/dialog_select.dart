@@ -12,7 +12,6 @@ import 'package:artisanal/style.dart' show Color;
 /// A single item in a [DialogSelect] list.
 ///
 
-// ignore_for_file: unused_shown_name
 /// Generic over [T] so callers can attach a typed value to each item.
 class DialogSelectItem<T> {
   const DialogSelectItem({

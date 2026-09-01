@@ -23,7 +23,6 @@ import 'frame.dart';
 ///   ],
 /// )
 
-// ignore_for_file: unused_shown_name
 /// ```
 class PromptFooterBar extends StatelessWidget {
   PromptFooterBar({

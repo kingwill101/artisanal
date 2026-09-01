@@ -2,8 +2,6 @@ import 'package:artisanal/runtime.dart';
 import '_component_foundation.dart';
 import 'package:artisanal/style.dart' show Color, Layout;
 
-// ignore_for_file: unused_shown_name
-
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '
   'Will be removed in a future release.',

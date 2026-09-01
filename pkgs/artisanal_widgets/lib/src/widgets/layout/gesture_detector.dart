@@ -1,5 +1,3 @@
-
-// ignore_for_file: unused_shown_name
 import 'package:artisanal/runtime.dart'
     show
         Cmd,
@@ -10,13 +8,10 @@ import 'package:artisanal/runtime.dart'
         MouseAction,
         MouseButton,
         HitTestMouseMsg,
-        View,
-        TuiTrace,
-        TraceTag;
+        TuiTrace;
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
-import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
 import '../focus/focus.dart' show Focusable;
 import '../gestures/gestures.dart';
