@@ -4,7 +4,7 @@ import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Style;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 /// An immutable pair of values used by [RangeSlider].
 class RangeValues {

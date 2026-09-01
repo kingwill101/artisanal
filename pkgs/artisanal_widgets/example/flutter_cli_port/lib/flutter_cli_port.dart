@@ -1,6 +1,6 @@
 library;
 
-import 'package:artisanal/artisanal.dart' as artisanal;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import 'src/app.dart';
@@ -17,7 +17,7 @@ export 'src/views/device_picker.dart';
 export 'src/views/test_view.dart';
 
 Future<void> runFlutterCliPort({FlutterCliState? initialState}) {
-  return artisanal.runWidgetApp(
+  return app.runWidgetApp(
     w.WidgetApp(
       FlutterCliDashboard(initialState: initialState),
       backgroundColor: FlutterCliTheme.tokyoNight.bg,

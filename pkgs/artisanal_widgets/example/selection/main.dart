@@ -5,16 +5,15 @@
 //
 // Run with: dart run example/selection/main.dart
 
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal_widgets/selection.dart' as s;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' show View;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main() async {
-  await artisanal.runWidgetApp(
+  await app.runWidgetApp(
     app.ArtisanalApp(
       title: 'Selection Across View Demo',
       home: SelectionShowcase(),

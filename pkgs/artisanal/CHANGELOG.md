@@ -6,6 +6,8 @@
 
 - Reduced the published package archive by excluding repository-hosted demo
   media.
+- Generalized the browser runner as `runBrowserProgram(Model)` and the shared
+  network-host lifecycle as `TerminalHostServer`.
 
 ### Removed
 
@@ -16,6 +18,9 @@
 - Removed the unused `chalkdart` dependency, unreachable web bootstrap code,
   obsolete color-profile forwarding files, and the abandoned duplicate
   documentation site.
+- Removed the dependency on `artisanal_widgets`, including the widget runner
+  APIs and the `widgets.dart` / `testing.dart` re-export entrypoints. Widget
+  applications now import those APIs from `package:artisanal_widgets`.
 
 ## 0.5.1
 

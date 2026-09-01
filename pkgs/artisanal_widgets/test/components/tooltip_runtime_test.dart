@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal/artisanal.dart' show WidgetTester;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 Future<void> _waitUntil(

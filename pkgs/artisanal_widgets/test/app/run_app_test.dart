@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal/artisanal.dart' as hosts;
 import 'package:artisanal/terminal.dart' show Ansi;
 import 'package:artisanal/tui.dart' as runtime;
@@ -121,7 +120,7 @@ void main() {
     test('uses widget-friendly defaults', () async {
       final terminal = runtime.StringTerminal();
 
-      await artisanal.runWidgetApp(
+      await w.runWidgetApp(
         w.WidgetApp(_QuitOnInitWidget()),
         host: runtime.ProgramHost.terminal(terminal),
       );
@@ -131,13 +130,13 @@ void main() {
     });
 
     test('default widget program options disable startup probes', () {
-      expect(artisanal.defaultWidgetProgramOptions.startupProbes, isFalse);
+      expect(w.defaultWidgetProgramOptions.startupProbes, isFalse);
     });
 
     test('explicit options can disable the widget defaults', () async {
       final terminal = runtime.StringTerminal();
 
-      await artisanal.runWidgetApp(
+      await w.runWidgetApp(
         w.WidgetApp(_QuitOnInitWidget()),
         host: runtime.ProgramHost.terminal(terminal),
         options: const runtime.ProgramOptions(
@@ -158,7 +157,7 @@ void main() {
       final terminal = runtime.StringTerminal();
       final app = w.WidgetApp(_QuitOnInitWidget());
 
-      await artisanal.runWidgetApp(
+      await w.runWidgetApp(
         app,
         host: runtime.ProgramHost.terminal(terminal),
         imageAutoMode: w.ImageAutoMode.portableFallback,
@@ -172,7 +171,7 @@ void main() {
     test('propagates the app title to startup output by default', () async {
       final terminal = runtime.StringTerminal();
 
-      await artisanal.runWidgetApp(
+      await w.runWidgetApp(
         w.ArtisanalApp(title: 'Run App Test', home: _QuitOnInitWidget()),
         host: runtime.ProgramHost.terminal(terminal),
       );
@@ -187,7 +186,7 @@ void main() {
       final terminal = runtime.StringTerminal();
       final controller = w.DebugConsoleController(initiallyVisible: true);
 
-      await artisanal.runWidgetApp(
+      await w.runWidgetApp(
         w.ArtisanalApp(
           title: 'Captured Logs',
           debugConsoleController: controller,
@@ -197,9 +196,8 @@ void main() {
         host: runtime.ProgramHost.terminal(terminal),
       );
 
-      final messages = controller.entries
-          .map((entry) => entry.message)
-          .join('\n');
+      final messages =
+          controller.entries.map((entry) => entry.message).join('\n');
       expect(messages, contains('captured print'));
     });
 
@@ -210,7 +208,7 @@ void main() {
         home: _QuitOnInitWidget(),
       );
 
-      await artisanal.runWidgetApp(
+      await w.runWidgetApp(
         app,
         host: runtime.ProgramHost.terminal(terminal),
         imageAutoMode: w.ImageAutoMode.portableFallback,
@@ -229,7 +227,7 @@ void main() {
 
         addTearDown(controller.dispose);
 
-        await artisanal.runWidgetApp(
+        await w.runWidgetApp(
           w.ArtisanalApp(
             title: 'Reloadable App',
             child: w.ReloadHost(
@@ -269,7 +267,7 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        await artisanal.runWidgetApp(
+        await w.runWidgetApp(
           w.WidgetApp(
             w.ReloadHost(
               controller: controller,
@@ -304,7 +302,7 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        await artisanal.runWidgetApp(
+        await w.runWidgetApp(
           w.ArtisanalApp(
             title: 'Watched App',
             child: w.ReloadHost(
@@ -327,14 +325,12 @@ void main() {
     test(
       'serveWidgetApp + browser transport exposes the browser page',
       () async {
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.browser,
-                  port: 0,
-                  browserTitle: 'Widget Browser Test',
-                  appBuilder: () => w.WidgetApp(_QuitOnInitWidget()),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          browserTitle: 'Widget Browser Test',
+          appBuilder: () => w.WidgetApp(_QuitOnInitWidget()),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -354,26 +350,24 @@ void main() {
       'serveWidgetApp + browser transport uses session capability image mode by default',
       () async {
         late w.ArtisanalApp app;
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.browser,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => app = w.ArtisanalApp(
-                    home: w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => app = w.ArtisanalApp(
+            home: w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -389,26 +383,24 @@ void main() {
     test(
       'serveWidgetApp + browser transport requests image capability reports by default',
       () async {
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.browser,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.ArtisanalApp(
-                    home: w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.ArtisanalApp(
+            home: w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -441,19 +433,17 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        final host =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.browser,
-                  port: 0,
-                  browserTitle: 'Watched Browser Test',
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _QuitOnInitWidget(),
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final host = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          browserTitle: 'Watched Browser Test',
+          appBuilder: () => w.WidgetApp(
+            w.ReloadHost(
+              controller: controller,
+              builder: (context, revision) => _QuitOnInitWidget(),
+            ),
+          ),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(() => host.close());
 
@@ -479,20 +469,18 @@ void main() {
     test(
       'serveWidgetApp + socket transport exposes app output over tcp',
       () async {
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () =>
-                      w.ArtisanalApp(title: 'Socket App', home: _ReadyWidget()),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () =>
+              w.ArtisanalApp(title: 'Socket App', home: _ReadyWidget()),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -515,26 +503,24 @@ void main() {
       'serveWidgetApp + socket transport uses session capability image mode by default',
       () async {
         late w.WidgetApp app;
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => app = w.WidgetApp(
-                    w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => app = w.WidgetApp(
+            w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -560,27 +546,25 @@ void main() {
     test(
       'serveWidgetApp + socket transport portable image mode skips session capability probes',
       () async {
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.socket,
-                  port: 0,
-                  imageAutoMode: w.ImageAutoMode.portableFallback,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          imageAutoMode: w.ImageAutoMode.portableFallback,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.WidgetApp(
+            w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -604,21 +588,18 @@ void main() {
     test(
       'serveWidgetApp + socket transport suppresses startup probes for non-ANSI clients',
       () async {
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.socket,
-                  port: 0,
-                  supportsAnsi: false,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () =>
-                      w.ArtisanalApp(home: w.Text('plain socket client')),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          supportsAnsi: false,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.ArtisanalApp(home: w.Text('plain socket client')),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -655,24 +636,22 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        final server =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _ReadyWidget(),
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.WidgetApp(
+            w.ReloadHost(
+              controller: controller,
+              builder: (context, revision) => _ReadyWidget(),
+            ),
+          ),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(() => server.close());
 
@@ -711,24 +690,22 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        final host =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _IdleWidget(),
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+        final host = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.WidgetApp(
+            w.ReloadHost(
+              controller: controller,
+              builder: (context, revision) => _IdleWidget(),
+            ),
+          ),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(() async {
           await host.close(force: true);
@@ -780,24 +757,22 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        final host =
-            await artisanal.serveWidgetApp(
-                  transport: artisanal.Transport.browser,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _IdleWidget(),
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final host = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.WidgetApp(
+            w.ReloadHost(
+              controller: controller,
+              builder: (context, revision) => _IdleWidget(),
+            ),
+          ),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(() async {
           await host.close(force: true);

@@ -1,6 +1,8 @@
 /// Stub for `socket_host.dart` when `dart:io` is not available.
 library;
 
+import 'host_server.dart' show TerminalHostServer;
+
 /// Stub for [SocketTerminalSessionHandler] on web/WASM.
 typedef SocketTerminalSessionHandler = Future<void> Function(Never socket);
 
@@ -16,7 +18,7 @@ abstract class StubServerSocket {
 }
 
 /// Stub for [SocketTerminalHostServer] on web/WASM.
-abstract final class SocketTerminalHostServer {
+abstract final class SocketTerminalHostServer implements TerminalHostServer {
   SocketTerminalHostServer._();
 
   /// Stub: returns a resize control sequence string (not available on web).
@@ -43,6 +45,7 @@ abstract final class SocketTerminalHostServer {
       throw UnsupportedError('SocketTerminalHostServer not available on web');
 
   /// Stub: not available on web.
+  @override
   Future<void> close({bool force = false}) =>
       throw UnsupportedError('SocketTerminalHostServer not available on web');
 }

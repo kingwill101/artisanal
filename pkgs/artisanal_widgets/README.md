@@ -3,9 +3,8 @@
 Flutter-inspired widget framework for terminal UIs, built on top of
 `artisanal`.
 
-This is the primary package for widget-first apps. Use the umbrella
-`package:artisanal/...` widget entrypoints only when you intentionally want the
-broader Artisanal toolkit from a single dependency.
+This is the package for widget-first apps. Widget APIs, runners, and test
+helpers are owned here; the core `artisanal` package does not re-export them.
 
 ## Table of Contents
 
@@ -27,7 +26,6 @@ dependencies:
 ## Import
 
 ```dart
-import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 ```
@@ -56,7 +54,6 @@ Both the local runner helpers and the hosted browser/socket helpers accept an
 ## Quick start
 
 ```dart
-import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 

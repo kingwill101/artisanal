@@ -26,6 +26,10 @@ void main() {
     expect(ReloadFileWatcher, isA<Type>());
     expect(ReloadMode, isA<Type>());
     expect(WidgetApp, isA<Type>());
+    expect(runWidgetApp, isA<Function>());
+    expect(serveWidgetApp, isA<Function>());
+    expect(Transport.values, hasLength(2));
+    expect(defaultWidgetProgramOptions.startupProbes, isFalse);
   });
 
   test(
@@ -83,9 +87,9 @@ void main() {
     );
     final positionDiagnosticsBinding =
         TextDiagnosticsBinding.fromPositionListenable(
-          controller: baseController,
-          diagnostics: positionDiagnosticsSource,
-        );
+      controller: baseController,
+      diagnostics: positionDiagnosticsSource,
+    );
     final decorationBinding = TextDecorationLayerBinding(
       controller: baseController,
       layerKey: 'search',

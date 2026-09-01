@@ -1,4 +1,4 @@
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 final List<String> editorDemoThemePresetNames = <String>[
   'adaptive',

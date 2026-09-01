@@ -294,21 +294,20 @@ Choose the smallest public library that covers your use case:
 
 | Import | Purpose |
 |--------|---------|
-| `package:artisanal/artisanal.dart` | Umbrella API for CLI output, styling, charting, Markdown, app runners, hosts, and common terminal types |
+| `package:artisanal/artisanal.dart` | Umbrella API for CLI output, styling, charting, Markdown, hosts, and common terminal types |
 | `package:artisanal/args.dart` | Command runner utilities (`CommandRunner`, `Command`) |
 | `package:artisanal/bubbles.dart` | Reusable TEA widgets |
 | `package:artisanal/catalog.dart` | Public metadata registry for Bubbles and display components |
 | `package:artisanal/style.dart` | Styles, colors, borders, layout, and themes |
 | `package:artisanal/tui.dart` | TEA runtime (`Model`, `Msg`, `Cmd`, `Program`) plus replay and tracing |
 | `package:artisanal/terminal.dart` | Terminal abstraction, ANSI helpers, keys, backends, and bridges |
-| `package:artisanal/widgets.dart` | Convenience re-export of the widget framework |
-| `package:artisanal/testing.dart` | Widget testing helpers |
 | `package:artisanal/editor_core.dart` | Low-level text document, editor state, and viewport primitives |
 | `package:artisanal/glamour.dart` | High-fidelity Markdown rendering |
 | `package:artisanal/uv.dart` | Compatibility re-export of Ultraviolet types |
 | `package:artisanal/compat.dart` | Backward-compatible API shims |
 
-Widget-first applications can import `package:artisanal_widgets/...` directly.
+Widget-first applications depend on and import `package:artisanal_widgets/...`
+directly; widget APIs are not re-exported from this core package.
 Renderer-level applications can import
 `package:ultraviolet/ultraviolet.dart` directly.
 

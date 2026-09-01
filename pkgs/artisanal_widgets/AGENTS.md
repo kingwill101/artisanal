@@ -6,9 +6,9 @@ Guidance for AI agents and contributors working in `pkgs/artisanal_widgets`.
 
 `artisanal_widgets` is the widget framework of the Artisanal workspace: a
 Flutter-inspired composable widget system for terminal UIs, built on top of
-`artisanal`. This is the **primary package for widget-first apps**; the
-`package:artisanal/...` widget entrypoints are umbrella convenience re-exports
-and should not grow new widget code — keep it here.
+`artisanal`. This is the **primary package for widget-first apps**. Widget
+entrypoints and implementations are owned here; core `artisanal` does not
+depend on or re-export them.
 
 Rendering flows through the element tree into UV buffers:
 `Widget` → `Element` tree → `RenderObject` tree → `Canvas`/`Buffer` →
@@ -110,7 +110,7 @@ tool/              # ANSI dump helpers for debugging output
   selects environment vs session-capability image rendering.
 - **App shells**: `ArtisanalApp` (title + home), `WidgetApp`, reload support
   (`ReloadController`, `ReloadFileWatcher`). Entry: `runWidgetApp(...)` from
-  `package:artisanal/artisanal.dart`. `runWidgetApp` defaults to
+  `package:artisanal_widgets/app.dart`. `runWidgetApp` defaults to
   `MouseMode.allMotion` for hover support — plain `runProgram` needs it set
   explicitly.
 - **Commands**: commands combining runtime-managed commands (`EveryCmd`,
@@ -131,7 +131,7 @@ tool/              # ANSI dump helpers for debugging output
   `charting.dart`, `selection.dart`, `testing.dart`). `artisanal_widgets.dart`
   is the legacy broad surface — prefer stable entrypoints in new code and
   tests. Internal code uses relative imports within `lib/src/widgets`.
-- **API stability**: 0.4.0, depended on by `artisanal` (re-exports). Keep the
+- **API stability**: 0.4.0, built on `artisanal` core. Keep the
   stable entrypoints compiling (`test/stable_entrypoints_test.dart` covers
   them). Prefer additive changes; document changes in `CHANGELOG.md`.
 - **Widget style**: follow the Flutter naming conventions already in use
@@ -155,8 +155,8 @@ tool/              # ANSI dump helpers for debugging output
   need a TTY; quit with `q` / `ctrl+c`.
 - `print()` from app code corrupts a full-screen TUI — use
   `ProgramOptions.withCaptureOutput()` or `Cmd.println`.
-- Do not add new widget implementations to `package:artisanal`; they belong in
-  this package (artisanal only re-exports).
+- Do not add widget implementations or entrypoints to `package:artisanal`;
+  they belong in this package.
 - Terminal image decoding runs off the main TUI isolate; keep image-heavy
   paths from stalling render.
 - Scrollbar/selection/hover behavior has many edge-case regression tests

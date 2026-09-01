@@ -6,6 +6,8 @@
 
 - Updated the supported Artisanal workspace releases to `artisanal` 0.5.x,
   `artisanal_widgets` 0.3.x, and `ultraviolet` 0.5.x.
+- Re-export widget runners from `artisanal_widgets` and the generic host
+  lifecycle from `artisanal` after the packages were decoupled.
 
 ## 0.2.0
 

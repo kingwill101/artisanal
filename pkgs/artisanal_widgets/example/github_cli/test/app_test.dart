@@ -14,6 +14,7 @@ import 'package:github_cli/src/client/fields.dart';
 import 'package:github_cli/src/ui/markdown/body.dart';
 import 'package:github_cli/src/utils/diff_comment_mapper.dart';
 import 'package:image/image.dart' as img;
+import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 Future<void> _pumpUntil(
@@ -1247,44 +1248,48 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.body, 'Please tighten this line.');
   });
 
-  test('inline review comments render between diff lines', skip: true, () async {
-    final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
-    addTearDown(() => tester.dispose());
-    final client = _FakeGithubClient(
-      _sampleDashboard('dart-lang/sdk'),
-      diff: _sampleDiff,
-      reviewComments: const [
-        GithubPullRequestReviewComment(
-          id: 'r1',
-          path: 'lib/main.dart',
-          line: 2,
-          side: 'RIGHT',
-          author: 'reviewer',
-          body: 'INLINE_REVIEW_BODY_SHOULD_APPEAR',
-          url: 'https://example.test/r1',
-          createdAt: null,
-        ),
-      ],
-    );
+  test(
+    'inline review comments render between diff lines',
+    skip: true,
+    () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+      addTearDown(() => tester.dispose());
+      final client = _FakeGithubClient(
+        _sampleDashboard('dart-lang/sdk'),
+        diff: _sampleDiff,
+        reviewComments: const [
+          GithubPullRequestReviewComment(
+            id: 'r1',
+            path: 'lib/main.dart',
+            line: 2,
+            side: 'RIGHT',
+            author: 'reviewer',
+            body: 'INLINE_REVIEW_BODY_SHOULD_APPEAR',
+            url: 'https://example.test/r1',
+            createdAt: null,
+          ),
+        ],
+      );
 
-    await tester.pumpWidget(
-      GithubPullRequestView(
-        client: client,
-        target: const GithubPullRequestTarget(
-          repository: 'dart-lang/sdk',
-          number: 9,
+      await tester.pumpWidget(
+        GithubPullRequestView(
+          client: client,
+          target: const GithubPullRequestTarget(
+            repository: 'dart-lang/sdk',
+            number: 9,
+          ),
         ),
-      ),
-    );
+      );
 
-    await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
-    tester.sendKey('d');
-    await _pumpUntil(
-      tester,
-      () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
-      timeout: const Duration(seconds: 5),
-    );
-  });
+      await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
+      tester.sendKey('d');
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+        timeout: const Duration(seconds: 5),
+      );
+    },
+  );
 
   test('mapReviewCommentsToRenderLines tolerates side/line mismatches', () {
     final anchors = [

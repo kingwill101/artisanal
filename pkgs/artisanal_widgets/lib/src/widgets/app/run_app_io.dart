@@ -1,15 +1,19 @@
 import 'dart:io' as io;
 
-import 'package:artisanal_widgets/widgets.dart'
-    show ArtisanalApp, ImageAutoMode, WidgetApp;
+import 'package:artisanal/style.dart' show ColorProfile;
+import 'package:artisanal/terminal.dart'
+    show
+        BrowserTerminalHostServer,
+        SocketTerminalHostServer,
+        TerminalDimensions,
+        TerminalHostServer;
+import 'package:artisanal/tui.dart'
+    show ProgramHost, ProgramOptions, runProgram;
 
-import '../style/color.dart' show ColorProfile;
-import '../terminal/browser_host.dart' show BrowserTerminalHostServer;
-import '../terminal/socket_host.dart' show SocketTerminalHostServer;
-import '../terminal/terminal.dart' show TerminalDimensions;
-import '../tui/runtime.dart' show ProgramHost, ProgramOptions, runProgram;
-import 'transport.dart'
-    show Transport, WidgetAppHostServer, defaultWidgetProgramOptions;
+import 'artisanal_app.dart' show ArtisanalApp;
+import 'transport.dart' show Transport, defaultWidgetProgramOptions;
+import 'widget_app.dart' show WidgetApp;
+import '../layout/image.dart' show ImageAutoMode;
 
 T _configureImageAutoMode<T extends WidgetApp>(
   T app, {
@@ -76,9 +80,9 @@ Future<void> runWidgetApp(
 /// On [Transport.socket] a [SocketTerminalHostServer] is started on [port]
 /// accepting raw TCP connections with terminal-resize control sequences.
 ///
-/// Returns a [WidgetAppHostServer] that can be [close]d to shut down the server
+/// Returns a [TerminalHostServer] that can be [close]d to shut down the server
 /// and release resources.
-Future<WidgetAppHostServer> serveWidgetApp({
+Future<TerminalHostServer> serveWidgetApp({
   required WidgetApp Function() appBuilder,
   Transport transport = Transport.browser,
   int port = 2323,
@@ -101,34 +105,28 @@ Future<WidgetAppHostServer> serveWidgetApp({
   switch (transport) {
     case Transport.browser:
       return await BrowserTerminalHostServer.serveProgram<WidgetApp>(
-            address: address,
-            port: port,
-            pagePath: pagePath,
-            webSocketPath: webSocketPath,
-            title: browserTitle,
-            pageHtml: pageHtml,
-            modelBuilder: () => _configureImageAutoMode(
-              appBuilder(),
-              imageAutoMode: imageAutoMode,
-            ),
-            options: resolvedOptions,
-          )
-          as WidgetAppHostServer;
+        address: address,
+        port: port,
+        pagePath: pagePath,
+        webSocketPath: webSocketPath,
+        title: browserTitle,
+        pageHtml: pageHtml,
+        modelBuilder: () =>
+            _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
+        options: resolvedOptions,
+      );
     case Transport.socket:
       return await SocketTerminalHostServer.serveProgram<WidgetApp>(
-            address: address,
-            port: port,
-            v6Only: v6Only,
-            shared: shared,
-            initialSize: initialSize,
-            supportsAnsi: supportsAnsi,
-            colorProfile: colorProfile,
-            modelBuilder: () => _configureImageAutoMode(
-              appBuilder(),
-              imageAutoMode: imageAutoMode,
-            ),
-            options: resolvedOptions,
-          )
-          as WidgetAppHostServer;
+        address: address,
+        port: port,
+        v6Only: v6Only,
+        shared: shared,
+        initialSize: initialSize,
+        supportsAnsi: supportsAnsi,
+        colorProfile: colorProfile,
+        modelBuilder: () =>
+            _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
+        options: resolvedOptions,
+      );
   }
 }

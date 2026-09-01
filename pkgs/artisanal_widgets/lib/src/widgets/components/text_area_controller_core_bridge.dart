@@ -6,7 +6,7 @@ import 'package:artisanal/bubbles.dart'
         TextLineStateSnapshot,
         TextCommandResult,
         TextLineCommandResult;
-import 'package:artisanal/widgets.dart' show TextAreaController;
+import 'package:artisanal_widgets/widgets.dart' show TextAreaController;
 
 final class TextAreaControllerCoreBridge {
   TextAreaControllerCoreBridge(this._controller);

@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
-import '../run/transport.dart' show WidgetAppHostServer;
 import '../style/color.dart';
 import '../tui/model.dart';
 import '../tui/program.dart';
 import '../tui/program_host_io.dart' show socketHost;
 import 'backend.dart';
+import 'host_server.dart' show TerminalHostServer;
 
 /// Session handler invoked for each accepted raw socket terminal connection.
 typedef SocketTerminalSessionHandler = Future<void> Function(io.Socket socket);
@@ -20,7 +20,7 @@ typedef SocketTerminalSessionHandler = Future<void> Function(io.Socket socket);
 ///
 /// Resize events are reported out-of-band using
 /// `OSC 9999;<cols>;<rows>` terminated by `BEL`.
-final class SocketTerminalHostServer implements WidgetAppHostServer {
+final class SocketTerminalHostServer implements TerminalHostServer {
   SocketTerminalHostServer._({required this.server, required this.onSession}) {
     _subscription = server.listen((socket) {
       unawaited(_handleSession(socket));
@@ -101,14 +101,16 @@ final class SocketTerminalHostServer implements WidgetAppHostServer {
   static String resizeControlSequence({
     required int width,
     required int height,
-  }) => '\x1b]9999;$width;$height\x07';
+  }) =>
+      '\x1b]9999;$width;$height\x07';
 
   /// Encodes [resizeControlSequence] as bytes for transport over a socket.
   static List<int> resizeControlBytes({
     required int width,
     required int height,
     Encoding encoding = utf8,
-  }) => encoding.encode(resizeControlSequence(width: width, height: height));
+  }) =>
+      encoding.encode(resizeControlSequence(width: width, height: height));
 
   Future<void> _handleSession(io.Socket socket) async {
     _activeSockets.add(socket);

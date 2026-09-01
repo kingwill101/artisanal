@@ -3,6 +3,18 @@ import 'package:artisanal_widgets/artisanal_widgets.dart' show WidgetTester;
 import 'package:test/test.dart';
 
 void main() {
+  test('WidgetApp reassemble invalidates view cache and rebuilds', () {
+    var label = 'WidgetApp v1';
+    final app = w.WidgetApp(_HotReloadProbeRoot(() => label));
+
+    expect(app.view(), contains(label));
+
+    label = 'WidgetApp v2';
+    app.reassemble();
+
+    expect(app.view(), contains(label));
+  });
+
   group('ReloadHost', () {
     test('reload rebuilds while preserving compatible state', () async {
       _ReloadProbeState.mountCount = 0;
@@ -75,6 +87,15 @@ void main() {
       expect(tester.view, contains('scope:ok'));
     });
   });
+}
+
+final class _HotReloadProbeRoot extends w.StatelessWidget {
+  _HotReloadProbeRoot(this.textProvider);
+
+  final String Function() textProvider;
+
+  @override
+  w.Widget build(w.BuildContext context) => w.Text(textProvider());
 }
 
 final class _ReloadProbe extends w.StatefulWidget {

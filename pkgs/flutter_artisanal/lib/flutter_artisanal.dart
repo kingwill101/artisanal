@@ -15,13 +15,10 @@ export 'package:artisanal/uv.dart'
         WidthMethod,
         runeWidth,
         stringWidth;
-export 'package:artisanal/artisanal.dart'
-    show
-        ProgramOptions,
-        runWidgetApp,
-        serveWidgetApp,
-        Transport,
-        WidgetAppHostServer;
+export 'package:artisanal/terminal.dart' show TerminalHostServer;
+export 'package:artisanal/tui.dart' show ProgramOptions;
+export 'package:artisanal_widgets/app.dart'
+    show runWidgetApp, serveWidgetApp, Transport, defaultWidgetProgramOptions;
 export 'package:artisanal/tui.dart'
     show
         TuiRendererOptions,

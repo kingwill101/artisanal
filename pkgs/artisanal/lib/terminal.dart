@@ -75,5 +75,6 @@ library;
 
 export 'src/terminal/terminal.dart';
 export 'src/terminal/ansi.dart';
+export 'src/terminal/host_server.dart';
 export 'src/terminal/keys.dart';
 export 'src/unicode/grapheme.dart';

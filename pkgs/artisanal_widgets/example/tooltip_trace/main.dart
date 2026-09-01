@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 import 'replay_driver.dart';
 

@@ -33,7 +33,7 @@ import 'package:artisanal/style.dart' show Border, Style;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg, KeyBinding;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 import 'text_area_controller_core_bridge.dart'
     show TextAreaControllerCoreBridge;

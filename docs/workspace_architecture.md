@@ -15,6 +15,8 @@ with app-level behavior built on top.
 2. Build reusable UI components in `artisanal_widgets` without product coupling.
 3. Keep renderer concerns (`diff`, sync output, frame behavior) in `ultraviolet`.
 4. Treat examples and app shells as consumers, not framework core.
+5. Keep dependencies one-way: `artisanal_widgets` may depend on `artisanal`,
+   while `artisanal` must not import or re-export `artisanal_widgets`.
 
 ## Non-Goals
 

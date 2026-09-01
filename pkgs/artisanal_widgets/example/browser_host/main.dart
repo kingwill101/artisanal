@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal/terminal.dart' show BrowserTerminalHostServer;
 
 Future<void> main(List<String> args) async {
@@ -20,8 +19,8 @@ Future<void> main(List<String> args) async {
       );
     }
     final host =
-        await artisanal.serveWidgetApp(
-              transport: artisanal.Transport.browser,
+        await app.serveWidgetApp(
+              transport: app.Transport.browser,
               port: config.port,
               browserTitle: 'Artisanal Widgets Browser Host',
               appBuilder: () => app.ArtisanalApp(

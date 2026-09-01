@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 import '../../example/help_view/main.dart';
