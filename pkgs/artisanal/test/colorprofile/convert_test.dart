@@ -1,4 +1,4 @@
-import 'package:artisanal/src/colorprofile/convert.dart';
+import 'package:ultraviolet/colorprofile.dart';
 import 'package:test/test.dart';
 
 void main() {

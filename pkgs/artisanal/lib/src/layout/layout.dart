@@ -36,10 +36,10 @@ import '../terminal/ansi.dart';
 import '../style/properties.dart';
 import '../style/color.dart';
 import '../style/style.dart';
-import '../unicode/grapheme.dart' as uni;
-import '../unicode/width.dart' show runeWidth;
+import 'package:ultraviolet/unicode.dart' as uni;
+import 'package:ultraviolet/unicode.dart' show runeWidth;
 import '../tui/trace.dart';
-import '../uv/wrap.dart' as uv_wrap;
+import 'package:ultraviolet/rendering.dart' as uv_wrap;
 
 const int _layoutTraceThresholdUs = 1000;
 

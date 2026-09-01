@@ -18,7 +18,7 @@ import 'dart:convert';
 
 import '../terminal/keys.dart';
 import 'msg.dart';
-import '../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 
 // Re-export key types from the shared terminal module
 export '../terminal/keys.dart' show Key, KeyType, Keys;

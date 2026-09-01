@@ -2,7 +2,7 @@ import '../style/color.dart';
 import 'cmd.dart';
 import 'degradation.dart';
 import 'msg.dart';
-import '../uv/uv.dart' hide MouseMode;
+import 'package:ultraviolet/ultraviolet.dart' hide MouseMode;
 
 /// TerminalProgressBarState represents the state of the terminal taskbar progress.
 enum TerminalProgressBarState {

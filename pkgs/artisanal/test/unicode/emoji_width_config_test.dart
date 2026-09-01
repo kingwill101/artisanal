@@ -1,4 +1,4 @@
-import 'package:artisanal/src/unicode/width.dart' as w;
+import 'package:ultraviolet/unicode.dart' as w;
 import 'package:test/test.dart';
 
 void main() {

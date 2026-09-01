@@ -2,7 +2,7 @@ import 'package:markdown/markdown.dart' show Element;
 
 import '../../style/style.dart';
 import '../../style/color.dart';
-import '../../uv/wrap.dart' as uv_wrap;
+import 'package:ultraviolet/rendering.dart' as uv_wrap;
 import 'render_context.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────

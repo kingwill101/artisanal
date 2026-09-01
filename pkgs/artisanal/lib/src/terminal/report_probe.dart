@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import '../uv/decoder.dart';
-import '../uv/event.dart';
+import 'package:ultraviolet/input.dart';
 import 'ansi.dart';
 import 'terminal_io_impl.dart';
 

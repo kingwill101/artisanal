@@ -16,7 +16,7 @@ import 'code_block.dart'
 import 'hr.dart' show renderHorizontalRule;
 import 'tables.dart' show renderTable;
 import 'images.dart' show renderImage;
-import '../../uv/wrap.dart' as uv_wrap;
+import 'package:ultraviolet/rendering.dart' as uv_wrap;
 import 'image_bytes_loader_stub.dart'
     if (dart.library.io) 'image_bytes_loader_io.dart'
     as image_loader;

@@ -7,10 +7,10 @@
 library;
 
 import '../terminal/ansi.dart';
-import '../uv/cell.dart' as uv;
-import '../uv/style_ops.dart' as uv_ops;
-import '../uv/ansi.dart' as uv_ansi;
-import '../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/core.dart' as uv;
+import 'package:ultraviolet/rendering.dart' as uv_ops;
+import 'package:ultraviolet/rendering.dart' as uv_ansi;
+import 'package:ultraviolet/unicode.dart' as uni;
 import '../layout/layout.dart' show Layout;
 import 'style.dart';
 

@@ -1,6 +1,6 @@
 import '../style/color.dart';
 import '../style/accessibility.dart' show isDarkColorRgb;
-import '../uv/terminal_renderer.dart' show RenderMetrics;
+import 'package:ultraviolet/rendering.dart' show RenderMetrics;
 import 'degradation.dart' show RenderBudgetState;
 import 'key.dart';
 

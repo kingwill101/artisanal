@@ -4,8 +4,8 @@
 /// runes. It handles control characters, newlines, and tabs.
 library;
 
-import '../../unicode/grapheme.dart' as uni;
-import '../../unicode/width.dart' as uv_width;
+import 'package:ultraviolet/unicode.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uv_width;
 
 /// Function type for sanitizing rune lists.
 typedef RuneSanitizer = List<int> Function(List<int> runes);
@@ -32,7 +32,7 @@ class SanitizerOptions {
 ///
 /// Example:
 /// ```dart
-/// import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+/// import 'package:ultraviolet/unicode.dart' as uni;
 ///
 /// final sanitizer = createSanitizer(SanitizerOptions(
 ///   tabReplacement: ' ',

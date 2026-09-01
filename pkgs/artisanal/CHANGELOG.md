@@ -10,6 +10,9 @@
 
 ### Changed
 
+- Routed Ultraviolet integration through package-owned public entrypoints and
+  removed duplicated one-line renderer, Unicode, and color-profile forwarding
+  libraries.
 - Added a narrow, platform-safe `runtime.dart` entrypoint for reusable and
   browser-capable consumers of the core TEA runtime.
 - Kept Markdown text rendering browser-compatible while retaining native image

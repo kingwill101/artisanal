@@ -2,7 +2,7 @@ import 'package:artisanal/src/tui/cmd.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/theme.dart';
 import 'package:artisanal/src/tui/terminal_palette.dart';
-import 'package:artisanal/src/uv/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'package:test/test.dart';
 
 void main() {

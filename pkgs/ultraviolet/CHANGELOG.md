@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Added focused, browser-safe `core.dart`, `input.dart`, `rendering.dart`,
+  `terminal.dart`, and `unicode.dart` entrypoints for consumers that do not
+  need the full package surface.
 - Removed the unused direct `meta` dependency and excluded generated DevTools
   profiler sessions from the published package archive.
 

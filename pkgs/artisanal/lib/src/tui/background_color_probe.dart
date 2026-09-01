@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:artisanal/terminal.dart' show Ansi;
 
 import 'msg.dart';
-import '../uv/event.dart' as uvev;
+import 'package:ultraviolet/input.dart' as uvev;
 import 'startup_probe.dart';
 
 /// Best-effort probe for terminal theme state before the first frame.

@@ -6,7 +6,7 @@
 library;
 
 import 'package:artisanal/style.dart';
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';

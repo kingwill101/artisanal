@@ -10,8 +10,8 @@ import 'package:artisanal/src/tui/program_host_io.dart'
     show jsonChannelHost, webSocketHost, socketHost;
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/view.dart';
-import 'package:artisanal/src/uv/terminal_renderer.dart' show RenderMetrics;
-import 'package:artisanal/src/uv/uv.dart' show Cursor, CursorShape;
+import 'package:ultraviolet/rendering.dart' show RenderMetrics;
+import 'package:ultraviolet/ultraviolet.dart' show Cursor, CursorShape;
 import 'package:test/test.dart';
 
 // Import ExecResult for testing

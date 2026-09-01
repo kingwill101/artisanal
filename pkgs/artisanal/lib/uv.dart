@@ -117,8 +117,7 @@ export 'src/uv/core_exports.dart';
 export 'src/uv/input_exports.dart';
 export 'src/uv/rendering_exports.dart';
 export 'src/uv/terminal_exports.dart';
-export 'src/uv/layout.dart';
-export 'src/unicode/width.dart'
+export 'package:ultraviolet/unicode.dart'
     show
         runeWidth,
         stringWidth,
@@ -127,8 +126,3 @@ export 'src/unicode/width.dart'
         WidthMethodX,
         emojiPresentationWidth,
         setEmojiPresentationWidth;
-export 'src/uv/halfblock_drawable.dart' show HalfBlockImageDrawable;
-export 'src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
-export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
-export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;
-export 'src/uv/terminal_graphics.dart';

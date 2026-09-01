@@ -10,13 +10,13 @@ import 'terminal_native_frame.dart';
 import 'terminal_render_inspector.dart';
 import 'trace.dart';
 import 'view.dart';
-import '../uv/ansi.dart' show UvAnsi;
-import '../uv/buffer.dart' as uv_buffer;
-import '../uv/styled_string.dart' as uv_styled;
-import '../uv/terminal_graphics.dart' as uv_graphics;
-import '../uv/terminal_renderer.dart' as uv_term;
+import 'package:ultraviolet/rendering.dart' show UvAnsi;
+import 'package:ultraviolet/core.dart' as uv_buffer;
+import 'package:ultraviolet/core.dart' as uv_styled;
+import 'package:ultraviolet/rendering.dart' as uv_graphics;
+import 'package:ultraviolet/rendering.dart' as uv_term;
 
-export '../uv/terminal_renderer.dart' show RenderMetrics;
+export 'package:ultraviolet/rendering.dart' show RenderMetrics;
 
 /// Abstract renderer interface for TUI output.
 ///

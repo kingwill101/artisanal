@@ -1,5 +1,4 @@
-import 'package:artisanal/src/colorprofile/downsample.dart';
-import 'package:artisanal/src/colorprofile/profile.dart';
+import 'package:ultraviolet/colorprofile.dart';
 import 'package:artisanal/src/terminal/ansi.dart' show Ansi;
 import 'package:test/test.dart';
 

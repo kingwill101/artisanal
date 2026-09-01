@@ -1,12 +1,1 @@
-export 'event.dart';
-export 'mouse.dart' show MouseMode, MouseButton, Mouse;
-export 'key.dart';
-export 'decoder.dart' show EventDecoder, LegacyKeyEncoding;
-export 'event_stream.dart';
-export 'terminal_reader.dart';
-export 'tabstop.dart';
-export 'environ.dart';
-export 'cancelreader.dart';
-export 'logger.dart';
-export 'winch.dart';
-export 'key_table.dart';
+export 'package:ultraviolet/input.dart';

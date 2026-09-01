@@ -8,7 +8,7 @@
 /// by the calling component.
 library;
 
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import 'runeutil.dart';
 
 /// A visual segment of an underlying content line.

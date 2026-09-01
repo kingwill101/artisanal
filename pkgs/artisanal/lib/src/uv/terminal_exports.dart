@@ -1,4 +1,2 @@
-export 'terminal.dart';
-export 'terminal_graphics.dart';
-export 'cursor.dart';
+export 'package:ultraviolet/terminal.dart';
 export 'tui_adapter.dart';

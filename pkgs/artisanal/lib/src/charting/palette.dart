@@ -1,7 +1,7 @@
 /// Color ramps and palette utilities for chart rendering.
 library;
 
-import '../uv/cell.dart';
+import 'package:ultraviolet/core.dart';
 
 /// Discrete color ramp for mapping normalized `0..1` values to colors.
 final class ChartRamp {

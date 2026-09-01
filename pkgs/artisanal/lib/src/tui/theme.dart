@@ -2,7 +2,7 @@ import 'msg.dart';
 import 'cmd.dart';
 import 'terminal_palette.dart';
 import '../style/accessibility.dart' show isDarkColorRgb;
-import '../uv/uv.dart' as uvev;
+import 'package:ultraviolet/ultraviolet.dart' as uvev;
 import 'trace.dart';
 
 /// Tracks terminal-reported colors and background truth.

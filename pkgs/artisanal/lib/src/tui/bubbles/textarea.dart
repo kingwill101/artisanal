@@ -5,8 +5,7 @@ import 'dart:math' as math;
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/src/tui/view.dart';
-import 'package:artisanal/src/uv/cursor.dart';
-import '../../uv/geometry.dart';
+import 'package:ultraviolet/terminal.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../cmd.dart';
@@ -16,7 +15,7 @@ import '../key.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
 import 'cursor.dart';
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Support types

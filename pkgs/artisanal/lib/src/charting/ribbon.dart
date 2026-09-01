@@ -1,9 +1,7 @@
 /// Stacked ribbon (area) chart renderer for UV screens.
 library;
 
-import '../uv/cell.dart';
-import '../uv/geometry.dart';
-import '../uv/screen.dart';
+import 'package:ultraviolet/core.dart';
 import 'core.dart';
 import 'package:artisanal/style.dart';
 
