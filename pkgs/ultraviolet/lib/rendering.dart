@@ -8,6 +8,7 @@ library;
 
 export 'core.dart';
 export 'src/uv/ansi.dart' show UvAnsi;
+export 'src/uv/ansi_slice.dart';
 export 'src/uv/effects.dart'
     show
         AmberTrailFilter,
@@ -33,6 +34,7 @@ export 'src/uv/halfblock_drawable.dart' show HalfBlockImageDrawable;
 export 'src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
 export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
 export 'src/uv/progress_bar.dart';
+export 'src/uv/renderer/renderer.dart';
 export 'src/uv/screen_ops.dart';
 export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;
 export 'src/uv/style_ops.dart';

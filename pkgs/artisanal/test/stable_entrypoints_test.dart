@@ -61,5 +61,8 @@ void main() {
     final color = filter.matrix.transformColor(const uv.UvRgb(0, 0, 255));
 
     expect(color, const uv.UvRgb(128, 0, 128));
+    expect(uv.TerminalRenderer, isA<Type>());
+    expect(uv.cutAnsiByCells('hello', 1, 4), 'ell');
+    expect(uv.truncateLeftAnsiByCells('hello', 2), 'llo');
   });
 }
