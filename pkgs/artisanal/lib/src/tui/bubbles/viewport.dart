@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart';
 import '../../style/ranges.dart' as ranges;
 import '../../terminal/ansi.dart';
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';

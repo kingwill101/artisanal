@@ -38,7 +38,7 @@ import 'package:highlight/languages/yaml.dart' as highlight_yaml;
 
 import '../../style/style.dart';
 import '../../style/color.dart' show BasicColor;
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import 'fence_language_resolver.dart';
 
 final Highlight _highlight = Highlight()

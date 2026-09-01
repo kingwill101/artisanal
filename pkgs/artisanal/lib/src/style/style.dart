@@ -32,8 +32,8 @@ import '../layout/layout.dart';
 import '../renderer/renderer.dart';
 import '../terminal/ansi.dart';
 import '../tui/trace.dart';
-import '../unicode/grapheme.dart' as uni;
-import '../uv/wrap.dart' as uv_wrap;
+import 'package:ultraviolet/unicode.dart' as uni;
+import 'package:ultraviolet/rendering.dart' as uv_wrap;
 
 const int _styleRenderTraceThresholdUs = 5000;
 

@@ -43,7 +43,7 @@ import '../../../style/border.dart' as style_border;
 import '../../../style/blending.dart' as blending;
 import '../../../style/color.dart';
 import '../../../style/style.dart';
-import '../../../colorprofile/convert.dart' as cp;
+import 'package:ultraviolet/colorprofile.dart' as cp;
 import 'base.dart';
 
 import 'dart:math' as math;

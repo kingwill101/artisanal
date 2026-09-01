@@ -17,7 +17,7 @@
 /// ```
 library;
 
-import '../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Key Type Enumeration

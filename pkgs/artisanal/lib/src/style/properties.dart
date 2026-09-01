@@ -8,7 +8,7 @@ library;
 ///
 /// Re-exported here so that `package:artisanal/style.dart` and
 /// `package:artisanal/uv.dart` both resolve to the same type.
-export 'package:ultraviolet/src/uv/cell.dart' show UnderlineStyle;
+export 'package:ultraviolet/core.dart' show UnderlineStyle;
 
 /// Represents padding (internal spacing) for styled content.
 ///

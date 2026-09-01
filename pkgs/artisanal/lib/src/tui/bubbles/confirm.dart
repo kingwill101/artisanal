@@ -3,7 +3,7 @@ import '../key.dart';
 import '../component.dart';
 import '../msg.dart';
 import 'package:artisanal/style.dart';
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import 'key_binding.dart';
 
 /// Message sent when confirmation is made.

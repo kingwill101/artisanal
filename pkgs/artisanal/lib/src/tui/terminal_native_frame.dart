@@ -1,7 +1,7 @@
 import 'view.dart';
-import '../uv/buffer.dart' as uv_buffer;
-import '../uv/cell.dart';
-import '../uv/styled_string.dart' as uv_styled;
+import 'package:ultraviolet/core.dart' as uv_buffer;
+import 'package:ultraviolet/core.dart';
+import 'package:ultraviolet/core.dart' as uv_styled;
 
 /// Native cell-buffer snapshot of rendered terminal output.
 class TerminalNativeFrame {

@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import '../bubbles/text_layout.dart' as layout;
 import '../bubbles/runeutil.dart';
 import 'editor_state.dart';

@@ -4,7 +4,7 @@ import 'dart:developer' as dev;
 
 import '../platform/platform.dart' as platform;
 
-import '../unicode/width.dart' as uni_width;
+import 'package:ultraviolet/unicode.dart' as uni_width;
 import 'cmd.dart';
 import 'degradation.dart';
 import 'devtools.dart';
@@ -25,10 +25,10 @@ import '../style/chars.dart';
 import '../style/color.dart' show Color;
 import 'background_color_probe.dart';
 import 'uv_capability_probe.dart';
-import '../uv/cursor.dart';
+import 'package:ultraviolet/terminal.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 import 'hot_reload_mixin.dart';
-import '../uv/event.dart' as uvev;
+import 'package:ultraviolet/input.dart' as uvev;
 
 /// The TUI program runtime.
 ///

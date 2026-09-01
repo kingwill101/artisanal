@@ -30,7 +30,7 @@ import '../../style/border.dart' as style_border;
 import '../../style/style.dart';
 import '../../style/color.dart';
 import '../../tui/bubbles/components/table.dart' as table_component;
-import '../../uv/wrap.dart' as uv_wrap;
+import 'package:ultraviolet/rendering.dart' as uv_wrap;
 import 'renderer.dart' show MarkdownRenderer;
 import 'syntax_highlighter.dart';
 import 'options.dart';

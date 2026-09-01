@@ -1,4 +1,4 @@
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 
 import 'text_decorations.dart';
 import 'text_document.dart';

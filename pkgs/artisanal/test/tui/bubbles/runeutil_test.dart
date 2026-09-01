@@ -1,5 +1,5 @@
 import 'package:artisanal/src/tui/bubbles/runeutil.dart';
-import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:test/test.dart';
 
 void main() {

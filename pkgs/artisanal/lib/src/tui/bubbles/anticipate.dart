@@ -8,7 +8,7 @@ library;
 
 import 'package:artisanal/src/tui/tui.dart';
 import 'package:artisanal/style.dart';
-import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 
 /// Configuration for anticipate/autocomplete component.
 class AnticipateConfig {

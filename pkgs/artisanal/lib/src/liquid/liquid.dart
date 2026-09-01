@@ -16,8 +16,8 @@ import '../charting/charting.dart' as chart;
 import '../tui/bubbles/components/base.dart' show RenderConfig;
 import '../tui/bubbles/components/table.dart' as table_component;
 import '../tui/bubbles/components/panel.dart';
-import '../uv/buffer.dart' show Buffer, ScreenBuffer;
-import '../uv/styled_string.dart' show StyledString;
+import 'package:ultraviolet/core.dart' show Buffer, ScreenBuffer;
+import 'package:ultraviolet/core.dart' show StyledString;
 
 /// Convenience wrapper for liquify templates.
 final class LiquidTemplate {

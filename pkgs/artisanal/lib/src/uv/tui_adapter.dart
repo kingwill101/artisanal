@@ -11,13 +11,13 @@ library;
 
 import '../terminal/keys.dart' as term;
 import '../tui/msg.dart';
-import '../unicode/grapheme.dart' as uni;
-import 'decoder.dart';
-import 'event.dart' as uvev;
-import 'event_stream.dart';
-import 'key.dart' as uvk;
-import 'key_table.dart';
-import 'mouse.dart' as uvm;
+import 'package:ultraviolet/unicode.dart' as uni;
+import 'package:ultraviolet/input.dart' show EventDecoder, LegacyKeyEncoding;
+import 'package:ultraviolet/input.dart' as uvev;
+import 'package:ultraviolet/input.dart' show UvEventStreamParser;
+import 'package:ultraviolet/input.dart' as uvk;
+import 'package:ultraviolet/input.dart' show buildKeysTable;
+import 'package:ultraviolet/input.dart' as uvm;
 
 /// Adapts Ultraviolet-style input events to the current TUI message types.
 ///

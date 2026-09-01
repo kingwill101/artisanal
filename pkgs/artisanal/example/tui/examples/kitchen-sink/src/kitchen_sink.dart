@@ -81,7 +81,7 @@ import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart' as uv;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:image/image.dart' as img;
 
 part 'kitchen_sink_core.dart';

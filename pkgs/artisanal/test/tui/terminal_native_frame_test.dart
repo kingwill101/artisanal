@@ -1,6 +1,6 @@
 import 'package:artisanal/tui.dart';
-import 'package:artisanal/src/uv/buffer.dart' as uv_buffer;
-import 'package:artisanal/src/uv/cell.dart';
+import 'package:ultraviolet/core.dart' as uv_buffer;
+import 'package:ultraviolet/core.dart';
 import 'package:test/test.dart';
 
 void main() {

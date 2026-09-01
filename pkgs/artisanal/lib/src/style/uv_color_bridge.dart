@@ -5,7 +5,7 @@
 /// sRGB without knowing the concrete class.
 library;
 
-import '../colorprofile/convert.dart' as cp;
+import 'package:ultraviolet/colorprofile.dart' as cp;
 import 'color.dart';
 
 /// Extension that adds [toRgb] to every [Color] subtype.

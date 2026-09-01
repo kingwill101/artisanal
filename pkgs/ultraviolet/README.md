@@ -215,6 +215,22 @@ task uv-demos   # compiles each example, then records all GIFs into assets/
 
 ## Small How-Tos
 
+For a narrower dependency surface, import the focused entrypoint matching the
+layer you use:
+
+```dart
+import 'package:ultraviolet/core.dart';      // cells, buffers, layout
+import 'package:ultraviolet/input.dart';     // events and decoding
+import 'package:ultraviolet/rendering.dart'; // diff renderer and effects
+import 'package:ultraviolet/terminal.dart';  // terminal lifecycle
+import 'package:ultraviolet/unicode.dart';   // graphemes and cell widths
+```
+
+All five entrypoints are browser-safe. The umbrella
+`package:ultraviolet/ultraviolet.dart` remains available when an application
+needs APIs from several layers. `package:ultraviolet/uv.dart` exposes the
+complete low-level UV surface for compatibility consumers.
+
 Write ANSI sequences directly:
 
 ```dart

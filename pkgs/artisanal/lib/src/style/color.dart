@@ -22,8 +22,8 @@
 /// ```
 library;
 
-import '../colorprofile/convert.dart' as cp;
-import '../colorprofile/profile.dart' as cp_profile;
+import 'package:ultraviolet/colorprofile.dart' as cp;
+import 'package:ultraviolet/colorprofile.dart' as cp_profile;
 
 /// Color profile indicating terminal color capabilities.
 enum ColorProfile {

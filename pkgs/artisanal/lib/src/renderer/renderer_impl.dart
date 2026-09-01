@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import '../colorprofile/detect_impl.dart' as cp_detect;
-import '../colorprofile/downsample.dart' as cp_downsample;
-import '../colorprofile/profile.dart' as cp;
+import 'package:ultraviolet/colorprofile.dart' as cp_downsample;
+import 'package:ultraviolet/colorprofile.dart' as cp;
 import '../style/color.dart' show ColorProfile;
 import '../terminal/ansi.dart' show Ansi;
 import 'renderer.dart' show Renderer;

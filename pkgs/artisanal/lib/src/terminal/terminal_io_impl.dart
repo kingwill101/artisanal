@@ -3,7 +3,8 @@ import 'dart:io' as io;
 
 import '../colorprofile/detect_impl.dart' as cp_detect;
 import '../style/color.dart';
-import '../uv/terminal_windows_io.dart';
+import 'package:ultraviolet/terminal.dart'
+    show enableWindowsVtInput, restoreWindowsVtInput;
 import 'ansi.dart';
 import 'stdin_stream.dart';
 import 'terminal_base.dart';

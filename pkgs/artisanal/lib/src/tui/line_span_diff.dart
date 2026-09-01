@@ -12,11 +12,11 @@
 library;
 
 import '../terminal/ansi.dart';
-import '../unicode/grapheme.dart' as uni;
-import '../unicode/width.dart' as uv_width;
-import '../uv/ansi.dart' show UvAnsi;
-import '../uv/cell.dart' show Link, UvStyle;
-import '../uv/styled_string.dart' as uv_styled;
+import 'package:ultraviolet/unicode.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uv_width;
+import 'package:ultraviolet/rendering.dart' show UvAnsi;
+import 'package:ultraviolet/core.dart' show Link, UvStyle;
+import 'package:ultraviolet/core.dart' as uv_styled;
 import 'terminal_render_inspector.dart';
 
 /// One minimal terminal edit for a single row: move the cursor to the 0-based

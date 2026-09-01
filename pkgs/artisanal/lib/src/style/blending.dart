@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 
-import '../colorprofile/convert.dart' as cp;
+import 'package:ultraviolet/colorprofile.dart' as cp;
 import 'uv_color_bridge.dart';
 import 'color.dart';
 

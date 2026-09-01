@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 
-import '../../unicode/grapheme.dart' as uni;
+import 'package:ultraviolet/unicode.dart' as uni;
 
 enum TextPasteMode { inline, chunked, collapsed }
 

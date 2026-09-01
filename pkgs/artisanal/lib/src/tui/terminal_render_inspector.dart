@@ -1,9 +1,9 @@
 import 'view.dart';
 import '../terminal/ansi.dart';
-import '../uv/ansi.dart' show UvAnsi;
-import '../uv/cell.dart' show Link, UvStyle;
-import '../uv/style_ops.dart' as uv_style;
-import '../uv/styled_string.dart' as uv_styled;
+import 'package:ultraviolet/rendering.dart' show UvAnsi;
+import 'package:ultraviolet/core.dart' show Link, UvStyle;
+import 'package:ultraviolet/rendering.dart' as uv_style;
+import 'package:ultraviolet/core.dart' as uv_styled;
 
 /// Parsed representation of rendered terminal output.
 class TerminalRenderFrame {
