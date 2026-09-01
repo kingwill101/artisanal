@@ -43,6 +43,14 @@ jobs:
           dart compile js pkgs/artisanal/tool/web_entrypoints_smoke.dart -o build/artisanal-web-entrypoints-smoke.js
           dart compile js pkgs/artisanal_widgets/tool/web_entrypoints_smoke.dart -o build/artisanal-widgets-web-entrypoints-smoke.js
 
+      - name: Install shell completion validators
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends zsh
+
+      - name: Validate shell completion compilation and protocol
+        run: bash tool/check_shell_completion.sh
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

@@ -22,6 +22,11 @@ tasks:
     cmds:
       - dart test
 
+  check-shell-completion:
+    desc: Compile and validate shell completion for web, native, Bash, and Zsh
+    cmds:
+      - bash tool/check_shell_completion.sh
+
   test-widgets:
     desc: Run tests for artisanal widgets
     dir: "{{.widgets_dir}}"
