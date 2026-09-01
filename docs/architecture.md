@@ -332,18 +332,15 @@ pkgs/artisanal/lib/
 ├── glamour.dart        # Focused high-fidelity Markdown renderer
 ├── args.dart           # CLI argument parser exports
 ├── terminal.dart       # Terminal abstraction exports
-├── testing.dart        # Widget testing re-export
 ├── uv.dart             # UV compatibility re-export
-├── widgets.dart        # Widget framework re-export
+├── web.dart            # Browser program runner
 └── src/
     ├── charting/       # Charting renderers
-    ├── run/            # App and hosted runner support
+    ├── web/            # Browser renderer/runner support
     ├── style/          # Lip Gloss-inspired styling
     ├── tui/            # Bubble Tea-inspired TUI
     │   └── bubbles/    # Pre-built TEA components
     │
-    │   # Widget system lives in a separate package:
-    │   # pkgs/artisanal_widgets/lib/src/widgets/
     ├── uv/             # Ultraviolet cell renderer
     ├── io/             # Console I/O utilities
     ├── terminal/       # Terminal abstraction
@@ -356,6 +353,10 @@ pkgs/artisanal/lib/
     ├── glamour/        # Glamour renderer
     └── liquid/         # Liquid adapters
 ```
+
+Widget shells, runners, and testing utilities live under
+`pkgs/artisanal_widgets/lib/`. Artisanal Widgets depends on this core package;
+core does not re-export the widget package.
 
 Standalone UV users should import `package:ultraviolet/ultraviolet.dart` directly;
 `package:artisanal/uv.dart` is retained as a compatibility shim.

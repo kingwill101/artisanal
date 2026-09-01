@@ -1,9 +1,9 @@
 import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, Command;
-import 'package:artisanal/artisanal.dart'
-    show defaultWidgetProgramOptions, runWidgetApp;
 import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal_widgets/app.dart'
+    show defaultWidgetProgramOptions, runWidgetApp;
 import 'package:artisanal_widgets/artisanal_widgets.dart'
     show WidgetApp, ImageAutoMode;
 

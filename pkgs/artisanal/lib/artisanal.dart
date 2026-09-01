@@ -35,15 +35,13 @@
 /// - `package:artisanal/terminal.dart`: Unified terminal abstraction and ANSI handling.
 /// - `package:artisanal/uv.dart`: Compatibility re-export for UV cell-buffer types.
 /// - `package:artisanal/compat.dart`: Backward-compatible shims for prior APIs.
-/// - `package:artisanal/widgets.dart`: Stable re-export of the widget framework.
 /// - `package:artisanal/editor_core.dart`: Stable low-level text document,
 ///   state, and viewport primitives for editor integrations.
 /// - `package:artisanal/glamour.dart`: Glamour-style Markdown rendering.
 /// - `package:ultraviolet/ultraviolet.dart`: Low-level cell-buffer rendering engine.
 ///
-/// Charting, Liquify adapters, Markdown, scoring, web helpers, and widget
-/// testing are exported directly from this library
-/// (`package:artisanal/artisanal.dart`).
+/// Charting, Liquify adapters, Markdown, scoring, and web helpers are exported
+/// directly from this library (`package:artisanal/artisanal.dart`).
 ///
 /// {@template artisanal_io_overview}
 /// The [Console] class is the primary entry point for high-level CLI output.
@@ -66,19 +64,6 @@ library;
 
 import 'src/io/console.dart' show Console;
 
-// Convenience re-exports for app shell types used by entrypoints
-export 'package:artisanal_widgets/app.dart'
-    show
-        ArtisanalApp,
-        ReloadController,
-        ReloadFileWatcher,
-        ReloadHost,
-        ReloadMode,
-        ReloadWidgetBuilder,
-        WidgetApp;
-// Widget testing
-export 'package:artisanal_widgets/testing.dart';
-export 'package:artisanal_widgets/widgets.dart' show ImageAutoMode;
 // Args Aliases
 export 'args.dart' show Command, CommandRunner;
 // Charting
@@ -112,9 +97,6 @@ export 'src/renderer/renderer.dart'
         NullRenderer,
         defaultRenderer,
         resetDefaultRenderer;
-export 'src/run/run_app.dart';
-// App entrypoints (platform-conditional: IO terminal, web canvas, or stub)
-export 'src/run/transport.dart';
 // Scoring
 export 'src/scoring/scoring.dart';
 export 'src/style/color.dart'
@@ -169,6 +151,7 @@ export 'src/terminal/terminal.dart'
         BackendTerminal,
         EmbeddedTerminalBackend,
         TerminalBridge;
+export 'src/terminal/host_server.dart' show TerminalHostServer;
 // Stable low-level editor primitives
 export 'src/tui/editor_core/editor_core.dart';
 // Markdown rendering

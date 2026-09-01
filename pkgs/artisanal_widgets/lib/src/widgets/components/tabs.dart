@@ -1,4 +1,4 @@
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 /// A tab item for use with [Tabs].
 ///

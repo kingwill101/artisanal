@@ -12,7 +12,6 @@ If you prefer a smaller `Model` → `update` → `view` loop, start with the
 ## Quick start
 
 ```dart
-import 'package:artisanal/artisanal.dart' show runWidgetApp;
 import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
 
@@ -45,13 +44,13 @@ void main() async {
 ## Where to import from
 
 Most widget apps use `package:artisanal_widgets/app.dart` for the app shell,
-`package:artisanal_widgets/widgets.dart` for widgets, and `runWidgetApp` from
-`package:artisanal/artisanal.dart` to start the app. Focused libraries are also
+runner, and hosting APIs, plus `package:artisanal_widgets/widgets.dart` for
+widgets. Focused libraries are also
 available for [charting](#chart-widgets), [editors](#input-widgets),
 [selection](#selection-widgets), and [testing](#widget-testing).
 
-The umbrella package re-exports the main widget and testing APIs as
-`package:artisanal/widgets.dart` and `package:artisanal/testing.dart`.
+The core `artisanal` package does not re-export widget APIs; this keeps the
+package dependency graph one-way.
 
 ---
 
@@ -113,7 +112,7 @@ runProgram(
 For the common fullscreen widget case, use the higher-level runner:
 
 ```dart
-import 'package:artisanal/artisanal.dart' show runWidgetApp;
+import 'package:artisanal_widgets/app.dart' show runWidgetApp;
 
 await runWidgetApp(WidgetApp(MyRoot()));
 
@@ -144,7 +143,7 @@ await runWidgetApp(
 The same runner layer can also target browser and raw-socket hosts:
 
 ```dart
-import 'package:artisanal/artisanal.dart' show Transport, serveWidgetApp;
+import 'package:artisanal_widgets/app.dart' show Transport, serveWidgetApp;
 
 final browserHost = await serveWidgetApp(
   transport: Transport.browser,
@@ -2489,12 +2488,11 @@ class _PulseLabelState extends State<PulseLabel> with AnimationMixin {
 
 ## Widget Testing
 
-Artisanal ships a dedicated testing infrastructure for widget apps. Import
-`package:artisanal/testing.dart` or `package:artisanal_widgets/testing.dart`
-to access the harness.
+Artisanal Widgets ships dedicated testing infrastructure. Import
+`package:artisanal_widgets/testing.dart` to access the harness.
 
 ```dart
-import 'package:artisanal/testing.dart';
+import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 void main() {

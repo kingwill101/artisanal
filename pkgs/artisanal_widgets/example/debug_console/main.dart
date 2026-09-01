@@ -1,7 +1,6 @@
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
   final controller = w.DebugConsoleController(initiallyVisible: true);
@@ -12,7 +11,7 @@ void main() async {
     debugConsoleCaptureErrors: true,
     home: DebugConsoleShowcaseScreen(),
   );
-  await artisanal.runWidgetApp(shell);
+  await app.runWidgetApp(shell);
 }
 
 class DebugConsoleShowcaseScreen extends w.StatefulWidget {

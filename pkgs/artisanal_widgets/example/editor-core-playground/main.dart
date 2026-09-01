@@ -3,14 +3,13 @@
 // Run with:
 //   dart run example/editor-core-playground/main.dart
 
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/bubbles.dart' as b;
 import 'package:artisanal_widgets/editors.dart' as editors;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show Border, Color, Style;
 import 'package:artisanal/terminal.dart' as terminal;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 const String _playgroundSearchLayerKey = 'playground.search';
 const String _playgroundReviewLineLayerKey = 'playground.review';
@@ -96,7 +95,7 @@ void bootstrapEditorCore() {
 ''';
 
 Future<void> main() async {
-  await artisanal.runWidgetApp(
+  await app.runWidgetApp(
     app.ArtisanalApp(
       title: 'Editor Core Playground',
       home: EditorCorePlaygroundScreen(),

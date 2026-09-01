@@ -8,7 +8,7 @@
 library;
 
 import 'package:artisanal/tui.dart' as runtime;
-import 'package:artisanal/widgets.dart' as tui;
+import 'package:artisanal_widgets/widgets.dart' as tui;
 
 // ── Change this string and save to test hot reload ──────────────────────
 const _title = 'WidgetApp Hot Reload Test (v1)';

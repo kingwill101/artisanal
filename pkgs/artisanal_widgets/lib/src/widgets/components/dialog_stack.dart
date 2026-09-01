@@ -1,5 +1,5 @@
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color;

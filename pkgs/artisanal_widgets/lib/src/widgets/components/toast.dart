@@ -1,4 +1,4 @@
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/style.dart' show Border;
 // ignore_for_file: unused_shown_name

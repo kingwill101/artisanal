@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 /// A page navigation control with prev/next buttons.
 ///

@@ -8,7 +8,6 @@ library;
 import 'dart:async';
 
 import 'package:artisanal/tui.dart';
-import 'package:artisanal/widgets.dart' as tui;
 import 'package:test/test.dart';
 
 import 'program_test.dart' show MockTerminal;
@@ -161,39 +160,6 @@ void main() {
       program.send(const _ReassembleDoneMsg());
       await runFuture;
     });
-
-    test(
-      'WidgetApp reassemble invalidates view cache and re-renders',
-      () async {
-        var label = 'WidgetApp v1';
-        final app = tui.WidgetApp(
-          _HotReloadProbeRoot(() => label),
-          debugRebuilds: false,
-        );
-
-        final program = Program(
-          app,
-          options: const ProgramOptions(altScreen: false),
-          terminal: terminal,
-        );
-
-        final runFuture = program.run();
-
-        await Future<void>.delayed(const Duration(milliseconds: 150));
-        final firstOutput = terminal.output.join();
-        expect(firstOutput, contains(label));
-        expect(app.view(), contains(label));
-
-        label = 'WidgetApp v2';
-        await program.performReassemble();
-        await Future<void>.delayed(const Duration(milliseconds: 150));
-        expect(app.view(), contains(label));
-        expect(terminal.output.join(), contains(label));
-
-        program.quit();
-        await runFuture;
-      },
-    );
   });
 }
 
@@ -201,25 +167,14 @@ class _ReassembleDoneMsg extends Msg {
   const _ReassembleDoneMsg();
 }
 
-class _HotReloadProbeRoot extends tui.StatelessWidget {
-  _HotReloadProbeRoot(this.textProvider);
-
-  final String Function() textProvider;
-
-  @override
-  tui.Widget build(tui.BuildContext context) {
-    return tui.Text(textProvider());
-  }
-}
-
 class _CallbackModel implements Model {
   _CallbackModel({
     required String Function() onView,
     required Cmd? Function() onInit,
     required Cmd? Function(Msg) onUpdate,
-  }) : _onView = onView,
-       _onInit = onInit,
-       _onUpdate = onUpdate;
+  })  : _onView = onView,
+        _onInit = onInit,
+        _onUpdate = onUpdate;
 
   final String Function() _onView;
   final Cmd? Function() _onInit;

@@ -13,4 +13,5 @@
 /// {@category TUI}
 library;
 
+export 'app.dart';
 export 'src/widgets/widgets.dart' hide StateSetter;

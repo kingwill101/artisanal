@@ -1,5 +1,5 @@
 import 'package:artisanal/style.dart' show Color, Border;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 /// Lifecycle status for a [ToolCard] / [ToolCardInline].
 enum ToolCardStatus {

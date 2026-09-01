@@ -7,8 +7,8 @@
 /// - `ArtisanalApp`
 /// - reload helpers and file-watcher support
 ///
-/// Import `package:artisanal/artisanal.dart` for the public `runWidgetApp`
-/// runner and hosted app entrypoints.
+/// This entrypoint also exposes `runWidgetApp`, `serveWidgetApp`, transport
+/// selection, and widget-oriented program defaults.
 ///
 /// {@category TUI}
 library;
@@ -17,3 +17,6 @@ export 'src/widgets/app/widget_app.dart';
 export 'src/widgets/app/artisanal_app.dart';
 export 'src/widgets/app/reload.dart';
 export 'src/widgets/app/reload_watcher.dart';
+export 'src/widgets/app/run_app.dart';
+export 'src/widgets/app/transport.dart';
+export 'src/widgets/layout/image.dart' show ImageAutoMode;

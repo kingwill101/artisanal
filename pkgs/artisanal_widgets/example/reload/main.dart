@@ -1,8 +1,7 @@
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main(List<String> args) async {
   final config = _parseArgs(args);
@@ -17,7 +16,7 @@ void main(List<String> args) async {
         mode: config.watchMode,
       );
     }
-    await artisanal.runWidgetApp(
+    await app.runWidgetApp(
       app.ArtisanalApp(
         title: 'Reload Host Showcase',
         child: app.ReloadHost(

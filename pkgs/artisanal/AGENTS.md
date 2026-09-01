@@ -20,10 +20,9 @@ faithful Dart port of Charm's Go libraries — Lip Gloss (styling), Bubble Tea
 
 Rendering is delegated to the `ultraviolet` package (cell buffers, diff-based
 `UvTerminalRenderer`, image protocols). The widget framework itself lives in
-the separate `artisanal_widgets` package; `package:artisanal/widgets.dart`
-re-exports it for convenience. Keep renderer internals in `ultraviolet` and
-widget internals in `artisanal_widgets` — this package is the integration
-layer.
+the separate `artisanal_widgets` package, which depends on this core package.
+Core must not depend on or re-export `artisanal_widgets`. Keep renderer
+internals in `ultraviolet` and widget internals in `artisanal_widgets`.
 
 Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.10.0 <4.0.0`.
 Version 0.6.0.
@@ -52,14 +51,13 @@ CI (`.github/workflows/ci.yaml`):
 ```
 lib/
   artisanal.dart       # umbrella: Console, Style, Terminal, markdown, charting,
-                       # Liquid, widget re-exports
+                       # Liquid, scoring, and core hosts
   args.dart            # CommandRunner / Command
   style.dart           # Style system
   tui.dart             # TUI runtime: Model, Msg, Cmd, Program, replay/trace
   bubbles.dart         # reusable TEA widgets
   terminal.dart        # Terminal abstraction, ANSI, Keys
-  widgets.dart         # re-export of package:artisanal_widgets
-  testing.dart         # widget testing helpers re-export
+  web.dart             # browser program runner
   editor_core.dart     # low-level editor primitives
   glamour.dart         # high-fidelity Markdown renderer
   uv.dart              # compatibility re-export of ultraviolet
@@ -132,9 +130,8 @@ example/               # demo apps (log_viewer_demo, command_center_demo, args/,
 - **CommandRunner**: Symfony/Laravel-style; namespaces, `option()` /
   `argument()` helpers, automatic shell completion (`ShellCompleter`), styled
   `<error>` blocks on stderr.
-- **Widgets**: the widget framework ships in `artisanal_widgets`;
-  `package:artisanal/widgets.dart` re-exports it. For widget-first apps prefer
-  importing `artisanal_widgets` directly.
+- **Widgets**: the widget framework, widget runners, and widget testing helpers
+  ship in `artisanal_widgets`. This core package does not re-export them.
 
 ## Conventions
 

@@ -57,7 +57,7 @@ import 'package:artisanal/bubbles.dart'
 import 'package:artisanal/style.dart' show Color, Border;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyBinding, KeyMap, KeyMsg;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 import 'text_area_controller_core_bridge.dart'
     show TextAreaControllerCoreBridge;

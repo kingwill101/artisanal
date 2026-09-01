@@ -4,10 +4,9 @@
 // theming, and built-in navigator wiring.
 
 import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
   final shell = app.ArtisanalApp(
@@ -16,7 +15,7 @@ void main() async {
     home: _HomeScreen(),
   );
 
-  await artisanal.runWidgetApp(shell);
+  await app.runWidgetApp(shell);
 }
 
 final class _HomeScreen extends w.StatefulWidget {

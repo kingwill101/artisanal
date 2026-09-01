@@ -1,11 +1,10 @@
-import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/editors.dart' as editors;
 import 'package:artisanal/tui.dart' as runtime;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main() async {
-  await artisanal.runWidgetApp(
+  await app.runWidgetApp(
     app.ArtisanalApp(title: 'TextArea Demo', home: TextAreaDemoScreen()),
   );
 }

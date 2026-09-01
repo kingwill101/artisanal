@@ -4,11 +4,11 @@
 // Navigate: ←/→ or SPACE/Enter cycle overview → full-screen charts → overview.
 // Exit: Ctrl+C / q
 //
-// Run: dart run example/charting/demo_all.dart
+// Run: dart run pkgs/artisanal_widgets/example/charting/demo_all.dart
 import 'dart:math' as math;
 
-import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 
 void main() async {
@@ -96,7 +96,31 @@ const _heatmapData = <List<double>>[
 ];
 
 const _sparkData = <double>[
-  3, 7, 2, 9, 5, 8, 1, 6, 4, 10, 3, 7, 5, 8, 2, 9, 6, 4, 7, 3, 8, 5, 10, 2, 6,
+  3,
+  7,
+  2,
+  9,
+  5,
+  8,
+  1,
+  6,
+  4,
+  10,
+  3,
+  7,
+  5,
+  8,
+  2,
+  9,
+  6,
+  4,
+  7,
+  3,
+  8,
+  5,
+  10,
+  2,
+  6,
 ];
 
 const _bg = '#0D1117';
@@ -439,9 +463,7 @@ class _DemoAllAppState extends State<_DemoAllApp> {
       final key = msg.key;
       if (key.ctrl && key.isChar('c')) return tui.Cmd.quit();
       if (key.isChar('q') || key.isChar('Q')) return tui.Cmd.quit();
-      if (key.type == tui.KeyType.right ||
-          key.isSpaceLike ||
-          key.isEnterLike) {
+      if (key.type == tui.KeyType.right || key.isSpaceLike || key.isEnterLike) {
         _next();
         return null;
       }
@@ -463,10 +485,8 @@ class _DemoAllAppState extends State<_DemoAllApp> {
     const gridCols = 3;
     const gridRows = 3;
     const gridPad = 1;
-    final gridCellW =
-        (termW - gridPad * (gridCols + 1)) ~/ gridCols;
-    final gridCellH =
-        (termH - gridPad * (gridRows + 1) - 1) ~/ gridRows;
+    final gridCellW = (termW - gridPad * (gridCols + 1)) ~/ gridCols;
+    final gridCellH = (termH - gridPad * (gridRows + 1) - 1) ~/ gridRows;
 
     final fullW = math.min(termW - 4, 80);
     final fullH = math.min(termH - 4, 24);

@@ -1,11 +1,13 @@
 /// Stub for `browser_host.dart` when `dart:io` is not available.
 library;
 
+import 'host_server.dart' show TerminalHostServer;
+
 /// Stub for [BrowserTerminalSessionHandler] on web/WASM.
 typedef BrowserTerminalSessionHandler = Future<void> Function(Never socket);
 
 /// Stub for [BrowserTerminalHostServer] on web/WASM.
-abstract final class BrowserTerminalHostServer {
+abstract final class BrowserTerminalHostServer implements TerminalHostServer {
   BrowserTerminalHostServer._();
 
   /// Stub: not available on web.
@@ -30,6 +32,7 @@ abstract final class BrowserTerminalHostServer {
       throw UnsupportedError('BrowserTerminalHostServer not available on web');
 
   /// Stub: not available on web.
+  @override
   Future<void> close({bool force = false}) =>
       throw UnsupportedError('BrowserTerminalHostServer not available on web');
 }

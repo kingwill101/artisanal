@@ -25,7 +25,8 @@ SDK: `>=3.10.0 <4.0.0`.
 
 **Boundary rules** (see `docs/workspace_architecture.md`):
 - Keep renderer concerns (diff, sync output, frame behavior) in `ultraviolet`.
-- Keep widget internals in `artisanal_widgets` — `artisanal` only re-exports it.
+- Keep widget APIs and internals in `artisanal_widgets`; `artisanal` must not
+  depend on or re-export the widget package.
 - Keep `artisanal` focused on stable primitives and integration, not
   app-specific logic.
 - Treat examples and app shells as consumers, not framework core.

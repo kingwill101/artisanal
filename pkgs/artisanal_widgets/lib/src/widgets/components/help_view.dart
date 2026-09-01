@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 /// A widget-side help view for rendering [KeyMap] bindings.
 ///

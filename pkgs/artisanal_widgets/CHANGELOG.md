@@ -6,6 +6,10 @@
 
 - Reduced the published package archive by excluding repository-hosted demo
   media and generated GitHub CLI web artifacts.
+- Moved `runWidgetApp`, `serveWidgetApp`, `Transport`, and widget-oriented
+  program defaults into the package-owned `app.dart` entrypoint.
+- Moved the lower-level chart-painter grid demo into this package because its
+  application shell uses the widget framework.
 
 ### Removed
 

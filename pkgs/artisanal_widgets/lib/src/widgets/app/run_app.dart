@@ -1,4 +1,4 @@
-/// Conditional export hub for app entrypoints.
+/// Conditional export hub for widget app entrypoints.
 ///
 /// - IO  → [run_app_io] (local terminal / network serving)
 /// - Web → [run_app_web] (canvas / DOM)

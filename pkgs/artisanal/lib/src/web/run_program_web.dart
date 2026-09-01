@@ -5,15 +5,15 @@ import 'dart:math' as math;
 
 import 'package:ultraviolet/web.dart' show CanvasTerminalRenderer;
 import 'package:web/web.dart' as web;
-import 'package:artisanal_widgets/app.dart' show WidgetApp;
 
 import '../terminal/backend.dart' show BackendTerminal;
+import '../tui/model.dart' show Model;
 import '../tui/program.dart' show runProgram;
 import '../tui/renderer.dart' show TuiRendererOptions;
-import '../web/backend_web.dart' show WebTerminalBackend;
-import '../web/renderer_web.dart' show WebUltravioletRenderer;
+import 'backend_web.dart' show WebTerminalBackend;
+import 'renderer_web.dart' show WebUltravioletRenderer;
 
-/// Options for configuring [runWidgetApp] on web.
+/// Options for configuring [runBrowserProgram].
 final class BrowserRunOptions {
   const BrowserRunOptions({
     this.fontSize = 14,
@@ -38,21 +38,21 @@ final class BrowserRunOptions {
   final bool appendToBody;
 }
 
-/// Runs a [WidgetApp] in the browser, rendering to an HTML5 canvas element.
+/// Runs a [Model] in the browser, rendering to an HTML5 canvas element.
 ///
-/// This is the web/WASM equivalent of the IO [runWidgetApp]. It:
+/// This is the web/WASM program host. It:
 /// 1. Creates or finds a canvas element
 /// 2. Sets up a [CanvasTerminalRenderer] for cell rendering
 /// 3. Creates a [WebTerminalBackend] with DOM event wiring
 /// 4. Creates a [WebUltravioletRenderer] that bridges UV rendering to the canvas
 /// 5. Runs the program via [runProgram]
-Future<void> runWidgetApp(
-  WidgetApp app, {
+Future<void> runBrowserProgram(
+  Model model, {
   BrowserRunOptions options = const BrowserRunOptions(),
 }) async {
   final canvas = options.canvasId != null
       ? (web.document.getElementById(options.canvasId!)
-            as web.HTMLCanvasElement)
+          as web.HTMLCanvasElement)
       : web.document.createElement('canvas') as web.HTMLCanvasElement;
 
   if (options.appendToBody && canvas.parentNode == null) {
@@ -177,7 +177,7 @@ Future<void> runWidgetApp(
   web.window.addEventListener('beforeunload', onBeforeUnload);
 
   try {
-    await runProgram(app, host: null, terminal: terminal, renderer: renderer);
+    await runProgram(model, host: null, terminal: terminal, renderer: renderer);
   } finally {
     web.document.removeEventListener('keydown', onKeyDown);
     canvas.removeEventListener('mousedown', onMouseDown);
@@ -189,27 +189,6 @@ Future<void> runWidgetApp(
     backend.dispose();
   }
 }
-
-/// Serves an app builder over a network transport.
-///
-/// On web this is unsupported — a browser tab cannot host a server.
-Future<Never> serveWidgetApp({
-  required Object Function() appBuilder,
-  Object? transport,
-  int port = 2323,
-  Object? imageAutoMode,
-  Object? options,
-  Object? address,
-  String pagePath = '/',
-  String webSocketPath = '/ws',
-  String browserTitle = 'Artisanal Widget Host',
-  String? pageHtml,
-  bool v6Only = false,
-  bool shared = false,
-  Object? initialSize,
-  bool supportsAnsi = true,
-  Object? colorProfile,
-}) => throw UnsupportedError('serveWidgetApp is not available on web.');
 
 // --- Internal helpers (adapted from bootstrap.dart) ---
 

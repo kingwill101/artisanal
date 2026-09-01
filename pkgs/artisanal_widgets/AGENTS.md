@@ -110,7 +110,7 @@ tool/              # ANSI dump helpers for debugging output
   selects environment vs session-capability image rendering.
 - **App shells**: `ArtisanalApp` (title + home), `WidgetApp`, reload support
   (`ReloadController`, `ReloadFileWatcher`). Entry: `runWidgetApp(...)` from
-  `package:artisanal/artisanal.dart`. `runWidgetApp` defaults to
+  `package:artisanal_widgets/app.dart`. `runWidgetApp` defaults to
   `MouseMode.allMotion` for hover support — plain `runProgram` needs it set
   explicitly.
 - **Commands**: commands combining runtime-managed commands (`EveryCmd`,

@@ -8,6 +8,7 @@ import 'package:artisanal/src/terminal/report_probe.dart' as terminal_probe;
 import 'package:artisanal/style.dart' hide Align, Padding;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' as uv;
+import 'package:artisanal_widgets/app.dart' as runner;
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:image/image.dart' as img;
 
@@ -72,7 +73,7 @@ Future<void> main(List<String> arguments) async {
     initialImageCellPixelHeight: terminalProbe?.cellPixelHeight,
   );
 
-  await artisanal.runWidgetApp(app, imageAutoMode: config.autoMode);
+  await runner.runWidgetApp(app, imageAutoMode: config.autoMode);
 }
 
 final class ImageProbeConfig {

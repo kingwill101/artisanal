@@ -1,4 +1,3 @@
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 
 class Hello extends StatelessWidget {

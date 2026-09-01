@@ -7,7 +7,7 @@ import 'package:artisanal/bubbles.dart' as b;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/tui.dart' show TuiTrace;
 import 'package:artisanal/style.dart';
-import 'package:artisanal/widgets.dart' as tui;
+import 'package:artisanal_widgets/widgets.dart' as tui;
 
 import '_editor_demo_theme.dart' as demo_theme;
 

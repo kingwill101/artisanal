@@ -1,6 +1,6 @@
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg;
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 // ignore_for_file: unused_shown_name
