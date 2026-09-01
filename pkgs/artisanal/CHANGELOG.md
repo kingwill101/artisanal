@@ -25,6 +25,12 @@
 - Generalized the browser runner as `runBrowserProgram(Model)` and the shared
   network-host lifecycle as `TerminalHostServer`.
 
+### Fixed
+
+- Generated Zsh completion wrappers now forward the actual cursor position
+  instead of treating every completion request as if the cursor were at the
+  start of the command line.
+
 ### Removed
 
 - Removed the unused out-of-process remote plugin protocol, process host,

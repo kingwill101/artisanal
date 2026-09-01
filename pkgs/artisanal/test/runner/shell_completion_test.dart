@@ -144,6 +144,8 @@ void main() {
       expect(script, contains('completion'));
       expect(script, contains('compadd'));
       expect(script, contains('COMPREPLY'));
+      expect(script, contains(r'COMP_POINT=$CURSOR'));
+      expect(script, isNot(contains('COMP_POINT=0')));
     });
 
     test('generateAll handles multiple names', () {

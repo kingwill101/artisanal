@@ -12,17 +12,30 @@ import 'package:completion/src/get_args_completions.dart'
 class ShellCompleter {
   final ArgParser _parser;
 
+  /// Creates a completer for [parser].
   ShellCompleter(this._parser);
 
+  /// Returns completion candidates for the current shell input.
   List<String> complete(List<String> args, String compLine, int compPoint) {
     return getArgsCompletions(_parser, args, compLine, compPoint);
   }
 
+  /// Generates a Bash and Zsh completion script for [executableName].
   static String generate(String executableName) {
-    return completion.generateCompletionScript([executableName]);
+    return _withZshCursorPoint(
+      completion.generateCompletionScript([executableName]),
+    );
   }
 
+  /// Generates a Bash and Zsh completion script for [executableNames].
   static String generateAll(List<String> executableNames) {
-    return completion.generateCompletionScript(executableNames);
+    return _withZshCursorPoint(
+      completion.generateCompletionScript(executableNames),
+    );
   }
+
+  // package:completion 1.0.2 hardcodes zero for Zsh, so every request is
+  // evaluated at the start of BUFFER and produces no useful candidates.
+  static String _withZshCursorPoint(String script) =>
+      script.replaceAll('COMP_POINT=0 \\\n', 'COMP_POINT=\$CURSOR \\\n');
 }
