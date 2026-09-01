@@ -33,9 +33,9 @@ dart run example/main.dart   # run an example (most are interactive)
 ```
 
 CI (`.github/workflows/ci.yaml`) runs `flutter test pkgs/artisanal_widgets
--r compact` from the repo root on Ubuntu (this is the only package treated as
-a Flutter package; there is no Windows job for it). `flutter analyze` runs at
-the repo root.
+-r compact` from the repo root on Ubuntu and with `--concurrency=1` on
+Windows. This is the only package treated as a Flutter package. `flutter
+analyze` runs at the repo root.
 
 ## Layout
 

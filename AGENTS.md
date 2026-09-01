@@ -74,7 +74,7 @@ tests (CI sets up Flutter stable).
    (`pkgs/ultraviolet`, `pkgs/artisanal`, `pkgs/artisanal_widgets`):
    - Dart packages on Ubuntu: `dart test pkgs/<pkg> -r compact`.
    - `artisanal_widgets`: `flutter test pkgs/artisanal_widgets -r compact`
-     (Ubuntu only — there is no Windows job for it).
+     on Ubuntu and with `--concurrency=1` on Windows.
    - Dart packages on Windows: `dart test pkgs/<pkg> --concurrency=1 -r compact`.
 
 Changes must pass on both Ubuntu and Windows where the platform matrix

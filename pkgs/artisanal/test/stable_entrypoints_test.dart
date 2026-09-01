@@ -1,5 +1,6 @@
 import 'package:artisanal/artisanal.dart' as hosts;
 import 'package:artisanal/tui.dart' as runtime;
+import 'package:artisanal/uv.dart' as uv;
 import 'package:test/test.dart';
 
 class _DemoModel implements runtime.Model {
@@ -53,5 +54,12 @@ void main() {
       hosts.SocketTerminalHostServer.resizeControlSequence,
       isA<Function>(),
     );
+  });
+
+  test('stable UV entrypoint exposes effects primitives', () {
+    final filter = uv.ColorMatrixFilter.tint(const uv.UvRgb(255, 0, 0));
+    final color = filter.matrix.transformColor(const uv.UvRgb(0, 0, 255));
+
+    expect(color, const uv.UvRgb(128, 0, 128));
   });
 }
