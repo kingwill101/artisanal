@@ -1,5 +1,5 @@
 import 'package:artisanal/style.dart' show Color, Style;
-import 'package:artisanal_widgets/widgets.dart';
+import '_component_foundation.dart';
 
 /// A typed item that can be displayed in a [StatusLine].
 ///

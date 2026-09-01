@@ -1,7 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color, Style;
-
+import '_component_foundation.dart';
 
 // ignore_for_file: unused_shown_name
 /// Trend direction for a [MetricDisplay].

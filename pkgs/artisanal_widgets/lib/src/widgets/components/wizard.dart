@@ -1,7 +1,12 @@
 import 'dart:math' as math;
+import '_component_foundation.dart';
+import 'button.dart';
+import 'card.dart';
+import 'frame.dart';
+import 'help_view.dart';
+import 'step_indicator.dart';
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/runtime.dart';
 

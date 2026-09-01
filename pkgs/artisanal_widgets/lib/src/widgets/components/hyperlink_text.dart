@@ -1,6 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart';
-
 import 'package:artisanal/style.dart' show Color, Style;
+import '_component_foundation.dart';
 
 /// A text widget that renders as a clickable hyperlink using OSC 8 escape
 /// sequences in terminals that support them.

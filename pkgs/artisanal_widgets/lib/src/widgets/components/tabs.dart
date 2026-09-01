@@ -1,4 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart';
+import '_component_foundation.dart';
+import 'button.dart';
 
 /// A tab item for use with [Tabs].
 ///

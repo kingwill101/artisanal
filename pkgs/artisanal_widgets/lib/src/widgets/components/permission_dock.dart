@@ -1,5 +1,6 @@
 import 'package:artisanal/style.dart' show Color, Border, Style;
-import 'package:artisanal_widgets/widgets.dart';
+import '_component_foundation.dart';
+import 'frame.dart';
 
 /// Action taken on a [PermissionDock].
 enum PermissionAction {

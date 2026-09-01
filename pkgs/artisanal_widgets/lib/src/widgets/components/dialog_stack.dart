@@ -1,5 +1,6 @@
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal_widgets/widgets.dart';
+import '_component_foundation.dart';
+import 'modal.dart';
 
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color;

@@ -6,7 +6,7 @@ import 'package:artisanal/text_editing.dart'
         TextLineStateSnapshot,
         TextCommandResult,
         TextLineCommandResult;
-import 'package:artisanal_widgets/widgets.dart' show TextAreaController;
+import '_component_foundation.dart';
 
 final class TextAreaControllerCoreBridge {
   TextAreaControllerCoreBridge(this._controller);

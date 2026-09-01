@@ -1,8 +1,11 @@
 import 'dart:async';
+import '_component_foundation.dart';
+import 'button.dart';
+import 'card.dart';
+import 'help_view.dart';
 import 'dart:math' as math;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal_widgets/widgets.dart';
 
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/compat.dart';

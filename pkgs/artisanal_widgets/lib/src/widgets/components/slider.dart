@@ -1,10 +1,10 @@
 import 'dart:math' as math;
+import '_component_foundation.dart';
 
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Style;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/runtime.dart' show Cmd, KeyMsg;
-import 'package:artisanal_widgets/widgets.dart';
 
 /// An immutable pair of values used by [RangeSlider].
 class RangeValues {
