@@ -5,7 +5,7 @@
 /// [ChordController.of] / [WhichKeySlot] — no parallel which-key map.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 import '../animation/listenable.dart';
 import '../components/which_key.dart';

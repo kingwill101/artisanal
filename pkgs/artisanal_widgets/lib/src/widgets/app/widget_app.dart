@@ -5,7 +5,7 @@ library;
 import 'dart:collection';
 import 'dart:developer' as dev;
 
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         BackgroundColorMsg,
         CapabilityMsg,
@@ -40,8 +40,8 @@ import 'package:artisanal/tui.dart'
         TuiTrace,
         View,
         WindowPixelSizeMsg,
-        WindowSizeMsg;
-import 'package:artisanal/bubbles.dart' show DebugOverlayModel;
+        WindowSizeMsg,
+        DebugOverlayModel;
 import 'package:artisanal/uv.dart'
     show
         PrimaryDeviceAttributesEvent,
@@ -56,20 +56,19 @@ import '../core/framework.dart'
     show BuildContext, State, StatefulWidget, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
-import '../layout/layout.dart'
-    show Column, Expanded, ImageAutoMode, Text, withImageAutoConfiguration;
+import '../layout/column.dart' show Column;
+import '../layout/expanded.dart' show Expanded;
+import '../layout/image.dart' show ImageAutoMode, withImageAutoConfiguration;
+import '../layout/text.dart' show Text;
 import '../scroll/scroll_widgets.dart' show SingleChildScrollView;
 import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
 import '../core/accessibility.dart';
-import '../components/components_widgets.dart'
-    show
-        Button,
-        CmdCallback,
-        DebugOverlay,
-        DebugOverlayPosition,
-        PerformanceOverlay;
+import '../components/button.dart' show Button;
+import '../components/component_style.dart' show CmdCallback;
+import '../components/debug_overlay.dart'
+    show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
 import '../theme/theme.dart' show hasDarkBackground, setHasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';

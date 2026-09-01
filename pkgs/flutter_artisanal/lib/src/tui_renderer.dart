@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show UltravioletTuiRenderer;
+import 'package:artisanal/runtime.dart' show UltravioletTuiRenderer;
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 
 class FlutterTerminalRenderer extends UltravioletTuiRenderer {

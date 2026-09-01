@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Style;
 import 'package:artisanal_widgets/widgets.dart';
 

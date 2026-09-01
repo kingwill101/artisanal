@@ -9,7 +9,7 @@ library;
 
 import 'dart:async';
 
-import 'package:artisanal/tui.dart' show Spinner;
+import 'package:artisanal/runtime.dart' show Spinner;
 
 import 'listenable.dart' show ValueNotifier;
 

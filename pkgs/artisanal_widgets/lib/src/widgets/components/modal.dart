@@ -1,6 +1,6 @@
 import 'package:artisanal_widgets/widgets.dart';
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Layout;
 
 // ignore_for_file: unused_shown_name

@@ -11,8 +11,8 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/artisanal.dart' show AnsiRendererOptions;
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/markdown.dart' show AnsiRendererOptions;
+import 'package:artisanal/runtime.dart'
     show
         Cmd,
         Msg,

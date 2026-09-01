@@ -1,10 +1,10 @@
 library;
 
-import 'package:artisanal/tui.dart' show Cmd, Msg, KeyMsg, TuiTrace;
+import 'package:artisanal/runtime.dart' show Cmd, Msg, KeyMsg, TuiTrace;
 import '../core/framework.dart'
     show BuildContext, InheritedWidget, State, StatefulWidget;
 
-import 'package:artisanal_widgets/src/widgets/layout/layout.dart'
+import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart'
     show GestureDetector;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 

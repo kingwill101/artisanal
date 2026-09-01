@@ -2,7 +2,7 @@
 import 'dart:collection';
 import 'dart:math' as math;
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         Cmd,
         Msg,
@@ -15,8 +15,8 @@ import 'package:artisanal/tui.dart'
         View,
         TuiTrace,
         TraceTag;
-import 'package:artisanal/artisanal.dart'
-    show MarkdownRenderer, markdownToAnsi, AnsiRendererOptions;
+import 'package:artisanal/markdown.dart'
+    show AnsiRendererOptions, MarkdownRenderer;
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'

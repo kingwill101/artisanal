@@ -37,6 +37,12 @@
 /// - `package:artisanal/compat.dart`: Backward-compatible shims for prior APIs.
 /// - `package:artisanal/editor_core.dart`: Stable low-level text document,
 ///   state, and viewport primitives for editor integrations.
+/// - `package:artisanal/runtime.dart`: Platform-safe core TEA runtime.
+/// - `package:artisanal/text_editing.dart`: Focused text input and editor models.
+/// - `package:artisanal/markdown.dart`: Focused Markdown-to-ANSI rendering.
+/// - `package:artisanal/git_diff.dart`: Focused diff model and review types.
+/// - `package:artisanal/charting.dart`, `layout.dart`, and `scoring.dart`:
+///   focused rendering and utility libraries.
 /// - `package:artisanal/glamour.dart`: Glamour-style Markdown rendering.
 /// - `package:ultraviolet/ultraviolet.dart`: Low-level cell-buffer rendering engine.
 ///

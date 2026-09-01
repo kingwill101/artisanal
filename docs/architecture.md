@@ -326,9 +326,16 @@ pkgs/artisanal/lib/
 ├── artisanal.dart      # Main entry point
 ├── style.dart          # Style system exports
 ├── tui.dart            # TUI framework exports
+├── runtime.dart        # Platform-safe core TUI runtime
 ├── bubbles.dart        # Bubble components exports
 ├── compat.dart         # Compatibility helpers
 ├── editor_core.dart    # Low-level editor primitives
+├── text_editing.dart   # Focused editor and text-input models
+├── markdown.dart       # Focused Markdown-to-ANSI renderer
+├── git_diff.dart       # Focused Git diff model and data types
+├── charting.dart       # Focused chart painters and data types
+├── layout.dart         # Focused string layout utilities
+├── scoring.dart        # Focused matching and ranking utilities
 ├── glamour.dart        # Focused high-fidelity Markdown renderer
 ├── args.dart           # CLI argument parser exports
 ├── terminal.dart       # Terminal abstraction exports

@@ -6,7 +6,7 @@ import 'dart:collection';
 
 import 'package:meta/meta.dart' show experimental;
 
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         BackgroundColorMsg,
         Cmd,
@@ -29,15 +29,12 @@ import '../layout/geometry.dart' show BoxConstraints, HitTestResult;
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart'
     show RenderRow, RenderColumn, FlexParentData, RenderFlexFit;
-import '../layout/layout.dart'
-    show
-        Flexible,
-        Spacer,
-        FlexFit,
-        Positioned,
-        StackParentData,
-        RenderStack,
-        TUIErrorWidget;
+import '../layout/enums.dart' show FlexFit;
+import '../layout/error_widget.dart' show TUIErrorWidget;
+import '../layout/flexible.dart' show Flexible;
+import '../layout/positioned.dart' show Positioned;
+import '../layout/spacer.dart' show Spacer;
+import '../layout/stack.dart' show RenderStack, StackParentData;
 import '../theme/theme.dart' show updateThemeFromBackground;
 import 'widget.dart';
 import '../app/performance.dart';

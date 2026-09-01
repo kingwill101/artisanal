@@ -1,6 +1,6 @@
 library;
 
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         Cmd,
         Msg,
@@ -17,7 +17,7 @@ import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
 import '../core/framework.dart'
     show BuildContext, State, StatefulWidget, StatelessWidget;
-import '../layout/layout.dart' show Text, TextAlign, TextOverflow;
+import '../layout/_layout_core.dart' show Text, TextAlign, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
 import '../layout/geometry.dart' show BoxConstraints, Size;
@@ -25,7 +25,7 @@ import '../selection/selection.dart' show SelectableView, SelectionController;
 import '../theme/theme.dart' show Theme, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../core/widget.dart';
-import 'package:artisanal/bubbles.dart'
+import 'package:artisanal/text_editing.dart'
     show
         EchoMode,
         TextCommandResult,

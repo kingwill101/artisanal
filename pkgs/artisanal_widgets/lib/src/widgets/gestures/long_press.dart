@@ -1,6 +1,6 @@
 library;
 
-import 'package:artisanal/tui.dart' show MouseMsg;
+import 'package:artisanal/runtime.dart' show MouseMsg;
 
 import '../layout/geometry.dart' show Offset;
 import 'events.dart';

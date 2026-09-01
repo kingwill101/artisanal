@@ -1,9 +1,8 @@
-import 'package:artisanal/artisanal.dart' show Style;
-import 'package:artisanal/style.dart' show Color;
+import 'package:artisanal/style.dart' show Color, Style;
 import 'package:artisanal_widgets/src/widgets/components/frame.dart';
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
-import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
 import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
 import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
 

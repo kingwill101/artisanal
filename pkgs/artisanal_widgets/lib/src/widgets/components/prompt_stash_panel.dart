@@ -6,7 +6,7 @@ import 'package:artisanal/style.dart' show Color, Border, Style;
 import '../composer/prompt_stash.dart';
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
-import '../layout/layout.dart';
+import '../layout/_layout_core.dart';
 import '../theme/theme.dart' show Theme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'frame.dart' show Frame;

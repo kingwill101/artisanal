@@ -116,7 +116,8 @@ export 'src/ansi.dart' show Ansi;
 // Ctrl+Z (0x1A) does not latch the stream into EOF when
 // ENABLE_VIRTUAL_TERMINAL_INPUT is active. Imported by the stdin stream
 // source on Windows.
-export 'src/uv/terminal_windows_native.dart'
+export 'src/uv/terminal_windows_native_stub.dart'
+    if (dart.library.io) 'src/uv/terminal_windows_native.dart'
     show NativeWindowsInputStream, sharedWindowsInputStream;
 export 'src/uv/style_ops.dart';
 export 'src/uv/progress_bar.dart';

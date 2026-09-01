@@ -12,7 +12,7 @@ library;
 
 import 'package:meta/meta.dart' show experimental;
 
-import 'package:artisanal/tui.dart' show RenderMetrics;
+import 'package:artisanal/runtime.dart' show RenderMetrics;
 
 /// Callback for per-frame widget-level timing data.
 typedef WidgetFrameTimingCallback = void Function(WidgetFrameTiming timing);

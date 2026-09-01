@@ -1,13 +1,14 @@
 /// High-level app shell for artisanal widgets.
 library;
 
-import 'package:artisanal/tui.dart' show View;
+import 'package:artisanal/runtime.dart' show View;
 
-import '../components/components_widgets.dart'
-    show DebugConsoleController, DebugConsoleHost, DebugOverlayPosition;
+import '../components/debug_console.dart'
+    show DebugConsoleController, DebugConsoleHost;
+import '../components/debug_overlay.dart' show DebugOverlayPosition;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
-import '../layout/layout.dart' show ImageAutoMode;
+import '../layout/image.dart' show ImageAutoMode;
 import '../navigation/navigation.dart'
     show
         Navigator,

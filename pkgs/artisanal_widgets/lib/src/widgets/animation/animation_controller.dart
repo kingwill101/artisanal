@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/runtime.dart' show Cmd;
 
 import 'animation.dart';
 import 'animation_tick.dart';

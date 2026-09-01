@@ -1,4 +1,4 @@
-import 'package:artisanal/bubbles.dart'
+import 'package:artisanal/text_editing.dart'
     show
         TextDocument,
         TextPosition,

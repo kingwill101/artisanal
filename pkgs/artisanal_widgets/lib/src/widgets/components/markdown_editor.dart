@@ -1,6 +1,5 @@
-
 // ignore_for_file: unused_shown_name
-import 'package:artisanal/bubbles.dart'
+import 'package:artisanal/text_editing.dart'
     show
         CodeLanguageProfile,
         CursorModel,
@@ -27,7 +26,8 @@ import 'package:artisanal/bubbles.dart'
         textSyntaxDecorationLayerPriority;
 import 'package:artisanal_widgets/widgets.dart';
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
+import 'package:artisanal/markdown.dart' show AnsiRendererOptions;
 import 'package:artisanal/style.dart' show Style;
 
 /// A higher-level Markdown editor with a live rendered preview.

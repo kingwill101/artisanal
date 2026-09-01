@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show
         Cmd,
         Msg,
@@ -11,10 +11,12 @@ import 'package:artisanal/tui.dart'
         MouseAction,
         MouseButton,
         HitTestMouseMsg,
+        ScrollbarChars,
         TraceTag,
-        TuiTrace;
-import 'package:artisanal/bubbles.dart'
-    show ViewportModel, ViewportKeyMap, ScrollbarChars, ViewportScrollPane;
+        TuiTrace,
+        ViewportKeyMap,
+        ViewportModel,
+        ViewportScrollPane;
 import 'package:artisanal/style.dart' hide Padding;
 import '../core/element.dart'
     show
@@ -32,7 +34,7 @@ import '../rendering/render_object.dart';
 import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
-import '../layout/layout.dart' show EdgeInsets, Padding;
+import '../layout/_layout_core.dart' show EdgeInsets, Padding;
 import '../selection/selection_text_utils.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart'

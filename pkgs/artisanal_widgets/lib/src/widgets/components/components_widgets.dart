@@ -6,7 +6,7 @@
 /// {@category Widgets}
 library;
 
-export 'package:artisanal/bubbles.dart'
+export 'package:artisanal/git_diff.dart'
     show
         DiffCommentAnchor,
         DiffCommentLineHighlight,

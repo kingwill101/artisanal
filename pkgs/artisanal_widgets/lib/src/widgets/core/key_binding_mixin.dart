@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Cmd, KeyMap, KeyMsg, Msg;
+import 'package:artisanal/runtime.dart' show Cmd, KeyMap, KeyMsg, Msg;
 
 import 'framework.dart' show State, StatefulWidget;
 

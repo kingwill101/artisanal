@@ -7,7 +7,7 @@ import 'package:artisanal/terminal.dart'
         SocketTerminalHostServer,
         TerminalDimensions,
         TerminalHostServer;
-import 'package:artisanal/tui.dart'
+import 'package:artisanal/runtime.dart'
     show ProgramHost, ProgramOptions, runProgram;
 
 import 'artisanal_app.dart' show ArtisanalApp;

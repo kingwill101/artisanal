@@ -14,7 +14,7 @@ import 'package:meta/meta.dart' show experimental;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/artisanal.dart'
+import 'package:artisanal/charting.dart'
     show
         ChartPainter,
         ChartLegendEntry,

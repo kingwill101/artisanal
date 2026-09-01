@@ -17,5 +17,5 @@ library;
 export 'widgets.dart';
 export 'src/widgets/charting/chart_models.dart';
 export 'src/widgets/charting/chart_renderers.dart';
-export 'package:artisanal/artisanal.dart'
+export 'package:artisanal/charting.dart'
     show ChartLegendEntry, ChartRamp, ChartPainter, BrailleCanvas;

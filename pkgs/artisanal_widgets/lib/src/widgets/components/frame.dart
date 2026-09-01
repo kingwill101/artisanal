@@ -1,8 +1,11 @@
-import 'package:artisanal/artisanal.dart' show Style;
-import 'package:artisanal/style.dart' show Color, Border;
+import 'package:artisanal/style.dart' show Border, Color, Style;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
-import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/layout/container.dart'
+    show BoxDecoration, Container;
+import 'package:artisanal_widgets/src/widgets/layout/spacing.dart'
+    show EdgeInsets;
+import 'package:artisanal_widgets/src/widgets/layout/tint.dart' show Tint;
 
 /// A container with optional padding, margin, background and border.
 ///

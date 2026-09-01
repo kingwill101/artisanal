@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 // ignore_for_file: unused_shown_name
 
-import 'package:artisanal/bubbles.dart'
+import 'package:artisanal/text_editing.dart'
     show
         CursorModel,
         TextAreaKeyMap,
@@ -56,7 +56,7 @@ import 'package:artisanal/bubbles.dart'
         textDiagnosticSummaryLabel;
 import 'package:artisanal/style.dart' show Color, Border;
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/tui.dart' show Cmd, KeyBinding, KeyMap, KeyMsg;
+import 'package:artisanal/runtime.dart' show Cmd, KeyBinding, KeyMap, KeyMsg;
 import 'package:artisanal_widgets/widgets.dart';
 
 import 'text_area_controller_core_bridge.dart'

@@ -1,8 +1,16 @@
+import 'package:artisanal/runtime.dart' show Cmd, Msg, RenderMetrics;
+import 'package:artisanal/style.dart' show Border, Colors, Style;
 
-import 'package:artisanal_widgets/widgets.dart';
-
-import 'package:artisanal/tui.dart';
-import 'package:artisanal/style.dart' show Border, Style, Colors;
+import '../app/render_metrics_provider.dart' show RenderMetricsProvider;
+import '../core/framework.dart' show BuildContext, State, StatefulWidget;
+import '../core/widget.dart' show Widget;
+import '../layout/align.dart' show Align;
+import '../layout/container.dart' show BoxDecoration, Container;
+import '../layout/enums.dart' show StackFit;
+import '../layout/ignore_pointer.dart' show IgnorePointer;
+import '../layout/spacing.dart' show Alignment, EdgeInsets;
+import '../layout/stack.dart' show Stack;
+import '../layout/text.dart' show Text;
 
 /// A debug overlay that displays rendering metrics.
 ///

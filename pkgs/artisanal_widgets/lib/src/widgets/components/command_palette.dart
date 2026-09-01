@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/scoring.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal_widgets/widgets.dart';
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Border;
 
 /// A single item in a [CommandPalette].
@@ -694,11 +694,10 @@ class _CommandPaletteState extends State<CommandPalette> {
       fit: StackFit.expand,
       children: [
         Opacity(
-          opacity: widget.open ? (1.0 - widget.backdropOpacity).clamp(0.2, 1.0) : 1.0,
-          child: IgnorePointer(
-            ignoring: widget.open,
-            child: widget.child,
-          ),
+          opacity: widget.open
+              ? (1.0 - widget.backdropOpacity).clamp(0.2, 1.0)
+              : 1.0,
+          child: IgnorePointer(ignoring: widget.open, child: widget.child),
         ),
         if (widget.open) ...[
           Positioned(
@@ -716,9 +715,7 @@ class _CommandPaletteState extends State<CommandPalette> {
             right: 0,
             top: 0,
             bottom: 0,
-            child: Center(
-              child: FocusScope(isTrapped: true, child: dialog),
-            ),
+            child: Center(child: FocusScope(isTrapped: true, child: dialog)),
           ),
         ],
       ],

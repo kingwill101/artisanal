@@ -10,7 +10,7 @@ import 'render_object.dart';
 import '../layout/geometry.dart' show BoxConstraints, Size, Offset;
 import 'package:artisanal/style.dart'
     show Layout, Style, HorizontalAlign, VerticalAlign;
-import 'package:artisanal/tui.dart' show TuiTrace, TraceTag;
+import 'package:artisanal/runtime.dart' show TuiTrace, TraceTag;
 
 /// Produces text after accounting for the width available during layout.
 typedef ConstrainedTextBuilder = String Function(int maxWidth);

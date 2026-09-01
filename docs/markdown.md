@@ -3,7 +3,7 @@
 Artisanal offers a quick ANSI renderer for inline content and a richer Glamour
 renderer for documents. Choose based on the output you need:
 
-- `package:artisanal/artisanal.dart`: lightweight Markdown-to-ANSI rendering
+- `package:artisanal/markdown.dart`: lightweight Markdown-to-ANSI rendering
   with simple options.
 - `package:artisanal/glamour.dart`: high-fidelity rendering with
   theme-driven formatting.
@@ -14,7 +14,7 @@ document-style rendering.
 ## Quick Start (ANSI)
 
 ```dart
-import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/markdown.dart';
 
 void main() {
   final markdown = '''

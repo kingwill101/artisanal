@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:artisanal/tui.dart' show ProgramOptions, Msg;
-import 'package:artisanal/tui.dart' show TuiRendererOptions;
+import 'package:artisanal/runtime.dart' show ProgramOptions, Msg;
+import 'package:artisanal/runtime.dart' show TuiRendererOptions;
 import 'package:flutter/widgets.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 

@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Cmd, Msg, KeyMsg;
+import 'package:artisanal/runtime.dart' show Cmd, Msg, KeyMsg;
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/widget.dart';
 import '../focus/focus.dart' show FocusKeyCallback;

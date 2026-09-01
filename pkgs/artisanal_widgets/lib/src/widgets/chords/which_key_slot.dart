@@ -2,7 +2,7 @@
 library;
 
 import 'package:artisanal/style.dart' as style show Color, Style;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 import '../components/which_key.dart';
 import '../core/framework.dart' show BuildContext, StatelessWidget;

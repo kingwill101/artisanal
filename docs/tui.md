@@ -40,6 +40,9 @@ The Elm Architecture (TEA) is a pattern for building interactive applications wi
 TEA model entrypoints:
 
 - `package:artisanal/tui.dart` — `Model`, `Msg`, `Cmd`, `Program`, `runProgram`, runtime messages, and `ProgramHost`
+- `package:artisanal/runtime.dart` — the same core runtime, rendering, replay,
+  and tracing contracts without optional native Markdown/process helpers;
+  prefer it in reusable or browser-capable packages
 - `package:artisanal/bubbles.dart` — reusable TEA components and prompt models
 - `package:artisanal/artisanal.dart` — umbrella API including terminal backends and browser/socket hosts
 

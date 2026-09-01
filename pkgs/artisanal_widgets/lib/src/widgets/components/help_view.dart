@@ -1,7 +1,22 @@
 import 'dart:math' as math;
 
+import 'package:artisanal/runtime.dart' show KeyBinding, KeyMap;
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal_widgets/widgets.dart';
+
+import '../core/framework.dart' show BuildContext, StatelessWidget;
+import '../core/widget.dart' show Widget;
+import '../layout/_layout_core.dart'
+    show
+        Column,
+        CrossAxisAlignment,
+        LayoutBuilder,
+        Row,
+        SizedBox,
+        Text,
+        TextSpan,
+        Wrap;
+import '../media/media_query.dart' show MediaQuery;
+import '../theme/theme_scope.dart' show ThemeScope;
 
 /// A widget-side help view for rendering [KeyMap] bindings.
 ///

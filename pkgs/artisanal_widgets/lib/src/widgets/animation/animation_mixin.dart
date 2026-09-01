@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Cmd, Msg;
+import 'package:artisanal/runtime.dart' show Cmd, Msg;
 
 import '../core/framework.dart' show State, StatefulWidget;
 import 'animation_controller.dart';

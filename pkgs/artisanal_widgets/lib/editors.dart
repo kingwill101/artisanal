@@ -37,7 +37,7 @@ export 'src/widgets/input/text_decoration_binding.dart'
         TextDecorationLayerBuilder,
         TextLineDecorationLayerBinding,
         TextLineDecorationLayerBuilder;
-export 'package:artisanal/bubbles.dart'
+export 'package:artisanal/text_editing.dart'
     show
         TextInputKeyMap,
         TextAreaKeyMap,
