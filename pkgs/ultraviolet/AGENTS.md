@@ -49,7 +49,7 @@ lib/
   src/
     uv/                  # core: cells, buffers, renderer, terminal, events
       terminal.dart      # Terminal: lifecycle, capabilities, draw, events
-      terminal_io.dart / terminal_web.dart / terminal_stub.dart  # platform split
+      terminal_io.dart / terminal_stub.dart  # native/fallback platform split
       buffer.dart        # Buffer, Line, LineData (2D grid of cells)
       cell.dart          # Cell, UvStyle, UvColor, CellDiffOption, Link, Attr
       terminal_renderer.dart      # UvTerminalRenderer (diff-based ANSI renderer)
@@ -106,10 +106,10 @@ example/               # demo apps (raycast_maze, conway_life, metaballs, ...)
   (or `package:ultraviolet/web.dart` / `colorprofile.dart`). Internal code uses
   relative imports within `lib/src`. Tests may import `src/...` directly to
   reach internals (e.g. `package:ultraviolet/src/uv/uv.dart`).
-- **Platform splitting**: native/web/stub variants via conditional imports,
-  e.g. `import 'terminal_stub.dart' if (dart.library.io) 'terminal_io.dart'
-  if (dart.library.html) 'terminal_web.dart';`. Keep IO-specific behavior out
-  of shared code; Windows output differs from POSIX (CRLF, wrap handling).
+- **Platform splitting**: native/fallback variants via conditional imports,
+  e.g. `import 'terminal_stub.dart' if (dart.library.io) 'terminal_io.dart';`.
+  The fallback also serves web builds. Keep IO-specific behavior out of shared
+  code; Windows output differs from POSIX (CRLF, wrap handling).
 - **Doc comments**: public APIs get `///` docs; major types carry
   `{@category Ultraviolet}` / `{@subCategory ...}` tags and `{@macro ...}`
   references. Match that style for new public surface.
