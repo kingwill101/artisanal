@@ -49,19 +49,25 @@ values, prints them to stdout, and exits. Normal runs are completely unaffected.
 
 ### Installing
 
-Print the completion script from your compiled binary (or `dart run`) and
-source it in your shell rc file:
+Print the completion script from your compiled or installed binary and source
+it in your shell rc file:
 
 ```bash
 # One-shot evaluation (bash / zsh)
 eval "$(./github_cli --completion-script)"
 
-# Or for a dart-run script
-eval "$(dart run bin/myapp.dart --completion-script)"
-
 # Persistent: append to your rc file
 ./github_cli --completion-script >> ~/.bashrc   # bash
 ./github_cli --completion-script >> ~/.zshrc    # zsh
+```
+
+Generate the script from the final executable name. A `dart run ...`
+invocation contains spaces and is not a shell command name that the completion
+script can register:
+
+```bash
+dart compile exe bin/myapp.dart -o build/myapp
+eval "$(./build/myapp --completion-script)"
 ```
 
 After adding to your rc file, restart your shell or `source ~/.bashrc` /
