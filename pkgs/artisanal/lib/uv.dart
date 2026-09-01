@@ -113,16 +113,5 @@
 /// {@endtemplate}
 library;
 
-export 'src/uv/core_exports.dart';
-export 'src/uv/input_exports.dart';
-export 'src/uv/rendering_exports.dart';
-export 'src/uv/terminal_exports.dart';
-export 'package:ultraviolet/unicode.dart'
-    show
-        runeWidth,
-        stringWidth,
-        maxLineWidth,
-        WidthMethod,
-        WidthMethodX,
-        emojiPresentationWidth,
-        setEmojiPresentationWidth;
+export 'package:ultraviolet/uv.dart';
+export 'src/uv/tui_adapter.dart';

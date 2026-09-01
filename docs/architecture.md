@@ -368,7 +368,8 @@ core does not re-export the widget package.
 Standalone UV users can import the focused `package:ultraviolet/core.dart`,
 `input.dart`, `rendering.dart`, `terminal.dart`, or `unicode.dart` entrypoint,
 or use `package:ultraviolet/ultraviolet.dart` for the umbrella surface.
-`package:artisanal/uv.dart` is retained as a compatibility shim.
+`package:ultraviolet/uv.dart` is the complete low-level compatibility surface;
+`package:artisanal/uv.dart` delegates to it.
 
 ## Related Documentation
 

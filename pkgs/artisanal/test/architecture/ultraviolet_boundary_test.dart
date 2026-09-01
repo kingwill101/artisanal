@@ -3,13 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-const _allowedUvImplementationFiles = {
-  'core_exports.dart',
-  'input_exports.dart',
-  'rendering_exports.dart',
-  'terminal_exports.dart',
-  'tui_adapter.dart',
-};
+const _allowedUvImplementationFiles = {'tui_adapter.dart'};
 
 void main() {
   final packageRoot = Directory('lib/src').existsSync()
@@ -40,7 +34,7 @@ void main() {
     );
   });
 
-  test('UV integration directory contains adapters and aggregates only', () {
+  test('UV integration directory contains the Artisanal adapter only', () {
     final uvRoot = Directory(p.join(packageRoot.path, 'lib', 'src', 'uv'));
     final unexpected =
         uvRoot
@@ -57,7 +51,7 @@ void main() {
       isEmpty,
       reason:
           'Ultraviolet primitives belong in package:ultraviolet. Keep only '
-          'Artisanal-owned adapters and focused compatibility aggregates here.',
+          'the Artisanal-owned input adapter here.',
     );
   });
 }

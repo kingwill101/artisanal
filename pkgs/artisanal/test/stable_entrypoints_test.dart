@@ -64,5 +64,12 @@ void main() {
     expect(uv.TerminalRenderer, isA<Type>());
     expect(uv.cutAnsiByCells('hello', 1, 4), 'ell');
     expect(uv.truncateLeftAnsiByCells('hello', 2), 'llo');
+    expect(uv.parsePrimaryDevAttrs, isA<Function>());
+    expect(uv.parseTermcap, isA<Function>());
+    expect(uv.Win32ControlKeyState, isA<Type>());
+    expect(uv.parseWin32InputKeyEvent, isA<Function>());
+    expect(uv.BufferFilter, isA<Type>());
+    expect(uv.BufferRenderSink, isA<Type>());
+    expect(uv.ScanlineFilter, isA<Type>());
   });
 }

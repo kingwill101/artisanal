@@ -228,7 +228,8 @@ import 'package:ultraviolet/unicode.dart';   // graphemes and cell widths
 
 All five entrypoints are browser-safe. The umbrella
 `package:ultraviolet/ultraviolet.dart` remains available when an application
-needs APIs from several layers.
+needs APIs from several layers. `package:ultraviolet/uv.dart` exposes the
+complete low-level UV surface for compatibility consumers.
 
 Write ANSI sequences directly:
 
