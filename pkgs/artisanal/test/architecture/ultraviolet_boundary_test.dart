@@ -4,6 +4,11 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 const _allowedUvImplementationFiles = {'tui_adapter.dart'};
+const _ultravioletOwnedImageEncoders = {
+  'kitty.dart',
+  'iterm2.dart',
+  'sixel.dart',
+};
 
 void main() {
   final packageRoot = Directory('lib/src').existsSync()
@@ -52,6 +57,25 @@ void main() {
       reason:
           'Ultraviolet primitives belong in package:ultraviolet. Keep only '
           'the Artisanal-owned input adapter here.',
+    );
+  });
+
+  test('terminal image encoders are implemented by Ultraviolet only', () {
+    final terminalRoot = Directory(
+      p.join(packageRoot.path, 'lib', 'src', 'terminal'),
+    );
+    final duplicated =
+        _ultravioletOwnedImageEncoders
+            .where((name) => File(p.join(terminalRoot.path, name)).existsSync())
+            .toList()
+          ..sort();
+
+    expect(
+      duplicated,
+      isEmpty,
+      reason:
+          'Kitty, iTerm2, and Sixel protocol encoding are renderer concerns '
+          'owned by package:ultraviolet. Artisanal should re-export them.',
     );
   });
 }

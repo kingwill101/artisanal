@@ -2,9 +2,8 @@ import 'package:image/image.dart' as img;
 
 import '../../style/color.dart';
 import '../../style/style.dart';
-import '../../terminal/kitty.dart';
-import '../../terminal/iterm2.dart';
-import '../../terminal/sixel.dart';
+import 'package:ultraviolet/rendering.dart'
+    show ITerm2Image, KittyImage, SixelImage;
 import 'image_renderer_platform_stub.dart'
     if (dart.library.io) 'image_renderer_platform_io.dart'
     as platform;

@@ -22,7 +22,11 @@ events, and terminal capability handling.
 
 ## Installation
 
-This package is currently configured as workspace/private (`publish_to: none`).
+From pub.dev:
+
+```sh
+dart pub add ultraviolet
+```
 
 Workspace usage:
 
@@ -208,6 +212,8 @@ task uv-demos   # compiles each example, then records all GIFs into assets/
   Text attributes and color model for foreground/background styling.
 - `UvTerminalRenderer`  
   Diff-based renderer that minimizes terminal output between frames.
+- `KittyImage` / `ITerm2Image` / `SixelImage` — Raw protocol encoders exported
+  by `package:ultraviolet/rendering.dart`.
 - `Ansi` / `UvAnsi`  
   ANSI escape sequence helpers (`Ansi`) and UV renderer ANSI controls (`UvAnsi`).
 - `Event` types (`KeyEvent`, `MouseEvent`, `WindowSizeEvent`, etc.)  

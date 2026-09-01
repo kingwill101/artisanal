@@ -103,8 +103,11 @@ export 'src/unicode/width.dart'
         emojiPresentationWidth,
         setEmojiPresentationWidth;
 export 'src/uv/halfblock_drawable.dart' show HalfBlockImageDrawable;
+export 'src/uv/iterm2.dart' show ITerm2Image;
 export 'src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
+export 'src/uv/kitty.dart' show KittyImage;
 export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
+export 'src/uv/sixel.dart' show SixelImage;
 export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;
 export 'src/uv/terminal_graphics.dart';
 export 'src/uv/ansi_slice.dart' show cutAnsiByCells;
