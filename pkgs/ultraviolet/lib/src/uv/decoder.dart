@@ -145,7 +145,6 @@ final class EventDecoder {
         return _parseStTerminated(
           intro8: 0x9e,
           intro7: 0x5e, // '^'
-          kind: 'pm',
           makeUnknown: (s) => UnknownPmEvent(s),
           buf: buf,
           allowIncompleteEsc: allowIncompleteEsc,
@@ -154,7 +153,6 @@ final class EventDecoder {
         return _parseStTerminated(
           intro8: 0x98,
           intro7: 0x58, // 'X'
-          kind: 'sos',
           makeUnknown: (s) => UnknownSosEvent(s),
           buf: buf,
           allowIncompleteEsc: allowIncompleteEsc,
@@ -195,7 +193,6 @@ final class EventDecoder {
           return _parseStTerminated(
             intro8: 0x9e,
             intro7: 0x5e,
-            kind: 'pm',
             makeUnknown: (s) => UnknownPmEvent(s),
             buf: buf,
             allowIncompleteEsc: allowIncompleteEsc,
@@ -204,7 +201,6 @@ final class EventDecoder {
           return _parseStTerminated(
             intro8: 0x98,
             intro7: 0x58,
-            kind: 'sos',
             makeUnknown: (s) => UnknownSosEvent(s),
             buf: buf,
             allowIncompleteEsc: allowIncompleteEsc,
@@ -1166,7 +1162,6 @@ final class EventDecoder {
     return _parseStTerminated(
       intro8: 0x9f,
       intro7: 0x5f,
-      kind: 'apc',
       makeUnknown: (s) => UnknownApcEvent(s),
       buf: buf,
       allowIncompleteEsc: allowIncompleteEsc,
@@ -1270,13 +1265,10 @@ final class EventDecoder {
   (int, Event?) _parseStTerminated({
     required int intro8,
     required int intro7,
-    required String kind,
     required Event Function(String) makeUnknown,
     required List<int> buf,
     required bool allowIncompleteEsc,
   }) {
-    // ignore: unused_local_variable
-    final _ = kind;
     // Port of `parseStTerminated`:
     // - Introduced by either the 8-bit control (intro8) or ESC intro7.
     // - Terminated by ST (8-bit 0x9c or 7-bit ESC \\).

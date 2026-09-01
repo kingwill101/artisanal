@@ -36,9 +36,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
 }
 
 class ShellCompleter {
-  ShellCompleter(ArgParser parser) : _parser = parser;
-  // ignore: unused_field
-  final ArgParser _parser;
+  ShellCompleter(ArgParser parser);
 
   List<String> complete(List<String> args, String compLine, int compPoint) {
     throw UnsupportedError('ShellCompleter is not available on this platform.');
