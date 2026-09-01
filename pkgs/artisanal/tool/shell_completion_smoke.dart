@@ -11,6 +11,7 @@ final class _HelloCommand extends Command<void> {
   void run() {}
 }
 
+/// Exercises the public shell completion API for compile and protocol checks.
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()..addFlag('verbose');
   final publicSurface = <Object>[parser, ShellCompleter(parser)];

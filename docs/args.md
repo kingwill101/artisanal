@@ -54,11 +54,11 @@ it in your shell rc file:
 
 ```bash
 # One-shot evaluation (bash / zsh)
-eval "$(./github_cli --completion-script)"
+eval "$(github_cli --completion-script)"
 
 # Persistent: append to your rc file
-./github_cli --completion-script >> ~/.bashrc   # bash
-./github_cli --completion-script >> ~/.zshrc    # zsh
+github_cli --completion-script >> ~/.bashrc   # bash
+github_cli --completion-script >> ~/.zshrc    # zsh
 ```
 
 Generate the script from the final executable name. A `dart run ...`
@@ -67,8 +67,15 @@ script can register:
 
 ```bash
 dart compile exe bin/myapp.dart -o build/myapp
-eval "$(./build/myapp --completion-script)"
+export PATH="$PWD/build:$PATH"
+eval "$(myapp --completion-script)"
 ```
+
+Keep the executable in a directory on `PATH` in future shell sessions (or
+install it into one), because the generated wrapper invokes `myapp` by name.
+For Zsh, initialize its completion system with
+`autoload -Uz compinit && compinit` before sourcing the generated script if
+your shell configuration does not already do so.
 
 After adding to your rc file, restart your shell or `source ~/.bashrc` /
 `source ~/.zshrc`.

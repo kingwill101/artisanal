@@ -15,7 +15,7 @@ This directory demonstrates all the improvements artisanal adds on top of
 | 6 | **Styled help** — sectioned, colored help output | `dart run example/args/main.dart --ansi` |
 | 7 | **Custom help colors** — `HelpColorScheme` presets | `dart run example/args/main.dart --ansi --help-color dark` |
 | 8 | **Styled error blocks** — Symfony-style `<error>` blocks on stderr | `dart run example/args/main.dart unknown-command` |
-| 9 | **Shell completion** — `--completion-script` flag | `./build/args-example --completion-script` (compile first) |
+| 9 | **Shell completion** — `--completion-script` flag | `args-example --completion-script` (compile and add to `PATH` first) |
 | 10 | **Verbosity** — `--quiet`, `--verbose` / `-v`, `-vv`, `-vvv` | `dart run example/args/main.dart demo -v` |
 | 11 | **Non-interactive mode** — `--no-interaction` / `-n` | `dart run example/args/main.dart demo -n` |
 | 12 | **UnknownCommandFallback** — shim-style delegation | `dart run example/args/main.dart shim:some-tool` |
@@ -50,5 +50,9 @@ generating one:
 
 ```bash
 dart compile exe example/args/main.dart -o build/args-example
-eval "$(./build/args-example --completion-script)"
+export PATH="$PWD/build:$PATH"
+eval "$(args-example --completion-script)"
 ```
+
+For Zsh, run `autoload -Uz compinit && compinit` first if completion is not
+already initialized by your shell configuration.

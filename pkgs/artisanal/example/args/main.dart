@@ -661,7 +661,8 @@ class NonInteractiveCommand extends Command<void> {
 // =============================================================================
 //
 //   dart compile exe example/args/main.dart -o build/args-example
-//   ./build/args-example --completion-script
+//   export PATH="$PWD/build:$PATH"
+//   args-example --completion-script
 //
 // #region shell_completion
 class CompletionDemoCommand extends Command<void> {
@@ -681,10 +682,11 @@ class CompletionDemoCommand extends Command<void> {
     io.newLine();
     io.line('Compile the CLI, then generate a completion script:');
     io.line('  dart compile exe example/args/main.dart -o build/args-example');
-    io.line('  ./build/args-example --completion-script');
+    io.line(r'  export PATH="$PWD/build:$PATH"');
+    io.line('  args-example --completion-script');
     io.newLine();
     io.line('Or pipe it directly into your shell config:');
-    io.line('  ./build/args-example --completion-script >> ~/.bashrc');
+    io.line('  args-example --completion-script >> ~/.bashrc');
     io.newLine();
     io.info('This is powered by the completion package via ShellCompleter.');
   }
