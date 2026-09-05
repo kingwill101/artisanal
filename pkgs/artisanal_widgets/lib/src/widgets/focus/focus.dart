@@ -7,9 +7,11 @@ import '../core/framework.dart'
 import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart'
     show GestureDetector;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:listen/listen.dart' show VoidCallback;
+
+export 'package:listen/listen.dart' show VoidCallback;
 
 typedef FocusListener = void Function();
-typedef VoidCallback = void Function();
 typedef FocusKeyCallback = Cmd? Function(KeyMsg msg);
 typedef FocusChangedCallback = void Function(bool focused);
 

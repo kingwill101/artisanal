@@ -1,8 +1,9 @@
 import 'package:artisanal/runtime.dart' show Cmd;
 
+import 'package:listen/listen.dart';
+
 import '../core/framework.dart';
 import '../core/widget.dart';
-import 'listenable.dart';
 
 /// A general-purpose widget that rebuilds whenever a [Listenable] notifies.
 ///

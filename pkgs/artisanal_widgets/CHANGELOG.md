@@ -15,6 +15,18 @@
   program defaults into the package-owned `app.dart` entrypoint.
 - Moved the lower-level chart-painter grid demo into this package because its
   application shell uses the widget framework.
+- Switched the observer primitives (`Listenable`, `ValueListenable`,
+  `ChangeNotifier`, `ValueNotifier`, `VoidCallback`) to `package:listen`
+  (`listen: ^1.0.1`). `src/widgets/animation/listenable.dart` is now a
+  scoped compatibility re-export of those types; new code should import
+  `package:listen/listen.dart` directly. Public API via
+  `package:artisanal_widgets/widgets.dart` keeps the same names.
+- Aligned `ChangeNotifier` semantics with `package:listen`/Flutter: `hasListeners`
+  and `notifyListeners` are `@protected` (`notifyListeners` remains
+  `@visibleForTesting`). Subclasses calling them internally are unaffected;
+  only direct external callers must route through a subclass wrapper.
+  Listener exceptions route through `Listenable.onError`, and `dispose()`
+  during notification is rejected by `package:listen` (asserts in debug).
 
 ### Removed
 

@@ -1112,15 +1112,45 @@ void main() {
       final controller = AnimationController(
         duration: const Duration(milliseconds: 300),
       );
-      controller.addListener(() {});
-      controller.addStatusListener((_) {});
-
-      expect(controller.hasListeners, isTrue);
+      var calls = 0;
+      controller.addListener(() => calls++);
+      controller.addStatusListener((_) => calls++);
 
       controller.dispose();
 
-      // After dispose, listeners should have been cleared
-      expect(controller.hasListeners, isFalse);
+      // After dispose the controller must not accept new listeners
+      // (`package:listen` reports use-after-dispose via Listenable.onError
+      // as StateError in debug).
+      expect(() => controller.addListener(() {}), throwsStateError);
+      expect(calls, isZero);
+    });
+
+    test('failed dispose during notification preserves status listeners', () {
+      final controller = AnimationController(
+        duration: const Duration(milliseconds: 300),
+      );
+      var statusCalls = 0;
+      controller.addStatusListener((_) => statusCalls++);
+      controller.addListener(() {
+        // `package:listen` rejects dispose() during notifyListeners().
+        expect(controller.dispose, throwsA(isA<AssertionError>()));
+      });
+
+      // reset() notifies value listeners, triggering the re-entrant dispose
+      // above (handled by the expect). Status listeners must survive the
+      // failed dispose because super.dispose() runs before clearing them.
+      controller.reset();
+      expect(statusCalls, greaterThanOrEqualTo(1));
+
+      final statusCallsAfterReset = statusCalls;
+      controller.forward();
+      expect(statusCalls, greaterThan(statusCallsAfterReset));
+
+      addTearDown(() {
+        try {
+          controller.dispose();
+        } catch (_) {}
+      });
     });
   });
 

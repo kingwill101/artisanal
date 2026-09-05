@@ -5,8 +5,7 @@ import 'package:artisanal/text_editing.dart'
         TextPatternDiagnosticRule,
         TextPositionDiagnosticRange,
         textPatternDiagnostics;
-
-import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
+import 'package:listen/listen.dart' show ChangeNotifier, ValueListenable;
 
 /// Builds positional diagnostics from plain text.
 typedef TextPositionDiagnosticsBuilder =

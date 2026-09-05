@@ -1,4 +1,4 @@
-import 'listenable.dart';
+import 'package:listen/listen.dart';
 
 // ---------------------------------------------------------------------------
 // AnimationStatus

@@ -1,43 +1,52 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+/// Exposes protected `ChangeNotifier` members (`hasListeners`,
+/// `notifyListeners` in `package:listen`) for behavioral assertions without
+/// relying on `@visibleForTesting` access from outside a subclass.
+final class _TestNotifier extends ChangeNotifier {
+  bool get hasListenersPublic => hasListeners;
+
+  void notify() => notifyListeners();
+}
+
 void main() {
   group('ChangeNotifier', () {
     test('add/remove listener updates hasListeners and notifications', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       var callCount = 0;
 
       void listener() => callCount += 1;
 
-      expect(notifier.hasListeners, isFalse);
+      expect(notifier.hasListenersPublic, isFalse);
       notifier.addListener(listener);
-      expect(notifier.hasListeners, isTrue);
+      expect(notifier.hasListenersPublic, isTrue);
 
-      notifier.notifyListeners();
+      notifier.notify();
       expect(callCount, 1);
 
       notifier.removeListener(listener);
-      expect(notifier.hasListeners, isFalse);
+      expect(notifier.hasListenersPublic, isFalse);
 
-      notifier.notifyListeners();
+      notifier.notify();
       expect(callCount, 1);
     });
 
     test('notifyListeners preserves registration order once per cycle', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       final calls = <String>[];
 
       notifier.addListener(() => calls.add('first'));
       notifier.addListener(() => calls.add('second'));
       notifier.addListener(() => calls.add('third'));
 
-      notifier.notifyListeners();
+      notifier.notify();
 
       expect(calls, ['first', 'second', 'third']);
     });
 
     test('removeListener only removes one matching registration', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       var callCount = 0;
 
       void listener() => callCount += 1;
@@ -45,16 +54,16 @@ void main() {
       notifier.addListener(listener);
       notifier.addListener(listener);
 
-      notifier.notifyListeners();
+      notifier.notify();
       expect(callCount, 2);
 
       notifier.removeListener(listener);
-      notifier.notifyListeners();
+      notifier.notify();
       expect(callCount, 3);
     });
 
     test('removing a listener during notification skips it in that cycle', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       final calls = <String>[];
 
       late void Function() second;
@@ -68,17 +77,17 @@ void main() {
       notifier.addListener(first);
       notifier.addListener(second);
 
-      notifier.notifyListeners();
+      notifier.notify();
       expect(calls, ['first']);
 
-      notifier.notifyListeners();
+      notifier.notify();
       expect(calls, ['first', 'first']);
     });
 
     test(
       'adding a listener during notification does not fire it in same cycle',
       () {
-        final notifier = ChangeNotifier();
+        final notifier = _TestNotifier();
         final calls = <String>[];
         var added = false;
 
@@ -94,34 +103,36 @@ void main() {
 
         notifier.addListener(first);
 
-        notifier.notifyListeners();
+        notifier.notify();
         expect(calls, ['first']);
 
-        notifier.notifyListeners();
+        notifier.notify();
         expect(calls, ['first', 'first', 'second']);
       },
     );
 
     test('dispose enforces runtime guards and removeListener remains safe', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       void listener() {}
 
       notifier.addListener(listener);
       notifier.dispose();
 
-      expect(notifier.hasListeners, isFalse);
+      expect(notifier.hasListenersPublic, isFalse);
       expect(() => notifier.removeListener(listener), returnsNormally);
       expect(() => notifier.addListener(listener), throwsStateError);
-      expect(notifier.notifyListeners, throwsStateError);
+      expect(notifier.notify, throwsStateError);
       expect(notifier.dispose, throwsStateError);
     });
 
     test('dispose during notification throws', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
 
       notifier.addListener(notifier.dispose);
 
-      expect(notifier.notifyListeners, throwsStateError);
+      // `package:listen` asserts (AssertionError in debug) instead of the
+      // previous local StateError when dispose() runs inside notifyListeners().
+      expect(notifier.notify, throwsA(isA<AssertionError>()));
     });
   });
 
@@ -184,47 +195,47 @@ void main() {
 
   group('Listenable.merge', () {
     test('fires when any child fires', () {
-      final a = ChangeNotifier();
-      final b = ChangeNotifier();
+      final a = _TestNotifier();
+      final b = _TestNotifier();
       final merged = Listenable.merge([a, b]);
 
       var callCount = 0;
       merged.addListener(() => callCount += 1);
 
-      a.notifyListeners();
+      a.notify();
       expect(callCount, 1);
 
-      b.notifyListeners();
+      b.notify();
       expect(callCount, 2);
     });
 
     test('handles null entries gracefully', () {
-      final a = ChangeNotifier();
+      final a = _TestNotifier();
       final merged = Listenable.merge([a, null]);
 
       var callCount = 0;
       merged.addListener(() => callCount += 1);
 
-      a.notifyListeners();
+      a.notify();
       expect(callCount, 1);
     });
 
     test('removeListener unsubscribes from all children', () {
-      final a = ChangeNotifier();
-      final b = ChangeNotifier();
+      final a = _TestNotifier();
+      final b = _TestNotifier();
       final merged = Listenable.merge([a, b]);
 
       var callCount = 0;
       void listener() => callCount += 1;
       merged.addListener(listener);
 
-      a.notifyListeners();
+      a.notify();
       expect(callCount, 1);
 
       merged.removeListener(listener);
 
-      a.notifyListeners();
-      b.notifyListeners();
+      a.notify();
+      b.notify();
       expect(callCount, 1);
     });
 

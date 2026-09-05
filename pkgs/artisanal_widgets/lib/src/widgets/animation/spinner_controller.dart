@@ -11,7 +11,7 @@ import 'dart:async';
 
 import 'package:artisanal/runtime.dart' show Spinner;
 
-import 'listenable.dart' show ValueNotifier;
+import 'package:listen/listen.dart' show ValueNotifier;
 
 /// A [ValueNotifier] that cycles through [Spinner.frames] on a periodic timer.
 ///
