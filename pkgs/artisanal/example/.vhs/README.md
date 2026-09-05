@@ -19,3 +19,6 @@ font (the CI workflow installs it before rendering).
 Add a new demo by dropping `<name>.tape` here and listing `<name>` in the
 `artisanal-demos-build` task in the root `Taskfile.yml` — the `artisanal-demos`
 task picks up every `*.tape` automatically.
+
+Not covered: `doc_examples.dart` (a snippet library with no `main`) and
+`artisanal_inspector.dart` (needs the ws-uri of a live program to inspect).
