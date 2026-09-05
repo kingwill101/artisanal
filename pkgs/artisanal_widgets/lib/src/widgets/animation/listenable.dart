@@ -10,4 +10,10 @@
 /// and `AnimatedBuilder` are built on.
 library;
 
-export 'package:listen/listen.dart';
+export 'package:listen/listen.dart'
+    show
+        ChangeNotifier,
+        Listenable,
+        ValueListenable,
+        ValueNotifier,
+        VoidCallback;

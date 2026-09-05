@@ -18,14 +18,15 @@
 - Switched the observer primitives (`Listenable`, `ValueListenable`,
   `ChangeNotifier`, `ValueNotifier`, `VoidCallback`) to `package:listen`
   (`listen: ^1.0.1`). `src/widgets/animation/listenable.dart` is now a
-  compatibility re-export of `package:listen/listen.dart`; new code should
-  import `package:listen/listen.dart` directly. Public API via
-  `package:artisanal_widgets/widgets.dart` is unchanged.
+  scoped compatibility re-export of those types; new code should import
+  `package:listen/listen.dart` directly. Public API via
+  `package:artisanal_widgets/widgets.dart` keeps the same names.
 - Aligned `ChangeNotifier` semantics with `package:listen`/Flutter: `hasListeners`
   and `notifyListeners` are `@protected` (`notifyListeners` remains
-  `@visibleForTesting`), listener exceptions route through `Listenable.onError`,
-  and `dispose()` during notification asserts in debug instead of throwing
-  `StateError`.
+  `@visibleForTesting`). Subclasses calling them internally are unaffected;
+  only direct external callers must route through a subclass wrapper.
+  Listener exceptions route through `Listenable.onError`, and `dispose()`
+  during notification is rejected by `package:listen` (asserts in debug).
 
 ### Removed
 

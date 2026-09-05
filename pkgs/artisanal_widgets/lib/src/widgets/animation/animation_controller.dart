@@ -297,8 +297,11 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   /// After calling dispose the controller must not be used.
   @override
   void dispose() {
-    _statusListeners.clear();
+    // Clear value listeners first via super.dispose() so a failed dispose
+    // (e.g. dispose() called from a value listener during notifyListeners(),
+    // which package:listen rejects) leaves _statusListeners intact.
     super.dispose(); // ChangeNotifier.dispose clears value listeners
+    _statusListeners.clear();
   }
 
   // ── API: Process Frame Ticks ──────────────────────────────────────────────
