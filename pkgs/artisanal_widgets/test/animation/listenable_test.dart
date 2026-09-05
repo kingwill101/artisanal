@@ -1,23 +1,29 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+/// Exposes `ChangeNotifier.hasListeners` (protected in `package:listen`)
+/// for behavioral assertions.
+final class _TestNotifier extends ChangeNotifier {
+  bool get hasListenersPublic => hasListeners;
+}
+
 void main() {
   group('ChangeNotifier', () {
     test('add/remove listener updates hasListeners and notifications', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       var callCount = 0;
 
       void listener() => callCount += 1;
 
-      expect(notifier.hasListeners, isFalse);
+      expect(notifier.hasListenersPublic, isFalse);
       notifier.addListener(listener);
-      expect(notifier.hasListeners, isTrue);
+      expect(notifier.hasListenersPublic, isTrue);
 
       notifier.notifyListeners();
       expect(callCount, 1);
 
       notifier.removeListener(listener);
-      expect(notifier.hasListeners, isFalse);
+      expect(notifier.hasListenersPublic, isFalse);
 
       notifier.notifyListeners();
       expect(callCount, 1);
@@ -103,13 +109,13 @@ void main() {
     );
 
     test('dispose enforces runtime guards and removeListener remains safe', () {
-      final notifier = ChangeNotifier();
+      final notifier = _TestNotifier();
       void listener() {}
 
       notifier.addListener(listener);
       notifier.dispose();
 
-      expect(notifier.hasListeners, isFalse);
+      expect(notifier.hasListenersPublic, isFalse);
       expect(() => notifier.removeListener(listener), returnsNormally);
       expect(() => notifier.addListener(listener), throwsStateError);
       expect(notifier.notifyListeners, throwsStateError);
@@ -121,7 +127,9 @@ void main() {
 
       notifier.addListener(notifier.dispose);
 
-      expect(notifier.notifyListeners, throwsStateError);
+      // `package:listen` asserts (AssertionError in debug) instead of the
+      // previous local StateError when dispose() runs inside notifyListeners().
+      expect(notifier.notifyListeners, throwsA(isA<AssertionError>()));
     });
   });
 

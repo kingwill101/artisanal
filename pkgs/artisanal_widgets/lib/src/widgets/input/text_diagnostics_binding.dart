@@ -7,7 +7,8 @@ import 'package:artisanal/text_editing.dart'
         TextPositionDiagnosticRange,
         textPatternDiagnostics;
 
-import '../animation/listenable.dart' show ValueListenable;
+import 'package:listen/listen.dart' show ValueListenable;
+
 import 'input_widgets.dart' show TextAreaController;
 
 /// Builds positional diagnostics from plain text.

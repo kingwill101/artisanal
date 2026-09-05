@@ -12,8 +12,9 @@ import 'package:artisanal/runtime.dart'
         View,
         TuiTrace;
 import 'package:artisanal/style.dart' show Layout, Style;
+import 'package:listen/listen.dart' show ChangeNotifier, ValueListenable;
+
 import '../animation/animated_builder.dart' show ListenableBuilder;
-import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
 import '../core/framework.dart'
     show BuildContext, State, StatefulWidget, StatelessWidget;

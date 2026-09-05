@@ -6,8 +6,8 @@
 library;
 
 import 'package:artisanal/runtime.dart' as tui;
+import 'package:listen/listen.dart';
 
-import '../animation/listenable.dart';
 import '../components/which_key.dart';
 import '../core/framework.dart' show BuildContext;
 import 'chord_scope.dart';

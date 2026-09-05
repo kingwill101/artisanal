@@ -37,7 +37,8 @@ import 'package:artisanal/charting.dart'
         SequenceDiagramTheme;
 import 'package:artisanal/uv.dart' show Canvas, Cell, Rectangle, UvStyle, rect;
 
-import '../animation/listenable.dart';
+import 'package:listen/listen.dart';
+
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
 import '../rendering/render_object.dart';
