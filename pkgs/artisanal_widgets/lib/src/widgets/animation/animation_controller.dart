@@ -1,9 +1,10 @@
 import 'package:artisanal/runtime.dart' show Cmd;
 
+import 'package:listen/listen.dart';
+
 import 'animation.dart';
 import 'animation_tick.dart';
 import 'curves.dart';
-import 'listenable.dart';
 
 /// A TEA-native animation controller.
 ///

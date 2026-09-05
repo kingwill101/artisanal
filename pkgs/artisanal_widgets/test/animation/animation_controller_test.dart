@@ -1112,15 +1112,17 @@ void main() {
       final controller = AnimationController(
         duration: const Duration(milliseconds: 300),
       );
-      controller.addListener(() {});
-      controller.addStatusListener((_) {});
-
-      expect(controller.hasListeners, isTrue);
+      var calls = 0;
+      controller.addListener(() => calls++);
+      controller.addStatusListener((_) => calls++);
 
       controller.dispose();
 
-      // After dispose, listeners should have been cleared
-      expect(controller.hasListeners, isFalse);
+      // After dispose the controller must not accept new listeners
+      // (`package:listen` reports use-after-dispose via Listenable.onError
+      // as StateError in debug).
+      expect(() => controller.addListener(() {}), throwsStateError);
+      expect(calls, isZero);
     });
   });
 
