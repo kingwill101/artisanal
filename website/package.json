@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
+    "sync:examples": "node scripts/sync-examples.mjs",
+    "prestart": "npm run sync:examples",
+    "prebuild": "npm run sync:examples",
     "start": "docusaurus start",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
