@@ -1,16 +1,16 @@
 {
   "categories": {
     "widgets": {
-      "label": "Widget examples",
-      "description": "Runnable artisanal_widgets showcases. Sources are injected from the real example files at site build time, so the docs never drift from code that runs."
+      "label": "artisanal_widgets",
+      "description": "Examples for the artisanal_widgets package: the Flutter-inspired widget framework built on top of the core TEA runtime. Sources are injected from the real example files at site build time, so the docs never drift from code that runs."
     },
     "core": {
-      "label": "Core examples",
-      "description": "Runnable artisanal core demos: styling showcases, markdown, charting, and console themes."
+      "label": "artisanal demos",
+      "description": "Examples for the artisanal package: the core TEA runtime (Model / Update / View), console I/O, styling, markdown, and charting. No widget framework involved — this is the foundation everything else builds on."
     },
     "tui": {
-      "label": "TEA recipes",
-      "description": "Bubble Tea-style runtime recipes and bubble ports: inputs, lists, views, and program plumbing."
+      "label": "TEA runtime recipes",
+      "description": "Small artisanal runtime recipes and bubble ports (inputs, lists, views, program plumbing) for the core TEA runtime."
     }
   },
   "entries": [
