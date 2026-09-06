@@ -14,7 +14,12 @@ Future<void> main() async {
   );
 
   try {
-    await runWidgetApp(PseudoTerminalView(pty: pty));
+    await runWidgetApp(
+      ArtisanalApp(
+        title: 'Artisanal PTY',
+        home: PseudoTerminalView(pty: pty),
+      ),
+    );
   } finally {
     pty.kill();
   }
