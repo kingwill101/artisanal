@@ -16,12 +16,10 @@ import '../tui/bubbles/components/text.dart' show Rule;
 import '../tui/bubbles/prompt.dart'
     show promptProgramOptions, runTextAreaPrompt;
 import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
-import 'inline_animation.dart';
 import '../tui/bubbles/textarea.dart' show TextAreaModel;
 import '../tui/program.dart' show ProgramOptions;
 import 'console.dart';
-import 'console_context.dart';
-import 'console_format.dart';
+import 'console_operations.dart';
 import 'console_presentation.dart';
 
 /// Higher-level console UI components (Laravel-style).
@@ -43,6 +41,8 @@ class Components {
 
   /// The I/O instance to use for output.
   final Console io;
+
+  late final ConsoleOperations _operations = ConsoleOperations(io);
 
   /// The style configuration.
   Style get style => io.style;
@@ -244,68 +244,14 @@ class Components {
     bool clearOnDone = false,
     bool showResult = true,
     String? doneMessage,
-  }) async {
-    // If not interactive, fall back to simple output
-    if (!supportsInteractiveConsole(io.interactive, () => io.promptTerminal)) {
-      io.write('$message ');
-      final watch = Stopwatch()..start();
-      try {
-        final result = await run();
-        watch.stop();
-        if (doneMessage != null && !clearOnDone) {
-          io.writeln(doneMessage);
-        } else if (showResult && !clearOnDone) {
-          io.writeln(
-            _styleFor(
-                  'success',
-                  io.componentTheme.successStyle(_renderConfig),
-                ).render('✓') +
-                muted(' ${formatConsoleDuration(watch.elapsed)}'),
-          );
-        } else if (!clearOnDone) {
-          io.writeln();
-        }
-        return result;
-      } catch (_) {
-        watch.stop();
-        if (showResult && !clearOnDone) {
-          io.writeln(
-            _styleFor(
-                  'error',
-                  io.componentTheme.errorStyle(_renderConfig),
-                ).render('✗') +
-                muted(' ${formatConsoleDuration(watch.elapsed)}'),
-          );
-        } else if (!clearOnDone) {
-          io.writeln();
-        }
-        rethrow;
-      }
-    }
-
-    // Use InlineAnimation for actual spinner animation
-    final animation = InlineAnimation(terminal: io.promptTerminal);
-    try {
-      final result = await animation.spin(
-        message: message,
-        task: run,
-        spinner: spinner,
-        clearOnDone: clearOnDone,
-        doneMessage: doneMessage,
-        successMessage: doneMessage == null && showResult && !clearOnDone
-            ? (_, elapsed) =>
-                  '${_styleFor('success', io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(formatConsoleDuration(elapsed))}'
-            : null,
-        failureMessage: showResult && !clearOnDone
-            ? (_, elapsed) =>
-                  '${_styleFor('error', io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(formatConsoleDuration(elapsed))}'
-            : null,
-      );
-      return result;
-    } catch (_) {
-      rethrow;
-    }
-  }
+  }) => _operations.spin(
+    message,
+    run: run,
+    spinner: spinner,
+    clearOnDone: clearOnDone,
+    showResult: showResult,
+    doneMessage: doneMessage,
+  );
 
   /// Runs a multi-line text editor inline and returns the submitted value.
   Future<String?> textArea(

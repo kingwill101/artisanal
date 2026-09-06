@@ -1,4 +1,31 @@
 import '../terminal/terminal.dart';
+import '../style/style.dart';
+import '../tui/bubbles/components/base.dart';
+import 'component_theme.dart';
+
+/// Internal console capabilities needed by interactive operation helpers.
+abstract interface class ConsoleOperationHost {
+  /// Whether interactive operations are enabled.
+  bool get interactive;
+
+  /// Terminal used for cursor-driven inline operations.
+  Terminal get promptTerminal;
+
+  /// Current component rendering configuration.
+  RenderConfig get renderConfig;
+
+  /// Theme used by interactive components.
+  ComponentTheme get componentTheme;
+
+  /// Looks up a named semantic style override.
+  Style? getStyle(String name);
+
+  /// Writes raw output without a trailing newline.
+  void write(String text);
+
+  /// Writes one output line.
+  void writeln([String line = '']);
+}
 
 /// Whether a console operation should use cursor-driven interactive output.
 ///

@@ -17,8 +17,8 @@ import 'components.dart';
 import 'component_theme.dart';
 import 'console_context.dart';
 import 'console_format.dart';
+import 'console_operations.dart';
 import 'console_presentation.dart';
-import 'inline_animation.dart';
 import 'output_theme.dart';
 import 'validators.dart';
 import '../terminal/terminal_io_impl.dart' show StdioTerminal;
@@ -175,7 +175,7 @@ class StepsResult {
 ///   });
 /// }
 /// ```
-class Console {
+class Console implements ConsoleOperationHost {
   /// Creates a new I/O helper.
   ///
   /// The [outputTheme] parameter allows customizing the colors used for
@@ -227,6 +227,7 @@ class Console {
   OutputTheme _outputTheme;
 
   /// The theme used by interactive prompts and built-in components.
+  @override
   ComponentTheme get componentTheme => _componentTheme;
 
   set componentTheme(ComponentTheme value) {
@@ -273,16 +274,19 @@ class Console {
   }
 
   /// Gets a registered style by name, or null if not found.
+  @override
   Style? getStyle(String name) => _tagParser.getStyle(name);
 
   /// Returns all registered style names.
   Iterable<String> get styleNames => _tagParser.styleNames;
 
   /// Rendering configuration for bubble-style display components.
+  @override
   RenderConfig get renderConfig =>
       RenderConfig.fromRenderer(_renderer, terminalWidth: terminalWidth);
 
   /// Whether interactive prompts are enabled.
+  @override
   final bool interactive;
 
   /// The current verbosity level.
@@ -303,6 +307,7 @@ class Console {
   final io.Stdout? _stdout;
 
   Components? _components;
+  ConsoleOperations? _operations;
 
   /// Whether output is suppressed (quiet mode).
   bool get quiet => verbosity == Verbosity.quiet;
@@ -322,6 +327,9 @@ class Console {
   /// ```
   Components get components => _components ??= Components(io: this);
 
+  ConsoleOperations get _consoleOperations =>
+      _operations ??= ConsoleOperations(this);
+
   /// Disposes of console resources, including any active terminal.
   void dispose() {
     _cachedPromptTerminal?.dispose();
@@ -333,12 +341,14 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Writes a line to stdout.
+  @override
   void writeln([String line = '']) {
     if (quiet) return;
     _out(_tagParser.render(line));
   }
 
   /// Writes raw text to stdout (no newline).
+  @override
   void write(String text) {
     if (quiet) return;
     _outRaw(_tagParser.render(text));
@@ -844,6 +854,7 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Terminal instance used for inline prompts and animations.
+  @override
   StdioTerminal get promptTerminal => _cachedPromptTerminal ??= StdioTerminal(
     stdout: _stdout ?? io.stdout,
     stdin: _stdin ?? io.stdin,
@@ -951,8 +962,7 @@ class Console {
     bool clearOnDone = false,
     String? doneMessage,
   }) async {
-    // Delegate to components.spin which has the full implementation
-    return components.spin(
+    return _consoleOperations.spin(
       message,
       run: run,
       spinner: spinner,
@@ -987,10 +997,9 @@ class Console {
     bool clearOnDone = false,
     String? doneMessage,
   }) async {
-    final animation = InlineAnimation(terminal: promptTerminal);
-    return animation.progress(
-      message: message,
-      task: run,
+    return _consoleOperations.progress(
+      message,
+      run: run,
       clearOnDone: clearOnDone,
       doneMessage: doneMessage,
     );
