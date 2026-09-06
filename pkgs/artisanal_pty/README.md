@@ -16,6 +16,7 @@ final pty = PseudoTerminal.start(
   Platform.isWindows ? 'pwsh.exe' : 'bash',
   [],
   environment: {'TERM': 'xterm-256color'},
+  raw: true,
 );
 
 try {

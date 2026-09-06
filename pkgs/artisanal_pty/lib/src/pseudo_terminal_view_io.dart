@@ -28,6 +28,7 @@ class PseudoTerminalView extends StatefulWidget {
 
 class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   late final VirtualTerminal _terminal = VirtualTerminal();
+  final Object _messageOwner = Object();
   StreamSubscription<String>? _subscription;
   final StreamController<String> _output = StreamController();
   int _width = 0;
@@ -46,7 +47,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   @override
   Cmd? handleInit() => StreamCmd<String>(
     stream: _output.stream,
-    onData: (data) => _PtyOutputMsg(widget.id, data),
+    onData: (data) => _PtyOutputMsg(_messageOwner, data),
   );
 
   @override
@@ -54,7 +55,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
     if (msg case _PtyOutputMsg(
       :final owner,
       :final data,
-    ) when owner == widget.id) {
+    ) when identical(owner, _messageOwner)) {
       _terminal.writeText(data);
     }
     return null;
@@ -110,6 +111,6 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
 final class _PtyOutputMsg extends Msg {
   const _PtyOutputMsg(this.owner, this.data);
 
-  final String owner;
+  final Object owner;
   final String data;
 }

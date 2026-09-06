@@ -11,6 +11,7 @@ Future<void> main() async {
     arguments,
     environment: {...Platform.environment, 'TERM': 'xterm-256color'},
     workingDirectory: Directory.current.path,
+    raw: true,
   );
 
   try {
