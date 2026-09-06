@@ -16,6 +16,7 @@ String get _packageRoot {
 }
 
 const _examples = [
+  'advanced-editor',
   'altscreen-toggle',
   'autocomplete',
   'border_showcase',
