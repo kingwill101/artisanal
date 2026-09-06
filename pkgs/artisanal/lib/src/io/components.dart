@@ -22,6 +22,7 @@ import '../tui/program.dart' show ProgramOptions;
 import 'console.dart';
 import 'console_context.dart';
 import 'console_format.dart';
+import 'console_presentation.dart';
 
 /// Higher-level console UI components (Laravel-style).
 ///
@@ -48,18 +49,17 @@ class Components {
 
   RenderConfig get _renderConfig => io.renderConfig;
 
-  /// Helper to apply muted styling.
-  String muted(String text) =>
-      (io.getStyle('muted') ?? io.componentTheme.mutedStyle(_renderConfig))
-          .render(text);
+  Style _styleFor(String role, Style themed) =>
+      resolveConsoleComponentStyle(themed, io.getStyle(role));
 
-  void _writeComponent(DisplayComponent component) {
-    final output = component.render();
-    if (output.isEmpty) return;
-    for (final line in output.split('\n')) {
-      io.writeln(line);
-    }
-  }
+  /// Helper to apply muted styling.
+  String muted(String text) => _styleFor(
+    'muted',
+    io.componentTheme.mutedStyle(_renderConfig),
+  ).render(text);
+
+  void _writeComponent(DisplayComponent component) =>
+      writeConsoleComponent(component, io.writeln);
 
   /// Displays a task with dotted fill and DONE/FAIL/SKIPPED status.
   Future<TaskResult> task(
@@ -82,7 +82,7 @@ class Components {
   void bulletList(Iterable<Object> items) {
     final bullet = _renderConfig
         .configureStyle(
-          io.getStyle('muted') ?? io.componentTheme.mutedStyle(_renderConfig),
+          _styleFor('muted', io.componentTheme.mutedStyle(_renderConfig)),
         )
         .render(DotChars.bullet);
     _writeComponent(
@@ -104,10 +104,10 @@ class Components {
       ..message(message.toString())
       ..width(_renderConfig.terminalWidth);
 
-    final style =
-        io.getStyle('alert') ??
-        io.getStyle('warning') ??
-        io.componentTheme.warningStyle(_renderConfig);
+    final style = _styleFor(
+      'alert',
+      _styleFor('warning', io.componentTheme.warningStyle(_renderConfig)),
+    );
     component.prefixStyle(style.bold()).borderStyle(style);
 
     _writeComponent(component);
@@ -120,8 +120,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('info') ?? io.componentTheme.infoStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'info',
+          io.componentTheme.infoStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -134,9 +136,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('success') ??
-            io.componentTheme.successStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'success',
+          io.componentTheme.successStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -149,9 +152,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('warning') ??
-            io.componentTheme.warningStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'warning',
+          io.componentTheme.warningStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -164,8 +168,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'error',
+          io.componentTheme.errorStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -250,9 +256,10 @@ class Components {
           io.writeln(doneMessage);
         } else if (showResult && !clearOnDone) {
           io.writeln(
-            (io.getStyle('success') ??
-                        io.componentTheme.successStyle(_renderConfig))
-                    .render('✓') +
+            _styleFor(
+                  'success',
+                  io.componentTheme.successStyle(_renderConfig),
+                ).render('✓') +
                 muted(' ${formatConsoleDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
@@ -263,9 +270,10 @@ class Components {
         watch.stop();
         if (showResult && !clearOnDone) {
           io.writeln(
-            (io.getStyle('error') ??
-                        io.componentTheme.errorStyle(_renderConfig))
-                    .render('✗') +
+            _styleFor(
+                  'error',
+                  io.componentTheme.errorStyle(_renderConfig),
+                ).render('✗') +
                 muted(' ${formatConsoleDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
@@ -286,11 +294,11 @@ class Components {
         doneMessage: doneMessage,
         successMessage: doneMessage == null && showResult && !clearOnDone
             ? (_, elapsed) =>
-                  '${(io.getStyle('success') ?? io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(formatConsoleDuration(elapsed))}'
+                  '${_styleFor('success', io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(formatConsoleDuration(elapsed))}'
             : null,
         failureMessage: showResult && !clearOnDone
             ? (_, elapsed) =>
-                  '${(io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(formatConsoleDuration(elapsed))}'
+                  '${_styleFor('error', io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(formatConsoleDuration(elapsed))}'
             : null,
       );
       return result;

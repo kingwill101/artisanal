@@ -17,6 +17,7 @@ import 'components.dart';
 import 'component_theme.dart';
 import 'console_context.dart';
 import 'console_format.dart';
+import 'console_presentation.dart';
 import 'inline_animation.dart';
 import 'output_theme.dart';
 import 'validators.dart';
@@ -833,10 +834,8 @@ class Console {
       headers: headers,
       rows: rows,
       renderConfig: renderConfig,
-    ).render();
-    for (final line in output.split('\n')) {
-      writeln(line);
-    }
+    );
+    writeConsoleComponent(output, writeln);
     newLine();
   }
 
@@ -1375,9 +1374,7 @@ class Console {
       renderConfig: renderConfig,
     );
 
-    for (final line in component.render().split('\n')) {
-      writeln(line);
-    }
+    writeConsoleComponent(component, writeln);
     newLine();
   }
 
@@ -1827,9 +1824,7 @@ class Console {
       _componentStyle(componentTheme.promptStyle(renderConfig), 'question');
 
   Style _componentStyle(Style themed, String role) {
-    final override = getStyle(role);
-    if (override == null) return themed;
-    return themed.copy()..inherit(override);
+    return resolveConsoleComponentStyle(themed, getStyle(role));
   }
 
   SelectStyles _selectStyles() {
@@ -1907,11 +1902,5 @@ String _formatDuration(Duration duration) => formatConsoleDuration(duration);
 /// Extension to allow [DisplayComponent]s to be written directly to a [Console].
 extension DisplayComponentExtension on DisplayComponent {
   /// Renders the component and writes it to the console.
-  void writelnTo(Console io) {
-    final output = render();
-    if (output.isEmpty) return;
-    for (final line in output.split('\n')) {
-      io.writeln(line);
-    }
-  }
+  void writelnTo(Console io) => writeConsoleComponent(this, io.writeln);
 }
