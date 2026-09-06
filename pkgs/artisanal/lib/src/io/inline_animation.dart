@@ -5,28 +5,7 @@ import '../style/style.dart';
 import '../style/chars.dart';
 import '../terminal/terminal.dart';
 import '../tui/bubbles/spinner.dart';
-import '../tui/bubbles/components/base.dart';
-
-/// Result of an inline animation operation.
-class InlineAnimationResult<T> {
-  const InlineAnimationResult({
-    required this.value,
-    required this.duration,
-    this.error,
-  });
-
-  /// The result value from the task.
-  final T? value;
-
-  /// How long the task took.
-  final Duration duration;
-
-  /// Error if the task failed.
-  final Object? error;
-
-  /// Whether the task succeeded.
-  bool get success => error == null;
-}
+import 'console_format.dart';
 
 /// Lightweight inline animation runner.
 ///
@@ -73,13 +52,10 @@ class InlineAnimationResult<T> {
 /// ```
 class InlineAnimation {
   /// Creates an inline animation runner.
-  InlineAnimation({required this.terminal, this.renderConfig});
+  InlineAnimation({required this.terminal});
 
   /// The terminal to render to.
   final Terminal terminal;
-
-  /// Optional render configuration for styling.
-  final RenderConfig? renderConfig;
 
   /// Runs a spinner animation while executing a task.
   ///
@@ -105,6 +81,8 @@ class InlineAnimation {
     bool clearOnDone = false,
     String? doneMessage,
     String? errorMessage,
+    String Function(T value, Duration elapsed)? successMessage,
+    String Function(Object error, Duration elapsed)? failureMessage,
   }) async {
     final frames = spinner.frames;
     if (frames.isEmpty) {
@@ -138,25 +116,32 @@ class InlineAnimation {
       // Handle completion
       if (clearOnDone && doneMessage == null) {
         terminal.clearLine();
-      } else if (doneMessage != null) {
+      } else if (successMessage != null || doneMessage != null) {
         terminal.clearLine();
-        terminal.writeln(doneMessage);
+        terminal.writeln(
+          successMessage?.call(result, watch.elapsed) ?? doneMessage!,
+        );
       } else {
         // Leave final frame visible, add newline
         terminal.writeln();
       }
 
       return result;
-    } catch (e) {
+    } catch (error) {
       watch.stop();
       timer?.cancel();
 
       // Handle error display
-      if (clearOnDone && errorMessage == null && doneMessage == null) {
+      if (clearOnDone &&
+          failureMessage == null &&
+          errorMessage == null &&
+          doneMessage == null) {
         terminal.clearLine();
-      } else if (errorMessage != null) {
+      } else if (failureMessage != null || errorMessage != null) {
         terminal.clearLine();
-        terminal.writeln(errorMessage);
+        terminal.writeln(
+          failureMessage?.call(error, watch.elapsed) ?? errorMessage!,
+        );
       } else if (doneMessage != null) {
         // Use done message format for errors too if no specific error message
         terminal.clearLine();
@@ -172,7 +157,7 @@ class InlineAnimation {
   }
 
   void _renderSpinnerFrame(String frame, String message, Duration elapsed) {
-    final elapsedStr = _formatDuration(elapsed);
+    final elapsedStr = formatConsoleDuration(elapsed);
     // Move to start of line, write content, then clear any leftover chars.
     // This avoids the flash caused by clearLine() which clears before writing.
     terminal.cursorToColumn(1);
@@ -268,7 +253,7 @@ class InlineAnimation {
     final empty = width - filled;
 
     final bar = '[${Style().bold().render('=' * filled)}${' ' * empty}]';
-    final elapsedStr = _formatDuration(elapsed);
+    final elapsedStr = formatConsoleDuration(elapsed);
 
     // Move to start of line, write content, then clear any leftover chars.
     // This avoids the flash caused by clearLine() which clears before writing.
@@ -388,11 +373,4 @@ class InlineAnimation {
 
     return results;
   }
-}
-
-String _formatDuration(Duration duration) {
-  final ms = duration.inMilliseconds;
-  if (ms < 1000) return '${ms}ms';
-  final seconds = ms / 1000;
-  return '${seconds.toStringAsFixed(seconds < 10 ? 1 : 0)}s';
 }

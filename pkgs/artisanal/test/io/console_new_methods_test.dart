@@ -27,6 +27,26 @@ Console _makeConsole({
 // ─────────────────────────────────────────────────────────────────────────────
 
 void main() {
+  group('Console.spin()', () {
+    test(
+      'writes a custom completion message in non-interactive mode',
+      () async {
+        final out = StringBuffer();
+        final raw = StringBuffer();
+        final io = _makeConsole(out: out, rawOut: raw);
+
+        final result = await io.spin(
+          'Loading',
+          run: () async => 42,
+          doneMessage: '✓ Loaded',
+        );
+
+        expect(result, 42);
+        expect(out.toString(), contains('✓ Loaded'));
+      },
+    );
+  });
+
   // ── clearScreen ───────────────────────────────────────────────────────────
 
   group('Console.clearScreen()', () {

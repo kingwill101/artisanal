@@ -15,6 +15,7 @@ import '../style/tag_parser.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
 import 'component_theme.dart';
+import 'console_format.dart';
 import 'inline_animation.dart';
 import 'output_theme.dart';
 import 'validators.dart';
@@ -957,6 +958,7 @@ class Console {
       spinner: spinner,
       clearOnDone: clearOnDone,
       showResult: doneMessage == null && !clearOnDone,
+      doneMessage: doneMessage,
     );
   }
 
@@ -1890,12 +1892,7 @@ class Console {
   }
 }
 
-String _formatDuration(Duration duration) {
-  final ms = duration.inMilliseconds;
-  if (ms < 1000) return '${ms}ms';
-  final seconds = ms / 1000;
-  return '${seconds.toStringAsFixed(seconds < 10 ? 1 : 0)}s';
-}
+String _formatDuration(Duration duration) => formatConsoleDuration(duration);
 
 /// Extension to allow [DisplayComponent]s to be written directly to a [Console].
 extension DisplayComponentExtension on DisplayComponent {

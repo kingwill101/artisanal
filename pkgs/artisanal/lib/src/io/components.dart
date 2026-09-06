@@ -20,6 +20,7 @@ import 'inline_animation.dart';
 import '../tui/bubbles/textarea.dart' show TextAreaModel;
 import '../tui/program.dart' show ProgramOptions;
 import 'console.dart';
+import 'console_format.dart';
 
 /// Higher-level console UI components (Laravel-style).
 ///
@@ -235,6 +236,7 @@ class Components {
     Spinner spinner = Spinners.miniDot,
     bool clearOnDone = false,
     bool showResult = true,
+    String? doneMessage,
   }) async {
     // If not interactive, fall back to simple output
     if (!io.interactive || !io.promptTerminal.supportsAnsi) {
@@ -243,12 +245,14 @@ class Components {
       try {
         final result = await run();
         watch.stop();
-        if (showResult && !clearOnDone) {
+        if (doneMessage != null && !clearOnDone) {
+          io.writeln(doneMessage);
+        } else if (showResult && !clearOnDone) {
           io.writeln(
             (io.getStyle('success') ??
                         io.componentTheme.successStyle(_renderConfig))
                     .render('✓') +
-                muted(' ${_formatDuration(watch.elapsed)}'),
+                muted(' ${formatConsoleDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
           io.writeln();
@@ -261,7 +265,7 @@ class Components {
             (io.getStyle('error') ??
                         io.componentTheme.errorStyle(_renderConfig))
                     .render('✗') +
-                muted(' ${_formatDuration(watch.elapsed)}'),
+                muted(' ${formatConsoleDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
           io.writeln();
@@ -272,27 +276,24 @@ class Components {
 
     // Use InlineAnimation for actual spinner animation
     final animation = InlineAnimation(terminal: io.promptTerminal);
-    final watch = Stopwatch()..start();
-
     try {
       final result = await animation.spin(
         message: message,
         task: run,
         spinner: spinner,
         clearOnDone: clearOnDone,
-        doneMessage: showResult && !clearOnDone
-            ? '${(io.getStyle('success') ?? io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
+        doneMessage: doneMessage,
+        successMessage: doneMessage == null && showResult && !clearOnDone
+            ? (_, elapsed) =>
+                  '${(io.getStyle('success') ?? io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(formatConsoleDuration(elapsed))}'
+            : null,
+        failureMessage: showResult && !clearOnDone
+            ? (_, elapsed) =>
+                  '${(io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(formatConsoleDuration(elapsed))}'
             : null,
       );
       return result;
     } catch (_) {
-      // Animation already cleaned up, just show error if needed
-      if (showResult && !clearOnDone) {
-        io.promptTerminal.clearLine();
-        io.promptTerminal.writeln(
-          '${(io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
-        );
-      }
       rethrow;
     }
   }
@@ -341,11 +342,4 @@ class Components {
     );
     io.newLine();
   }
-}
-
-String _formatDuration(Duration duration) {
-  final ms = duration.inMilliseconds;
-  if (ms < 1000) return '${ms}ms';
-  final seconds = ms / 1000;
-  return '${seconds.toStringAsFixed(seconds < 10 ? 1 : 0)}s';
 }
