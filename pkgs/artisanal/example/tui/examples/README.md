@@ -9,9 +9,10 @@ dart run example/tui/examples/<example>/main.dart
 ### Advanced Editor
 
 The `advanced-editor` example is a full-screen alternate-buffer workbench with
-line numbers, syntax and diagnostic decorations, search, multiple cursors,
-stable editor commands, a filterable command palette, revision status, and
-in-memory checkpoints.
+line numbers, incremental syntax highlighting, diagnostics, a find/replace
+overlay, completion and code-action pickers, multiple cursors, folding,
+snippets, matching brackets, a filterable command palette, and file-backed
+save/recovery.
 
 ```bash
 dart run example/tui/examples/advanced-editor/main.dart
