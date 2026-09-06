@@ -715,9 +715,9 @@ class BufferedTuiRenderer implements TuiRenderer {
 
 /// Ultraviolet-inspired renderer backed by a cell buffer + diffing updates.
 ///
-/// This renderer keeps `Model.view(): String` as the public API, but internally
-/// parses ANSI-styled strings into a cell buffer and diffs frames to emit
-/// minimal terminal updates.
+/// String and [View] output is parsed into a cell buffer. [FrameView] output
+/// paints that buffer directly, avoiding an ANSI serialization and parse pass.
+/// Both paths use the same Ultraviolet buffer diff and terminal output.
 ///
 /// In full-screen mode this writes UV output directly to the terminal. In
 /// inline mode it captures UV output first, rewrites absolute row-addressing
@@ -749,7 +749,7 @@ class UltravioletTuiRenderer
 
   bool _initialized = false;
   bool _dirty = false;
-  String _pendingView = '';
+  Object _pendingView = '';
 
   final List<String> _printLines = <String>[];
   static const int _maxPrintLines = 2000;
@@ -1165,6 +1165,7 @@ class UltravioletTuiRenderer
       View v => v.content,
       _ => view.toString(),
     };
+    final pendingView = view is FrameView ? view : _composeView(content);
     final (width: terminalWidth, height: terminalHeight) = terminal.size;
     final geometry = _options.isBounded ? _viewportGeometry() : null;
     final targetWidth = geometry?.width ?? terminalWidth;
@@ -1182,13 +1183,14 @@ class UltravioletTuiRenderer
       // Only skip if the view hasn't changed; otherwise we must render or the
       // terminal can get stuck with stale overlay content.
       if (_frameStopwatch.elapsed < _options.frameTime &&
-          content == _pendingView &&
+          (identical(pendingView, _pendingView) ||
+              pendingView == _pendingView) &&
           !sizeChanged) {
         return;
       }
     }
 
-    _pendingView = _composeView(content);
+    _pendingView = pendingView;
     _dirty = true;
     // Reset and start the stopwatch for next frame timing
     _frameStopwatch.reset();
@@ -1338,22 +1340,49 @@ class UltravioletTuiRenderer
     }
 
     final isBounded = _options.isBounded;
-    final graphicsFrame = uv_graphics.TerminalGraphicsFrame.scan(_pendingView);
+    final pendingView = _pendingView;
+    final textContent = switch (pendingView) {
+      String content => content,
+      FrameView _ => '',
+      View view => view.content,
+      _ => pendingView.toString(),
+    };
+    final graphicsFrame = uv_graphics.TerminalGraphicsFrame.scan(textContent);
     final forceInlineFullRedraw = isBounded && _inlineNeedsFullClear;
 
-    // Phase 1: ANSI parse → StyledString
+    // Phase 1: ANSI parse → StyledString, or prepare a direct frame.
     final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
-    final ss = uv_styled.newStyledString(
-      _options.ansiCompress ? compressAnsi(_pendingView) : _pendingView,
-    )..wrap = !isBounded;
+    final ss = pendingView is FrameView
+        ? null
+        : (uv_styled.newStyledString(
+            _options.ansiCompress ? compressAnsi(textContent) : textContent,
+          )..wrap = !isBounded);
     parseSw?.stop();
 
     // Phase 2: Draw styled string into screen buffer
     final Stopwatch? drawSw = tracing ? (Stopwatch()..start()) : null;
-    if (forceInlineFullRedraw) {
+    if (forceInlineFullRedraw || pendingView is FrameView) {
       scr.clear();
     }
-    ss.draw(scr, scr.bounds());
+    if (pendingView case FrameView frameView) {
+      var frameArea = scr.bounds();
+      if (_printLines.isNotEmpty &&
+          !(_options.isInline && _options.uiAnchor == UiAnchor.bottom)) {
+        final logs = uv_styled.newStyledString(_printLines.join('\n'))
+          ..wrap = !isBounded;
+        logs.draw(scr, frameArea);
+        final logHeight = _printLines.length.clamp(0, frameArea.height);
+        frameArea = uv_buffer.rect(
+          frameArea.minX,
+          frameArea.minY + logHeight,
+          frameArea.width,
+          frameArea.height - logHeight,
+        );
+      }
+      frameView.paint(Frame(screen: scr, area: frameArea));
+    } else {
+      ss!.draw(scr, scr.bounds());
+    }
     drawSw?.stop();
     if (_captureNativeFrames) {
       _captureCurrentNativeFrame(scr);

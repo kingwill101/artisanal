@@ -4,6 +4,44 @@ import 'degradation.dart';
 import 'msg.dart';
 import 'package:ultraviolet/ultraviolet.dart' hide MouseMode;
 
+/// A value that can paint itself directly into a terminal [Frame].
+///
+/// Implementations should be short-lived descriptions of the current model
+/// state. Persistent application state belongs in the TEA [Model], not in the
+/// renderable.
+abstract interface class FrameRenderable {
+  /// Paints this value into [area], clipped to the frame bounds.
+  void render(Frame frame, Rectangle area);
+}
+
+/// The mutable cell target for one immediate-mode render pass.
+///
+/// A frame is created by the Ultraviolet renderer after the terminal viewport
+/// has been sized and cleared. Use [screen] for low-level cell operations or
+/// [render] to compose [FrameRenderable] values.
+///
+/// {@category TUI}
+final class Frame {
+  /// Creates a frame over [screen] restricted to [area].
+  const Frame({required this.screen, required this.area});
+
+  /// The cell surface receiving this frame.
+  final Screen screen;
+
+  /// The drawable viewport for this frame.
+  final Rectangle area;
+
+  /// Paints [renderable] into [area], clipped to this frame's viewport.
+  void render(FrameRenderable renderable, Rectangle area) {
+    final clipped = this.area.intersect(area);
+    if (clipped.isEmpty) return;
+    renderable.render(this, clipped);
+  }
+}
+
+/// Signature used by [FrameView] to paint a structured terminal frame.
+typedef FramePainter = void Function(Frame frame);
+
 /// TerminalProgressBarState represents the state of the terminal taskbar progress.
 enum TerminalProgressBarState {
   none,
@@ -117,6 +155,64 @@ class View {
 
   @override
   String toString() => 'View(content: ${content.length} chars)';
+}
+
+/// A [View] that paints cells directly instead of parsing an ANSI string.
+///
+/// [FrameView] is the immediate-mode rendering path for foundational TEA
+/// applications. The runtime creates a cleared [Frame] at the current terminal
+/// size and invokes [paint] once per rendered model state. Ultraviolet then
+/// diffs the resulting cell buffer as usual.
+///
+/// [content] is an optional fallback used by renderers that do not support
+/// structured frames. It is not parsed by [UltravioletTuiRenderer].
+///
+/// {@category TUI}
+final class FrameView extends View {
+  /// Creates a structured cell view.
+  const FrameView({
+    required this.paint,
+    super.content = '',
+    super.onMouse,
+    super.cursor,
+    super.backgroundColor,
+    super.foregroundColor,
+    super.windowTitle,
+    super.progressBar,
+    super.altScreen,
+    super.reportFocus,
+    super.bracketedPaste,
+    super.mouseMode,
+    super.keyboardEnhancements,
+    super.degradation,
+  });
+
+  /// Paints the current model state into a frame.
+  final FramePainter paint;
+
+  @override
+  FrameView degraded(DegradationLevel level) {
+    if (level == DegradationLevel.full || degradation == null) return this;
+    return FrameView(
+      paint: paint,
+      content: degradation!.resolve(content, level),
+      onMouse: onMouse,
+      cursor: cursor,
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      windowTitle: windowTitle,
+      progressBar: progressBar,
+      altScreen: altScreen,
+      reportFocus: reportFocus,
+      bracketedPaste: bracketedPaste,
+      mouseMode: mouseMode,
+      keyboardEnhancements: keyboardEnhancements,
+      degradation: degradation,
+    );
+  }
+
+  @override
+  String toString() => 'FrameView(fallback: ${content.length} chars)';
 }
 
 /// KeyboardEnhancements describes the requested keyboard enhancement features.

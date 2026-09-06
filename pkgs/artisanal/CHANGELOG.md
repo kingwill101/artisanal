@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add `FrameView`, `Frame`, and `FrameRenderable` for immediate-mode TEA views
+  that paint directly into Ultraviolet cell buffers.
+
 ## 0.6.0
 
 ### Added
