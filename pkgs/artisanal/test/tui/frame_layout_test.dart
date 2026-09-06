@@ -73,6 +73,22 @@ void main() {
       );
     });
 
+    test('fixed and percentage constraints preserve Ultraviolet parity', () {
+      final areas = FrameLayout.horizontal(const FrameArea(0, 0, 37, 1), const [
+        FrameLength(9),
+        FramePercentage(40),
+        FrameFill(),
+      ]);
+      final fixed = const ultraviolet.Fixed(9).apply(37);
+      final percentage = const ultraviolet.Percent(40).apply(37);
+
+      expect(areas.map((area) => area.width), [
+        fixed,
+        percentage,
+        37 - fixed - percentage,
+      ]);
+    });
+
     test('returns empty regions when insets consume the viewport', () {
       final areas = FrameLayout.vertical(const FrameArea(0, 0, 4, 2), const [
         FrameFill(),

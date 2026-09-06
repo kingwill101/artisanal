@@ -135,7 +135,7 @@ abstract final class FrameLayout {
 
     for (var i = 0; i < constraints.length; i++) {
       if (constraints[i] case FrameLength(:final cells)) {
-        final allocated = cells.clamp(0, remaining);
+        final allocated = ultraviolet.Fixed(cells).apply(remaining);
         sizes[i] = allocated;
         remaining -= allocated;
       }
@@ -143,8 +143,8 @@ abstract final class FrameLayout {
 
     for (var i = 0; i < constraints.length; i++) {
       if (constraints[i] case FramePercentage(:final percent)) {
-        final requested = available * percent ~/ 100;
-        final allocated = requested.clamp(0, remaining);
+        final requested = ultraviolet.Percent(percent).apply(available);
+        final allocated = ultraviolet.Fixed(requested).apply(remaining);
         sizes[i] = allocated;
         remaining -= allocated;
       }
@@ -174,9 +174,10 @@ abstract final class FrameLayout {
     var cursor = axis == FrameAxis.horizontal ? inner.x : inner.y;
     return List<FrameArea>.generate(constraints.length, (index) {
       final size = sizes[index];
-      final result = axis == FrameAxis.horizontal
-          ? FrameArea(cursor, inner.y, size, inner.height)
-          : FrameArea(inner.x, cursor, inner.width, size);
+      final rectangle = axis == FrameAxis.horizontal
+          ? ultraviolet.rect(cursor, inner.y, size, inner.height)
+          : ultraviolet.rect(inner.x, cursor, inner.width, size);
+      final result = _fromUltraviolet(rectangle);
       cursor += size + actualGap;
       final end = axis == FrameAxis.horizontal ? inner.right : inner.bottom;
       if (cursor > end) cursor = end;
@@ -191,5 +192,9 @@ abstract final class FrameLayout {
       right: insets.right,
       bottom: insets.bottom,
     );
+  }
+
+  static FrameArea _fromUltraviolet(ultraviolet.Rectangle area) {
+    return FrameArea(area.minX, area.minY, area.width, area.height);
   }
 }
