@@ -59,13 +59,15 @@ final class EditorWorkBudget {
     this.maxSynchronousSyntaxLength = 100000,
     this.maxSearchResults = 10000,
     this.maxDecorations = 20000,
+    this.maxCompletionItems = 200,
   }) : assert(largeDocumentLength >= 0),
        assert(oversizedDocumentLength >= largeDocumentLength),
        assert(largeDocumentLines >= 0),
        assert(oversizedDocumentLines >= largeDocumentLines),
        assert(maxSynchronousSyntaxLength >= 0),
        assert(maxSearchResults >= 0),
-       assert(maxDecorations >= 0);
+       assert(maxDecorations >= 0),
+       assert(maxCompletionItems >= 0);
 
   /// Grapheme count at which bounded strategies are recommended.
   final int largeDocumentLength;
@@ -88,6 +90,9 @@ final class EditorWorkBudget {
   /// Recommended cap for materialized decoration ranges.
   final int maxDecorations;
 
+  /// Recommended cap for completion candidates shown in a popup.
+  final int maxCompletionItems;
+
   /// Assesses [document] against this budget.
   EditorWorkAssessment assess(TextDocument document) {
     final scale =
@@ -106,6 +111,7 @@ final class EditorWorkBudget {
       preferVisibleRangeWork: scale != EditorDocumentScale.normal,
       maxSearchResults: maxSearchResults,
       maxDecorations: maxDecorations,
+      maxCompletionItems: maxCompletionItems,
     );
   }
 }
@@ -118,6 +124,7 @@ final class EditorWorkAssessment {
     required this.preferVisibleRangeWork,
     required this.maxSearchResults,
     required this.maxDecorations,
+    required this.maxCompletionItems,
   });
 
   final EditorDocumentScale scale;
@@ -125,4 +132,5 @@ final class EditorWorkAssessment {
   final bool preferVisibleRangeWork;
   final int maxSearchResults;
   final int maxDecorations;
+  final int maxCompletionItems;
 }

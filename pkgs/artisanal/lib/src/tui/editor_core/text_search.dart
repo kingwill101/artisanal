@@ -43,12 +43,19 @@ final class TextSearchMatch {
 
 /// Result of [findTextSearchMatches].
 final class TextSearchResult {
-  const TextSearchResult({required this.matches, this.error});
+  const TextSearchResult({
+    required this.matches,
+    this.error,
+    this.truncated = false,
+  });
 
   final List<TextSearchMatch> matches;
 
   /// Non-null when the pattern is empty or the regex failed to compile.
   final String? error;
+
+  /// Whether [matches] stopped early because [maxResults] was reached.
+  final bool truncated;
 
   bool get isEmpty => matches.isEmpty;
 }
@@ -60,8 +67,9 @@ final class TextSearchResult {
 /// while typing).
 TextSearchResult findTextSearchMatches(
   TextDocument document,
-  TextSearchQuery query,
-) {
+  TextSearchQuery query, {
+  int? maxResults,
+}) {
   if (query.pattern.isEmpty) {
     return const TextSearchResult(
       matches: [],
@@ -80,31 +88,33 @@ TextSearchResult findTextSearchMatches(
   if (text.isEmpty) return const TextSearchResult(matches: []);
   final index = _GraphemeIndexTable(graphemes);
   final matches = <TextSearchMatch>[];
+  var truncated = false;
   for (final match in expression.allMatches(text)) {
     if (query.wholeWord && !_hasWordBoundaries(text, match)) continue;
     final start = index.graphemeForCodeUnit(match.start);
     final end = index.graphemeForCodeUnit(match.end, inclusiveEnd: true);
     if (end < start) continue;
+    if (maxResults != null && matches.length >= maxResults) {
+      truncated = true;
+      break;
+    }
     matches.add(
       TextSearchMatch(
         startOffset: start,
         endOffset: end,
-        groups: List<String?>.generate(
-          match.groupCount + 1,
-          (group) {
-            try {
-              return match.group(group);
-            } catch (_) {
-              return null;
-            }
-          },
-          growable: false,
-        ),
+        groups: List<String?>.generate(match.groupCount + 1, (group) {
+          try {
+            return match.group(group);
+          } catch (_) {
+            return null;
+          }
+        }, growable: false),
       ),
     );
   }
   return TextSearchResult(
     matches: List<TextSearchMatch>.unmodifiable(matches),
+    truncated: truncated,
   );
 }
 

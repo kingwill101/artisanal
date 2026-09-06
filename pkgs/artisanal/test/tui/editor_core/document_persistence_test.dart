@@ -55,6 +55,30 @@ void main() {
     expect(await checkpoint, isTrue);
     expect(session.savedRevision, isNull);
   });
+
+  test('memory store separates durable and recovery snapshots', () async {
+    final store = MemoryEditorDocumentStore();
+    final session = EditorPersistenceSession(
+      documentId: 'memory:demo',
+      store: store,
+      now: () => DateTime.utc(2026),
+    );
+
+    await session.checkpoint(TextDocument(text: 'draft'), revision: 1);
+    expect(store.recoveryFor('memory:demo')?.document.text, 'draft');
+    expect(store.durableFor('memory:demo'), isNull);
+
+    await session.save(TextDocument(text: 'saved'), revision: 2);
+    expect(store.durableFor('memory:demo')?.document.text, 'saved');
+    expect(store.recoveryFor('memory:demo'), isNull);
+
+    store.failNextWrite = true;
+    expect(
+      session.save(TextDocument(text: 'failed'), revision: 3),
+      throwsStateError,
+    );
+    expect(store.durableFor('memory:demo')?.revision, 2);
+  });
 }
 
 final class _MemoryDocumentStore implements EditorDocumentStore {

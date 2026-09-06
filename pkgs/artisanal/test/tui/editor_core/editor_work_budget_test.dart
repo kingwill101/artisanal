@@ -10,6 +10,7 @@ void main() {
     maxSynchronousSyntaxLength: 6,
     maxSearchResults: 12,
     maxDecorations: 24,
+    maxCompletionItems: 4,
   );
 
   test('classifies documents by either grapheme or line limits', () {
@@ -41,5 +42,6 @@ void main() {
     expect(large.preferVisibleRangeWork, isTrue);
     expect(large.maxSearchResults, 12);
     expect(large.maxDecorations, 24);
+    expect(large.maxCompletionItems, 4);
   });
 }

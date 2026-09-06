@@ -128,3 +128,46 @@ final class EditorPersistenceSession {
     );
   }
 }
+
+/// In-memory [EditorDocumentStore] for tests, examples, and recovery drills.
+final class MemoryEditorDocumentStore implements EditorDocumentStore {
+  final Map<String, EditorDocumentSnapshot> _durable =
+      <String, EditorDocumentSnapshot>{};
+  final Map<String, EditorDocumentSnapshot> _recovery =
+      <String, EditorDocumentSnapshot>{};
+
+  /// When true, the next [write] throws and is then cleared.
+  bool failNextWrite = false;
+
+  EditorDocumentSnapshot? durableFor(String documentId) => _durable[documentId];
+
+  EditorDocumentSnapshot? recoveryFor(String documentId) =>
+      _recovery[documentId];
+
+  @override
+  Future<EditorDocumentSnapshot?> read(String documentId) async =>
+      _durable[documentId];
+
+  @override
+  Future<void> write(EditorDocumentSnapshot snapshot) async {
+    if (failNextWrite) {
+      failNextWrite = false;
+      throw StateError('Save failed');
+    }
+    _durable[snapshot.documentId] = snapshot;
+  }
+
+  @override
+  Future<EditorDocumentSnapshot?> readRecovery(String documentId) async =>
+      _recovery[documentId];
+
+  @override
+  Future<void> writeRecovery(EditorDocumentSnapshot snapshot) async {
+    _recovery[snapshot.documentId] = snapshot;
+  }
+
+  @override
+  Future<void> deleteRecovery(String documentId) async {
+    _recovery.remove(documentId);
+  }
+}

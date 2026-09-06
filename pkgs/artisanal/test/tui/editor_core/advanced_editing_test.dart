@@ -27,7 +27,13 @@ void main() {
       final document = TextDocument(text: 'x = [1];');
       final range = bracketPairRange(document, 4);
       expect(range, isNotNull);
-      expect(document.textInRange(startOffset: range!.startOffset, endOffset: range.endOffset), '[1]');
+      expect(
+        document.textInRange(
+          startOffset: range!.startOffset,
+          endOffset: range.endOffset,
+        ),
+        '[1]',
+      );
     });
   });
 
@@ -81,8 +87,16 @@ void main() {
     test('templates expand groups and replace descending', () {
       final graphemes = 'a1 b2'.split('');
       final matches = [
-        const TextSearchMatch(startOffset: 0, endOffset: 2, groups: ['a1', 'a', '1']),
-        const TextSearchMatch(startOffset: 3, endOffset: 5, groups: ['b2', 'b', '2']),
+        const TextSearchMatch(
+          startOffset: 0,
+          endOffset: 2,
+          groups: ['a1', 'a', '1'],
+        ),
+        const TextSearchMatch(
+          startOffset: 3,
+          endOffset: 5,
+          groups: ['b2', 'b', '2'],
+        ),
       ];
       expect(
         expandSearchReplacementTemplate(r'[$2$1]', matches[0], 'a1'),
@@ -95,6 +109,37 @@ void main() {
         (match) => '<${match.groups[1]}>'.split(''),
       );
       expect(replaced.join(), '<a> <b>');
+    });
+
+    test('caps materialized matches when maxResults is set', () {
+      final document = TextDocument(text: 'aa aa aa aa');
+      final result = findTextSearchMatches(
+        document,
+        const TextSearchQuery(pattern: 'aa'),
+        maxResults: 2,
+      );
+      expect(result.matches, hasLength(2));
+      expect(result.truncated, isTrue);
+    });
+
+    test('reports truncation only when additional matches exist', () {
+      final document = TextDocument(text: 'aa aa');
+
+      final exact = findTextSearchMatches(
+        document,
+        const TextSearchQuery(pattern: 'aa'),
+        maxResults: 2,
+      );
+      final none = findTextSearchMatches(
+        document,
+        const TextSearchQuery(pattern: 'aa'),
+        maxResults: 0,
+      );
+
+      expect(exact.matches, hasLength(2));
+      expect(exact.truncated, isFalse);
+      expect(none.matches, isEmpty);
+      expect(none.truncated, isTrue);
     });
 
     test('sessions move with optional wrap', () {
@@ -156,11 +201,16 @@ void main() {
 
   group('workspace edits', () {
     test('applies multi-file edits and reports ranges', () {
-      final result = applyWorkspaceEdit(const {'a.dart': 'int x = 1;'}, const WorkspaceEdit(
-        files: {
-          'a.dart': [FileTextEdit(startOffset: 4, endOffset: 5, replacement: 'y')],
-        },
-      ));
+      final result = applyWorkspaceEdit(
+        const {'a.dart': 'int x = 1;'},
+        const WorkspaceEdit(
+          files: {
+            'a.dart': [
+              FileTextEdit(startOffset: 4, endOffset: 5, replacement: 'y'),
+            ],
+          },
+        ),
+      );
       final applied = result['a.dart']!;
       expect(applied.applied, isTrue);
       expect(applied.newText, 'int y = 1;');
@@ -178,19 +228,25 @@ void main() {
     });
 
     test('preview renders hunks, conflicts, and unchanged files', () {
-      final preview = previewWorkspaceEdit(const {
-        'a.dart': 'line1\nline2\nline3\n',
-        'b.dart': 'same\n',
-      }, const WorkspaceEdit(
-        files: {
-          'a.dart': [FileTextEdit(startOffset: 6, endOffset: 11, replacement: 'CHANGED')],
-          'b.dart': <FileTextEdit>[],
-          'c.dart': [
-            FileTextEdit(startOffset: 0, endOffset: 2),
-            FileTextEdit(startOffset: 1, endOffset: 3),
-          ],
-        },
-      ));
+      final preview = previewWorkspaceEdit(
+        const {'a.dart': 'line1\nline2\nline3\n', 'b.dart': 'same\n'},
+        const WorkspaceEdit(
+          files: {
+            'a.dart': [
+              FileTextEdit(
+                startOffset: 6,
+                endOffset: 11,
+                replacement: 'CHANGED',
+              ),
+            ],
+            'b.dart': <FileTextEdit>[],
+            'c.dart': [
+              FileTextEdit(startOffset: 0, endOffset: 2),
+              FileTextEdit(startOffset: 1, endOffset: 3),
+            ],
+          },
+        ),
+      );
       expect(preview, contains('--- a/a.dart'));
       expect(preview, contains('-line2'));
       expect(preview, contains('+CHANGED'));
@@ -203,7 +259,9 @@ void main() {
     test('parses placeholders, mirrors, and the final stop', () {
       final snippet = parseSnippet(r'for (${1:i} = 0; $1 < ${2:n}; $1++) {$0}');
       expect(snippet.text, 'for (i = 0; i < n; i++) {}');
-      final first = snippet.tabstops.firstWhere((stop) => stop.index == 1 && !stop.isMirror);
+      final first = snippet.tabstops.firstWhere(
+        (stop) => stop.index == 1 && !stop.isMirror,
+      );
       expect(first.placeholder, 'i');
       expect(snippet.text.substring(first.startOffset, first.endOffset), 'i');
     });
@@ -243,16 +301,14 @@ void main() {
     });
 
     test('collapse hides bodies and keeps headers', () {
-      final state = FoldState(ranges: computeIndentFolds(lines))
-        ..toggle(0);
+      final state = FoldState(ranges: computeIndentFolds(lines))..toggle(0);
       expect(state.isLineHidden(0), isFalse);
       expect(state.isLineHidden(2), isTrue);
       expect(state.visibleLines(lines.length), [0, 4, 5]);
     });
 
     test('retain carries collapse state across recompute', () {
-      final state = FoldState(ranges: computeIndentFolds(lines))
-        ..toggle(1);
+      final state = FoldState(ranges: computeIndentFolds(lines))..toggle(1);
       final next = state.retain(computeIndentFolds([...lines, 'extra']));
       expect(next.isCollapsedAt(1), isTrue);
     });
