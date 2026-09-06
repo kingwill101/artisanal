@@ -1,7 +1,7 @@
 // HyperlinkText Showcase
 
 import 'package:artisanal/style.dart' show Border;
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/tui.dart' hide Frame;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 
 void main() async {
