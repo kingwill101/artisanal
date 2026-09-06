@@ -531,7 +531,7 @@ final class LogViewerModel implements tui.Model {
   }
 
   String _buildTabBar() {
-    final tabs = ['Overview', 'Logs', 'Database', 'Health'];
+    final tabs = ['Overview', 'Logs', 'A Database', 'Health'];
     final buffer = StringBuffer();
     buffer.write(' ');
 
@@ -720,11 +720,12 @@ final class LogViewerModel implements tui.Model {
 void main() async {
   final p = tui.Program(
     LogViewerModel.initial(),
-    options: const tui.ProgramOptions(
+    options: tui.ProgramOptions(
       useUltravioletRenderer: true,
       altScreen: true,
-      metricsInterval: Duration(milliseconds: 250),
+      metricsInterval: const Duration(milliseconds: 250),
       mouseMode: tui.MouseMode.allMotion,
+      diagnostics: tui.ProgramDiagnosticsOptions(),
     ),
   );
 

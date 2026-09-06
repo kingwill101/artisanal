@@ -136,6 +136,9 @@ void main() {
       final result = devtools.onSend(msg);
 
       expect(result, same(msg));
+      expect(devtools.pendingMessageCount, 1);
+      devtools.onProcessed(msg, Duration.zero);
+      expect(devtools.pendingMessageCount, 0);
     });
 
     test('onProcessed records message log entry', () {
@@ -181,6 +184,16 @@ void main() {
       // Re-start should clear the log.
       devtools.onStart((_) {});
       expect(devtools.messageLog, isEmpty);
+    });
+
+    test('onStop clears queued messages', () {
+      devtools.onStart((_) {});
+      devtools.onSend(const CustomMsg('queued'));
+      expect(devtools.pendingMessageCount, 1);
+
+      devtools.onStop();
+
+      expect(devtools.pendingMessageCount, 0);
     });
 
     test('onRendered updates render stats', () {
@@ -259,6 +272,7 @@ void main() {
 
         final result = dt.onSend(const CustomMsg('test'));
         expect(result, isNull);
+        expect(dt.pendingMessageCount, 0);
       });
 
       test('onSend delegates to inner and respects transform', () {
@@ -275,6 +289,9 @@ void main() {
         final result = dt.onSend(const CustomMsg('original'));
         expect(result, isA<CustomMsg>());
         expect((result! as CustomMsg).value, 'transformed');
+        expect(dt.pendingMessageCount, 1);
+        dt.onProcessed(result, Duration.zero);
+        expect(dt.pendingMessageCount, 0);
       });
 
       test('onProcessed delegates to inner', () {

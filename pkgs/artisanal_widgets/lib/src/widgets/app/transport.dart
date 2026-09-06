@@ -1,4 +1,5 @@
-import 'package:artisanal/runtime.dart' show MouseMode, ProgramOptions;
+import 'package:artisanal/runtime.dart'
+    show MouseMode, ProgramDiagnosticsOptions, ProgramOptions;
 
 /// Transport selection for [serveWidgetApp].
 enum Transport {
@@ -14,8 +15,9 @@ enum Transport {
 /// Enables alt-screen, passive hover mouse reporting, and disables startup
 /// probes so interactive widget UIs do not defer early repaints behind
 /// terminal capability probing.
-const ProgramOptions defaultWidgetProgramOptions = ProgramOptions(
+final ProgramOptions defaultWidgetProgramOptions = ProgramOptions(
   altScreen: true,
   mouseMode: MouseMode.allMotion,
   startupProbes: false,
+  diagnostics: ProgramDiagnosticsOptions(captureOutput: false),
 );

@@ -15,6 +15,7 @@ import 'package:meta/meta.dart' show experimental;
 import 'package:artisanal/runtime.dart'
     show
         DegradationLevel,
+        ProgramDiagnosticsMetrics,
         ProgramInterceptor,
         ProgramRenderMonitor,
         ProgramRenderStats,
@@ -90,6 +91,15 @@ class RenderMetricsInjector {
     }
     _dispatching = true;
     try {
+      if (injection.clearEntries) {
+        ProgramDiagnosticsMetrics.clear();
+      }
+      for (final key in injection.removeKeys) {
+        ProgramDiagnosticsMetrics.removeMetric(key);
+      }
+      if (injection.upsertEntries.isNotEmpty) {
+        ProgramDiagnosticsMetrics.setMetrics(injection.upsertEntries);
+      }
       _controller.add(injection);
     } finally {
       _dispatching = false;

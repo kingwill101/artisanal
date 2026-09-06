@@ -49,6 +49,8 @@ import 'package:artisanal/runtime.dart'
         WindowSizeMsg,
         RepaintMsg,
         Program,
+        ProgramDiagnosticsOptions,
+        ProgramDiagnosticsPosition,
         ProgramOptions,
         ZoneInfo;
 import 'package:artisanal_widgets/src/widgets/components/debug_overlay.dart';
@@ -471,10 +473,7 @@ class WidgetTester {
       widget,
       scanZones: scanZones,
       useHitTesting: useHitTesting,
-      debugOverlay: debugOverlay,
       imageAutoMode: imageAutoMode,
-      debugOverlayPosition:
-          debugOverlayPosition ?? DebugOverlayPosition.topRight,
     );
 
     _terminal = _TestTerminal(
@@ -484,13 +483,26 @@ class WidgetTester {
 
     _program = Program<WidgetApp>(
       _app!,
-      options: const ProgramOptions(
+      options: ProgramOptions(
         altScreen: false,
         hideCursor: false,
         mouse: true,
         disableRenderer: true,
         signalHandlers: false,
         catchPanics: false,
+        diagnostics: ProgramDiagnosticsOptions(
+          initiallyVisible: debugOverlay,
+          position: switch (debugOverlayPosition ??
+              DebugOverlayPosition.topRight) {
+            DebugOverlayPosition.topLeft => ProgramDiagnosticsPosition.topLeft,
+            DebugOverlayPosition.topRight =>
+              ProgramDiagnosticsPosition.topRight,
+            DebugOverlayPosition.bottomLeft =>
+              ProgramDiagnosticsPosition.bottomLeft,
+            DebugOverlayPosition.bottomRight =>
+              ProgramDiagnosticsPosition.bottomRight,
+          },
+        ),
       ),
       terminal: _terminal!,
     );

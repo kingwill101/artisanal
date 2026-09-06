@@ -30,6 +30,7 @@ void main() {
     expect(serveWidgetApp, isA<Function>());
     expect(Transport.values, hasLength(2));
     expect(defaultWidgetProgramOptions.startupProbes, isFalse);
+    expect(defaultWidgetProgramOptions.diagnostics, isNotNull);
   });
 
   test(
@@ -87,9 +88,9 @@ void main() {
     );
     final positionDiagnosticsBinding =
         TextDiagnosticsBinding.fromPositionListenable(
-      controller: baseController,
-      diagnostics: positionDiagnosticsSource,
-    );
+          controller: baseController,
+          diagnostics: positionDiagnosticsSource,
+        );
     final decorationBinding = TextDecorationLayerBinding(
       controller: baseController,
       layerKey: 'search',

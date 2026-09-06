@@ -4,12 +4,7 @@ import 'frame.dart';
 import 'spinner_indicator.dart';
 
 /// Lifecycle status for a [ToolCard] / [ToolCardInline].
-enum ToolCardStatus {
-  pending,
-  running,
-  completed,
-  error,
-}
+enum ToolCardStatus { pending, running, completed, error }
 
 /// Compact one-line tool invocation (OpenCode-style inline tool).
 ///
@@ -93,7 +88,10 @@ class ToolCardInline extends StatelessWidget {
                 interval: const Duration(milliseconds: 80),
               )
             else if (status == ToolCardStatus.pending)
-              Text(pendingGlyph, style: theme.bodySmall.copy()..foreground(muted))
+              Text(
+                pendingGlyph,
+                style: theme.bodySmall.copy()..foreground(muted),
+              )
             else if (isError)
               Text(errorGlyph, style: theme.bodySmall.copy()..foreground(err))
             else
@@ -108,10 +106,7 @@ class ToolCardInline extends StatelessWidget {
         if (error != null && error!.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 2),
-            child: Text(
-              error!,
-              style: theme.bodySmall.copy()..foreground(err),
-            ),
+            child: Text(error!, style: theme.bodySmall.copy()..foreground(err)),
           ),
       ],
     );
@@ -160,7 +155,8 @@ class ToolCard extends StatelessWidget {
     final err = errorColor ?? theme.error;
     final run = runningColor ?? theme.primary;
     final bg = background ?? theme.surface;
-    final accent = accentColor ??
+    final accent =
+        accentColor ??
         (status == ToolCardStatus.running
             ? run
             : status == ToolCardStatus.error
@@ -170,8 +166,7 @@ class ToolCard extends StatelessWidget {
     final isRunning = status == ToolCardStatus.running;
     final isPending = status == ToolCardStatus.pending;
     final heading = title.isNotEmpty ? title : '# $toolName';
-    final headingFg =
-        isRunning || isPending ? theme.onSurface : muted;
+    final headingFg = isRunning || isPending ? theme.onSurface : muted;
 
     return Frame(
       background: bg,

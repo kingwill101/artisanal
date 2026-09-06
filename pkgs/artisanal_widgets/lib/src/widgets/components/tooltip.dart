@@ -1,6 +1,6 @@
 import 'package:artisanal/layout.dart' show Layout;
 import '_component_foundation.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 import 'popup_menu.dart' show bestPopupAnchorRenderObject;
 import 'package:artisanal_widgets/src/widgets/core/element.dart';
 import 'dart:math' as math;
@@ -188,7 +188,7 @@ class _TooltipState extends State<Tooltip> {
     final theme = ThemeScope.of(context);
     final labelStyle = copyStyle(widget.textStyle ?? theme.bodySmall)
       ..foreground(widget.foreground ?? theme.onSurface);
-    return Frame(
+    return widget_frame.Frame(
       padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 1),
       background: widget.background ?? theme.surface,
       border: Border.normal,

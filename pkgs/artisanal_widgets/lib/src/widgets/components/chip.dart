@@ -2,7 +2,8 @@ import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal_widgets/src/widgets/components/button.dart';
-import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/components/frame.dart'
+    as widget_frame;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/focus.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
@@ -57,7 +58,7 @@ class Chip extends StatelessWidget {
       if (onDeleted != null) GestureDetector(onTap: onDeleted, child: delete),
     ];
 
-    Widget chip = Frame(
+    Widget chip = widget_frame.Frame(
       border: Border.rounded,
       borderColor: theme.border,
       background: backgroundColor ?? theme.surface,
@@ -324,7 +325,7 @@ class _InputChipState extends State<InputChip> {
         ),
     ];
 
-    Widget result = Frame(
+    Widget result = widget_frame.Frame(
       border: Border.rounded,
       borderColor: widget.selected ? selectedBg : theme.border,
       background: background,

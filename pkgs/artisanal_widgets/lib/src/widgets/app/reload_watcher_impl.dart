@@ -70,6 +70,10 @@ final class ReloadFileWatcher {
       );
     }
 
+    // Directory.watch installs its native watcher asynchronously on some
+    // platforms. Yield once so callers can safely create a file immediately
+    // after awaiting watch() without racing watcher initialization.
+    await Future<void>.delayed(Duration.zero);
     return watcher;
   }
 

@@ -4,6 +4,12 @@
 
 ### Changed
 
+- Forwarded `RenderMetricsInjector` custom entries to Artisanal's universal
+  program developer tools overlay while preserving the existing widget-local
+  metrics stream.
+- Removed `WidgetApp`'s separate built-in metrics overlay and F12 handler.
+  Widget hosts now enable program diagnostics by default; configure visibility,
+  position, and shortcuts with `ProgramDiagnosticsOptions`.
 - Routed framework internals through Artisanal's narrow runtime entrypoint so
   widget app imports do not load unrelated native Markdown dependencies.
 - Kept both `app.dart` and the complete `widgets.dart` public surface
@@ -44,6 +50,8 @@
   `RenderMetricsInjector`: publishes made from inside dispatch (e.g. the
   metrics listener synchronously triggering another render) are deferred
   one microtask instead of throwing.
+- Ensured `ReloadFileWatcher.watch` waits for native watcher installation before
+  returning, so immediate file changes are not missed.
 
 ## 0.3.1
 

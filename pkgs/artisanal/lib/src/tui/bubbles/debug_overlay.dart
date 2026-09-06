@@ -20,9 +20,6 @@ enum DebugOverlayMode {
 
   /// Only captured output from intercepted `print()` calls.
   output,
-
-  /// All sections combined.
-  all,
 }
 
 /// Draggable render-metrics overlay for debugging TUI performance.
@@ -315,15 +312,28 @@ final class DebugOverlayModel {
     );
 
     // Include mode, message count, and output count in cache key.
-    final msgCount = messageEntries.length;
-    final outCount = outputEntries.length;
+    final messageHash = Object.hashAll(
+      messageEntries.map(
+        (entry) => Object.hash(
+          entry.timestamp,
+          entry.messageType,
+          entry.summary,
+          entry.processingTime,
+        ),
+      ),
+    );
+    final outputHash = Object.hashAll(
+      outputEntries.map(
+        (entry) => Object.hash(entry.timestamp, entry.source, entry.line),
+      ),
+    );
     final cacheKey = Object.hash(
       currentFrame,
       panelWidth,
       customHash,
       mode,
-      msgCount,
-      outCount,
+      messageHash,
+      outputHash,
     );
 
     // Use cached panel if nothing has changed.
@@ -334,12 +344,15 @@ final class DebugOverlayModel {
     final label = Style().foreground(Colors.yellow).bold();
     final dim = Style().dim();
     final content = StringBuffer();
+    final tabs = DebugOverlayMode.values
+        .map((value) => value == mode ? '[${value.name}]' : value.name)
+        .join(' ');
+    content
+      ..writeln(dim.render(tabs))
+      ..writeln();
 
     // --- Metrics section ---
-    if (mode == DebugOverlayMode.metrics || mode == DebugOverlayMode.all) {
-      if (mode == DebugOverlayMode.all) {
-        content.writeln(dim.render('── Metrics ──'));
-      }
+    if (mode == DebugOverlayMode.metrics) {
       final avgFps = m?.averageFps ?? 0.0;
       final avgFrameTimeUs = m?.averageFrameTime.inMicroseconds ?? 0;
       final avgRenderTimeUs = m?.averageRenderDuration.inMicroseconds ?? 0;
@@ -371,11 +384,7 @@ final class DebugOverlayModel {
     }
 
     // --- Messages section ---
-    if (mode == DebugOverlayMode.messages || mode == DebugOverlayMode.all) {
-      if (content.isNotEmpty) content.writeln();
-      if (mode == DebugOverlayMode.all) {
-        content.writeln(dim.render('── Messages ──'));
-      }
+    if (mode == DebugOverlayMode.messages) {
       if (messageEntries.isEmpty) {
         content.writeln(dim.render('(no messages)'));
       } else {
@@ -402,11 +411,7 @@ final class DebugOverlayModel {
     }
 
     // --- Output section ---
-    if (mode == DebugOverlayMode.output || mode == DebugOverlayMode.all) {
-      if (content.isNotEmpty) content.writeln();
-      if (mode == DebugOverlayMode.all) {
-        content.writeln(dim.render('── Output ──'));
-      }
+    if (mode == DebugOverlayMode.output) {
       if (outputEntries.isEmpty) {
         content.writeln(dim.render('(no output)'));
       } else {
@@ -440,7 +445,6 @@ final class DebugOverlayModel {
       DebugOverlayMode.metrics => title,
       DebugOverlayMode.messages => 'Messages',
       DebugOverlayMode.output => 'Captured Output',
-      DebugOverlayMode.all => 'Debug',
     };
 
     final rendered = PanelComponent(

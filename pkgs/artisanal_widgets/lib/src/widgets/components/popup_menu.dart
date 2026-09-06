@@ -1,7 +1,7 @@
 import 'package:artisanal_widgets/src/widgets/core/element.dart';
 import '_component_foundation.dart';
 import 'button.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 import 'dart:math' as math;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
@@ -446,7 +446,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
 
   Widget _buildMenuFrame(BuildContext context) {
     final theme = ThemeScope.of(context);
-    return Frame(
+    return widget_frame.Frame(
       border: widget.menuBorder,
       borderColor: widget.menuBorderColor ?? theme.border,
       background: widget.menuBackground ?? theme.surface,

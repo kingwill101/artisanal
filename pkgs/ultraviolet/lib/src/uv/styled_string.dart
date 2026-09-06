@@ -152,7 +152,22 @@ void readLink(String data, LinkState out) {
   if (firstSep < 0) return;
   final params = data.substring(0, firstSep);
   final url = data.substring(firstSep + 1);
+  // Treat unsafe OSC 8 payloads as a link reset. Cell deliberately rejects
+  // control characters to prevent terminal-control injection, but malformed
+  // or untrusted ANSI input must not be able to crash the renderer.
+  if (_containsControl(params) || _containsControl(url)) {
+    out.link = const Link();
+    return;
+  }
   out.link = Link(url: url, params: params);
+}
+
+bool _containsControl(String value) {
+  for (var i = 0; i < value.length; i++) {
+    final codeUnit = value.codeUnitAt(i);
+    if (codeUnit < 0x20 || codeUnit == 0x7f) return true;
+  }
+  return false;
 }
 
 /// Holds the parsed hyperlink URL from an OSC 8 sequence.

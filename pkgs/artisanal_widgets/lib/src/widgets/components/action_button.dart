@@ -1,6 +1,7 @@
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color;
-import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/components/frame.dart'
+    as widget_frame;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
 import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
@@ -118,7 +119,7 @@ class _ActionButtonState extends State<ActionButton> {
 
     final style = copyStyle(theme.labelMedium)..foreground(fg);
 
-    Widget button = Frame(
+    Widget button = widget_frame.Frame(
       padding: pad,
       background: bg,
       child: Text(widget.label, style: style),
