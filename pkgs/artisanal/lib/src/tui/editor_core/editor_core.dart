@@ -6,8 +6,9 @@ export 'document_persistence.dart';
 export 'editing.dart';
 export 'viewing.dart';
 // Versatile seams: language adapters (no builtins, no FFI) and
-// Tree-sitter-style syntax-tree DTOs. Future advanced editing features
-// (motions, text objects, modal layers) build on these without touching core.
+// Tree-sitter-style syntax-tree DTOs. Range resolvers, commands, and
+// fold-aware views are host-agnostic building blocks; editing styles sit
+// on top without forking core.
 export 'text_language.dart';
 export 'syntax_tree.dart';
 // Prompt-composer helpers: tracked paste placeholders, prompt

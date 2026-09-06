@@ -41,6 +41,33 @@ void main() {
       expect(target.value, 1);
     });
 
+    test('dispatches an optional argument to executeWith', () {
+      final target = _Target();
+      final registry = EditorCommandRegistry<_Target>()
+        ..register(
+          EditorCommand(
+            id: 'editor.insert',
+            label: 'Insert',
+            execute: (_) => false,
+            executeWith: (target, argument) {
+              if (argument is! int) return false;
+              target.value = argument;
+              return true;
+            },
+          ),
+        );
+
+      expect(
+        registry.dispatch('editor.insert', target),
+        EditorCommandDispatchResult.noChange,
+      );
+      expect(
+        registry.dispatch('editor.insert', target, argument: 9),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(target.value, 9);
+    });
+
     test(
       'rejects accidental duplicate IDs and permits explicit replacement',
       () {

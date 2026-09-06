@@ -307,6 +307,14 @@ void main() {
       expect(state.visibleLines(lines.length), [0, 4, 5]);
     });
 
+    test('maps hidden nested lines to their visible fold header', () {
+      final state = FoldState(ranges: computeIndentFolds(lines))..collapseAll();
+      expect(state.visibleLineFor(0), 0);
+      expect(state.visibleLineFor(1), 0);
+      expect(state.visibleLineFor(2), 0);
+      expect(state.visibleLineFor(5), 5);
+    });
+
     test('retain carries collapse state across recompute', () {
       final state = FoldState(ranges: computeIndentFolds(lines))..toggle(1);
       final next = state.retain(computeIndentFolds([...lines, 'extra']));

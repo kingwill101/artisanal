@@ -7,6 +7,7 @@ import '../bubbles/text_layout.dart' as layout;
 import '../bubbles/runeutil.dart';
 import 'editor_state.dart';
 import 'text_document.dart';
+import 'text_folding.dart';
 
 final class TextViewLine {
   const TextViewLine({
@@ -81,6 +82,7 @@ final class TextView {
     this.viewportStartRow = 0,
     this.viewportStartColumn = 0,
     this.scrollMargin = 0,
+    this.folds,
   });
 
   int width;
@@ -90,6 +92,9 @@ final class TextView {
   int viewportStartRow;
   int viewportStartColumn;
   double scrollMargin;
+
+  /// Optional fold projection. Hidden lines are skipped; headers remain.
+  FoldState? folds;
 
   int effectiveContentWidth() {
     if (width <= 0) {
@@ -319,7 +324,12 @@ final class TextView {
       return null;
     }
 
-    final resolvedCursor = document.clampPosition(cursor ?? state.cursor);
+    final clampedCursor = document.clampPosition(cursor ?? state.cursor);
+    final visibleCursorLine = folds?.visibleLineFor(clampedCursor.line);
+    final resolvedCursor =
+        visibleCursorLine == null || visibleCursorLine == clampedCursor.line
+        ? clampedCursor
+        : TextPosition(line: visibleCursorLine, column: 0);
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
       if (resolvedCursor.line != line.logicalLine) {
@@ -664,7 +674,7 @@ final class TextView {
   }
 
   List<layout.VisualLine> _buildVisualLines(TextDocument document) {
-    return layout.buildVisualLinesFromReader(
+    final visual = layout.buildVisualLinesFromReader(
       lineCount: document.lineCount,
       lineTextAt: document.lineAt,
       lineLengthAt: document.lineLength,
@@ -672,5 +682,11 @@ final class TextView {
       softWrap: softWrap,
       wrapWidthCells: effectiveWrapWidth(),
     );
+    final hidden = folds;
+    if (hidden == null) return visual;
+    return [
+      for (final line in visual)
+        if (!hidden.isLineHidden(line.rowIndex)) line,
+    ];
   }
 }

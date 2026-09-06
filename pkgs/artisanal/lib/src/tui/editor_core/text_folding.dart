@@ -32,14 +32,9 @@ final class FoldRange {
 /// non-blank line, and ends at the last consecutively deeper line (trailing
 /// blank lines belong to the enclosing scope, not the fold). Tabs count
 /// [tabWidth] columns.
-List<FoldRange> computeIndentFolds(
-  List<String> lineTexts, {
-  int tabWidth = 4,
-}) {
+List<FoldRange> computeIndentFolds(List<String> lineTexts, {int tabWidth = 4}) {
   final width = tabWidth < 1 ? 1 : tabWidth;
-  final indents = [
-    for (final line in lineTexts) _indentWidth(line, width),
-  ];
+  final indents = [for (final line in lineTexts) _indentWidth(line, width)];
   final folds = <FoldRange>[];
   for (var i = 0; i < lineTexts.length; i++) {
     final indent = indents[i];
@@ -85,6 +80,25 @@ final class FoldState {
       }
     }
     return false;
+  }
+
+  /// Maps [line] to the visible header that represents it.
+  ///
+  /// Visible lines map to themselves. A line hidden by nested collapsed folds
+  /// maps to the outermost visible collapsed header.
+  int visibleLineFor(int line) {
+    var visible = line;
+    while (true) {
+      FoldRange? containing;
+      for (final range in _ranges) {
+        if (_collapsed.contains(range.startLine) && range.contains(visible)) {
+          containing = range;
+          break;
+        }
+      }
+      if (containing == null) return visible;
+      visible = containing.startLine;
+    }
   }
 
   /// Toggles the fold starting at [line]; no-op when none starts there.

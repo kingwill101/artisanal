@@ -879,6 +879,35 @@ void main() {
       expect(lines.map((line) => line.text).toList(), ['b', 'c']);
     });
 
+    test('skips lines hidden by collapsed folds', () {
+      final document = TextDocument(text: 'header\n  inner\n  more\nnext');
+      final folds = FoldState(
+        ranges: const [FoldRange(startLine: 0, endLine: 2)],
+      )..toggle(0);
+      final view = TextView(width: 20, height: 8, softWrap: true, folds: folds);
+      final state = EditorState(line: 0, column: 0);
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'header',
+        'next',
+      ]);
+      expect(view.buildLines(document, state).last.logicalLine, 3);
+    });
+
+    test('projects a cursor on a hidden line onto the fold header', () {
+      final document = TextDocument(text: 'header\n  inner\nnext');
+      final folds = FoldState(
+        ranges: const [FoldRange(startLine: 0, endLine: 1)],
+      )..collapseAll();
+      final view = TextView(width: 20, height: 8, softWrap: true, folds: folds);
+      final state = EditorState(line: 1, column: 4);
+
+      final cursor = view.resolveCursorVisualPosition(document, state);
+      expect(cursor?.visualRow, 0);
+      expect(cursor?.column, 0);
+      expect(cursor?.displayColumn, 0);
+    });
+
     test('ensureCursorVisible updates the viewport start row', () {
       final document = TextDocument(text: 'a\nb\nc\nd\ne');
       final state = EditorState(line: 4, column: 1);

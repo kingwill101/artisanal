@@ -5,6 +5,10 @@ import '../command_palette.dart';
 /// Executes an editor command against [target].
 typedef EditorCommandHandler<T> = bool Function(T target);
 
+/// Executes an editor command with a host-supplied argument such as insert text.
+typedef EditorCommandArgumentHandler<T> =
+    bool Function(T target, Object? argument);
+
 /// Decides whether an editor command is currently available.
 typedef EditorCommandPredicate<T> = bool Function(T target);
 
@@ -16,6 +20,9 @@ abstract final class EditorCommandIds {
   static const selectLine = 'editor.action.selectLine';
   static const clearSelection = 'editor.action.clearSelection';
   static const insertLineBreak = 'editor.action.insertLineBreak';
+  static const insertText = 'editor.action.insertText';
+  static const cursorDocumentStart = 'editor.action.cursorDocumentStart';
+  static const cursorDocumentEnd = 'editor.action.cursorDocumentEnd';
   static const addCursorAbove = 'editor.action.addCursorAbove';
   static const addCursorBelow = 'editor.action.addCursorBelow';
   static const addNextOccurrence = 'editor.action.addNextOccurrence';
@@ -70,6 +77,7 @@ final class EditorCommand<T> {
     required this.id,
     required this.label,
     required this.execute,
+    this.executeWith,
     this.description = '',
     this.category = 'Editor',
     this.isEnabled,
@@ -93,6 +101,9 @@ final class EditorCommand<T> {
 
   /// Command implementation. Returns whether it changed or handled [target].
   final EditorCommandHandler<T> execute;
+
+  /// Optional argument-taking implementation (insert text, snippet source).
+  final EditorCommandArgumentHandler<T>? executeWith;
 
   /// Whether this command can execute against [target].
   bool enabledFor(T target) => isEnabled?.call(target) ?? true;
@@ -155,13 +166,23 @@ final class EditorCommandRegistry<T> {
       _commands.values.where((command) => command.enabledFor(target));
 
   /// Dispatches [id] against [target].
-  EditorCommandDispatchResult dispatch(String id, T target) {
+  ///
+  /// When [argument] is supplied and the command defines [EditorCommand.executeWith],
+  /// that handler runs. Otherwise [EditorCommand.execute] runs.
+  EditorCommandDispatchResult dispatch(
+    String id,
+    T target, {
+    Object? argument,
+  }) {
     final command = _commands[id];
     if (command == null) return EditorCommandDispatchResult.notFound;
     if (!command.enabledFor(target)) {
       return EditorCommandDispatchResult.disabled;
     }
-    return command.execute(target)
+    final handled = command.executeWith != null && argument != null
+        ? command.executeWith!(target, argument)
+        : command.execute(target);
+    return handled
         ? EditorCommandDispatchResult.handled
         : EditorCommandDispatchResult.noChange;
   }

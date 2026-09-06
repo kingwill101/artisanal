@@ -138,7 +138,7 @@ final class AdvancedEditorModel implements tui.Model {
   _SearchField _searchField = _SearchField.find;
   String searchQuery = '';
   String replaceQuery = '';
-  core.FoldState folds = core.FoldState();
+
   core.SnippetSession? snippet;
   int snippetOrigin = 0;
   core.EditorDocumentSnapshot? pendingRecovery;
@@ -650,41 +650,30 @@ final class AdvancedEditorModel implements tui.Model {
   }
 
   void _refreshFolds() {
-    folds = folds.retain(
-      core.computeIndentFolds([
-        for (var i = 0; i < editor.lineCount; i++) editor.document.lineAt(i),
-      ]),
-    );
+    editor.refreshIndentFolds();
     editor.setLineDecorationLayer('folds', [
-      for (final range in folds.ranges)
+      for (final range in editor.folds.ranges)
         core.TextLineDecoration(
           lineIndex: range.startLine,
           styleKey: 'line.active',
-          lineNumberMarker: folds.isCollapsedAt(range.startLine) ? '▸' : '▾',
+          lineNumberMarker: editor.folds.isCollapsedAt(range.startLine)
+              ? '▸'
+              : '▾',
         ),
     ]);
   }
 
   void _toggleFoldAtCursor() {
-    final line = editor.editorState.cursor.line;
-    var range = folds.foldStartingAt(line);
-    if (range == null) {
-      for (final candidate in folds.ranges) {
-        if (line >= candidate.startLine && line <= candidate.endLine) {
-          range = candidate;
-          break;
-        }
-      }
-    }
-    if (range == null) {
+    final result = editor.executeCommand(core.EditorCommandIds.toggleFold);
+    if (result != core.EditorCommandDispatchResult.handled) {
       status = 'FOLD  •  no fold at cursor';
       return;
     }
-    folds.toggle(range.startLine);
     _refreshFolds();
-    status = folds.isCollapsedAt(range.startLine)
-        ? 'FOLD  •  collapsed ${range.startLine + 1}-${range.endLine + 1}'
-        : 'FOLD  •  expanded ${range.startLine + 1}';
+    final line = editor.editorState.cursor.line;
+    status = editor.folds.isCollapsedAt(line)
+        ? 'FOLD  •  collapsed line ${line + 1}'
+        : 'FOLD  •  expanded line ${line + 1}';
   }
 
   void _jumpToBracket() {
@@ -751,37 +740,6 @@ final class AdvancedEditorModel implements tui.Model {
         },
       ),
       core.EditorCommand(
-        id: core.EditorCommandIds.toggleFold,
-        label: 'Toggle Fold',
-        category: 'View',
-        execute: (_) {
-          _toggleFoldAtCursor();
-          return true;
-        },
-      ),
-      core.EditorCommand(
-        id: core.EditorCommandIds.foldAll,
-        label: 'Fold All',
-        category: 'View',
-        execute: (_) {
-          folds.collapseAll();
-          _refreshFolds();
-          status = 'FOLD  •  all collapsed';
-          return true;
-        },
-      ),
-      core.EditorCommand(
-        id: core.EditorCommandIds.unfoldAll,
-        label: 'Unfold All',
-        category: 'View',
-        execute: (_) {
-          folds.expandAll();
-          _refreshFolds();
-          status = 'FOLD  •  all expanded';
-          return true;
-        },
-      ),
-      core.EditorCommand(
         id: core.EditorCommandIds.goToMatchingBracket,
         label: 'Go to Matching Bracket',
         category: 'Cursor',
@@ -803,7 +761,7 @@ final class AdvancedEditorModel implements tui.Model {
     final diagnostics = editor.diagnostics.length;
     final cursor = editor.editorState.cursor;
     final position = 'Ln ${cursor.line + 1}, Col ${cursor.column + 1}';
-    final foldsCollapsed = folds.collapsedStarts.length;
+    final foldsCollapsed = editor.folds.collapsedStarts.length;
     final footer = _bar(
       ' $status',
       '$position  $dirty  $diagnostics warning(s)  '

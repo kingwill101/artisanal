@@ -79,9 +79,114 @@ void main() {
           EditorCommandIds.selectLine,
           EditorCommandIds.clearSelection,
           EditorCommandIds.insertLineBreak,
+          EditorCommandIds.insertText,
+          EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
         ]),
+      );
+    });
+
+    test('inserts and moves through the command registry', () {
+      final model = TextAreaModel()
+        ..setText('ab\ncd', recordHistory: false)
+        ..setSelections(TextSelectionSet.collapsed(0));
+
+      expect(
+        model.executeCommand(EditorCommandIds.insertText, argument: 'x'),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'xab\ncd');
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDocumentEnd),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.cursorOffset, model.length);
+      expect(
+        model.executeCommand(EditorCommandIds.cursorLeft),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.cursorOffset, model.length - 1);
+    });
+
+    test('command motions preserve a legacy single selection', () {
+      final model = TextAreaModel()
+        ..setText('alpha\nbeta\ngamma', recordHistory: false)
+        ..setSelection(
+          baseLine: 0,
+          baseColumn: 0,
+          extentLine: 2,
+          extentColumn: 5,
+        )
+        ..setCursor(1, 2);
+
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.selectionBase, (line: 0, column: 0));
+      expect(model.selectionExtent, (line: 2, column: 5));
+      expect(model.line, 2);
+      expect(model.column, 2);
+    });
+
+    test('repeated backward extension preserves its anchor', () {
+      var model = TextAreaModel()
+        ..setText('abcd', recordHistory: false)
+        ..setSelections(TextSelectionSet.collapsed(3))
+        ..focus();
+
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.left, shift: true)),
+      );
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.left, shift: true)),
+      );
+
+      expect(model.selectionBase, (line: 0, column: 3));
+      expect(model.selectionExtent, (line: 0, column: 1));
+      expect(model.cursorOffset, 1);
+    });
+
+    test('hides collapsed fold bodies in the painted view', () {
+      final model = TextAreaModel(
+        showLineNumbers: false,
+        useVirtualCursor: true,
+        width: 20,
+        height: 8,
+      )..setText('header\n  inner\n  more\nnext', recordHistory: false);
+      model.setSelections(TextSelectionSet.collapsed(0));
+      model.refreshIndentFolds();
+      expect(model.folds.ranges, isNotEmpty);
+      expect(
+        model.executeCommand(EditorCommandIds.toggleFold),
+        EditorCommandDispatchResult.handled,
+      );
+
+      final rendered = model.view().toString().replaceAll(
+        RegExp(r'\x1B\[[0-9;]*m'),
+        '',
+      );
+      expect(rendered, contains('header'));
+      expect(rendered, contains('next'));
+      expect(rendered, isNot(contains('inner')));
+    });
+
+    test('fold all moves a hidden cursor to the visible header', () {
+      final model = TextAreaModel()
+        ..setText('header\n  inner\nnext', recordHistory: false)
+        ..setSelections(TextSelectionSet.collapsed(9));
+      model.refreshIndentFolds();
+
+      expect(
+        model.executeCommand(EditorCommandIds.foldAll),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.line, 0);
+      expect(model.column, 0);
+      expect(
+        model.executeCommand(EditorCommandIds.foldAll),
+        EditorCommandDispatchResult.noChange,
       );
     });
 

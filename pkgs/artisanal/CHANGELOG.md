@@ -45,6 +45,10 @@
   extension, indent/outdent, and line move/duplicate/delete operations.
 - Enforced editor work budgets in search (truncated matches), decoration
   layers, completion lists, and synchronous syntax scheduling.
+- Added `EditorRangeResolver`, `mapSelectionRanges`, and `mapSelectionEnds` so
+  motions and edits share selection-set transforms; routed textarea keys
+  through named commands (including argument-taking insert), and made
+  `TextView` skip folded lines without stranding cursors in hidden bodies.
 - Added `MemoryEditorDocumentStore` plus a file-backed example store for
   save/recovery workflows.
 - Added a full-screen alternate-buffer `advanced-editor` example with find

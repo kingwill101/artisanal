@@ -884,6 +884,9 @@ class TextAreaModel extends ViewComponent {
   /// Limits for search, decorations, completions, and syntax work.
   EditorWorkBudget workBudget = const EditorWorkBudget();
 
+  /// Fold projection applied by [TextView]. Hidden lines are not painted.
+  FoldState folds = FoldState();
+
   /// Feature recommendations for the current document.
   EditorWorkAssessment get workAssessment => workBudget.assess(_document);
 
@@ -955,8 +958,10 @@ class TextAreaModel extends ViewComponent {
   EditorCommandRegistry<TextAreaModel> get commandRegistry => _commandRegistry;
 
   /// Dispatches a stable editor command against this model.
-  EditorCommandDispatchResult executeCommand(String commandId) =>
-      _commandRegistry.dispatch(commandId, this);
+  EditorCommandDispatchResult executeCommand(
+    String commandId, {
+    Object? argument,
+  }) => _commandRegistry.dispatch(commandId, this, argument: argument);
 
   TextDocument get document {
     return _document;
@@ -1969,7 +1974,8 @@ class TextAreaModel extends ViewComponent {
       ..width = _width
       ..height = _height
       ..softWrap = softWrap
-      ..leadingColumns = _leadingColumnsForView();
+      ..leadingColumns = _leadingColumnsForView()
+      ..folds = folds;
     _textView.ensureCursorVisible(_document, _editorState);
     _syncImplicitLineDecorations();
   }
@@ -2910,6 +2916,17 @@ class TextAreaModel extends ViewComponent {
         },
       ),
       EditorCommand(
+        id: EditorCommandIds.insertText,
+        label: 'Insert Text',
+        category: 'Edit',
+        execute: (_) => false,
+        executeWith: (model, argument) {
+          if (argument is! String || argument.isEmpty) return false;
+          model.insertString(argument);
+          return true;
+        },
+      ),
+      EditorCommand(
         id: EditorCommandIds.addCursorAbove,
         label: 'Add Cursor Above',
         category: 'Selection',
@@ -3127,6 +3144,36 @@ class TextAreaModel extends ViewComponent {
         category: 'Edit',
         execute: (model) => model.moveLinesAtSelections(down: true),
       ),
+      EditorCommand(
+        id: EditorCommandIds.cursorDocumentStart,
+        label: 'Move Cursor to Document Start',
+        category: 'Cursor',
+        execute: (model) => model.moveToDocumentStart(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.cursorDocumentEnd,
+        label: 'Move Cursor to Document End',
+        category: 'Cursor',
+        execute: (model) => model.moveToDocumentEnd(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.toggleFold,
+        label: 'Toggle Fold',
+        category: 'View',
+        execute: (model) => model.toggleFoldAtCursor(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.foldAll,
+        label: 'Fold All',
+        category: 'View',
+        execute: (model) => model.collapseAllFolds(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.unfoldAll,
+        label: 'Unfold All',
+        category: 'View',
+        execute: (model) => model.expandAllFolds(),
+      ),
     ]);
   }
 
@@ -3272,15 +3319,6 @@ class TextAreaModel extends ViewComponent {
     _codeActionError = null;
   }
 
-  void _insertChar(String ch) {
-    if (ch.isEmpty) return;
-    _insertTextShared(ch);
-  }
-
-  void _newline() {
-    _insertTextShared('\n');
-  }
-
   void _insertTextShared(String text) {
     if (text.isEmpty) return;
     _recordUndoSnapshot();
@@ -3322,17 +3360,6 @@ class TextAreaModel extends ViewComponent {
     if (!result.changed) return;
     _applyOffsetCommandResult(result);
     _enforceCharLimit();
-  }
-
-  void _backspace() {
-    if (_row == 0 && _col == 0) return;
-    _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
-    final result = textDeletePrevious(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    _applyOffsetCommandResult(result);
   }
 
   String _applyCharLimit(String text) {
@@ -3495,192 +3522,103 @@ class TextAreaModel extends ViewComponent {
 
           // deletion
           if (key.matchesSingle(keyMap.deleteBeforeCursor)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteLeft);
-              return (this, null);
-            }
-            _beginHistoryAction(_TextAreaHistoryAction.deleteBackward);
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _backspace();
+            executeCommand(EditorCommandIds.deleteLeft);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteCharacterForward)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteRight);
-              return (this, null);
-            }
-            _beginHistoryAction(_TextAreaHistoryAction.deleteForward);
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _deleteCharForward();
+            executeCommand(EditorCommandIds.deleteRight);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteWordBackward)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteWordLeft);
-              return (this, null);
-            }
-            _beginHistoryAction(
-              _TextAreaHistoryAction.deleteBackward,
-              breakChain: true,
-            );
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _deleteWordBackward();
+            executeCommand(EditorCommandIds.deleteWordLeft);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteWordForward)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteWordRight);
-              return (this, null);
-            }
-            _beginHistoryAction(
-              _TextAreaHistoryAction.deleteForward,
-              breakChain: true,
-            );
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _deleteWordForward();
+            executeCommand(EditorCommandIds.deleteWordRight);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteToLineStart)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteLineLeft);
-              return (this, null);
-            }
-            _beginHistoryAction(
-              _TextAreaHistoryAction.deleteBackward,
-              breakChain: true,
-            );
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _deleteToLineStart();
+            executeCommand(EditorCommandIds.deleteLineLeft);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteToLineEnd)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteLineRight);
-              return (this, null);
-            }
-            _beginHistoryAction(
-              _TextAreaHistoryAction.deleteForward,
-              breakChain: true,
-            );
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _deleteToLineEnd();
+            executeCommand(EditorCommandIds.deleteLineRight);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteAfterCursor)) {
-            if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.deleteLineRight);
-              return (this, null);
-            }
-            _beginHistoryAction(
-              _TextAreaHistoryAction.deleteForward,
-              breakChain: true,
-            );
-            if (_deleteSelectionIfAny()) {
-              return (this, null);
-            }
-            _deleteToLineEnd();
+            executeCommand(EditorCommandIds.deleteLineRight);
             return (this, null);
           }
 
           // navigation
-          if (key.matchesSingle(keyMap.wordForward)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectWordRight);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorWordRight);
-            } else {
-              _moveWordForward();
-            }
+          if (_matchesMovementBinding(key, keyMap.wordForward)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectWordRight
+                  : EditorCommandIds.cursorWordRight,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.wordBackward)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectWordLeft);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorWordLeft);
-            } else {
-              _moveWordBackward();
-            }
+          if (_matchesMovementBinding(key, keyMap.wordBackward)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectWordLeft
+                  : EditorCommandIds.cursorWordLeft,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.lineStart)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectLineStart);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorLineStart);
-            } else {
-              _cursorStartOfLine();
-            }
+          if (_matchesMovementBinding(key, keyMap.lineStart)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectLineStart
+                  : EditorCommandIds.cursorLineStart,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.lineEnd)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectLineEnd);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorLineEnd);
-            } else {
-              _cursorEndOfLine();
-            }
+          if (_matchesMovementBinding(key, keyMap.lineEnd)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectLineEnd
+                  : EditorCommandIds.cursorLineEnd,
+            );
             return (this, null);
           }
           if (key.matchesSingle(keyMap.inputBegin)) {
-            _cursorStartOfInput();
+            executeCommand(EditorCommandIds.cursorDocumentStart);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.inputEnd)) {
-            _cursorEndOfInput();
+            executeCommand(EditorCommandIds.cursorDocumentEnd);
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.characterForward)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectRight);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorRight);
-            } else {
-              _moveRight();
-            }
+          if (_matchesMovementBinding(key, keyMap.characterForward)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectRight
+                  : EditorCommandIds.cursorRight,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.characterBackward)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectLeft);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorLeft);
-            } else {
-              _moveLeft();
-            }
+          if (_matchesMovementBinding(key, keyMap.characterBackward)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectLeft
+                  : EditorCommandIds.cursorLeft,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.lineNext)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectDown);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorDown);
-            } else {
-              _lineNext();
-            }
+          if (_matchesMovementBinding(key, keyMap.lineNext)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectDown
+                  : EditorCommandIds.cursorDown,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.linePrevious)) {
-            if (key.shift) {
-              executeCommand(EditorCommandIds.selectUp);
-            } else if (hasMultipleSelections) {
-              executeCommand(EditorCommandIds.cursorUp);
-            } else {
-              _linePrev();
-            }
+          if (_matchesMovementBinding(key, keyMap.linePrevious)) {
+            executeCommand(
+              key.shift ? EditorCommandIds.selectUp : EditorCommandIds.cursorUp,
+            );
             return (this, null);
           }
           if (key.matchesSingle(keyMap.transposeCharacterBackward)) {
@@ -3708,11 +3646,7 @@ class TextAreaModel extends ViewComponent {
 
           // Fallback direct modifier checks for common combos.
           if (key.type == KeyType.delete && key.alt) {
-            _beginHistoryAction(
-              _TextAreaHistoryAction.deleteForward,
-              breakChain: true,
-            );
-            _deleteWordForward();
+            executeCommand(EditorCommandIds.deleteWordRight);
             return (this, null);
           }
           if (key.ctrl && key.type == KeyType.runes && key.runes.isNotEmpty) {
@@ -3765,27 +3699,24 @@ class TextAreaModel extends ViewComponent {
           }
 
           if (key.type == KeyType.space) {
-            _beginHistoryAction(_TextAreaHistoryAction.insert);
-            _insertChar(' ');
+            executeCommand(EditorCommandIds.insertText, argument: ' ');
             return (this, null);
           }
 
           if (key.type == KeyType.enter && keyMap.insertNewline.enabled) {
-            _beginHistoryAction(
-              _TextAreaHistoryAction.insert,
-              breakChain: true,
-            );
-            _newline();
+            executeCommand(EditorCommandIds.insertLineBreak);
             return (this, null);
           }
 
           if (key.type == KeyType.runes && key.runes.isNotEmpty) {
-            _beginHistoryAction(_TextAreaHistoryAction.insert);
             final rune = key.runes.first;
             if (rune == 0x0a) {
-              _newline();
+              executeCommand(EditorCommandIds.insertLineBreak);
             } else {
-              _insertChar(String.fromCharCode(rune));
+              executeCommand(
+                EditorCommandIds.insertText,
+                argument: String.fromCharCode(rune),
+              );
             }
             return (this, null);
           }
@@ -4023,170 +3954,229 @@ class TextAreaModel extends ViewComponent {
 
   /// Moves every active cursor left or right by one grapheme.
   bool moveSelectionsHorizontally({required bool forward}) {
-    final active = _selections;
-    if (active == null || active.ranges.length < 2) return false;
-    final moved = <TextSelectionRange>[];
-    var primaryOffset = active.primary!.endOffset;
-    for (final range in active.ranges) {
-      final offset = range.isCollapsed
-          ? (range.endOffset + (forward ? 1 : -1)).clamp(0, length)
-          : (forward ? range.endOffset : range.startOffset);
-      moved.add(TextSelectionRange(startOffset: offset, endOffset: offset));
-      if (range == active.primary) primaryOffset = offset;
-    }
-    setSelections(TextSelectionSet(moved, primaryOffset: primaryOffset));
-    return true;
+    return _applyMappedEnds(
+      forward: forward,
+      mapEnd: (offset, _) => (offset + (forward ? 1 : -1)).clamp(0, length),
+    );
   }
 
   /// Moves every active cursor to the next or previous word boundary.
   bool moveSelectionsByWord({required bool forward}) {
-    final active = _selections;
-    if (active == null || active.ranges.length < 2) return false;
     _refreshDocumentSnapshot();
-    final moved = <TextSelectionRange>[];
-    var primaryOffset = active.primary!.endOffset;
-    for (final range in active.ranges) {
-      final offset = range.isCollapsed
-          ? textMoveByWord(
-              document: _document,
-              state: TextOffsetStateSnapshot.collapsed(
-                cursorOffset: range.endOffset,
-              ),
-              forward: forward,
-            ).cursorOffset
-          : (forward ? range.endOffset : range.startOffset);
-      moved.add(TextSelectionRange(startOffset: offset, endOffset: offset));
-      if (range == active.primary) primaryOffset = offset;
-    }
-    setSelections(TextSelectionSet(moved, primaryOffset: primaryOffset));
-    return true;
+    return _applyMappedEnds(
+      forward: forward,
+      mapEnd: (offset, _) => textMoveByWord(
+        document: _document,
+        state: TextOffsetStateSnapshot.collapsed(cursorOffset: offset),
+        forward: forward,
+      ).cursorOffset,
+    );
   }
 
   /// Moves every active cursor to the start or end of its logical line.
   bool moveSelectionsToLineBoundary({required bool forward}) {
-    final active = _selections;
-    if (active == null || active.ranges.length < 2) return false;
     _refreshDocumentSnapshot();
-    final moved = <TextSelectionRange>[];
-    var primaryOffset = active.primary!.endOffset;
-    for (final range in active.ranges) {
-      final offset = range.isCollapsed
-          ? _lineBoundaryOffset(range.endOffset, forward: forward)
-          : (forward ? range.endOffset : range.startOffset);
-      moved.add(TextSelectionRange(startOffset: offset, endOffset: offset));
-      if (range == active.primary) primaryOffset = offset;
-    }
-    setSelections(TextSelectionSet(moved, primaryOffset: primaryOffset));
-    return true;
+    return _applyMappedEnds(
+      forward: forward,
+      mapEnd: (offset, _) => _lineBoundaryOffset(offset, forward: forward),
+    );
   }
 
-  /// Moves every active cursor up or down by one line, preserving column.
+  /// Moves every active cursor up or down by one visible line.
   bool moveSelectionsVertically({required bool below}) {
-    return _mapSelections(
-      requireMultiple: true,
-      transform: (range) {
-        final offset = range.isCollapsed
-            ? _offsetOnAdjacentLine(range.endOffset, below: below)
-            : (below ? range.endOffset : range.startOffset);
-        return TextSelectionRange(startOffset: offset, endOffset: offset);
-      },
+    return _applyMappedEnds(
+      forward: below,
+      mapEnd: (offset, _) => _offsetOnAdjacentLine(offset, below: below),
     );
   }
 
   /// Extends every selection's end by one grapheme.
   bool extendSelectionsHorizontally({required bool forward}) {
-    return _mapSelections(
-      requireMultiple: false,
-      transform: (range) {
-        final end = (range.endOffset + (forward ? 1 : -1)).clamp(0, length);
-        return TextSelectionRange(
-          startOffset: range.startOffset,
-          endOffset: end,
-        );
-      },
+    return _applyMappedEnds(
+      forward: forward,
+      extend: true,
+      mapEnd: (offset, _) => (offset + (forward ? 1 : -1)).clamp(0, length),
     );
   }
 
   /// Extends every selection's end by one word.
   bool extendSelectionsByWord({required bool forward}) {
     _refreshDocumentSnapshot();
-    return _mapSelections(
-      requireMultiple: false,
-      transform: (range) {
-        final end = textMoveByWord(
-          document: _document,
-          state: TextOffsetStateSnapshot.collapsed(
-            cursorOffset: range.endOffset,
-          ),
-          forward: forward,
-        ).cursorOffset;
-        return TextSelectionRange(
-          startOffset: range.startOffset,
-          endOffset: end,
-        );
-      },
+    return _applyMappedEnds(
+      forward: forward,
+      extend: true,
+      mapEnd: (offset, _) => textMoveByWord(
+        document: _document,
+        state: TextOffsetStateSnapshot.collapsed(cursorOffset: offset),
+        forward: forward,
+      ).cursorOffset,
     );
   }
 
   /// Extends every selection's end to its line boundary.
   bool extendSelectionsToLineBoundary({required bool forward}) {
     _refreshDocumentSnapshot();
-    return _mapSelections(
-      requireMultiple: false,
-      transform: (range) {
-        final end = _lineBoundaryOffset(range.endOffset, forward: forward);
-        return TextSelectionRange(
-          startOffset: range.startOffset,
-          endOffset: end,
-        );
-      },
+    return _applyMappedEnds(
+      forward: forward,
+      extend: true,
+      mapEnd: (offset, _) => _lineBoundaryOffset(offset, forward: forward),
     );
   }
 
-  /// Extends every selection's end up or down by one line.
+  /// Extends every selection's end up or down by one visible line.
   bool extendSelectionsVertically({required bool below}) {
     _refreshDocumentSnapshot();
-    return _mapSelections(
-      requireMultiple: false,
-      transform: (range) {
-        final end = _offsetOnAdjacentLine(range.endOffset, below: below);
-        return TextSelectionRange(
-          startOffset: range.startOffset,
-          endOffset: end,
-        );
-      },
+    return _applyMappedEnds(
+      forward: below,
+      extend: true,
+      mapEnd: (offset, _) => _offsetOnAdjacentLine(offset, below: below),
     );
   }
 
-  bool _mapSelections({
-    required bool requireMultiple,
-    required TextSelectionRange Function(TextSelectionRange range) transform,
+  bool _applyMappedEnds({
+    required bool forward,
+    bool extend = false,
+    required int Function(int endOffset, TextSelectionRange range) mapEnd,
   }) {
-    final active = requireMultiple ? _selections : selections;
-    if (active == null || active.ranges.isEmpty) return false;
-    if (requireMultiple && active.ranges.length < 2) return false;
-    final moved = <TextSelectionRange>[];
-    var primaryOffset = active.primary!.endOffset;
-    var changed = false;
-    for (final range in active.ranges) {
-      final next = transform(range);
-      changed = changed || next != range;
-      moved.add(next);
-      if (range == active.primary) primaryOffset = next.endOffset;
+    final current = selections;
+    if (_selections == null) {
+      final currentOffset = cursorOffset;
+      final nextOffset = mapEnd(currentOffset, current.primary!);
+      if (nextOffset == currentOffset) return false;
+      final nextPosition = _document.positionForOffset(nextOffset);
+      if (extend) {
+        _selectLineState(
+          base: _currentSelectionBasePosition() ?? _currentCursorPosition(),
+          extent: nextPosition,
+          cursor: nextPosition,
+        );
+      } else {
+        _moveLineCursor(nextPosition);
+      }
+      _lastDocumentChange = null;
+      _syncCoreState();
+      return true;
     }
-    if (!changed) return false;
-    setSelections(TextSelectionSet(moved, primaryOffset: primaryOffset));
+    final next = mapSelectionEnds(
+      current,
+      mapEnd: mapEnd,
+      forward: forward,
+      extend: extend,
+    );
+    if (identical(next, current)) return false;
+    setSelections(next);
     return true;
+  }
+
+  bool _matchesMovementBinding(Key key, KeyBinding binding) {
+    return key.matchesSingle(binding) ||
+        (key.shift && key.copyWith(shift: false).matchesSingle(binding));
   }
 
   int _offsetOnAdjacentLine(int offset, {required bool below}) {
     final position = _document.positionForOffset(offset);
-    final targetLine = position.line + (below ? 1 : -1);
+    var targetLine = position.line + (below ? 1 : -1);
+    while (targetLine >= 0 &&
+        targetLine < lineCount &&
+        folds.isLineHidden(targetLine)) {
+      targetLine += below ? 1 : -1;
+    }
     if (targetLine < 0 || targetLine >= lineCount) return offset;
     final column = position.column.clamp(0, _document.lineLength(targetLine));
     return _document.offsetForPosition(
       TextPosition(line: targetLine, column: column),
     );
+  }
+
+  /// Recomputes indent folds and keeps collapse state that still applies.
+  void refreshIndentFolds({int tabWidth = 4}) {
+    folds = folds.retain(
+      computeIndentFolds([
+        for (var i = 0; i < lineCount; i++) _document.lineAt(i),
+      ], tabWidth: tabWidth),
+    );
+    if (!_moveHiddenCursorsToFoldHeaders()) _syncCoreState();
+  }
+
+  /// Toggles the fold at the primary cursor, moving onto the header if hidden.
+  bool toggleFoldAtCursor() {
+    _refreshEditorStateSnapshot();
+    final line = _editorState.cursor.line;
+    var range = folds.foldStartingAt(line);
+    if (range == null) {
+      for (final candidate in folds.ranges) {
+        if (line >= candidate.startLine && line <= candidate.endLine) {
+          range = candidate;
+          break;
+        }
+      }
+    }
+    if (range == null) return false;
+    folds.toggle(range.startLine);
+    if (!_moveHiddenCursorsToFoldHeaders()) _syncCoreState();
+    return true;
+  }
+
+  /// Collapses every fold range.
+  bool collapseAllFolds() {
+    if (folds.ranges.isEmpty) return false;
+    final collapsedBefore = folds.collapsedStarts.length;
+    folds.collapseAll();
+    if (folds.collapsedStarts.length == collapsedBefore) return false;
+    if (!_moveHiddenCursorsToFoldHeaders()) _syncCoreState();
+    return true;
+  }
+
+  /// Expands every fold range.
+  bool expandAllFolds() {
+    if (folds.collapsedStarts.isEmpty) return false;
+    folds.expandAll();
+    _syncCoreState();
+    return true;
+  }
+
+  bool _moveHiddenCursorsToFoldHeaders() {
+    if (_selections == null) {
+      final visibleLine = folds.visibleLineFor(_row);
+      if (visibleLine == _row) return false;
+      _collapseLineState(TextPosition(line: visibleLine, column: 0));
+      _lastDocumentChange = null;
+      _syncCoreState();
+      return true;
+    }
+
+    final current = _selections!;
+    final next = mapSelectionRanges(
+      current,
+      transform: (range) {
+        final position = _document.positionForOffset(range.endOffset);
+        final visibleLine = folds.visibleLineFor(position.line);
+        if (visibleLine == position.line) return range;
+        final offset = _document.lineStartOffset(visibleLine);
+        return TextSelectionRange(startOffset: offset, endOffset: offset);
+      },
+    );
+    if (identical(next, current)) return false;
+    setSelections(next);
+    return true;
+  }
+
+  /// Moves the primary cursor to the start of the document.
+  bool moveToDocumentStart() {
+    if (cursorOffset == 0 && !hasSelection && !hasMultipleSelections) {
+      return false;
+    }
+    setSelections(TextSelectionSet.collapsed(0));
+    return true;
+  }
+
+  /// Moves the primary cursor to the end of the document.
+  bool moveToDocumentEnd() {
+    if (cursorOffset == length && !hasSelection && !hasMultipleSelections) {
+      return false;
+    }
+    setSelections(TextSelectionSet.collapsed(length));
+    return true;
   }
 
   Set<int> _selectedLineIndexes() {
@@ -4442,8 +4432,8 @@ class TextAreaModel extends ViewComponent {
 
   /// Deletes one grapheme beside every cursor, or each selected range.
   bool deleteAtSelections({required bool forward}) {
-    final active = _selections;
-    if (active == null || active.ranges.length < 2) return false;
+    final active = selections;
+    if (active.ranges.isEmpty) return false;
     var changed = false;
     final deletionRanges = <TextSelectionRange>[];
     for (final range in active.ranges) {
@@ -4475,8 +4465,8 @@ class TextAreaModel extends ViewComponent {
 
   /// Deletes to a word boundary beside every cursor as one undoable edit.
   bool deleteWordAtSelections({required bool forward}) {
-    final active = _selections;
-    if (active == null || active.ranges.length < 2) return false;
+    final active = selections;
+    if (active.ranges.isEmpty) return false;
     _refreshDocumentSnapshot();
     final deletionRanges = <TextSelectionRange>[];
     var changed = false;
@@ -4511,8 +4501,8 @@ class TextAreaModel extends ViewComponent {
 
   /// Deletes from every cursor to its logical line boundary atomically.
   bool deleteToLineBoundaryAtSelections({required bool forward}) {
-    final active = _selections;
-    if (active == null || active.ranges.length < 2) return false;
+    final active = selections;
+    if (active.ranges.isEmpty) return false;
     _refreshDocumentSnapshot();
     final deletionRanges = <TextSelectionRange>[];
     var changed = false;
@@ -4787,8 +4777,10 @@ class TextAreaModel extends ViewComponent {
   // ─────────────────────────────────────────────────────────────────────────
 
   List<_DisplayLine> _softWrappedLines(int lineNumberDigits) {
-    _textView.leadingColumns =
-        _getPromptWidth(_row) + (showLineNumbers ? lineNumberDigits + 1 : 0);
+    _textView
+      ..leadingColumns =
+          _getPromptWidth(_row) + (showLineNumbers ? lineNumberDigits + 1 : 0)
+      ..folds = folds;
     final lines = _textView.buildViewportLines(_document, _editorState);
     return lines
         .map(
@@ -4816,117 +4808,6 @@ class TextAreaModel extends ViewComponent {
     _recordUndoSnapshot();
     _applyOffsetCommandResult(result);
     return true;
-  }
-
-  void _deleteWordBackward() {
-    if (_globalOffset() == 0) return;
-    _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
-    final result = textDeleteWordBackward(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    _applyOffsetCommandResult(result);
-  }
-
-  void _deleteToLineStart() {
-    if (_col == 0) return;
-    _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
-    final result = textDeleteToLineStart(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    _applyOffsetCommandResult(result);
-  }
-
-  void _deleteToLineEnd() {
-    if (_col >= _document.lineLength(_row)) return;
-    _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
-    final result = textDeleteToLineEnd(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    _applyOffsetCommandResult(result);
-  }
-
-  void _moveWordForward() {
-    _refreshDocumentSnapshot();
-    final result = textMoveByWord(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-      forward: true,
-      clearSelection: false,
-    );
-    if (!result.changed) return;
-    _applyOffsetCursorCommandResult(result);
-  }
-
-  void _moveWordBackward() {
-    _refreshDocumentSnapshot();
-    final result = textMoveByWord(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-      forward: false,
-      clearSelection: false,
-    );
-    if (!result.changed) return;
-    _applyOffsetCursorCommandResult(result);
-  }
-
-  void _cursorStartOfLine() {
-    cursorStart();
-  }
-
-  void _cursorEndOfLine() {
-    cursorEnd();
-  }
-
-  void _cursorStartOfInput() {
-    _refreshDocumentSnapshot();
-    _applyOffsetCursorCommandResult(
-      textMoveToDocumentBoundary(
-        document: _document,
-        state: _currentOffsetStateSnapshot(),
-        forward: false,
-        clearSelection: false,
-      ),
-    );
-  }
-
-  void _cursorEndOfInput() {
-    _refreshDocumentSnapshot();
-    _applyOffsetCursorCommandResult(
-      textMoveToDocumentBoundary(
-        document: _document,
-        state: _currentOffsetStateSnapshot(),
-        forward: true,
-        clearSelection: false,
-      ),
-    );
-  }
-
-  void _deleteCharForward() {
-    _refreshDocumentSnapshot();
-    if (_globalOffset() >= _document.length) return;
-    _recordUndoSnapshot();
-    final result = textDeleteNext(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    _applyOffsetCommandResult(result);
-  }
-
-  void _deleteWordForward() {
-    _refreshDocumentSnapshot();
-    if (_globalOffset() >= _document.length) return;
-    _recordUndoSnapshot();
-    final result = textDeleteWordForward(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    _applyOffsetCommandResult(result);
   }
 
   void _transposeBackward() {
@@ -4984,42 +4865,6 @@ class TextAreaModel extends ViewComponent {
       _applyOffsetCommandResult(result);
       return true;
     });
-  }
-
-  void _moveLeft() {
-    _refreshDocumentSnapshot();
-    final result = textMoveByCharacter(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-      forward: false,
-      clearSelection: false,
-    );
-    if (!result.changed) return;
-    _applyOffsetCursorCommandResult(result);
-  }
-
-  void _moveRight() {
-    _refreshDocumentSnapshot();
-    final result = textMoveByCharacter(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-      forward: true,
-      clearSelection: false,
-    );
-    if (!result.changed) return;
-    _applyOffsetCursorCommandResult(result);
-  }
-
-  void _lineNext() {
-    if (_row < lineCount - 1) {
-      _moveLineCursor(TextPosition(line: _row + 1, column: _col));
-    }
-  }
-
-  void _linePrev() {
-    if (_row > 0) {
-      _moveLineCursor(TextPosition(line: _row - 1, column: _col));
-    }
   }
 
   int _globalOffset() {
