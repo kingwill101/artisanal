@@ -1,6 +1,6 @@
 name: artisanal_pty
 description: An embeddable ANSI terminal emulator and pty2 widget for Artisanal.
-version: 0.1.1
+version: 0.1.0
 repository: https://github.com/kingwill101/artisanal
 resolution: workspace
 
