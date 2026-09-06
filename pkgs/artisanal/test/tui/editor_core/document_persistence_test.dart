@@ -1,0 +1,91 @@
+import 'dart:async';
+
+import 'package:artisanal/editor_core.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('save records revision and clears recovery state', () async {
+    final store = _MemoryDocumentStore();
+    final session = EditorPersistenceSession(
+      documentId: 'file:///demo.dart',
+      store: store,
+      now: () => DateTime.utc(2026),
+    );
+
+    expect(session.isDirty(1), isTrue);
+    expect(
+      await session.checkpoint(TextDocument(text: 'draft'), revision: 1),
+      isTrue,
+    );
+    expect(session.savedRevision, isNull);
+    expect(
+      await session.save(TextDocument(text: 'saved'), revision: 1),
+      isTrue,
+    );
+
+    expect(session.savedRevision, 1);
+    expect(session.isDirty(1), isFalse);
+    expect(store.durable?.document.text, 'saved');
+    expect(store.durable?.savedAt, DateTime.utc(2026));
+    expect(store.recovery, isNull);
+  });
+
+  test('newer operations invalidate stale load results', () async {
+    final store = _MemoryDocumentStore()..pauseReads = true;
+    final session = EditorPersistenceSession(
+      documentId: 'memory:demo',
+      store: store,
+    );
+
+    final load = session.load();
+    final checkpoint = session.checkpoint(
+      TextDocument(text: 'newer'),
+      revision: 2,
+    );
+    store.pendingRead!.complete(
+      EditorDocumentSnapshot(
+        documentId: 'memory:demo',
+        document: TextDocument(text: 'old'),
+        revision: 1,
+        savedAt: DateTime.utc(2025),
+      ),
+    );
+
+    expect(await load, isNull);
+    expect(await checkpoint, isTrue);
+    expect(session.savedRevision, isNull);
+  });
+}
+
+final class _MemoryDocumentStore implements EditorDocumentStore {
+  EditorDocumentSnapshot? durable;
+  EditorDocumentSnapshot? recovery;
+  bool pauseReads = false;
+  Completer<EditorDocumentSnapshot?>? pendingRead;
+
+  @override
+  Future<void> deleteRecovery(String documentId) async {
+    recovery = null;
+  }
+
+  @override
+  Future<EditorDocumentSnapshot?> read(String documentId) {
+    if (!pauseReads) return Future.value(durable);
+    pendingRead = Completer<EditorDocumentSnapshot?>();
+    return pendingRead!.future;
+  }
+
+  @override
+  Future<EditorDocumentSnapshot?> readRecovery(String documentId) async =>
+      recovery;
+
+  @override
+  Future<void> write(EditorDocumentSnapshot snapshot) async {
+    durable = snapshot;
+  }
+
+  @override
+  Future<void> writeRecovery(EditorDocumentSnapshot snapshot) async {
+    recovery = snapshot;
+  }
+}

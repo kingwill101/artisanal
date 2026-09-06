@@ -159,7 +159,9 @@ export 'src/terminal/terminal.dart'
         TerminalBridge;
 export 'src/terminal/host_server.dart' show TerminalHostServer;
 // Stable low-level editor primitives
+// (core adapters/motions/modal) plus opt-in code extensions for back-compat.
 export 'src/tui/editor_core/editor_core.dart';
+export 'src/tui/editor_core/code_extensions.dart';
 // Markdown rendering
 export 'src/tui/markdown/ansi_renderer.dart';
 export 'src/tui/markdown/github_comment.dart';

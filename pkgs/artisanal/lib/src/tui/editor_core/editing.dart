@@ -1,5 +1,3 @@
-export 'code_edit_policy.dart';
-export 'code_editing.dart';
 export 'edit_buffer.dart';
 export 'edit_history.dart';
 export 'text_commands.dart';

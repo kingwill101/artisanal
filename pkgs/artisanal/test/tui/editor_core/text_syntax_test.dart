@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
@@ -379,6 +381,71 @@ void main() {
       expect(provider.calls.last.change, isNull);
     });
   });
+
+  group('AsyncTextSyntaxSession', () {
+    test('publishes only the newest completed request', () async {
+      final provider = _AsyncSyntaxProvider();
+      final session = AsyncTextSyntaxSession<int>(provider: provider);
+      final first = session.request(TextDocument(text: 'first'));
+      final second = session.request(TextDocument(text: 'second'));
+
+      provider.requests[1].complete(
+        const TextSyntaxBuildResult(
+          decorations: [
+            TextDecorationRange(startOffset: 0, endOffset: 6, styleKey: 'new'),
+          ],
+          state: 2,
+        ),
+      );
+      final accepted = await second;
+      provider.requests[0].complete(
+        const TextSyntaxBuildResult(
+          decorations: [
+            TextDecorationRange(
+              startOffset: 0,
+              endOffset: 5,
+              styleKey: 'stale',
+            ),
+          ],
+          state: 1,
+        ),
+      );
+
+      expect(await first, isNull);
+      expect(accepted?.text, 'second');
+      expect(session.snapshot?.decorations.single.styleKey, 'new');
+    });
+
+    test('cancel invalidates an outstanding request', () async {
+      final provider = _AsyncSyntaxProvider();
+      final session = AsyncTextSyntaxSession<int>(provider: provider);
+      final pending = session.request(TextDocument(text: 'pending'));
+
+      session.cancel();
+      provider.requests.single.complete(
+        const TextSyntaxBuildResult(decorations: [], state: 1),
+      );
+
+      expect(await pending, isNull);
+      expect(session.snapshot, isNull);
+    });
+  });
+}
+
+final class _AsyncSyntaxProvider implements AsyncTextSyntaxProvider<int> {
+  final List<Completer<TextSyntaxBuildResult<int>>> requests = [];
+
+  @override
+  Future<TextSyntaxBuildResult<int>> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<int>? previous,
+    TextDocumentChange? change,
+  }) {
+    final completer = Completer<TextSyntaxBuildResult<int>>();
+    requests.add(completer);
+    return completer.future;
+  }
 }
 
 final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {

@@ -61,6 +61,17 @@ abstract class TextSyntaxProvider<State> {
   }
 }
 
+/// Asynchronous syntax provider for parsers that run outside the render loop.
+abstract class AsyncTextSyntaxProvider<State> {
+  /// Builds decorations for [document], optionally using incremental context.
+  Future<TextSyntaxBuildResult<State>> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<State>? previous,
+    TextDocumentChange? change,
+  });
+}
+
 final class TextSyntaxLineWindow {
   const TextSyntaxLineWindow({required this.startLine, required this.endLine});
 
@@ -305,6 +316,80 @@ final class TextSyntaxSession<State> {
   }
 
   void clear() {
+    _snapshot = null;
+  }
+}
+
+/// Coordinates asynchronous syntax builds and rejects stale responses.
+///
+/// A newer [request] or [cancel] invalidates every outstanding build. Providers
+/// do not need cancellation support: late results are simply not published.
+final class AsyncTextSyntaxSession<State> {
+  AsyncTextSyntaxSession({required this.provider, this.language});
+
+  /// Provider used to build syntax snapshots.
+  final AsyncTextSyntaxProvider<State> provider;
+
+  /// Default language passed to the provider.
+  String? language;
+
+  int _generation = 0;
+  TextSyntaxSnapshot<State>? _snapshot;
+
+  /// Most recently accepted snapshot.
+  TextSyntaxSnapshot<State>? get snapshot => _snapshot;
+
+  /// Requests a syntax build, returning `null` when its result became stale.
+  Future<TextSyntaxSnapshot<State>?> request(
+    TextDocument document, {
+    String? language,
+    TextDocumentChange? change,
+    bool force = false,
+  }) async {
+    final generation = ++_generation;
+    final resolvedLanguage = language ?? this.language;
+    final previous = _snapshot;
+    if (!force &&
+        previous?.document == document &&
+        previous?.language == resolvedLanguage &&
+        (change == null || change.isNoop)) {
+      return previous;
+    }
+    final incrementalPrevious = !force && previous?.language == resolvedLanguage
+        ? previous
+        : null;
+    final result = await provider.buildDocument(
+      document,
+      language: resolvedLanguage,
+      previous: incrementalPrevious,
+      change: incrementalPrevious == null ? null : change,
+    );
+    if (generation != _generation) return null;
+    final decorations = result.patch != null && incrementalPrevious != null
+        ? mergeTextSyntaxDecorationPatch(
+            incrementalPrevious.decorations,
+            result.patch!,
+          )
+        : result.decorations;
+    final snapshot = TextSyntaxSnapshot<State>(
+      document: document,
+      decorations: List<TextDecorationRange>.unmodifiable(decorations),
+      language: resolvedLanguage,
+      state: result.state,
+      change: change,
+    );
+    _snapshot = snapshot;
+    return snapshot;
+  }
+
+  /// Invalidates every outstanding request without clearing accepted syntax.
+  void cancel() {
+    _generation++;
+  }
+
+  /// Clears accepted syntax and invalidates every outstanding request.
+  void reset() {
+    cancel();
     _snapshot = null;
   }
 }

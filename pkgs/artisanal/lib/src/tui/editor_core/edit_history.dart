@@ -13,6 +13,24 @@ typedef EditHistoryCoalescePredicate<Action, State, Marker> =
 typedef EditHistoryMarkerBuilder<Action, State, Marker> =
     Marker Function(Action action, State state);
 
+final class EditHistoryCheckpoint<Action, State, Marker> {
+  const EditHistoryCheckpoint._({
+    required this.undo,
+    required this.redo,
+    required this.currentAction,
+    required this.lastAction,
+    required this.lastMarker,
+    required this.didRecordUndoSnapshot,
+  });
+
+  final List<State> undo;
+  final List<State> redo;
+  final Action? currentAction;
+  final Action? lastAction;
+  final Marker? lastMarker;
+  final bool didRecordUndoSnapshot;
+}
+
 final class EditHistoryController<Action, State, Marker> {
   EditHistoryController({
     required this.maxEntries,
@@ -36,6 +54,30 @@ final class EditHistoryController<Action, State, Marker> {
 
   bool get canUndo => _undoStack.isNotEmpty;
   bool get canRedo => _redoStack.isNotEmpty;
+
+  EditHistoryCheckpoint<Action, State, Marker> checkpoint() {
+    return EditHistoryCheckpoint._(
+      undo: List<State>.of(_undoStack),
+      redo: List<State>.of(_redoStack),
+      currentAction: _currentAction,
+      lastAction: _lastAction,
+      lastMarker: _lastMarker,
+      didRecordUndoSnapshot: _didRecordUndoSnapshot,
+    );
+  }
+
+  void restoreCheckpoint(EditHistoryCheckpoint<Action, State, Marker> value) {
+    _undoStack
+      ..clear()
+      ..addAll(value.undo);
+    _redoStack
+      ..clear()
+      ..addAll(value.redo);
+    _currentAction = value.currentAction;
+    _lastAction = value.lastAction;
+    _lastMarker = value.lastMarker;
+    _didRecordUndoSnapshot = value.didRecordUndoSnapshot;
+  }
 
   void clear() {
     _undoStack.clear();
