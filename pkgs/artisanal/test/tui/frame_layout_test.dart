@@ -48,6 +48,20 @@ void main() {
       ]);
     });
 
+    test('does not lose a partial gap budget in tiny areas', () {
+      final areas = FrameLayout.horizontal(const FrameArea(0, 0, 1, 1), const [
+        FrameFill(),
+        FrameFill(),
+        FrameFill(),
+      ], gap: 1);
+
+      expect(areas, const [
+        FrameArea(0, 0, 0, 1),
+        FrameArea(1, 0, 0, 1),
+        FrameArea(1, 0, 0, 1),
+      ]);
+    });
+
     test('distributes fill rounding by remainder then declaration order', () {
       final areas = FrameLayout.horizontal(const FrameArea(0, 0, 8, 1), const [
         FrameFill(),

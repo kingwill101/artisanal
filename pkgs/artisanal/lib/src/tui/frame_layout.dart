@@ -168,9 +168,12 @@ abstract final class FrameLayout {
       }
     }
 
-    final actualGap = constraints.length <= 1
-        ? 0
-        : gapBudget ~/ (constraints.length - 1);
+    final gapSizes = constraints.length <= 1
+        ? const <int>[]
+        : ultraviolet.splitByLargestRemainder(
+            gapBudget,
+            List<int>.filled(constraints.length - 1, 1),
+          );
     var cursor = axis == FrameAxis.horizontal ? inner.x : inner.y;
     return List<FrameArea>.generate(constraints.length, (index) {
       final size = sizes[index];
@@ -178,7 +181,8 @@ abstract final class FrameLayout {
           ? ultraviolet.rect(cursor, inner.y, size, inner.height)
           : ultraviolet.rect(inner.x, cursor, inner.width, size);
       final result = _fromUltraviolet(rectangle);
-      cursor += size + actualGap;
+      cursor += size;
+      if (index < gapSizes.length) cursor += gapSizes[index];
       final end = axis == FrameAxis.horizontal ? inner.right : inner.bottom;
       if (cursor > end) cursor = end;
       return result;
