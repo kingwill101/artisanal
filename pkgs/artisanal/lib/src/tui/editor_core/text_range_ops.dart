@@ -1,5 +1,6 @@
 library;
 
+import 'editor_state.dart';
 import 'text_document.dart';
 import 'text_selection_set.dart';
 
@@ -9,6 +10,40 @@ import 'text_selection_set.dart';
 /// Editing styles (insert-only, modal, multi-cursor) share the same type.
 typedef EditorRangeResolver =
     TextSelectionSet Function(TextDocument document, TextSelectionSet current);
+
+/// Reports whether a logical document line is hidden from vertical movement.
+typedef TextLineHiddenPredicate = bool Function(int line);
+
+/// Resolves the next visible logical line while retaining a preferred column.
+///
+/// [preferredColumn] normally comes from the first vertical move in a sequence.
+/// Passing it through later calls lets a cursor cross a short line and return
+/// to the original column on a longer line. Hidden lines are skipped when
+/// [isLineHidden] is supplied. If there is no adjacent visible line, the
+/// original [offset] is returned.
+int textOffsetOnAdjacentVisibleLine({
+  required TextDocument document,
+  required int offset,
+  required bool below,
+  int? preferredColumn,
+  TextLineHiddenPredicate? isLineHidden,
+}) {
+  final position = document.positionForOffset(offset);
+  var targetLine = position.line + (below ? 1 : -1);
+  while (targetLine >= 0 &&
+      targetLine < document.lineCount &&
+      (isLineHidden?.call(targetLine) ?? false)) {
+    targetLine += below ? 1 : -1;
+  }
+  if (targetLine < 0 || targetLine >= document.lineCount) return offset;
+  final targetColumn = (preferredColumn ?? position.column).clamp(
+    0,
+    document.lineLength(targetLine),
+  );
+  return document.offsetForPosition(
+    TextPosition(line: targetLine, column: targetColumn),
+  );
+}
 
 /// Maps each range through [transform] and rebuilds the set.
 ///

@@ -838,6 +838,9 @@ class TextAreaModel extends ViewComponent {
       >{};
   List<TextDiagnosticRange> _diagnostics = const [];
   TextSelectionSet? _selections;
+  int _selectionGeneration = 0;
+  int _verticalMotionGeneration = -1;
+  Map<TextSelectionRange, int> _verticalGoalColumns = const {};
   List<TextDecorationRange> _decorations = const [];
   List<TextLineDecoration> _lineDecorations = const [];
   TextDocumentChange? _lastDocumentChange;
@@ -1203,15 +1206,13 @@ class TextAreaModel extends ViewComponent {
   bool addCursorVertically({required bool below}) {
     final primary = selections.primary;
     if (primary == null) return false;
-    final position = _document.positionForOffset(primary.activeOffset);
-    final targetLine = position.line + (below ? 1 : -1);
-    if (targetLine < 0 || targetLine >= lineCount) return false;
-    final target = _document.offsetForPosition(
-      TextPosition(
-        line: targetLine,
-        column: position.column.clamp(0, _document.lineLength(targetLine)),
-      ),
+    final target = textOffsetOnAdjacentVisibleLine(
+      document: _document,
+      offset: primary.activeOffset,
+      below: below,
+      isLineHidden: folds.isLineHidden,
     );
+    if (target == primary.activeOffset) return false;
     final before = selections.ranges.length;
     addCursorAtOffset(target);
     return selections.ranges.length > before;
@@ -1905,6 +1906,7 @@ class TextAreaModel extends ViewComponent {
         ? null
         : (clamped.selectionExtent!.column, clamped.selectionExtent!.line);
     _editorStateDirty = true;
+    _selectionGeneration++;
   }
 
   void _collapseLineState(TextPosition cursor) {
@@ -3990,10 +3992,7 @@ class TextAreaModel extends ViewComponent {
 
   /// Moves every active cursor up or down by one visible line.
   bool moveSelectionsVertically({required bool below}) {
-    return _applyMappedEnds(
-      forward: below,
-      mapEnd: (offset, _) => _offsetOnAdjacentLine(offset, below: below),
-    );
+    return _applyVerticalMappedEnds(below: below);
   }
 
   /// Extends every selection's end by one grapheme.
@@ -4032,11 +4031,7 @@ class TextAreaModel extends ViewComponent {
   /// Extends every selection's end up or down by one visible line.
   bool extendSelectionsVertically({required bool below}) {
     _refreshDocumentSnapshot();
-    return _applyMappedEnds(
-      forward: below,
-      extend: true,
-      mapEnd: (offset, _) => _offsetOnAdjacentLine(offset, below: below),
-    );
+    return _applyVerticalMappedEnds(below: below, extend: true);
   }
 
   bool _applyMappedEnds({
@@ -4044,6 +4039,7 @@ class TextAreaModel extends ViewComponent {
     bool extend = false,
     required int Function(int endOffset, TextSelectionRange range) mapEnd,
   }) {
+    _invalidateVerticalMotion();
     final current = selections;
     if (_selections == null) {
       final currentOffset = cursorOffset;
@@ -4074,24 +4070,82 @@ class TextAreaModel extends ViewComponent {
     return true;
   }
 
+  bool _applyVerticalMappedEnds({required bool below, bool extend = false}) {
+    final current = selections;
+    final previousGoals = _verticalMotionGeneration == _selectionGeneration
+        ? _verticalGoalColumns
+        : const <TextSelectionRange, int>{};
+    if (_selections == null) {
+      final currentRange = current.primary!;
+      final currentOffset = cursorOffset;
+      final position = _document.positionForOffset(currentOffset);
+      final preferredColumn = previousGoals[currentRange] ?? position.column;
+      final nextOffset = textOffsetOnAdjacentVisibleLine(
+        document: _document,
+        offset: currentOffset,
+        below: below,
+        preferredColumn: preferredColumn,
+        isLineHidden: folds.isLineHidden,
+      );
+      if (nextOffset == currentOffset) return false;
+      final nextPosition = _document.positionForOffset(nextOffset);
+      if (extend) {
+        _selectLineState(
+          base: _currentSelectionBasePosition() ?? _currentCursorPosition(),
+          extent: nextPosition,
+          cursor: nextPosition,
+        );
+      } else {
+        _moveLineCursor(nextPosition);
+      }
+      _lastDocumentChange = null;
+      _syncCoreState();
+      _verticalGoalColumns = <TextSelectionRange, int>{
+        selections.primary!: preferredColumn,
+      };
+      _verticalMotionGeneration = _selectionGeneration;
+      return true;
+    }
+
+    final goalsByActiveOffset = <int, int>{};
+    final next = mapSelectionEnds(
+      current,
+      forward: below,
+      extend: extend,
+      mapEnd: (offset, range) {
+        final position = _document.positionForOffset(offset);
+        final preferredColumn = previousGoals[range] ?? position.column;
+        final nextOffset = textOffsetOnAdjacentVisibleLine(
+          document: _document,
+          offset: offset,
+          below: below,
+          preferredColumn: preferredColumn,
+          isLineHidden: folds.isLineHidden,
+        );
+        goalsByActiveOffset[nextOffset] = preferredColumn;
+        return nextOffset;
+      },
+    );
+    if (identical(next, current)) return false;
+    setSelections(next);
+    _verticalGoalColumns = Map<TextSelectionRange, int>.unmodifiable({
+      for (final range in selections.ranges)
+        range:
+            goalsByActiveOffset[range.activeOffset] ??
+            _document.positionForOffset(range.activeOffset).column,
+    });
+    _verticalMotionGeneration = _selectionGeneration;
+    return true;
+  }
+
+  void _invalidateVerticalMotion() {
+    _verticalMotionGeneration = -1;
+    _verticalGoalColumns = const {};
+  }
+
   bool _matchesMovementBinding(Key key, KeyBinding binding) {
     return key.matchesSingle(binding) ||
         (key.shift && key.copyWith(shift: false).matchesSingle(binding));
-  }
-
-  int _offsetOnAdjacentLine(int offset, {required bool below}) {
-    final position = _document.positionForOffset(offset);
-    var targetLine = position.line + (below ? 1 : -1);
-    while (targetLine >= 0 &&
-        targetLine < lineCount &&
-        folds.isLineHidden(targetLine)) {
-      targetLine += below ? 1 : -1;
-    }
-    if (targetLine < 0 || targetLine >= lineCount) return offset;
-    final column = position.column.clamp(0, _document.lineLength(targetLine));
-    return _document.offsetForPosition(
-      TextPosition(line: targetLine, column: column),
-    );
   }
 
   /// Recomputes indent folds and keeps collapse state that still applies.

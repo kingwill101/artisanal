@@ -147,9 +147,9 @@ Construction normalizes bounds and merges overlapping or touching ranges.
 `TextSelectionRange` retains direction separately: `anchorOffset` is fixed,
 `activeOffset` moves, and `isReversed` reports whether the active edge is the
 lower bound. Use `TextSelectionRange.directional` when constructing from
-anchor/active offsets. Use `primary` for status displays and provider requests. Use
-`applyInsertion`/`applyDeletion` when maintaining selection state outside an
-integrated editor.
+anchor/active offsets. Use `primary` for status displays and provider requests.
+Use `applyInsertion`/`applyDeletion` when maintaining selection state outside
+an integrated editor.
 
 For direct list-based transformations,
 `insertTextAtEachSelection` and the other multi-range helpers apply edits in
@@ -171,13 +171,20 @@ The range helpers are:
 - `mapSelectionRanges`, which transforms every complete range and preserves
   the primary selection;
 - `mapSelectionEnds`, which moves or extends every range's active edge while
-  preserving its anchor.
+  preserving its anchor;
+- `textOffsetOnAdjacentVisibleLine`, which resolves fold-aware vertical
+  movement and accepts a preferred column retained by the host.
 
 When `mapSelectionEnds` moves instead of extending, a directional motion first
 collapses an existing selection toward that direction. This is the usual arrow
 key behavior and applies identically to a single selection and a selection set.
 Repeated backward extension remains backward, and crossing the anchor changes
 direction without changing the anchor.
+
+For vertical movement, capture the cursor column at the start of a movement
+sequence and pass it back as `preferredColumn`. Short lines clamp the resulting
+offset without replacing that preference, so a later long line restores the
+intended column. Reset the preference after horizontal movement or editing.
 
 A host can package a structural motion as an `EditorRangeResolver` and apply it
 to every selection rather than duplicating single- and multi-cursor paths.

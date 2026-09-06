@@ -724,6 +724,101 @@ void main() {
       );
     });
 
+    test('vertical movement retains and resets the preferred column', () {
+      final model = TextAreaModel()
+        ..setText('abcdef\nxy\nabcdef', recordHistory: false)
+        ..setCursor(0, 5);
+
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (1, 2));
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (2, 5));
+      expect(
+        model.executeCommand(EditorCommandIds.cursorUp),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (1, 2));
+
+      expect(
+        model.executeCommand(EditorCommandIds.cursorLeft),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(
+        model.executeCommand(EditorCommandIds.cursorUp),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (0, 1));
+    });
+
+    test('editing resets the preferred vertical column', () {
+      final model = TextAreaModel()
+        ..setText('abcdef\nxy\nabcdef', recordHistory: false)
+        ..setCursor(0, 5);
+
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(
+        model.executeCommand(EditorCommandIds.insertText, argument: '!'),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (1, 3));
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (2, 3));
+    });
+
+    test('vertical movement retains a preferred column for every cursor', () {
+      final model = TextAreaModel()
+        ..setText('abcdef\nxy\nabcdef\nxy', recordHistory: false);
+      final document = model.document;
+      model.setSelections(
+        TextSelectionSet([
+          TextSelectionRange(
+            startOffset: document.offsetForPosition(
+              const TextPosition(line: 0, column: 5),
+            ),
+            endOffset: document.offsetForPosition(
+              const TextPosition(line: 0, column: 5),
+            ),
+          ),
+          TextSelectionRange(
+            startOffset: document.offsetForPosition(
+              const TextPosition(line: 1, column: 1),
+            ),
+            endOffset: document.offsetForPosition(
+              const TextPosition(line: 1, column: 1),
+            ),
+          ),
+        ]),
+      );
+
+      for (var i = 0; i < 2; i++) {
+        expect(
+          model.executeCommand(EditorCommandIds.cursorDown),
+          EditorCommandDispatchResult.handled,
+        );
+      }
+
+      expect(
+        model.selections.ranges
+            .map(
+              (range) => model.document.positionForOffset(range.activeOffset),
+            )
+            .map((position) => (position.line, position.column)),
+        [(2, 5), (3, 1)],
+      );
+    });
+
     test('line commands are atomic and duplicate below the source line', () {
       final model = TextAreaModel()
         ..setText('a\nb\nc', recordHistory: false)

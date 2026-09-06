@@ -2,6 +2,63 @@ import 'package:artisanal/editor_core.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('textOffsetOnAdjacentVisibleLine', () {
+    test('restores a preferred column after crossing a short line', () {
+      final document = TextDocument(text: 'abcdef\nxy\nabcdef');
+      final start = document.offsetForPosition(
+        const TextPosition(line: 0, column: 5),
+      );
+
+      final shortLine = textOffsetOnAdjacentVisibleLine(
+        document: document,
+        offset: start,
+        below: true,
+        preferredColumn: 5,
+      );
+      final restored = textOffsetOnAdjacentVisibleLine(
+        document: document,
+        offset: shortLine,
+        below: true,
+        preferredColumn: 5,
+      );
+
+      expect(
+        document.positionForOffset(shortLine),
+        const TextPosition(line: 1, column: 2),
+      );
+      expect(
+        document.positionForOffset(restored),
+        const TextPosition(line: 2, column: 5),
+      );
+    });
+
+    test('skips hidden lines and stops at document boundaries', () {
+      final document = TextDocument(text: 'ab\nhidden\ncd');
+      final start = document.offsetForPosition(
+        const TextPosition(line: 0, column: 1),
+      );
+      final moved = textOffsetOnAdjacentVisibleLine(
+        document: document,
+        offset: start,
+        below: true,
+        isLineHidden: (line) => line == 1,
+      );
+
+      expect(
+        document.positionForOffset(moved),
+        const TextPosition(line: 2, column: 1),
+      );
+      expect(
+        textOffsetOnAdjacentVisibleLine(
+          document: document,
+          offset: moved,
+          below: true,
+        ),
+        moved,
+      );
+    });
+  });
+
   group('mapSelectionRanges', () {
     test('maps every range and preserves the primary range', () {
       final selections = TextSelectionSet(const [
