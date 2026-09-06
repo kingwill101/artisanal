@@ -881,6 +881,17 @@ class TextAreaModel extends ViewComponent {
   bool get isDirty => value != _savedValue;
   bool get hasSelection => _hasSelection();
 
+  /// Limits for search, decorations, completions, and syntax work.
+  EditorWorkBudget workBudget = const EditorWorkBudget();
+
+  /// Feature recommendations for the current document.
+  EditorWorkAssessment get workAssessment => workBudget.assess(_document);
+
+  bool _searchTruncated = false;
+
+  /// Whether the current search stopped at [EditorWorkBudget.maxSearchResults].
+  bool get searchTruncated => _searchTruncated;
+
   /// Active normalized selections. A single legacy cursor is returned when
   /// multi-cursor mode is inactive.
   TextSelectionSet get selections {
@@ -1240,8 +1251,13 @@ class TextAreaModel extends ViewComponent {
 
   /// Starts or incrementally refreshes a grapheme-aware search session.
   TextSearchResult startSearch(TextSearchQuery query) {
-    final result = findTextSearchMatches(_document, query);
+    final result = findTextSearchMatches(
+      _document,
+      query,
+      maxResults: workAssessment.maxSearchResults,
+    );
     _searchError = result.error;
+    _searchTruncated = result.truncated;
     _searchSession = TextSearchSession(query: query, matches: result.matches);
     setHighlights(
       result.matches.map(
@@ -1258,6 +1274,7 @@ class TextAreaModel extends ViewComponent {
   void closeSearch() {
     _searchSession = null;
     _searchError = null;
+    _searchTruncated = false;
     clearHighlights();
   }
 
@@ -1354,6 +1371,14 @@ class TextAreaModel extends ViewComponent {
     String? language,
     bool force = false,
   }) {
+    if (!force && !workAssessment.allowSynchronousSyntax) {
+      return session.snapshot ??
+          TextSyntaxSnapshot<State>(
+            decorations: decorationsForLayer(textSyntaxDecorationLayerKey),
+            language: language ?? session.language,
+            document: _document,
+          );
+    }
     final snapshot = session.syncDocument(
       _document,
       language: language,
@@ -1406,10 +1431,14 @@ class TextAreaModel extends ViewComponent {
     int priority = textDefaultDecorationLayerPriority,
   }) {
     _refreshDocumentSnapshot();
-    final normalized = decorations
+    final maxDecorations = workAssessment.maxDecorations;
+    var normalized = decorations
         .map((range) => range.normalized().clamp(_document.length))
         .where((range) => !range.isEmpty)
         .toList(growable: false);
+    if (normalized.length > maxDecorations) {
+      normalized = normalized.sublist(0, maxDecorations);
+    }
 
     final existingLayer = _decorationLayers[layerKey];
     if (normalized.isEmpty) {
@@ -2439,42 +2468,10 @@ class TextAreaModel extends ViewComponent {
   }
 
   /// Indents the selected lines, or the current line if there is no selection.
-  bool indentLines({int width = 2}) {
-    return _runEditFrame(() {
-      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textIndentLinesDocument(
-        document: _document,
-        state: _currentLineStateSnapshot(),
-        width: width,
-      );
-      if (!result.changed) {
-        return false;
-      }
-
-      _recordUndoSnapshot();
-      _applyOffsetCommandResult(result);
-      return true;
-    });
-  }
+  bool indentLines({int width = 2}) => indentAtSelections(width: width);
 
   /// Outdents the selected lines, or the current line if there is no selection.
-  bool outdentLines({int width = 2}) {
-    return _runEditFrame(() {
-      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textOutdentLinesDocument(
-        document: _document,
-        state: _currentLineStateSnapshot(),
-        width: width,
-      );
-      if (!result.changed) {
-        return false;
-      }
-
-      _recordUndoSnapshot();
-      _applyOffsetCommandResult(result);
-      return true;
-    });
-  }
+  bool outdentLines({int width = 2}) => outdentAtSelections(width: width);
 
   /// Moves the selected lines, or the current line, one row upward.
   bool moveLinesUp() {
@@ -3033,6 +3030,103 @@ class TextAreaModel extends ViewComponent {
         isEnabled: (model) => model.diagnostics.isNotEmpty,
         execute: (model) => model.selectPreviousDiagnostic(),
       ),
+      EditorCommand(
+        id: EditorCommandIds.cursorUp,
+        label: 'Move Cursors Up',
+        category: 'Cursor',
+        execute: (model) => model.moveSelectionsVertically(below: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.cursorDown,
+        label: 'Move Cursors Down',
+        category: 'Cursor',
+        execute: (model) => model.moveSelectionsVertically(below: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectLeft,
+        label: 'Extend Selections Left',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsHorizontally(forward: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectRight,
+        label: 'Extend Selections Right',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsHorizontally(forward: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectUp,
+        label: 'Extend Selections Up',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsVertically(below: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectDown,
+        label: 'Extend Selections Down',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsVertically(below: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectWordLeft,
+        label: 'Extend Selections One Word Left',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsByWord(forward: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectWordRight,
+        label: 'Extend Selections One Word Right',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsByWord(forward: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectLineStart,
+        label: 'Extend Selections to Line Start',
+        category: 'Selection',
+        execute: (model) =>
+            model.extendSelectionsToLineBoundary(forward: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectLineEnd,
+        label: 'Extend Selections to Line End',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsToLineBoundary(forward: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.indentLines,
+        label: 'Indent Lines',
+        category: 'Edit',
+        execute: (model) => model.indentLines(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.outdentLines,
+        label: 'Outdent Lines',
+        category: 'Edit',
+        execute: (model) => model.outdentLines(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.deleteLine,
+        label: 'Delete Lines',
+        category: 'Edit',
+        execute: (model) => model.deleteLinesAtSelections(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.duplicateLine,
+        label: 'Duplicate Lines',
+        category: 'Edit',
+        execute: (model) => model.duplicateLinesAtSelections(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.moveLineUp,
+        label: 'Move Lines Up',
+        category: 'Edit',
+        execute: (model) => model.moveLinesAtSelections(down: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.moveLineDown,
+        label: 'Move Lines Down',
+        category: 'Edit',
+        execute: (model) => model.moveLinesAtSelections(down: true),
+      ),
     ]);
   }
 
@@ -3339,9 +3433,11 @@ class TextAreaModel extends ViewComponent {
           return (this, null);
         case TextAreaCompletionMsg(:final result):
           if (result == null) return (this, null);
-          _completionItems = List<EditorCompletionItem>.unmodifiable(
-            result.items,
-          );
+          final maxItems = workAssessment.maxCompletionItems;
+          final items = result.items.length > maxItems
+              ? result.items.take(maxItems).toList(growable: false)
+              : result.items;
+          _completionItems = List<EditorCompletionItem>.unmodifiable(items);
           _completionIndex = _completionItems.isEmpty ? -1 : 0;
           _completionError = null;
           return (this, null);
@@ -3500,7 +3596,9 @@ class TextAreaModel extends ViewComponent {
 
           // navigation
           if (key.matchesSingle(keyMap.wordForward)) {
-            if (hasMultipleSelections) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectWordRight);
+            } else if (hasMultipleSelections) {
               executeCommand(EditorCommandIds.cursorWordRight);
             } else {
               _moveWordForward();
@@ -3508,7 +3606,9 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.wordBackward)) {
-            if (hasMultipleSelections) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectWordLeft);
+            } else if (hasMultipleSelections) {
               executeCommand(EditorCommandIds.cursorWordLeft);
             } else {
               _moveWordBackward();
@@ -3516,7 +3616,9 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.lineStart)) {
-            if (hasMultipleSelections) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectLineStart);
+            } else if (hasMultipleSelections) {
               executeCommand(EditorCommandIds.cursorLineStart);
             } else {
               _cursorStartOfLine();
@@ -3524,7 +3626,9 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.lineEnd)) {
-            if (hasMultipleSelections) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectLineEnd);
+            } else if (hasMultipleSelections) {
               executeCommand(EditorCommandIds.cursorLineEnd);
             } else {
               _cursorEndOfLine();
@@ -3540,7 +3644,9 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.characterForward)) {
-            if (hasMultipleSelections) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectRight);
+            } else if (hasMultipleSelections) {
               executeCommand(EditorCommandIds.cursorRight);
             } else {
               _moveRight();
@@ -3548,7 +3654,9 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.characterBackward)) {
-            if (hasMultipleSelections) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectLeft);
+            } else if (hasMultipleSelections) {
               executeCommand(EditorCommandIds.cursorLeft);
             } else {
               _moveLeft();
@@ -3556,11 +3664,23 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.lineNext)) {
-            _lineNext();
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectDown);
+            } else if (hasMultipleSelections) {
+              executeCommand(EditorCommandIds.cursorDown);
+            } else {
+              _lineNext();
+            }
             return (this, null);
           }
           if (key.matchesSingle(keyMap.linePrevious)) {
-            _linePrev();
+            if (key.shift) {
+              executeCommand(EditorCommandIds.selectUp);
+            } else if (hasMultipleSelections) {
+              executeCommand(EditorCommandIds.cursorUp);
+            } else {
+              _linePrev();
+            }
             return (this, null);
           }
           if (key.matchesSingle(keyMap.transposeCharacterBackward)) {
@@ -3633,6 +3753,15 @@ class TextAreaModel extends ViewComponent {
               _capitalizeWordForward();
               return (this, null);
             }
+          }
+
+          if (key.type == KeyType.tab) {
+            if (key.shift) {
+              executeCommand(EditorCommandIds.outdentLines);
+            } else {
+              executeCommand(EditorCommandIds.indentLines);
+            }
+            return (this, null);
           }
 
           if (key.type == KeyType.space) {
@@ -3949,6 +4078,366 @@ class TextAreaModel extends ViewComponent {
     }
     setSelections(TextSelectionSet(moved, primaryOffset: primaryOffset));
     return true;
+  }
+
+  /// Moves every active cursor up or down by one line, preserving column.
+  bool moveSelectionsVertically({required bool below}) {
+    return _mapSelections(
+      requireMultiple: true,
+      transform: (range) {
+        final offset = range.isCollapsed
+            ? _offsetOnAdjacentLine(range.endOffset, below: below)
+            : (below ? range.endOffset : range.startOffset);
+        return TextSelectionRange(startOffset: offset, endOffset: offset);
+      },
+    );
+  }
+
+  /// Extends every selection's end by one grapheme.
+  bool extendSelectionsHorizontally({required bool forward}) {
+    return _mapSelections(
+      requireMultiple: false,
+      transform: (range) {
+        final end = (range.endOffset + (forward ? 1 : -1)).clamp(0, length);
+        return TextSelectionRange(
+          startOffset: range.startOffset,
+          endOffset: end,
+        );
+      },
+    );
+  }
+
+  /// Extends every selection's end by one word.
+  bool extendSelectionsByWord({required bool forward}) {
+    _refreshDocumentSnapshot();
+    return _mapSelections(
+      requireMultiple: false,
+      transform: (range) {
+        final end = textMoveByWord(
+          document: _document,
+          state: TextOffsetStateSnapshot.collapsed(
+            cursorOffset: range.endOffset,
+          ),
+          forward: forward,
+        ).cursorOffset;
+        return TextSelectionRange(
+          startOffset: range.startOffset,
+          endOffset: end,
+        );
+      },
+    );
+  }
+
+  /// Extends every selection's end to its line boundary.
+  bool extendSelectionsToLineBoundary({required bool forward}) {
+    _refreshDocumentSnapshot();
+    return _mapSelections(
+      requireMultiple: false,
+      transform: (range) {
+        final end = _lineBoundaryOffset(range.endOffset, forward: forward);
+        return TextSelectionRange(
+          startOffset: range.startOffset,
+          endOffset: end,
+        );
+      },
+    );
+  }
+
+  /// Extends every selection's end up or down by one line.
+  bool extendSelectionsVertically({required bool below}) {
+    _refreshDocumentSnapshot();
+    return _mapSelections(
+      requireMultiple: false,
+      transform: (range) {
+        final end = _offsetOnAdjacentLine(range.endOffset, below: below);
+        return TextSelectionRange(
+          startOffset: range.startOffset,
+          endOffset: end,
+        );
+      },
+    );
+  }
+
+  bool _mapSelections({
+    required bool requireMultiple,
+    required TextSelectionRange Function(TextSelectionRange range) transform,
+  }) {
+    final active = requireMultiple ? _selections : selections;
+    if (active == null || active.ranges.isEmpty) return false;
+    if (requireMultiple && active.ranges.length < 2) return false;
+    final moved = <TextSelectionRange>[];
+    var primaryOffset = active.primary!.endOffset;
+    var changed = false;
+    for (final range in active.ranges) {
+      final next = transform(range);
+      changed = changed || next != range;
+      moved.add(next);
+      if (range == active.primary) primaryOffset = next.endOffset;
+    }
+    if (!changed) return false;
+    setSelections(TextSelectionSet(moved, primaryOffset: primaryOffset));
+    return true;
+  }
+
+  int _offsetOnAdjacentLine(int offset, {required bool below}) {
+    final position = _document.positionForOffset(offset);
+    final targetLine = position.line + (below ? 1 : -1);
+    if (targetLine < 0 || targetLine >= lineCount) return offset;
+    final column = position.column.clamp(0, _document.lineLength(targetLine));
+    return _document.offsetForPosition(
+      TextPosition(line: targetLine, column: column),
+    );
+  }
+
+  Set<int> _selectedLineIndexes() {
+    final lines = <int>{};
+    for (final range in selections.ranges) {
+      final start = _document.positionForOffset(range.startOffset).line;
+      final endOffset = range.isCollapsed
+          ? range.endOffset
+          : math.max(range.startOffset, range.endOffset - 1);
+      final end = _document.positionForOffset(endOffset).line;
+      final from = math.min(start, end);
+      final to = math.max(start, end);
+      for (var line = from; line <= to; line++) {
+        lines.add(line);
+      }
+    }
+    return lines;
+  }
+
+  /// Indents every line touched by an active cursor or selection.
+  bool indentAtSelections({int width = 2}) {
+    final pad = List<String>.filled(width < 1 ? 1 : width, ' ');
+    return _editSelectedLineStarts((lineText) => [...pad, ...lineText]);
+  }
+
+  /// Outdents every line touched by an active cursor or selection.
+  bool outdentAtSelections({int width = 2}) {
+    final indentWidth = width < 1 ? 1 : width;
+    return _editSelectedLineStarts((lineText) {
+      final removal = _leadingIndentRemovalCount(lineText, indentWidth);
+      return removal == 0 ? lineText : lineText.sublist(removal);
+    });
+  }
+
+  bool _editSelectedLineStarts(
+    List<String> Function(List<String> lineGraphemes) transform,
+  ) {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      _refreshDocumentSnapshot();
+      final lines = _selectedLineIndexes().toList()
+        ..sort((a, b) => b.compareTo(a));
+      if (lines.isEmpty) return false;
+      final graphemes = _document.flattenWithNewlines();
+      var next = selections;
+      var changed = false;
+      for (final line in lines) {
+        final start = _document.lineStartOffset(line);
+        final end = _document.lineEndOffset(line);
+        final current = graphemes.sublist(start, end);
+        final updated = transform(current);
+        if (_sameGraphemes(current, updated)) continue;
+        if (!changed) _recordUndoSnapshot();
+        graphemes.replaceRange(start, end, updated);
+        final delta = updated.length - current.length;
+        next = delta > 0
+            ? next.applyInsertion(offset: start, length: delta)
+            : next.applyDeletion(startOffset: start, endOffset: start - delta);
+        changed = true;
+      }
+      if (!changed) return false;
+      _replaceText(graphemes.join());
+      setSelections(next);
+      return true;
+    });
+  }
+
+  bool _sameGraphemes(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
+  }
+
+  int _leadingIndentRemovalCount(List<String> graphemes, int width) {
+    var count = 0;
+    var removed = 0;
+    for (final grapheme in graphemes) {
+      if (count >= width) break;
+      if (grapheme == ' ') {
+        count++;
+        removed++;
+      } else if (grapheme == '\t') {
+        count = width;
+        removed++;
+      } else {
+        break;
+      }
+    }
+    return removed;
+  }
+
+  /// Deletes every line touched by an active cursor or selection.
+  bool deleteLinesAtSelections() {
+    return _runEditFrame(() {
+      _beginHistoryAction(
+        _TextAreaHistoryAction.deleteForward,
+        breakChain: true,
+      );
+      _refreshDocumentSnapshot();
+      final lines = _selectedLineIndexes().toList()
+        ..sort((a, b) => b.compareTo(a));
+      if (lines.isEmpty) return false;
+      final graphemes = _document.flattenWithNewlines();
+      var next = selections;
+      var changed = false;
+      for (final line in lines) {
+        final start = _document.lineStartOffset(line);
+        final end = _document.lineEndOffset(line, includeTrailingNewline: true);
+        if (start == end) continue;
+        if (!changed) _recordUndoSnapshot();
+        graphemes.replaceRange(start, end, const <String>[]);
+        next = next.applyDeletion(startOffset: start, endOffset: end);
+        changed = true;
+      }
+      if (!changed) return false;
+      _replaceText(graphemes.isEmpty ? '' : graphemes.join());
+      setSelections(next);
+      return true;
+    });
+  }
+
+  /// Duplicates every touched line below the original.
+  bool duplicateLinesAtSelections() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      _refreshDocumentSnapshot();
+      final lines = _selectedLineIndexes().toList()
+        ..sort((a, b) => b.compareTo(a));
+      if (lines.isEmpty) return false;
+      _recordUndoSnapshot();
+      final graphemes = _document.flattenWithNewlines();
+      var next = selections;
+      var changed = false;
+      for (final line in lines) {
+        final start = _document.lineStartOffset(line);
+        final end = _document.lineEndOffset(line);
+        final content = graphemes.sublist(start, end);
+        final insertion = ['\n', ...content];
+        graphemes.replaceRange(end, end, insertion);
+        next = next.applyInsertion(offset: end, length: insertion.length);
+        changed = true;
+      }
+      if (!changed) return false;
+      _replaceText(graphemes.join());
+      setSelections(next);
+      return true;
+    });
+  }
+
+  /// Moves every touched line up or down by one row, keeping contiguous runs
+  /// together.
+  bool moveLinesAtSelections({required bool down}) {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      _refreshDocumentSnapshot();
+      final indexes = _selectedLineIndexes().toList()..sort();
+      if (indexes.isEmpty) return false;
+      final runs = _contiguousLineRuns(indexes);
+      final lines = [for (var i = 0; i < lineCount; i++) _document.lineAt(i)];
+      var changed = false;
+      final ordered = down ? runs.reversed : runs;
+      for (final run in ordered) {
+        if (down) {
+          if (run.end >= lines.length - 1) continue;
+          final block = lines.sublist(run.start, run.end + 1);
+          lines.removeRange(run.start, run.end + 1);
+          lines.insertAll(run.start + 1, block);
+          changed = true;
+        } else {
+          if (run.start <= 0) continue;
+          final block = lines.sublist(run.start, run.end + 1);
+          lines.removeRange(run.start, run.end + 1);
+          lines.insertAll(run.start - 1, block);
+          changed = true;
+        }
+      }
+      if (!changed) return false;
+      final delta = down ? 1 : -1;
+      final mapped = [
+        for (final range in selections.ranges)
+          (
+            start: _document.positionForOffset(range.startOffset),
+            end: _document.positionForOffset(range.endOffset),
+          ),
+      ];
+      final primaryIndex = selections.ranges.indexOf(selections.primary!);
+      _recordUndoSnapshot();
+      // A trailing newline is represented by the final empty document line,
+      // so joining all logical lines already preserves it.
+      _replaceText(lines.join('\n'));
+      TextSelectionRange relocate(
+        ({TextPosition start, TextPosition end}) positions,
+      ) {
+        final startLine = (positions.start.line + delta).clamp(
+          0,
+          lineCount - 1,
+        );
+        final endLine = (positions.end.line + delta).clamp(0, lineCount - 1);
+        return TextSelectionRange(
+          startOffset: _document.offsetForPosition(
+            TextPosition(
+              line: startLine,
+              column: positions.start.column.clamp(
+                0,
+                _document.lineLength(startLine),
+              ),
+            ),
+          ),
+          endOffset: _document.offsetForPosition(
+            TextPosition(
+              line: endLine,
+              column: positions.end.column.clamp(
+                0,
+                _document.lineLength(endLine),
+              ),
+            ),
+          ),
+        );
+      }
+
+      final relocated = [for (final positions in mapped) relocate(positions)];
+      setSelections(
+        TextSelectionSet(
+          relocated,
+          primaryOffset: relocated.isEmpty
+              ? 0
+              : relocated[primaryIndex].endOffset,
+        ),
+      );
+      return true;
+    });
+  }
+
+  List<({int start, int end})> _contiguousLineRuns(List<int> sortedLines) {
+    if (sortedLines.isEmpty) return const [];
+    final runs = <({int start, int end})>[];
+    var start = sortedLines.first;
+    var end = start;
+    for (var i = 1; i < sortedLines.length; i++) {
+      if (sortedLines[i] == end + 1) {
+        end = sortedLines[i];
+      } else {
+        runs.add((start: start, end: end));
+        start = sortedLines[i];
+        end = start;
+      }
+    }
+    runs.add((start: start, end: end));
+    return runs;
   }
 
   /// Deletes one grapheme beside every cursor, or each selected range.

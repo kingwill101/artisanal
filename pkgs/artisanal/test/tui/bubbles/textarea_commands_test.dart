@@ -559,5 +559,99 @@ void main() {
       expect(model.undo(), isTrue);
       expect(model.value, 'first line\nsecond line\nthird');
     });
+
+    test('extends selections and moves multiple cursors vertically', () {
+      final model = TextAreaModel()
+        ..setText('abc\ndef\nghi', recordHistory: false)
+        ..setSelections(
+          TextSelectionSet([
+            const TextSelectionRange(startOffset: 1, endOffset: 1),
+            const TextSelectionRange(startOffset: 5, endOffset: 5),
+          ], primaryOffset: 5),
+        );
+
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.selections.ranges.map((range) => range.endOffset), [5, 9]);
+      expect(
+        model.executeCommand(EditorCommandIds.selectRight),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(
+        model.selections.ranges,
+        contains(const TextSelectionRange(startOffset: 5, endOffset: 6)),
+      );
+    });
+
+    test('line commands are atomic and duplicate below the source line', () {
+      final model = TextAreaModel()
+        ..setText('a\nb\nc', recordHistory: false)
+        ..setSelections(
+          TextSelectionSet([
+            const TextSelectionRange(startOffset: 2, endOffset: 2),
+          ], primaryOffset: 2),
+        );
+
+      expect(
+        model.executeCommand(EditorCommandIds.duplicateLine),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'a\nb\nb\nc');
+      expect(model.undo(), isTrue);
+      expect(model.value, 'a\nb\nc');
+
+      expect(
+        model.executeCommand(EditorCommandIds.moveLineUp),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'b\na\nc');
+      expect(model.undo(), isTrue);
+      expect(model.value, 'a\nb\nc');
+    });
+
+    test('moving lines preserves trailing newline and primary cursor', () {
+      final model = TextAreaModel()
+        ..setText('a\nb\nc\nd\n', recordHistory: false)
+        ..setSelections(
+          TextSelectionSet([
+            const TextSelectionRange(startOffset: 2, endOffset: 2),
+            const TextSelectionRange(startOffset: 6, endOffset: 6),
+          ], primaryOffset: 2),
+        );
+
+      expect(model.moveLinesAtSelections(down: false), isTrue);
+      expect(model.value, 'b\na\nd\nc\n');
+      expect(model.selections.primary?.endOffset, 0);
+      expect(model.undo(), isTrue);
+      expect(model.value, 'a\nb\nc\nd\n');
+    });
+
+    test('work budgets cap search and completion materialization', () async {
+      var model = TextAreaModel()
+        ..workBudget = const EditorWorkBudget(
+          maxSearchResults: 2,
+          maxCompletionItems: 2,
+        )
+        ..setText('x x x', recordHistory: false);
+
+      final search = model.startSearch(const TextSearchQuery(pattern: 'x'));
+      expect(search.matches, hasLength(2));
+      expect(model.searchTruncated, isTrue);
+
+      final msg = await model
+          .requestCompletions(
+            const _CompletionProvider([
+              EditorCompletionItem(label: 'one', insertText: 'one'),
+              EditorCompletionItem(label: 'two', insertText: 'two'),
+              EditorCompletionItem(label: 'three', insertText: 'three'),
+            ]),
+          )
+          .execute();
+      final (next, _) = model.update(msg!);
+      model = next;
+      expect(model.completionItems, hasLength(2));
+    });
   });
 }
