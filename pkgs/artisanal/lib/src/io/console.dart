@@ -19,6 +19,7 @@ import 'console_context.dart';
 import 'console_format.dart';
 import 'console_operations.dart';
 import 'console_presentation.dart';
+import 'operation_results.dart';
 import 'output_theme.dart';
 import 'validators.dart';
 import '../terminal/terminal_io_impl.dart' show StdioTerminal;
@@ -45,6 +46,8 @@ import '../tui/bubbles/number_input.dart' show NumberInputModel;
 import '../tui/bubbles/suggest.dart' show SuggestModel, SuggestStyles;
 import '../tui/program.dart' show Program;
 
+export 'operation_results.dart';
+
 /// Callback for writing a complete line to output.
 typedef WriteLine = void Function(String line);
 
@@ -56,18 +59,6 @@ typedef ReadLine = String? Function();
 
 /// Callback for reading secret/password input without echo.
 typedef SecretReader = String Function(String prompt, {String? fallback});
-
-/// Result of a task operation.
-enum TaskResult {
-  /// Task completed successfully.
-  success,
-
-  /// Task failed.
-  failure,
-
-  /// Task was skipped.
-  skipped,
-}
 
 /// Style presets for tree rendering.
 enum TreeStyle {
@@ -85,64 +76,6 @@ enum TreeStyle {
 
   /// Arrow-style list (→ for all items).
   arrow,
-}
-
-/// Result of a task group operation.
-class TaskGroupResult {
-  /// Creates a task group result.
-  const TaskGroupResult({
-    required this.completed,
-    required this.failed,
-    required this.skipped,
-    this.duration,
-  });
-
-  /// Names of successfully completed tasks.
-  final List<String> completed;
-
-  /// List of (name, error) pairs for failed tasks.
-  final List<(String, Object)> failed;
-
-  /// Names of tasks that were skipped (due to prior failures).
-  final List<String> skipped;
-
-  /// Total duration of the task group execution.
-  final Duration? duration;
-
-  /// Whether all tasks completed successfully.
-  bool get success => failed.isEmpty && skipped.isEmpty;
-
-  /// Total number of tasks.
-  int get total => completed.length + failed.length + skipped.length;
-}
-
-/// Result of a steps workflow operation.
-class StepsResult {
-  /// Creates a steps result.
-  const StepsResult({
-    required this.completed,
-    required this.failed,
-    required this.skipped,
-    this.duration,
-  });
-
-  /// Names of successfully completed steps.
-  final List<String> completed;
-
-  /// List of (name, error) pairs for failed steps.
-  final List<(String, Object)> failed;
-
-  /// Names of steps that were skipped (due to prior failures).
-  final List<String> skipped;
-
-  /// Total duration of the workflow execution.
-  final Duration? duration;
-
-  /// Whether all steps completed successfully.
-  bool get success => failed.isEmpty && skipped.isEmpty;
-
-  /// Total number of steps.
-  int get total => completed.length + failed.length + skipped.length;
 }
 
 /// The main I/O helper for Artisanal-style console output.
