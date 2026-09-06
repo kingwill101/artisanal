@@ -57,7 +57,8 @@
   short lines and resetting the affinity after horizontal movement. Soft-wrap
   mode follows projected visual rows and retains terminal-cell columns;
   Home/End use visual-row boundaries while logical-line commands remain
-  separately dispatchable.
+  separately dispatchable, and Page Up/Page Down move or extend selections by
+  viewport-sized visual-row pages.
 - Added `MemoryEditorDocumentStore` plus a file-backed example store for
   save/recovery workflows.
 - Added a full-screen alternate-buffer `advanced-editor` example with find

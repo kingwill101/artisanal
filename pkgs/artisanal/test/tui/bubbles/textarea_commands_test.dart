@@ -84,6 +84,10 @@ void main() {
           EditorCommandIds.cursorVisualLineEnd,
           EditorCommandIds.selectVisualLineStart,
           EditorCommandIds.selectVisualLineEnd,
+          EditorCommandIds.cursorPageUp,
+          EditorCommandIds.cursorPageDown,
+          EditorCommandIds.selectPageUp,
+          EditorCommandIds.selectPageDown,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -881,6 +885,35 @@ void main() {
         const tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [0x65], ctrl: true)),
       );
       expect((model.line, model.column), (0, 6));
+    });
+
+    test('page keys move and extend by viewport visual rows', () {
+      var model =
+          TextAreaModel(
+              prompt: '',
+              showLineNumbers: false,
+              softWrap: true,
+              width: 4,
+              height: 3,
+            )
+            ..setText('abcdef\nxy\nabcdef\nzz', recordHistory: false)
+            ..setCursor(0, 2)
+            ..focus();
+
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.pageDown)),
+      );
+      expect((model.line, model.column), (2, 2));
+
+      (model, _) = model.update(const tui.KeyMsg(tui.Key(tui.KeyType.pageUp)));
+      expect((model.line, model.column), (0, 2));
+
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.pageDown, shift: true)),
+      );
+      expect((model.line, model.column), (2, 2));
+      expect(model.selectionBase, (line: 0, column: 2));
+      expect(model.selectionExtent, (line: 2, column: 2));
     });
 
     test('line commands are atomic and duplicate below the source line', () {

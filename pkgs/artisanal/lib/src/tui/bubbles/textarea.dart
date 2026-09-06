@@ -478,6 +478,8 @@ class TextAreaKeyMap extends KeyMap {
     KeyBinding? lineEnd,
     KeyBinding? lineNext,
     KeyBinding? linePrevious,
+    KeyBinding? pageUp,
+    KeyBinding? pageDown,
     KeyBinding? insertNewline,
     KeyBinding? deleteBeforeCursor,
     KeyBinding? deleteCharacterForward,
@@ -530,6 +532,10 @@ class TextAreaKeyMap extends KeyMap {
        linePrevious =
            linePrevious ??
            KeyBinding.withHelp(['up', 'ctrl+p'], Arrows.up, 'previous line'),
+       pageUp =
+           pageUp ?? KeyBinding.withHelp(['pageup'], 'pgup', 'previous page'),
+       pageDown =
+           pageDown ?? KeyBinding.withHelp(['pagedown'], 'pgdown', 'next page'),
        insertNewline =
            insertNewline ??
            KeyBinding.withHelp(
@@ -603,6 +609,7 @@ class TextAreaKeyMap extends KeyMap {
       [this.selectAll, this.selectLine],
       [this.lineStart, this.lineEnd],
       [this.linePrevious, this.lineNext],
+      [this.pageUp, this.pageDown],
       [
         this.deleteBeforeCursor,
         this.deleteCharacterForward,
@@ -635,6 +642,8 @@ class TextAreaKeyMap extends KeyMap {
   final KeyBinding lineEnd;
   final KeyBinding lineNext;
   final KeyBinding linePrevious;
+  final KeyBinding pageUp;
+  final KeyBinding pageDown;
   final KeyBinding insertNewline;
   final KeyBinding deleteBeforeCursor;
   final KeyBinding deleteCharacterForward;
@@ -664,6 +673,8 @@ class TextAreaKeyMap extends KeyMap {
     KeyBinding? lineEnd,
     KeyBinding? lineNext,
     KeyBinding? linePrevious,
+    KeyBinding? pageUp,
+    KeyBinding? pageDown,
     KeyBinding? insertNewline,
     KeyBinding? deleteBeforeCursor,
     KeyBinding? deleteCharacterForward,
@@ -693,6 +704,8 @@ class TextAreaKeyMap extends KeyMap {
       lineEnd: lineEnd ?? this.lineEnd,
       lineNext: lineNext ?? this.lineNext,
       linePrevious: linePrevious ?? this.linePrevious,
+      pageUp: pageUp ?? this.pageUp,
+      pageDown: pageDown ?? this.pageDown,
       insertNewline: insertNewline ?? this.insertNewline,
       deleteBeforeCursor: deleteBeforeCursor ?? this.deleteBeforeCursor,
       deleteCharacterForward:
@@ -3086,6 +3099,18 @@ class TextAreaModel extends ViewComponent {
         execute: (model) => model.moveSelectionsVertically(below: true),
       ),
       EditorCommand(
+        id: EditorCommandIds.cursorPageUp,
+        label: 'Move Cursors One Page Up',
+        category: 'Cursor',
+        execute: (model) => model.moveSelectionsByPage(below: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.cursorPageDown,
+        label: 'Move Cursors One Page Down',
+        category: 'Cursor',
+        execute: (model) => model.moveSelectionsByPage(below: true),
+      ),
+      EditorCommand(
         id: EditorCommandIds.selectLeft,
         label: 'Extend Selections Left',
         category: 'Selection',
@@ -3108,6 +3133,18 @@ class TextAreaModel extends ViewComponent {
         label: 'Extend Selections Down',
         category: 'Selection',
         execute: (model) => model.extendSelectionsVertically(below: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectPageUp,
+        label: 'Extend Selections One Page Up',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsByPage(below: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectPageDown,
+        label: 'Extend Selections One Page Down',
+        category: 'Selection',
+        execute: (model) => model.extendSelectionsByPage(below: true),
       ),
       EditorCommand(
         id: EditorCommandIds.selectWordLeft,
@@ -3675,6 +3712,22 @@ class TextAreaModel extends ViewComponent {
             );
             return (this, null);
           }
+          if (_matchesMovementBinding(key, keyMap.pageUp)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectPageUp
+                  : EditorCommandIds.cursorPageUp,
+            );
+            return (this, null);
+          }
+          if (_matchesMovementBinding(key, keyMap.pageDown)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectPageDown
+                  : EditorCommandIds.cursorPageDown,
+            );
+            return (this, null);
+          }
           if (key.matchesSingle(keyMap.transposeCharacterBackward)) {
             _transposeBackward();
             return (this, null);
@@ -4054,6 +4107,11 @@ class TextAreaModel extends ViewComponent {
     return _applyVerticalMappedEnds(below: below);
   }
 
+  /// Moves every active cursor by one viewport page.
+  bool moveSelectionsByPage({required bool below}) {
+    return _applyVerticalMappedEnds(below: below, rows: _pageRowCount);
+  }
+
   /// Extends every selection's end by one grapheme.
   bool extendSelectionsHorizontally({required bool forward}) {
     return _applyMappedEnds(
@@ -4105,6 +4163,15 @@ class TextAreaModel extends ViewComponent {
     return _applyVerticalMappedEnds(below: below, extend: true);
   }
 
+  /// Extends every selection's active edge by one viewport page.
+  bool extendSelectionsByPage({required bool below}) {
+    return _applyVerticalMappedEnds(
+      below: below,
+      extend: true,
+      rows: _pageRowCount,
+    );
+  }
+
   bool _applyMappedEnds({
     required bool forward,
     bool extend = false,
@@ -4141,7 +4208,12 @@ class TextAreaModel extends ViewComponent {
     return true;
   }
 
-  bool _applyVerticalMappedEnds({required bool below, bool extend = false}) {
+  bool _applyVerticalMappedEnds({
+    required bool below,
+    bool extend = false,
+    int rows = 1,
+  }) {
+    if (rows <= 0) return false;
     _refreshEditorStateSnapshot();
     _configureTextView();
     final current = selections;
@@ -4160,6 +4232,7 @@ class TextAreaModel extends ViewComponent {
         currentOffset,
         below: below,
         preferredColumn: preferredColumn,
+        rows: rows,
       );
       if (nextOffset == currentOffset) return false;
       final nextPosition = _document.positionForOffset(nextOffset);
@@ -4194,6 +4267,7 @@ class TextAreaModel extends ViewComponent {
           offset,
           below: below,
           preferredColumn: preferredColumn,
+          rows: rows,
         );
         goalsByActiveOffset[nextOffset] = preferredColumn;
         return nextOffset;
@@ -4229,25 +4303,33 @@ class TextAreaModel extends ViewComponent {
     int offset, {
     required bool below,
     required int preferredColumn,
+    int rows = 1,
   }) {
-    final position = _document.positionForOffset(offset);
-    if (!softWrap) {
-      return textOffsetOnAdjacentVisibleLine(
-        document: _document,
-        offset: offset,
-        below: below,
-        preferredColumn: preferredColumn,
-        isLineHidden: folds.isLineHidden,
-      );
+    var result = offset;
+    for (var row = 0; row < rows; row++) {
+      final position = _document.positionForOffset(result);
+      final next = softWrap
+          ? _textView.cursorOffsetForVisualLineMove(
+              _document,
+              _editorState,
+              lineDelta: below ? 1 : -1,
+              desiredDisplayColumn: preferredColumn,
+              cursor: position,
+            )
+          : textOffsetOnAdjacentVisibleLine(
+              document: _document,
+              offset: result,
+              below: below,
+              preferredColumn: preferredColumn,
+              isLineHidden: folds.isLineHidden,
+            );
+      if (next == result) break;
+      result = next;
     }
-    return _textView.cursorOffsetForVisualLineMove(
-      _document,
-      _editorState,
-      lineDelta: below ? 1 : -1,
-      desiredDisplayColumn: preferredColumn,
-      cursor: position,
-    );
+    return result;
   }
+
+  int get _pageRowCount => _height > 0 ? _height : 1;
 
   int _offsetForVisualLineBoundary(int offset, {required bool forward}) {
     if (!softWrap) return _lineBoundaryOffset(offset, forward: forward);
