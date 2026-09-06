@@ -24,42 +24,44 @@ apps can mix widget screens with lower-level runtime features when needed.
 
 ## How output reaches the terminal
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           Application Layer                             │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                │
-│  │    Console    │  │    Program    │  │ CommandRunner │                │
-│  │  (High-level  │  │   (TUI Elm    │  │   (CLI with   │                │
-│  │     I/O)      │  │ Architecture) │  │  subcommands) │                │
-│  └───────┬───────┘  └───────┬───────┘  └───────────────┘                │
-│          │                  │                                           │
-├──────────┼──────────────────┼───────────────────────────────────────────┤
-│          │    Presentation Layer                                        │
-│  ┌───────▼───────┐  ┌───────▼───────┐  ┌───────────────┐                │
-│  │     Style     │  │    Widgets    │  │    Bubbles    │                │
-│  │  (Lip Gloss   │  │ (Declarative  │  │  (Reusable    │                │
-│  │   styling)    │  │   layouts)    │  │  components)  │                │
-│  └───────┬───────┘  └───────┬───────┘  └───────────────┘                │
-│          │                  │                                           │
-├──────────┼──────────────────┼───────────────────────────────────────────┤
-│          │  Rendering Layer │                                           │
-│          ▼                  ▼                                           │
-│  ┌─────────────────────────────────────┐                                │
-│  │           UV (Ultraviolet)          │                                │
-│  │      Cell-based terminal renderer   │                                │
-│  │  ┌─────────┐ ┌─────────┐ ┌───────┐  │                                │
-│  │  │ Canvas  │ │ Buffer  │ │ Layer │  │                                │
-│  │  └─────────┘ └─────────┘ └───────┘  │                                │
-│  └───────────────────┬─────────────────┘                                │
-│                      │                                                  │
-├──────────────────────┼──────────────────────────────────────────────────┤
-│                      │    Terminal Layer                                │
-│  ┌───────────────────▼─────────────────┐  ┌───────────────┐             │
-│  │        Terminal Abstraction         │  │  Color Profile│             │
-│  │   (Raw mode, ANSI, Input parsing)   │  │   Detection   │             │
-│  └─────────────────────────────────────┘  └───────────────┘             │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph application["Application layer"]
+        console["Console: high-level I/O"]
+        program["Program: TUI Elm Architecture"]
+        runner["CommandRunner: CLI with subcommands"]
+    end
+
+    subgraph presentation["Presentation layer"]
+        style["Style: Lip Gloss styling"]
+        widgets["Widgets: declarative layouts"]
+        bubbles["Bubbles: reusable components"]
+    end
+
+    subgraph rendering["Rendering layer"]
+        ultraviolet["Ultraviolet cell renderer"]
+        canvas["Canvas"]
+        buffer["Buffer"]
+        layer["Layer"]
+        ultraviolet --- canvas
+        ultraviolet --- buffer
+        ultraviolet --- layer
+    end
+
+    subgraph terminal["Terminal layer"]
+        terminalApi["Terminal abstraction: raw mode, ANSI, and input parsing"]
+        colorProfile["Color profile detection"]
+    end
+
+    console --> style
+    program --> widgets
+    program --> bubbles
+    runner --> console
+    style --> ultraviolet
+    widgets --> ultraviolet
+    bubbles --> ultraviolet
+    ultraviolet --> terminalApi
+    colorProfile --> ultraviolet
 ```
 
 ## Core Systems
@@ -258,20 +260,28 @@ import 'package:artisanal/glamour.dart';
 
 ### Console (High-level I/O)
 
-```
-User Code → Console → Style.render() → Terminal → stdout
+```mermaid
+flowchart LR
+    user["User code"] --> console["Console"]
+    console --> style["Style.render()"]
+    style --> terminal["Terminal"]
+    terminal --> stdout["stdout"]
 ```
 
 ### TUI (Interactive)
 
-```
-stdin → KeyParser → Msg → Model.update() → Model → Model.view() → Renderer → stdout
-                            ↓
-                           Cmd
-                            ↓
-                     Async Operation
-                            ↓
-                           Msg (loops back)
+```mermaid
+flowchart LR
+    stdin["stdin"] --> parser["KeyParser"]
+    parser --> message["Msg"]
+    message --> update["Model.update()"]
+    update --> model["Model"]
+    model --> view["Model.view()"]
+    view --> renderer["Renderer"]
+    renderer --> stdout["stdout"]
+    update --> command["Cmd"]
+    command --> operation["Async operation"]
+    operation --> message
 ```
 
 ### UV Rendering
@@ -279,17 +289,24 @@ stdin → KeyParser → Msg → Model.update() → Model → Model.view() → Re
 There are two separate rendering paths depending on which programming model is in use:
 
 **TEA model path** (bare `Model`, no widget tree):
-```
-Model.view() → String/View → UvTerminalRenderer → diff → stdout
+```mermaid
+flowchart LR
+    view["Model.view()"] --> value["String or View"]
+    value --> renderer["UvTerminalRenderer"]
+    renderer --> diff["Cell diff"]
+    diff --> stdout["stdout"]
 ```
 
 **Widget system path** (`WidgetApp` wraps a widget tree):
-```
-WidgetApp.view()
-  └── ElementTree.render()
-        └── RenderObject tree → Canvas → Buffer
-                                              ↓
-                                        UvTerminalRenderer → diff → stdout
+```mermaid
+flowchart TB
+    view["WidgetApp.view()"] --> elements["ElementTree.render()"]
+    elements --> renderObjects["RenderObject tree"]
+    renderObjects --> canvas["Canvas"]
+    canvas --> buffer["Buffer"]
+    buffer --> renderer["UvTerminalRenderer"]
+    renderer --> diff["Cell diff"]
+    diff --> stdout["stdout"]
 ```
 
 In both cases the `Program` runtime calls `model.view()` — the difference is that `WidgetApp.view()` triggers a full element-tree traversal before producing a string.

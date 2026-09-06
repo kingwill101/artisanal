@@ -41,22 +41,13 @@ Flutter-style state, start with [the widget guide](widgets.md).
 
 The Elm Architecture (TEA) is a pattern for building interactive applications with three core concepts:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Program Runtime                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│    ┌──────────┐     ┌──────────┐     ┌──────────┐         │
-│    │  Model   │────▶│  View    │────▶│ Terminal │         │
-│    │  (State) │     │ (Render) │     │ (Output) │         │
-│    └────▲─────┘     └──────────┘     └──────────┘         │
-│         │                                                   │
-│    ┌────┴─────┐     ┌──────────┐     ┌──────────┐         │
-│    │  Update  │◀────│   Msg    │◀────│  Input   │         │
-│    │ (Logic)  │     │ (Events) │     │ (Stdin)  │         │
-│    └──────────┘     └──────────┘     └──────────┘         │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    input["Input: stdin"] --> message["Msg: events"]
+    message --> update["Update: logic"]
+    update --> model["Model: state"]
+    model --> view["View: render"]
+    view --> terminal["Terminal: output"]
 ```
 
 1. **Model** - Immutable state of your application
