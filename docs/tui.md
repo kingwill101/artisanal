@@ -192,6 +192,17 @@ See the runnable examples:
 - `pkgs/artisanal/example/tui/frame_dashboard_demo.dart` for responsive panes,
   selection, and an overlay.
 
+To compare equivalent two-pane content rendered as one composed string and as
+two positioned regions, run:
+
+```sh
+dart run pkgs/artisanal/benchmark/positioned_frame_benchmark.dart
+```
+
+Treat the result as a local comparison rather than a fixed performance claim.
+The benchmark reports total renderer time and output bytes; both paths still
+use the same Ultraviolet terminal diff.
+
 ### Immutability
 
 Models should be immutable - create new instances rather than mutating:
