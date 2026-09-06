@@ -64,7 +64,8 @@ void main() {
   });
 
   test('halfblock pixels reach the wire as cells', () async {
-    var model = composer.MediaComposerModel.initial();
+    var model = composer.MediaComposerModel.initial()
+      ..protocolOverride = md.ImageProtocol.halfblock;
     var (next, _) = model.update(_ctrl(0x76));
     model = next as composer.MediaComposerModel;
     final id = model.elements.ofKind('image').single.id;
@@ -72,8 +73,7 @@ void main() {
     model = next as composer.MediaComposerModel;
     (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.enter)));
     model = next as composer.MediaComposerModel;
-    // CI default: no terminal markers → halfblock fallback.
-    expect(model.paintProtocol.name, 'halfblock');
+    expect(model.paintProtocol, md.ImageProtocol.halfblock);
 
     final bytes = _renderFullscreen(model.view());
     expect(bytes, contains('▀'));

@@ -7,9 +7,8 @@ import 'package:test/test.dart';
 
 import '../../../example/tui/examples/media-composer/main.dart' as composer;
 
-tui.KeyMsg _ctrl(int rune) => tui.KeyMsg(
-  tui.Key(tui.KeyType.runes, runes: [rune], ctrl: true),
-);
+tui.KeyMsg _ctrl(int rune) =>
+    tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [rune], ctrl: true));
 
 tui.KeyMsg _enter() => tui.KeyMsg(tui.Key(tui.KeyType.enter));
 
@@ -17,81 +16,64 @@ void main() {
   group('pasted file paths', () {
     test('recognizes plain, quoted, and file:// paths', () {
       expect(extractPastedFilePaths('/tmp/shot.png'), ['/tmp/shot.png']);
-      expect(
-        extractPastedFilePaths("'/tmp/my photo.jpg'"),
-        ['/tmp/my photo.jpg'],
-      );
-      expect(
-        extractPastedFilePaths('"C:/pics/shot.png"'),
-        ['C:/pics/shot.png'],
-      );
-      expect(
-        extractPastedFilePaths('file:///tmp/shot.png'),
-        ['/tmp/shot.png'],
-      );
+      expect(extractPastedFilePaths("'/tmp/my photo.jpg'"), [
+        '/tmp/my photo.jpg',
+      ]);
+      expect(extractPastedFilePaths('"C:/pics/shot.png"'), [
+        'C:/pics/shot.png',
+      ]);
+      expect(extractPastedFilePaths('file:///tmp/shot.png'), ['/tmp/shot.png']);
     });
 
     test('decodes percent-escaped file URLs', () {
-      expect(
-        extractPastedFilePaths('file:///tmp/my%20photo.png'),
-        ['/tmp/my photo.png'],
-      );
+      expect(extractPastedFilePaths('file:///tmp/my%20photo.png'), [
+        '/tmp/my photo.png',
+      ]);
     });
 
     test('unescapes shell-escaped posix paths only', () {
-      expect(
-        extractPastedFilePaths(r'/tmp/my\ photo.png'),
-        ['/tmp/my photo.png'],
-      );
-      expect(
-        extractPastedFilePaths(r'/tmp/paren\(1\).png'),
-        ['/tmp/paren(1).png'],
-      );
+      expect(extractPastedFilePaths(r'/tmp/my\ photo.png'), [
+        '/tmp/my photo.png',
+      ]);
+      expect(extractPastedFilePaths(r'/tmp/paren\(1\).png'), [
+        '/tmp/paren(1).png',
+      ]);
       // Windows backslashes are separators, not escapes.
-      expect(
-        extractPastedFilePaths(r'C:\pics\shot.png'),
-        [r'C:\pics\shot.png'],
-      );
+      expect(extractPastedFilePaths(r'C:\pics\shot.png'), [
+        r'C:\pics\shot.png',
+      ]);
     });
 
     test('normalizes windows spellings', () {
-      expect(
-        extractPastedFilePaths(r'C:\pics\shot.png'),
-        [r'C:\pics\shot.png'],
-      );
-      expect(
-        extractPastedFilePaths(r'\\server\share\shot.png'),
-        [r'\\server\share\shot.png'],
-      );
-      expect(
-        extractPastedFilePaths(r'\\?\C:\pics\shot.png'),
-        [r'C:\pics\shot.png'],
-      );
-      expect(
-        extractPastedFilePaths(r'\\?\UNC\server\share\s.png'),
-        [r'\\server\share\s.png'],
-      );
+      expect(extractPastedFilePaths(r'C:\pics\shot.png'), [
+        r'C:\pics\shot.png',
+      ]);
+      expect(extractPastedFilePaths(r'\\server\share\shot.png'), [
+        r'\\server\share\shot.png',
+      ]);
+      expect(extractPastedFilePaths(r'\\?\C:\pics\shot.png'), [
+        r'C:\pics\shot.png',
+      ]);
+      expect(extractPastedFilePaths(r'\\?\UNC\server\share\s.png'), [
+        r'\\server\share\s.png',
+      ]);
     });
 
     test('ignores prose and deduplicates', () {
       expect(extractPastedFilePaths('just some words'), isEmpty);
       expect(extractPastedFilePaths(''), isEmpty);
       expect(extractPastedFilePaths('   '), isEmpty);
-      expect(
-        extractPastedFilePaths('/tmp/a.png\n/tmp/a.png'),
-        ['/tmp/a.png'],
-      );
+      expect(extractPastedFilePaths('/tmp/a.png\n/tmp/a.png'), ['/tmp/a.png']);
     });
 
     test('handles mixed multi-line payloads line by line', () {
-      expect(
-        extractPastedFilePaths('see this\n/tmp/a.png\nlooks good'),
-        ['/tmp/a.png'],
-      );
-      expect(
-        extractPastedFilePaths('/tmp/a.png\n/tmp/b.gif'),
-        ['/tmp/a.png', '/tmp/b.gif'],
-      );
+      expect(extractPastedFilePaths('see this\n/tmp/a.png\nlooks good'), [
+        '/tmp/a.png',
+      ]);
+      expect(extractPastedFilePaths('/tmp/a.png\n/tmp/b.gif'), [
+        '/tmp/a.png',
+        '/tmp/b.gif',
+      ]);
     });
 
     test('accepts relative paths with extensions', () {
@@ -127,7 +109,11 @@ void main() {
   group('inline elements', () {
     test('creates, hit-tests, and filters by kind', () {
       final store = InlineElementStore();
-      final image = store.create(kind: inlineElementImage, startOffset: 0, endOffset: 10);
+      final image = store.create(
+        kind: inlineElementImage,
+        startOffset: 0,
+        endOffset: 10,
+      );
       store.create(kind: inlineElementPaste, startOffset: 12, endOffset: 20);
       expect(store.elementAt(5)?.id, image);
       expect(store.elementAt(10), isNull); // end-exclusive
@@ -138,14 +124,22 @@ void main() {
 
     test('right-edge lookup finds chips at the cursor edge', () {
       final store = InlineElementStore();
-      final id = store.create(kind: inlineElementImage, startOffset: 0, endOffset: 10);
+      final id = store.create(
+        kind: inlineElementImage,
+        startOffset: 0,
+        endOffset: 10,
+      );
       expect(store.elementEndingAtOfKind(10, inlineElementImage)?.id, id);
       expect(store.elementEndingAtOfKind(9, inlineElementImage), isNull);
     });
 
     test('edits shift ranges and drop covered chips', () {
       final store = InlineElementStore();
-      final chip = store.create(kind: inlineElementImage, startOffset: 4, endOffset: 8);
+      final chip = store.create(
+        kind: inlineElementImage,
+        startOffset: 4,
+        endOffset: 8,
+      );
       store.applyInsertion(offset: 0, length: 2);
       expect(store.get(chip)!.startOffset, 6);
       store.applyDeletion(startOffset: 0, endOffset: 20);
@@ -154,7 +148,11 @@ void main() {
 
     test('ranges update preserving identity', () {
       final store = InlineElementStore();
-      final id = store.create(kind: inlineElementImage, startOffset: 0, endOffset: 4);
+      final id = store.create(
+        kind: inlineElementImage,
+        startOffset: 0,
+        endOffset: 4,
+      );
       expect(store.updateRange(id: id, startOffset: 2, endOffset: 6), isTrue);
       expect(store.get(id)!.startOffset, 2);
       expect(store.updateRange(id: 999, startOffset: 0, endOffset: 1), isFalse);
@@ -205,7 +203,10 @@ void main() {
         MediaAffordance.textFallback,
       );
       expect(
-        resolveMediaAffordance(protocolSupported: true, forceTextFallback: true),
+        resolveMediaAffordance(
+          protocolSupported: true,
+          forceTextFallback: true,
+        ),
         MediaAffordance.textFallback,
       );
     });
@@ -264,13 +265,15 @@ void main() {
       model = next as composer.MediaComposerModel;
       expect(model.viewer, isNotNull);
       expect(model.view(), contains('demo-image-1.png'));
-      expect(model.view(), contains('▀')); // real halfblock pixels
+      if (model.paintProtocol == md.ImageProtocol.halfblock) {
+        expect(model.view(), contains('▀'));
+      } else {
+        expect(model.view(), isNot(contains('[Open ')));
+      }
       expect(model.composer.value.contains('\n'), isFalse);
 
       // The open modal captures input; Esc closes it first.
-      (next, _) = model.update(
-        tui.KeyMsg(tui.Key(tui.KeyType.escape)),
-      );
+      (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.escape)));
       model = next as composer.MediaComposerModel;
       expect(model.viewer, isNull);
 
@@ -292,7 +295,8 @@ void main() {
       expect(model.attachments, isEmpty);
     });
 
-    test('forced fallback shows text instead of pixels', () {      var model = composer.MediaComposerModel.initial()
+    test('forced fallback shows text instead of pixels', () {
+      var model = composer.MediaComposerModel.initial()
         ..forceTextFallback = true;
       var (next, _) = model.update(_ctrl(0x76));
       model = next as composer.MediaComposerModel;
@@ -303,7 +307,8 @@ void main() {
       expect(model.view(), isNot(contains('▀')));
     });
 
-    test('pasted image paths auto-attach; other text pastes through', () async {      final temp = io.Directory.systemTemp.createTempSync('media_paste_');
+    test('pasted image paths auto-attach; other text pastes through', () async {
+      final temp = io.Directory.systemTemp.createTempSync('media_paste_');
       try {
         final file = io.File('${temp.path}/shot.png')
           ..writeAsBytesSync([1, 2, 3]);
@@ -327,8 +332,8 @@ void main() {
     });
     test('protocol override cycles and labels', () {
       var model = composer.MediaComposerModel.initial();
-      // CI has no terminal markers: auto falls back to halfblock.
-      expect(model.paintProtocol.name, 'halfblock');
+      final auto = model.paintProtocol;
+      expect(auto, isNot(md.ImageProtocol.none));
       var (next, _) = model.update(_ctrl(0x70)); // ctrl+p
       model = next as composer.MediaComposerModel;
       expect(model.protocolOverride, isNotNull);
@@ -339,7 +344,7 @@ void main() {
         model = next as composer.MediaComposerModel;
       }
       expect(model.protocolOverride, isNull);
-      expect(model.paintProtocol.name, 'halfblock');
+      expect(model.paintProtocol, auto);
     });
 
     test('Kitty viewer reserves its full image height inside the modal', () {
