@@ -20,6 +20,7 @@ import 'inline_animation.dart';
 import '../tui/bubbles/textarea.dart' show TextAreaModel;
 import '../tui/program.dart' show ProgramOptions;
 import 'console.dart';
+import 'console_context.dart';
 import 'console_format.dart';
 
 /// Higher-level console UI components (Laravel-style).
@@ -239,7 +240,7 @@ class Components {
     String? doneMessage,
   }) async {
     // If not interactive, fall back to simple output
-    if (!io.interactive || !io.promptTerminal.supportsAnsi) {
+    if (!supportsInteractiveConsole(io.interactive, () => io.promptTerminal)) {
       io.write('$message ');
       final watch = Stopwatch()..start();
       try {

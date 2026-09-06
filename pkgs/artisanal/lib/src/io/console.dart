@@ -15,6 +15,7 @@ import '../style/tag_parser.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
 import 'component_theme.dart';
+import 'console_context.dart';
 import 'console_format.dart';
 import 'inline_animation.dart';
 import 'output_theme.dart';
@@ -722,8 +723,8 @@ class Console {
     final desc = description.trimRight();
     final prefix = '  $desc ';
     final terminal = promptTerminal;
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal;
-    final animate = run != null && interactive && supportsAnsi;
+    final animate =
+        run != null && supportsInteractiveConsole(interactive, () => terminal);
     // Use actual terminal width, not the configured terminalWidth which may be wrong
     final actualWidth = terminal.width;
 
@@ -1032,7 +1033,10 @@ class Console {
       return const TaskGroupResult(completed: [], failed: [], skipped: []);
     }
 
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
+    final supportsInteractive = supportsInteractiveConsole(
+      interactive,
+      () => promptTerminal,
+    );
     final watch = Stopwatch()..start();
 
     if (title != null) {
@@ -1055,7 +1059,7 @@ class Console {
         continue;
       }
 
-      if (supportsAnsi) {
+      if (supportsInteractive) {
         try {
           await components.spin(
             description,
@@ -1148,7 +1152,10 @@ class Console {
     }
 
     final terminal = promptTerminal;
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
+    final supportsInteractive = supportsInteractiveConsole(
+      interactive,
+      () => terminal,
+    );
     final watch = Stopwatch()..start();
     final totalSteps = steps.length;
     final stepWidth = totalSteps.toString().length;
@@ -1176,7 +1183,7 @@ class Console {
         continue;
       }
 
-      if (supportsAnsi) {
+      if (supportsInteractive) {
         terminal.hideCursor();
         final stepWatch = Stopwatch()..start();
 
@@ -1300,9 +1307,12 @@ class Console {
     FutureOr<void> Function()? onComplete,
   }) async {
     final terminal = promptTerminal;
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
+    final supportsInteractive = supportsInteractiveConsole(
+      interactive,
+      () => terminal,
+    );
 
-    if (!supportsAnsi) {
+    if (!supportsInteractive) {
       // Non-interactive: just wait
       writeln('$message $seconds seconds...');
       await Future<void>.delayed(Duration(seconds: seconds));
