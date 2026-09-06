@@ -8,8 +8,7 @@ Embeddable terminal emulation for Artisanal applications, backed by
 ```dart
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart'
-    show InterruptMsg, ProgramOptions, QuitMsg;
+import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal_pty/widgets.dart';
 import 'package:artisanal_widgets/app.dart';
 import 'package:pty2/pty2.dart';
@@ -27,8 +26,11 @@ try {
       title: 'Artisanal PTY',
       home: PseudoTerminalView(pty: pty),
     ),
-    options: ProgramOptions().withFilter(
-      (_, message) => message is InterruptMsg ? const QuitMsg() : message,
+    options: runtime.ProgramOptions().withFilter(
+      (_, message) =>
+          message is runtime.InterruptMsg
+              ? const runtime.QuitMsg()
+              : message,
     ),
   );
 } finally {

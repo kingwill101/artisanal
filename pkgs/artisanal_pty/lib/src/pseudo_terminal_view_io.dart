@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart' show Cmd, Msg, StreamCmd;
+import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal_widgets/widgets.dart';
 import 'package:pty2/pty2.dart';
 
@@ -45,13 +45,13 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   }
 
   @override
-  Cmd? handleInit() => StreamCmd<String>(
+  runtime.Cmd? handleInit() => runtime.StreamCmd<String>(
     stream: _output.stream,
     onData: (data) => _PtyOutputMsg(_messageOwner, data),
   );
 
   @override
-  Cmd? handleUpdate(Msg msg) {
+  runtime.Cmd? handleUpdate(runtime.Msg msg) {
     if (msg case _PtyOutputMsg(
       :final owner,
       :final data,
@@ -62,7 +62,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   }
 
   @override
-  Cmd? didUpdateWidget(covariant PseudoTerminalView oldWidget) {
+  runtime.Cmd? didUpdateWidget(covariant PseudoTerminalView oldWidget) {
     if (!identical(oldWidget.pty, widget.pty)) {
       _subscription?.cancel();
       _subscribe();
@@ -108,7 +108,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   );
 }
 
-final class _PtyOutputMsg extends Msg {
+final class _PtyOutputMsg extends runtime.Msg {
   const _PtyOutputMsg(this.owner, this.data);
 
   final Object owner;

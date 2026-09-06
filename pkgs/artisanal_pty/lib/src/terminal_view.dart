@@ -1,4 +1,4 @@
-import 'package:artisanal/runtime.dart' show Cmd;
+import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal_widgets/widgets.dart';
 
 import 'input_encoder.dart';
@@ -33,7 +33,7 @@ class _TerminalViewState extends State<TerminalView> {
   }
 
   @override
-  Cmd? didUpdateWidget(covariant TerminalView oldWidget) {
+  runtime.Cmd? didUpdateWidget(covariant TerminalView oldWidget) {
     if (!identical(oldWidget.terminal, widget.terminal)) {
       oldWidget.terminal.removeListener(_changed);
       widget.terminal.addListener(_changed);
