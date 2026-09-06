@@ -45,6 +45,7 @@ Most applications can stay at the TUI or widget layer.
 | Add subcommands and flags | [Commands and arguments](args.md) |
 | Style text, borders, and layouts | [Terminal styling](style.md) |
 | Add inputs, lists, and reusable TEA components | [Interactive components](bubbles.md) |
+| Build a text editor, code editor, or prompt composer | [Editor core](editors/index.md) |
 | Render Markdown | [Markdown in the terminal](markdown.md) |
 | Draw charts or sequence diagrams | [Terminal charts](charting.md) |
 | Test a widget app | [Widget testing](testing.md) |
@@ -63,6 +64,7 @@ Most applications can stay at the TUI or widget layer.
 
 ## Advanced and experimental topics
 
+- [Editor core and language tooling](editors/index.md)
 - [Renderer backends](renderer.md)
 - [Terminal access](terminal.md)
 - [Color detection](colorprofile.md)
