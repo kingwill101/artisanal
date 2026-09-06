@@ -23,6 +23,8 @@ abstract final class EditorCommandIds {
   static const insertText = 'editor.action.insertText';
   static const cursorDocumentStart = 'editor.action.cursorDocumentStart';
   static const cursorDocumentEnd = 'editor.action.cursorDocumentEnd';
+  static const selectDocumentStart = 'editor.action.selectDocumentStart';
+  static const selectDocumentEnd = 'editor.action.selectDocumentEnd';
   static const addCursorAbove = 'editor.action.addCursorAbove';
   static const addCursorBelow = 'editor.action.addCursorBelow';
   static const addNextOccurrence = 'editor.action.addNextOccurrence';

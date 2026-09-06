@@ -88,6 +88,8 @@ void main() {
           EditorCommandIds.cursorPageDown,
           EditorCommandIds.selectPageUp,
           EditorCommandIds.selectPageDown,
+          EditorCommandIds.selectDocumentStart,
+          EditorCommandIds.selectDocumentEnd,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -914,6 +916,27 @@ void main() {
       expect((model.line, model.column), (2, 2));
       expect(model.selectionBase, (line: 0, column: 2));
       expect(model.selectionExtent, (line: 2, column: 2));
+    });
+
+    test('shift with document boundary keys extends the selection', () {
+      var model = TextAreaModel()
+        ..setText('ab\ncd', recordHistory: false)
+        ..setCursor(0, 1)
+        ..focus();
+
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.end, ctrl: true, shift: true)),
+      );
+      expect((model.line, model.column), (1, 2));
+      expect(model.selectionBase, (line: 0, column: 1));
+      expect(model.selectionExtent, (line: 1, column: 2));
+
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.home, ctrl: true, shift: true)),
+      );
+      expect((model.line, model.column), (0, 0));
+      expect(model.selectionBase, (line: 0, column: 1));
+      expect(model.selectionExtent, (line: 0, column: 0));
     });
 
     test('line commands are atomic and duplicate below the source line', () {

@@ -194,6 +194,8 @@ commands remain available when a host needs explicit logical-line movement.
 Page Up/Page Down dispatch page commands that move by the textarea's viewport
 height through the same visual-row projection. Shift extends each selection,
 and folded lines remain skipped.
+Ctrl+Home/Ctrl+End dispatch document-boundary movement; adding Shift dispatches
+the corresponding `selectDocumentStart`/`selectDocumentEnd` command.
 
 A host can package a structural motion as an `EditorRangeResolver` and apply it
 to every selection rather than duplicating single- and multi-cursor paths.

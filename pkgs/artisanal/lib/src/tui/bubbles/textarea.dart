@@ -3234,6 +3234,20 @@ class TextAreaModel extends ViewComponent {
         execute: (model) => model.moveToDocumentEnd(),
       ),
       EditorCommand(
+        id: EditorCommandIds.selectDocumentStart,
+        label: 'Extend Selections to Document Start',
+        category: 'Selection',
+        execute: (model) =>
+            model.extendSelectionsToDocumentBoundary(forward: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectDocumentEnd,
+        label: 'Extend Selections to Document End',
+        category: 'Selection',
+        execute: (model) =>
+            model.extendSelectionsToDocumentBoundary(forward: true),
+      ),
+      EditorCommand(
         id: EditorCommandIds.toggleFold,
         label: 'Toggle Fold',
         category: 'View',
@@ -3674,12 +3688,20 @@ class TextAreaModel extends ViewComponent {
             executeCommand(commandId);
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.inputBegin)) {
-            executeCommand(EditorCommandIds.cursorDocumentStart);
+          if (_matchesMovementBinding(key, keyMap.inputBegin)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectDocumentStart
+                  : EditorCommandIds.cursorDocumentStart,
+            );
             return (this, null);
           }
-          if (key.matchesSingle(keyMap.inputEnd)) {
-            executeCommand(EditorCommandIds.cursorDocumentEnd);
+          if (_matchesMovementBinding(key, keyMap.inputEnd)) {
+            executeCommand(
+              key.shift
+                  ? EditorCommandIds.selectDocumentEnd
+                  : EditorCommandIds.cursorDocumentEnd,
+            );
             return (this, null);
           }
           if (_matchesMovementBinding(key, keyMap.characterForward)) {
@@ -4142,6 +4164,15 @@ class TextAreaModel extends ViewComponent {
       forward: forward,
       extend: true,
       mapEnd: (offset, _) => _lineBoundaryOffset(offset, forward: forward),
+    );
+  }
+
+  /// Extends every selection's active edge to a document boundary.
+  bool extendSelectionsToDocumentBoundary({required bool forward}) {
+    return _applyMappedEnds(
+      forward: forward,
+      extend: true,
+      mapEnd: (_, _) => forward ? length : 0,
     );
   }
 

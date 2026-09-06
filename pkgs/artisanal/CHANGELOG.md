@@ -58,7 +58,8 @@
   mode follows projected visual rows and retains terminal-cell columns;
   Home/End use visual-row boundaries while logical-line commands remain
   separately dispatchable, and Page Up/Page Down move or extend selections by
-  viewport-sized visual-row pages.
+  viewport-sized visual-row pages. Shift+Ctrl+Home/End extends selections to
+  document boundaries through stable commands.
 - Added `MemoryEditorDocumentStore` plus a file-backed example store for
   save/recovery workflows.
 - Added a full-screen alternate-buffer `advanced-editor` example with find
