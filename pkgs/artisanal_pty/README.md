@@ -58,3 +58,7 @@ final view = terminal.render();
 
 The caller always owns the process or remote transport. Terminate a local PTY
 after the application exits.
+
+`PseudoTerminalView` quits the widget application when the child process exits
+by default. Set `quitOnExit: false` when the surrounding application should
+remain open after the terminal session ends.

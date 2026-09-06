@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+### Fixed
+
+- Quit the widget application when its child PTY exits, with an opt-out through
+  `PseudoTerminalView.quitOnExit`.
+- Ignore queued output from a previous PTY after `PseudoTerminalView` switches
+  to a replacement process.
+
 ## 0.1.0
 
 ### Added
