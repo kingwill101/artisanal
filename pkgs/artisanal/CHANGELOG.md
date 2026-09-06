@@ -15,6 +15,8 @@
   nested layouts, selection state, narrow stacking, and overlays.
 - Document when TEA applications should return `String`, `View`, or
   `FrameView`, including positioned layout and styling guidance.
+- Reserve the actual wrapped height of persistent log lines before painting a
+  structured frame.
 
 ## 0.6.0
 

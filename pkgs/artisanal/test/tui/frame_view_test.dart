@@ -159,5 +159,59 @@ void main() {
       expect(terminal.output, contains('fallback'));
       renderer.dispose();
     });
+
+    test('reserves every wrapped row used by persistent log lines', () async {
+      final terminal = StringTerminal(terminalWidth: 5, terminalHeight: 4);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(altScreen: false),
+      );
+      FrameArea? paintedArea;
+      renderer.printLine('abcdefgh');
+
+      renderer.render(
+        FrameView(
+          paint: (frame) {
+            paintedArea = frame.area;
+            frame.write('V');
+          },
+        ),
+      );
+      await renderer.flush();
+
+      expect(paintedArea, const FrameArea(0, 2, 5, 2));
+      expect(renderer.screenBuffer!.cellAt(0, 0)?.content, 'a');
+      expect(renderer.screenBuffer!.cellAt(0, 1)?.content, 'f');
+      expect(renderer.screenBuffer!.cellAt(0, 2)?.content, 'V');
+      renderer.dispose();
+    });
+
+    test('uses the bounded screen dimensions for inline frames', () async {
+      final terminal = StringTerminal(terminalWidth: 8, terminalHeight: 6);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(
+          altScreen: false,
+          screenMode: ScreenMode.inline,
+          inlineHeight: 3,
+        ),
+      );
+      FrameArea? paintedArea;
+
+      renderer.render(
+        FrameView(
+          paint: (frame) {
+            paintedArea = frame.area;
+            frame.write('inline');
+          },
+        ),
+      );
+      await renderer.flush();
+
+      expect(paintedArea, const FrameArea(0, 0, 8, 3));
+      expect(renderer.screenBuffer!.width(), 8);
+      expect(renderer.screenBuffer!.height(), 3);
+      renderer.dispose();
+    });
   });
 }

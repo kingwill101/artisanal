@@ -1398,10 +1398,17 @@ class UltravioletTuiRenderer
       var frameArea = scr.bounds();
       if (_printLines.isNotEmpty &&
           !(_options.isInline && _options.uiAnchor == UiAnchor.bottom)) {
-        final logs = uv_styled.newStyledString(_printLines.join('\n'))
+        final logText = _printLines.join('\n');
+        final wrappedLogText = isBounded
+            ? logText
+            : uv_graphics.wrapAnsiPreserving(logText, frameArea.width);
+        final logs = uv_styled.newStyledString(wrappedLogText)
           ..wrap = !isBounded;
         logs.draw(scr, frameArea);
-        final logHeight = _printLines.length.clamp(0, frameArea.height);
+        final logHeight = wrappedLogText
+            .split('\n')
+            .length
+            .clamp(0, frameArea.height);
         frameArea = uv_buffer.rect(
           frameArea.minX,
           frameArea.minY + logHeight,
