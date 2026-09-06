@@ -8,6 +8,8 @@
   percentage, weighted-fill, gap, and inset constraints.
 - Add a responsive, core-only positioned-frame dashboard example covering
   nested layouts, selection state, narrow stacking, and overlays.
+- Document when TEA applications should return `String`, `View`, or
+  `FrameView`, including positioned layout and styling guidance.
 
 ## 0.6.0
 

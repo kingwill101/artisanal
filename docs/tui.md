@@ -93,10 +93,104 @@ abstract class Model {
   /// Handles messages and returns (newState, optionalCommand)
   (Model, Cmd?) update(Msg msg);
 
-  /// Renders current state to a string or View object
+  /// Renders current state to a String, View, or FrameView
   Object view();
 }
 ```
+
+## Choosing a view representation
+
+The TEA runtime accepts three view representations. They share the same model
+and update loop, and all use Ultraviolet's cell-buffer diff when
+`useUltravioletRenderer` is enabled.
+
+| Return value | Choose it when |
+|---|---|
+| `String` | The screen is naturally one styled document or a vertically composed Bubble |
+| `View` | The screen is one string but also needs declarative cursor, title, progress, color, or terminal-mode metadata |
+| `FrameView` | Independently rendered panes, clipping, overlays, or responsive spatial composition would otherwise require manual string joining |
+
+`FrameView` does not replace `Style`. A frame positions the same ANSI-styled
+strings produced by `Style.render()`:
+
+```dart
+@override
+Object view() => FrameView(
+  content: 'Status fallback',
+  windowTitle: 'Status',
+  paint: (frame) {
+    final panes = FrameLayout.horizontal(
+      frame.area,
+      const [FramePercentage(35), FrameFill()],
+      gap: 1,
+    );
+
+    final sidebar = Style()
+        .foreground(Colors.cyan)
+        .border(Border.rounded)
+        // Style.width is the content width; reserve two columns for borders.
+        .width((panes[0].width - 2).clamp(0, panes[0].width))
+        .render('Projects');
+
+    frame.write(sidebar, target: panes[0], wrap: false);
+    frame.write(renderDetails(), target: panes[1]);
+  },
+);
+```
+
+Import `package:artisanal/style.dart` for `Style`, colors, and borders. The
+frame API deliberately does not expose Ultraviolet cells or styles.
+
+### Positioned frame layout
+
+`FrameLayout.horizontal` and `FrameLayout.vertical` are pure functions from
+one `FrameArea` to a list of child areas. They do not create a retained tree or
+own application state.
+
+Available constraints are:
+
+- `FrameLength(cells)` for a fixed size;
+- `FramePercentage(percent)` for a percentage of available space;
+- `FrameFill(flex)` for a weighted share of remaining space.
+
+Insets and gaps are optional:
+
+```dart
+final rows = FrameLayout.vertical(
+  frame.area,
+  const [
+    FrameLength(2),
+    FrameFill(),
+    FrameLength(1),
+  ],
+  gap: 1,
+  insets: const FrameInsets.all(1),
+);
+```
+
+Fixed lengths are allocated first, then percentages, then weighted fills.
+Later allocations are clipped when the viewport is too small. Select a
+responsive arrangement in the view:
+
+```dart
+if (frame.area.width >= 60) {
+  paintWide(frame);
+} else {
+  paintNarrow(frame);
+}
+```
+
+`FrameView` is primarily a spatial-composition API. Each `frame.write` still
+parses its styled string into cells, so using positioned regions is not by
+itself a guarantee of lower frame-construction cost. Ultraviolet still compares
+the completed buffer with the previous frame and writes only changed terminal
+cells.
+
+See the runnable examples:
+
+- `pkgs/artisanal/example/tui/frame_view_demo.dart` for a centered counter;
+- `pkgs/artisanal/example/tui/frame_dashboard_demo.dart` for responsive panes,
+  selection, and an overlay.
 
 ### Immutability
 
