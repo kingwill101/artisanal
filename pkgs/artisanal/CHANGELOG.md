@@ -4,6 +4,8 @@
 
 - Add `FrameView`, `FrameArea`, and `FrameRenderable` for immediate-mode TEA
   views that position Artisanal styled strings without exposing renderer cells.
+- Add pure horizontal and vertical `FrameLayout` splitting with fixed,
+  percentage, weighted-fill, gap, and inset constraints.
 
 ## 0.6.0
 

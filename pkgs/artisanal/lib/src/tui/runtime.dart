@@ -169,6 +169,16 @@ export 'view.dart'
         TerminalProgressBarState,
         KeyboardEnhancements;
 
+export 'frame_layout.dart'
+    show
+        FrameAxis,
+        FrameInsets,
+        FrameConstraint,
+        FrameLength,
+        FramePercentage,
+        FrameFill,
+        FrameLayout;
+
 export 'program.dart'
     show
         ScreenMode,
