@@ -48,6 +48,41 @@ final class FrameArea {
     );
   }
 
+  /// Returns this area with the given edge insets removed.
+  ///
+  /// Insets that consume more than the available size produce an empty area
+  /// anchored within this area's bottom-right edge.
+  FrameArea inset({int left = 0, int top = 0, int right = 0, int bottom = 0}) {
+    if (left < 0 || top < 0 || right < 0 || bottom < 0) {
+      throw ArgumentError('FrameArea insets must not be negative');
+    }
+    final insetX = left.clamp(0, width);
+    final insetY = top.clamp(0, height);
+    final insetWidth = width - left - right;
+    final insetHeight = height - top - bottom;
+    return FrameArea(
+      x + insetX,
+      y + insetY,
+      insetWidth > 0 ? insetWidth : 0,
+      insetHeight > 0 ? insetHeight : 0,
+    );
+  }
+
+  /// Returns an area of at most [width] by [height], centered within this area.
+  FrameArea centered({required int width, required int height}) {
+    if (width < 0 || height < 0) {
+      throw ArgumentError('Centered dimensions must not be negative');
+    }
+    final centeredWidth = width.clamp(0, this.width);
+    final centeredHeight = height.clamp(0, this.height);
+    return FrameArea(
+      x + (this.width - centeredWidth) ~/ 2,
+      y + (this.height - centeredHeight) ~/ 2,
+      centeredWidth,
+      centeredHeight,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       other is FrameArea &&

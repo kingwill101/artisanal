@@ -13,6 +13,36 @@ void main() {
       );
       expect(area.intersect(const FrameArea(20, 20, 1, 1)).isEmpty, isTrue);
     });
+
+    test('applies insets without escaping a small area', () {
+      expect(
+        const FrameArea(
+          4,
+          6,
+          10,
+          8,
+        ).inset(left: 2, top: 1, right: 3, bottom: 2),
+        const FrameArea(6, 7, 5, 5),
+      );
+      expect(
+        const FrameArea(4, 6, 2, 1).inset(left: 5, top: 5),
+        const FrameArea(6, 7, 0, 0),
+      );
+    });
+
+    test('centers requested dimensions and clamps them to the area', () {
+      const area = FrameArea(10, 20, 11, 7);
+
+      expect(area.centered(width: 5, height: 3), const FrameArea(13, 22, 5, 3));
+      expect(area.centered(width: 50, height: 50), area);
+    });
+
+    test('rejects negative inset and centered dimensions', () {
+      const area = FrameArea(0, 0, 10, 10);
+
+      expect(() => area.inset(left: -1), throwsArgumentError);
+      expect(() => area.centered(width: -1, height: 1), throwsArgumentError);
+    });
   });
 
   group('FrameView', () {

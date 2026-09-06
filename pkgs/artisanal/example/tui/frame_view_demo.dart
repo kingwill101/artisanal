@@ -57,17 +57,7 @@ final class CounterPanel implements FrameRenderable {
 
   @override
   void render(Frame frame, FrameArea area) {
-    final rows = FrameLayout.vertical(area, const [
-      FrameFill(),
-      FrameLength(9),
-      FrameFill(),
-    ]);
-    final columns = FrameLayout.horizontal(rows[1], const [
-      FrameFill(),
-      FrameLength(48),
-      FrameFill(),
-    ]);
-    final panel = columns[1];
+    final panel = area.centered(width: 48, height: 9);
     if (panel.isEmpty) return;
 
     final border = Style()

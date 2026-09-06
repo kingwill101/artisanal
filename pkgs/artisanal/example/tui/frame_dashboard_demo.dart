@@ -163,17 +163,7 @@ final class DashboardModel implements Model {
       .render('↑/↓ or j/k: select   enter: inspect   q: quit');
 
   void _paintOverlay(Frame frame) {
-    final rows = FrameLayout.vertical(frame.area, const [
-      FrameFill(),
-      FrameLength(7),
-      FrameFill(),
-    ]);
-    final columns = FrameLayout.horizontal(rows[1], const [
-      FrameFill(),
-      FrameLength(42),
-      FrameFill(),
-    ]);
-    final area = columns[1];
+    final area = frame.area.centered(width: 42, height: 7);
     final project = projects[selected];
     frame.write(
       _panel([

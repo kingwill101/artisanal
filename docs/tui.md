@@ -147,6 +147,10 @@ frame API deliberately does not expose Ultraviolet cells or styles.
 one `FrameArea` to a list of child areas. They do not create a retained tree or
 own application state.
 
+Use `area.inset(...)` to derive an inner content region and
+`area.centered(width:, height:)` for bounded overlays. Both helpers clamp their
+result to the source area.
+
 Available constraints are:
 
 - `FrameLength(cells)` for a fixed size;

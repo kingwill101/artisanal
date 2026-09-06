@@ -198,13 +198,11 @@ abstract final class FrameLayout {
   }
 
   static FrameArea _inset(FrameArea area, FrameInsets insets) {
-    final width = area.width - insets.left - insets.right;
-    final height = area.height - insets.top - insets.bottom;
-    return FrameArea(
-      area.x + insets.left.clamp(0, area.width),
-      area.y + insets.top.clamp(0, area.height),
-      width > 0 ? width : 0,
-      height > 0 ? height : 0,
+    return area.inset(
+      left: insets.left,
+      top: insets.top,
+      right: insets.right,
+      bottom: insets.bottom,
     );
   }
 }
