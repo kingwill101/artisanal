@@ -6,6 +6,8 @@
   views that position Artisanal styled strings without exposing renderer cells.
 - Add pure horizontal and vertical `FrameLayout` splitting with fixed,
   percentage, weighted-fill, gap, and inset constraints.
+- Add a responsive, core-only positioned-frame dashboard example covering
+  nested layouts, selection state, narrow stacking, and overlays.
 
 ## 0.6.0
 
