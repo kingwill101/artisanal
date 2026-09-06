@@ -41,6 +41,7 @@ jobs:
         run: |
           dart compile js pkgs/ultraviolet/tool/web_entrypoint_smoke.dart -o build/ultraviolet-web-entrypoint-smoke.js
           dart compile js pkgs/artisanal/tool/web_entrypoints_smoke.dart -o build/artisanal-web-entrypoints-smoke.js
+          dart compile js pkgs/artisanal_pty/tool/web_entrypoints_smoke.dart -o build/artisanal-pty-web-entrypoints-smoke.js
           dart compile js pkgs/artisanal_widgets/tool/web_entrypoints_smoke.dart -o build/artisanal-widgets-web-entrypoints-smoke.js
 
       - name: Install shell completion validators
@@ -62,6 +63,7 @@ jobs:
         package:
           - pkgs/ultraviolet
           - pkgs/artisanal
+          - pkgs/artisanal_pty
           - pkgs/artisanal_widgets
     steps:
       - uses: actions/checkout@v4
