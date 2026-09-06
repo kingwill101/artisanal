@@ -136,6 +136,28 @@ flowchart TD
 This separation lets a TEA component, a widget editor, and a test harness invoke
 the same operation without translating behavior through UI-specific code.
 
+### Kernel design guarantees
+
+The editor kernel follows three rules:
+
+1. **Ranges are the currency of movement.** An `EditorRangeResolver` maps a
+   document and selection set to a new selection set. Character, word, line,
+   vertical, and fold-aware movement use the same range transforms for one
+   cursor or many cursors.
+2. **Keys resolve to commands.** `TextAreaModel` routes insertion, deletion,
+   newline, motion, indentation, and folding through stable command IDs.
+   Argument-taking commands such as `insertText` also cover typed input. A host
+   can intercept input and dispatch the same commands without modifying the
+   textarea.
+3. **The view is a projection.** Folding changes which logical lines
+   `TextView` projects into visual rows; it does not rewrite the document.
+   Visible rows retain their logical line numbers, and vertical movement skips
+   collapsed bodies.
+
+These rules are editing-style-neutral. A modal host can map mode-specific keys
+to commands or range resolvers, while an insert-only host continues to use the
+same kernel unchanged.
+
 ## Important conventions
 
 - Document offsets and columns are **grapheme offsets**, not UTF-16 code-unit

@@ -154,10 +154,27 @@ descending offset order so earlier offsets remain stable.
 
 ## Range transforms
 
-`mapSelectionEnds` is the common primitive for cursor motions and selection
-extension. A modal editor can package its own structural motion as an
-`EditorRangeResolver` and apply it to every selection rather than duplicating
-single- and multi-cursor paths.
+`EditorRangeResolver` is the host-independent motion contract:
+
+```dart
+typedef EditorRangeResolver = TextSelectionSet Function(
+  TextDocument document,
+  TextSelectionSet current,
+);
+```
+
+The range helpers are:
+
+- `mapSelectionRanges`, which transforms every complete range and preserves
+  the primary selection;
+- `mapSelectionEnds`, which moves or extends every range's moving end.
+
+When `mapSelectionEnds` moves instead of extending, a directional motion first
+collapses an existing selection toward that direction. This is the usual arrow
+key behavior and applies identically to a single selection and a selection set.
+
+A host can package a structural motion as an `EditorRangeResolver` and apply it
+to every selection rather than duplicating single- and multi-cursor paths.
 
 Use one resolver for:
 

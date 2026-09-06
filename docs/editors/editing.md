@@ -172,6 +172,22 @@ plugin or mode from silently shadowing another command.
 commands to the same registry so keyboard shortcuts and palettes share one
 source of truth.
 
+`TextAreaModel.update` uses this registry for ordinary editing too. Typed
+characters dispatch `EditorCommandIds.insertText` with an argument; newline,
+arrows, word/line/document motions, deletion, indentation, and folds dispatch
+their corresponding IDs. There is no separate private behavior path for those
+keys.
+
+This means a host may consume a key before `TextAreaModel.update` and dispatch
+the same command itself:
+
+```dart
+editor.executeCommand(EditorCommandIds.cursorWordRight);
+editor.executeCommand(EditorCommandIds.insertText, argument: 'value');
+```
+
+The host changes input policy, not editing semantics.
+
 ## Portable keymaps
 
 The editor core does not parse terminal key events. Normalize host events into

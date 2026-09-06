@@ -205,6 +205,12 @@ After edits, recompute ranges and retain collapse state. Custom syntax
 providers can produce `FoldRange(kind: FoldKind.syntax)` instead of using
 indentation.
 
+Folding is a view projection rather than a document mutation. Hidden lines
+remain in `TextDocument`; `TextView` omits them from visual output while
+preserving logical line indexes on visible rows. Cursor and selection movement
+uses the same fold-aware range path, so vertical motion skips a collapsed body
+for both one cursor and multiple cursors.
+
 ## Pointer input
 
 Pointer-aware hosts should:
