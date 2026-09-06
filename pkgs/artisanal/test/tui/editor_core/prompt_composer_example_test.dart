@@ -1,3 +1,4 @@
+import 'package:artisanal/editor_core.dart' show TextSelectionSet;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:test/test.dart';
 
@@ -20,15 +21,86 @@ void main() {
     var (next, _) = model.update(_ctrl(0x76)); // ctrl+v: big paste
     model = next as composer.PromptComposerModel;
     expect(model.placeholders.isEmpty, isFalse);
-    expect(model.composer.value, contains('[Pasted ~8 lines #1]'));
+    expect(model.composer.value, contains('[Pasted: 28 lines #1]'));
+    expect(model.composer.decorations, hasLength(1));
 
     (next, _) = model.update(_ctrl(0x73)); // ctrl+s: submit
     model = next as composer.PromptComposerModel;
     expect(model.submitted, hasLength(1));
     expect(model.submitted.single, contains('pasted line 1'));
-    expect(model.submitted.single, contains('pasted line 8'));
+    expect(model.submitted.single, contains('pasted line 28'));
     expect(model.placeholders.isEmpty, isTrue);
     expect(model.composer.value, isEmpty);
+  });
+
+  test('real large paste messages collapse and expand on submit', () {
+    var model = composer.PromptComposerModel.initial();
+    final paste = List.generate(24, (index) => 'line ${index + 1}').join('\n');
+
+    var (next, _) = model.update(tui.PasteMsg(paste));
+    model = next as composer.PromptComposerModel;
+
+    expect(model.composer.value, '[Pasted: 24 lines #1]');
+    expect(model.placeholders.ranges.single.fullText, paste);
+
+    (next, _) = model.update(_ctrl(0x74));
+    model = next as composer.PromptComposerModel;
+    expect(model.submitted.single, paste);
+  });
+
+  test('short paste messages remain directly editable', () {
+    var model = composer.PromptComposerModel.initial();
+
+    final (next, _) = model.update(const tui.PasteTextMsg('alpha\nbeta'));
+    model = next as composer.PromptComposerModel;
+
+    expect(model.composer.value, 'alpha\nbeta');
+    expect(model.placeholders.isEmpty, isTrue);
+  });
+
+  test('collapsed paste is atomic and previews from either edge', () {
+    var model = composer.PromptComposerModel.initial();
+    model.composer
+      ..insertString('>x')
+      ..setSelections(TextSelectionSet.collapsed(1));
+    final paste = List.generate(24, (index) => 'line ${index + 1}').join('\n');
+
+    var (next, _) = model.update(tui.PasteTextMsg(paste));
+    model = next as composer.PromptComposerModel;
+    final range = model.placeholders.ranges.single;
+    expect(model.composer.cursorOffset, range.endOffset);
+    expect(model.view(), contains('Pasted: 24 lines'));
+    expect(model.view(), contains('… (12 more lines)'));
+
+    (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.left)));
+    model = next as composer.PromptComposerModel;
+    expect(model.composer.cursorOffset, range.startOffset);
+    expect(model.view(), contains('Pasted: 24 lines'));
+
+    (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.right)));
+    model = next as composer.PromptComposerModel;
+    expect(model.composer.cursorOffset, range.endOffset);
+
+    (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.right)));
+    model = next as composer.PromptComposerModel;
+    expect(model.isPastePreviewVisible, isFalse);
+  });
+
+  test('backspace removes an entire collapsed paste and undo restores it', () {
+    var model = composer.PromptComposerModel.initial();
+    final paste = List.generate(24, (index) => 'line ${index + 1}').join('\n');
+
+    var (next, _) = model.update(tui.PasteTextMsg(paste));
+    model = next as composer.PromptComposerModel;
+    (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.backspace)));
+    model = next as composer.PromptComposerModel;
+    expect(model.composer.value, isEmpty);
+    expect(model.placeholders.isEmpty, isTrue);
+
+    (next, _) = model.update(_ctrl(0x7a));
+    model = next as composer.PromptComposerModel;
+    expect(model.composer.value, '[Pasted: 24 lines #1]');
+    expect(model.placeholders.ranges.single.fullText, paste);
   });
 
   test('prompt composer attaches IDE selection context on submit', () {
