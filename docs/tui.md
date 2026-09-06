@@ -9,6 +9,34 @@ The design is inspired by [Bubble Tea](https://github.com/charmbracelet/bubblete
 If you would rather compose screens from `Widget` objects and use
 Flutter-style state, start with [the widget guide](widgets.md).
 
+## Table of contents
+
+- [The basic loop](#the-basic-loop)
+- [Quick Start](#quick-start)
+- [Model Interface](#model-interface)
+- [Program Class](#program-class)
+- [Command System (Cmd)](#command-system-cmd)
+- [Message Types (Msg)](#message-types-msg)
+- [Interrupt Handling](#interrupt-handling)
+- [View Rendering](#view-rendering)
+- [Markdown Rendering](#markdown-rendering)
+- [Built-in Bubbles (Components)](#built-in-bubbles-components)
+- [Creating Custom Components](#creating-custom-components)
+- [Composing Components](#composing-components)
+- [Message Filtering](#message-filtering)
+- [Program Interceptors](#program-interceptors)
+- [Replay Automation](#replay-automation)
+- [Trace Logging](#trace-logging)
+- [Hot Reload Support](#hot-reload-support)
+- [Universal Developer Tools Overlay](#universal-developer-tools-overlay)
+- [TUI Runtime Instrumentation](#tui-runtime-instrumentation)
+- [Replay + Trace Workflow (OpenCode Example)](#replay--trace-workflow-opencode-example)
+- [UV Renderer Integration](#uv-renderer-integration)
+- [Helper Functions](#helper-functions)
+- [Best Practices](#best-practices)
+- [Import](#import)
+- [Where to go next](#where-to-go-next)
+
 ## The basic loop
 
 The Elm Architecture (TEA) is a pattern for building interactive applications with three core concepts:
@@ -1591,9 +1619,9 @@ into the widget host through `HotReloadMixin`.
 Hot reload requires the Dart VM service. Launch your app with:
 
 ```sh
-dart run --enable-vm-service bin/my_app.dart
+dart --enable-vm-service run bin/my_app.dart
 # or via the convenience helpers
-dart run --enable-vm-service example/my_example.dart
+dart --enable-vm-service run example/my_example.dart
 ```
 
 The `runWatchedArtisanalApp` and `runReloadableArtisanalApp` helpers from
@@ -1644,6 +1672,60 @@ path whenever the reload lifecycle transitions. Models can react to it:
 Hot reload is automatically disabled in AOT/release builds
 (`dart compile exe`, `flutter --release`). In those modes the mixin skips
 all initialization and `HotReloadStatusMsg` is never dispatched.
+
+Initialization is idempotent: concurrent requests share one watcher, and
+program shutdown waits for initialization before closing the watcher and VM
+service connection. The integration does not change the process working
+directory, so relative paths used by the application remain stable. When an
+entrypoint is outside `bin`, `lib`, or `test`, Artisanal also watches that
+entrypoint with `dart:io`; this covers examples and atomic saves without an
+additional watcher dependency.
+
+## Universal Developer Tools Overlay
+
+Enable the program-owned diagnostics overlay for raw TUI models and
+`artisanal_widgets` applications with `ProgramOptions.diagnostics`:
+
+```dart
+final program = Program(
+  MyModel(),
+  options: ProgramOptions(
+    diagnostics: ProgramDiagnosticsOptions(),
+  ),
+);
+```
+
+Press **F12** to toggle the overlay. Supply any existing `KeyBinding` to use a
+different shortcut:
+
+```dart
+ProgramDiagnosticsOptions(
+  initiallyVisible: true,
+  toggleBinding: KeyBinding(keys: ['ctrl+d']),
+)
+```
+
+The overlay shows render metrics, recent runtime messages (including
+`HotReloadStatusMsg`), captured `print()` output, and custom metrics. Enabling
+it automatically captures program output. The toggle is consumed by the
+runtime and is not forwarded to the application model.
+
+While visible, use **Tab** / **Shift+Tab** to switch between Metrics, Messages,
+and Captured Output. Scroll message and output history with **Up**,
+**Down**, **Page Up**, **Page Down**, **Home**, and **End**. These navigation
+keys are consumed only while the diagnostics overlay is visible.
+
+Applications can publish metrics without depending on the widget framework:
+
+```dart
+ProgramDiagnosticsMetrics.setMetric('Queue depth', queue.length);
+ProgramDiagnosticsMetrics.setMetrics({
+  'Cache hits': cacheHits,
+  'Workers': workerCount,
+});
+```
+
+The facility is omitted in product builds even when configured.
 
 ## TUI Runtime Instrumentation
 

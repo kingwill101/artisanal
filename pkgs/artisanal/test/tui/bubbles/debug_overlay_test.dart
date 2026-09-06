@@ -11,13 +11,12 @@ void main() {
   // =========================================================================
 
   group('DebugOverlayMode', () {
-    test('has four values', () {
-      expect(DebugOverlayMode.values, hasLength(4));
+    test('has three tab values', () {
+      expect(DebugOverlayMode.values, hasLength(3));
       expect(DebugOverlayMode.values.map((e) => e.name), [
         'metrics',
         'messages',
         'output',
-        'all',
       ]);
     });
   });
@@ -63,14 +62,14 @@ void main() {
       ];
 
       final updated = overlay.copyWith(
-        mode: DebugOverlayMode.all,
+        mode: DebugOverlayMode.output,
         messageEntries: entries,
         outputEntries: outputs,
         maxDisplayMessages: 5,
         maxDisplayOutput: 3,
       );
 
-      expect(updated.mode, DebugOverlayMode.all);
+      expect(updated.mode, DebugOverlayMode.output);
       expect(updated.messageEntries, same(entries));
       expect(updated.outputEntries, same(outputs));
       expect(updated.maxDisplayMessages, 5);
@@ -82,7 +81,7 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('cycleMode', () {
-      test('cycles through all modes', () {
+      test('cycles through each tab', () {
         var m = overlay;
         expect(m.mode, DebugOverlayMode.metrics);
 
@@ -91,9 +90,6 @@ void main() {
 
         m = m.cycleMode();
         expect(m.mode, DebugOverlayMode.output);
-
-        m = m.cycleMode();
-        expect(m.mode, DebugOverlayMode.all);
 
         m = m.cycleMode();
         expect(m.mode, DebugOverlayMode.metrics);
@@ -276,43 +272,6 @@ void main() {
     // -----------------------------------------------------------------------
     // panel() rendering — all mode
     // -----------------------------------------------------------------------
-
-    group('panel() all mode', () {
-      test('renders all three sections with headers', () {
-        final msgEntries = [
-          DevToolsMessageEntry(
-            timestamp: DateTime.utc(2025, 6, 15),
-            messageType: 'QuitMsg',
-            summary: 'quit',
-            processingTime: Duration.zero,
-          ),
-        ];
-        final outEntries = [
-          OutputLogEntry(
-            line: 'captured line',
-            source: OutputSource.stdout,
-            timestamp: DateTime.utc(2025, 6, 15),
-          ),
-        ];
-        final m = overlay.copyWith(
-          enabled: true,
-          mode: DebugOverlayMode.all,
-          messageEntries: msgEntries,
-          outputEntries: outEntries,
-        );
-        final rendered = m.panel();
-        // Section headers in "all" mode.
-        expect(rendered, contains('Metrics'));
-        expect(rendered, contains('Messages'));
-        expect(rendered, contains('Output'));
-        // Panel title should be "Debug".
-        expect(rendered, contains('Debug'));
-        // Content from each section.
-        expect(rendered, contains('FPS:'));
-        expect(rendered, contains('quit'));
-        expect(rendered, contains('captured line'));
-      });
-    });
 
     // -----------------------------------------------------------------------
     // Truncation

@@ -185,6 +185,14 @@ export 'program.dart'
         runProgramWithResult,
         runProgramDebug;
 
+export 'program_devtools.dart'
+    show
+        ProgramDiagnosticsOptions,
+        ProgramDiagnosticsPosition,
+        ProgramDiagnostics,
+        ProgramDiagnosticsMetrics,
+        ProgramDevToolsController;
+
 export 'key_chord.dart'
     show KeyChordInterceptor, KeyChordBinding, chordBindings;
 

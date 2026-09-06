@@ -272,7 +272,6 @@ TUI. It supports four modes:
 | `metrics` | FPS, frame time, render time (original) |
 | `messages` | Recent message log from DevTools |
 | `output` | Captured `print()` output |
-| `all` | All three sections combined |
 
 ### Feeding Data to the Overlay
 

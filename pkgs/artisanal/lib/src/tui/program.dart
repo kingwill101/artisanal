@@ -28,6 +28,7 @@ import 'uv_capability_probe.dart';
 import 'package:ultraviolet/terminal.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 import 'hot_reload_mixin.dart';
+import 'program_devtools.dart';
 import 'package:ultraviolet/input.dart' as uvev;
 
 /// The TUI program runtime.
@@ -311,6 +312,7 @@ class ProgramOptions {
     this.useUltravioletInputDecoder = true,
     this.startupProbes,
     this.hotReload,
+    this.diagnostics,
     this.captureOutput = false,
     this.cancelSignal,
     this.environment,
@@ -566,6 +568,9 @@ class ProgramOptions {
   /// This is automatically disabled in production (`dart.vm.product` is `true`).
   final bool? hotReload;
 
+  /// Enables the unified runtime diagnostics subsystem and in-app overlay.
+  final ProgramDiagnosticsOptions? diagnostics;
+
   /// Whether to capture `print()` output inside the program zone.
   ///
   /// When `true`, calls to `print()` from application code (and any
@@ -652,6 +657,7 @@ class ProgramOptions {
     bool? useUltravioletInputDecoder,
     bool? startupProbes,
     bool? hotReload,
+    ProgramDiagnosticsOptions? diagnostics,
     bool? captureOutput,
     Future<void>? cancelSignal,
     List<String>? environment,
@@ -696,6 +702,7 @@ class ProgramOptions {
           useUltravioletInputDecoder ?? this.useUltravioletInputDecoder,
       startupProbes: startupProbes ?? this.startupProbes,
       hotReload: hotReload ?? this.hotReload,
+      diagnostics: diagnostics ?? this.diagnostics,
       captureOutput: captureOutput ?? this.captureOutput,
       cancelSignal: cancelSignal ?? this.cancelSignal,
       environment: environment ?? this.environment,
@@ -1170,7 +1177,24 @@ class Program<M extends Model> with HotReloadMixin {
     TuiRenderer? renderer,
   }) : _options = binding.options,
        _terminal = binding.terminal,
-       _customRenderer = renderer;
+       _customRenderer = renderer {
+    final options = _options.diagnostics;
+    if (!const bool.fromEnvironment('dart.vm.product') &&
+        (options != null || _options.interceptor is ArtisanalDevTools)) {
+      _diagnostics = ProgramDiagnostics(
+        messageCapacity: options?.maxMessages ?? 500,
+      );
+      if (options != null) {
+        _programDevTools = ProgramDevToolsController(
+          options,
+          diagnostics: _diagnostics,
+        );
+      }
+      if (_options.interceptor case final ArtisanalDevTools devTools) {
+        devTools.attachDiagnostics(_diagnostics!);
+      }
+    }
+  }
 
   final M _initialModel;
   final ProgramOptions _options;
@@ -1183,6 +1207,10 @@ class Program<M extends Model> with HotReloadMixin {
   /// a renderer that bridges the UV screen buffer to an alternative output
   /// target such as an HTML5 canvas.
   final TuiRenderer? _customRenderer;
+  ProgramDevToolsController? _programDevTools;
+  ProgramDiagnostics? _diagnostics;
+  StreamSubscription<Map<String, String>>? _devToolsMetricsSubscription;
+  int _lastRenderedDevToolsRevision = -1;
 
   /// The current render-budget state.
   ///
@@ -1439,12 +1467,24 @@ class Program<M extends Model> with HotReloadMixin {
     _running = true;
     _cancelled = false;
     _cleanedUp = false;
+    _diagnostics?.reset();
+    final programDevTools = _programDevTools;
+    if (programDevTools != null) {
+      programDevTools.updateCustomMetrics(ProgramDiagnosticsMetrics.values);
+      _devToolsMetricsSubscription = ProgramDiagnosticsMetrics.changes.listen((
+        metrics,
+      ) {
+        programDevTools.updateCustomMetrics(metrics);
+        scheduleRender();
+      });
+    }
     _cleanupErrors.clear();
     _runCompleter = Completer<void>();
     _panic = null;
     _panicStackTrace = null;
 
-    if (_options.captureOutput) {
+    if (_options.captureOutput ||
+        (_options.diagnostics?.captureOutput ?? false)) {
       await runZoned(
         _runInner,
         zoneSpecification: ZoneSpecification(
@@ -2905,8 +2945,15 @@ class Program<M extends Model> with HotReloadMixin {
   void _processMessage(Msg msg, {bool deferRender = false}) {
     if (_model == null) return;
 
+    if (_programDevTools?.handle(msg) ?? false) {
+      scheduleRender();
+      return;
+    }
+
     final interceptor = _options.interceptor;
-    final processSw = interceptor == null ? null : (Stopwatch()..start());
+    final processSw = interceptor == null && _diagnostics == null
+        ? null
+        : (Stopwatch()..start());
 
     if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
       final now = _now();
@@ -3094,7 +3141,9 @@ class Program<M extends Model> with HotReloadMixin {
       span.end();
       if (processSw != null) {
         processSw.stop();
-        interceptor!.onProcessed(msg, processSw.elapsed);
+        _diagnostics?.recordMessage(msg, processSw.elapsed);
+        _programDevTools?.diagnosticsChanged();
+        interceptor?.onProcessed(msg, processSw.elapsed);
       }
     }
   }
@@ -3822,7 +3871,9 @@ class Program<M extends Model> with HotReloadMixin {
       return;
     }
     final degradationLevel = _renderBudgetController.level;
-    final effectiveView = _applyRenderDegradation(view, degradationLevel);
+    var effectiveView = _applyRenderDegradation(view, degradationLevel);
+    final devToolsRevision = _programDevTools?.revision ?? -1;
+    effectiveView = _programDevTools?.compose(effectiveView) ?? effectiveView;
     viewSw?.stop();
     if (renderId != null && viewSw != null) {
       _trace(
@@ -3836,6 +3887,7 @@ class Program<M extends Model> with HotReloadMixin {
     // and diffing for no-op frames (e.g. RenderMetricsMsg with overlay off).
     if (!sizeChangedSinceLastRender &&
         identical(view, _lastRenderedView) &&
+        devToolsRevision == _lastRenderedDevToolsRevision &&
         degradationLevel == _lastRenderedDegradationLevel) {
       if (renderId != null) {
         _trace('render#$renderId skip (identical view)', tag: TraceTag.render);
@@ -3843,6 +3895,7 @@ class Program<M extends Model> with HotReloadMixin {
       return;
     }
     _lastRenderedView = view;
+    _lastRenderedDevToolsRevision = devToolsRevision;
     _lastRenderedDegradationLevel = degradationLevel;
     if (termSize != null) {
       _lastRenderWidth = termSize.width;
@@ -4061,7 +4114,9 @@ class Program<M extends Model> with HotReloadMixin {
     _renderer!.invalidate();
     final view = _model!.view();
     final degradationLevel = _renderBudgetController.level;
-    final effectiveView = _applyRenderDegradation(view, degradationLevel);
+    var effectiveView = _applyRenderDegradation(view, degradationLevel);
+    effectiveView = _programDevTools?.compose(effectiveView) ?? effectiveView;
+    _lastRenderedDevToolsRevision = _programDevTools?.revision ?? -1;
 
     if (effectiveView is View) {
       _lastView = effectiveView;
@@ -4233,13 +4288,7 @@ class Program<M extends Model> with HotReloadMixin {
     if (opt == false) return false;
     if (opt == true) return true;
 
-    // Auto-detect: only proceed if the VM service is reachable.
-    try {
-      final info = await dev.Service.getInfo();
-      return info.serverUri != null;
-    } catch (_) {
-      return false;
-    }
+    return canInitializeHotReload();
   }
 
   /// Reassembles the application after a hot reload.
@@ -4533,8 +4582,10 @@ class Program<M extends Model> with HotReloadMixin {
     trySync(() => TuiTrace.close());
     trySync(() => _options.interceptor?.onStop());
 
-    // Stop hot reload
-    trySync(() => stopHotReload());
+    // Stop hot reload and wait for its watcher/VM connection to close.
+    await tryAsync(stopHotReload);
+    await tryAsync(() async => _devToolsMetricsSubscription?.cancel());
+    _devToolsMetricsSubscription = null;
 
     // Final terminal cleanup
     trySync(() => _terminal?.dispose());

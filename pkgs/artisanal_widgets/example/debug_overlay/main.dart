@@ -18,18 +18,15 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
   final monitor = w.RenderMetricsProgramMonitor(prefix: 'Monitor');
-  // The simplest way: set debugOverlay: true.
+  // Enable the universal Program diagnostics overlay.
   // Press F12 at runtime to toggle it on/off.
-  final app = WidgetApp(
-    DebugOverlayDemo(),
-    debugOverlay: true,
-    debugOverlayPosition: w.DebugOverlayPosition.topRight,
-  );
+  final app = WidgetApp(DebugOverlayDemo());
   await tui.runProgram(
     app,
-    options: const tui.ProgramOptions(
+    options: tui.ProgramOptions(
       altScreen: true,
       mouseMode: tui.MouseMode.allMotion,
+      diagnostics: tui.ProgramDiagnosticsOptions(initiallyVisible: true),
     ).withInterceptor(monitor),
   );
 }

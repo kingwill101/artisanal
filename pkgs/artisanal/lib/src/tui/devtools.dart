@@ -47,12 +47,14 @@
 /// - `artisanal:state` — model state snapshot after each update
 library;
 
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer' as dev;
 
 import 'degradation.dart';
 import 'msg.dart';
 import 'program.dart';
+import 'program_devtools.dart';
 import 'terminal_native_frame.dart';
 
 /// Maximum number of message log entries retained in the ring buffer.
@@ -188,6 +190,7 @@ class ArtisanalDevTools extends ProgramInterceptor {
 
   void Function(Msg msg)? _send;
   final List<DevToolsMessageEntry> _messageLog = <DevToolsMessageEntry>[];
+  ProgramDiagnostics? _diagnostics;
   final DevToolsRenderStats _renderStats = DevToolsRenderStats();
   int _renderGeneration = 0;
   bool _running = false;
@@ -196,19 +199,31 @@ class ArtisanalDevTools extends ProgramInterceptor {
   bool _extensionsRegistered = false;
   ProgramOptions? _options;
 
-  // Track the last few messages for the pending-message timeline flow.
-  Msg? _currentMsg;
-  final Stopwatch _messageSw = Stopwatch();
+  // TimelineTask supports messages that are queued before earlier messages
+  // finish processing. Lists also handle the same Msg instance being sent more
+  // than once.
+  final Map<Msg, List<dev.TimelineTask>> _messageTimelineTasks =
+      HashMap<Msg, List<dev.TimelineTask>>.identity();
 
   /// Provides read-only access to render stats for testing.
-  DevToolsRenderStats get renderStats => _renderStats;
+  DevToolsRenderStats get renderStats =>
+      _diagnostics?.renderStats ?? _renderStats;
 
   /// Provides read-only access to the message log for testing.
   List<DevToolsMessageEntry> get messageLog =>
+      _diagnostics?.messages ??
       List<DevToolsMessageEntry>.unmodifiable(_messageLog);
+
+  /// Attaches the program-owned diagnostics session used by all presentations.
+  void attachDiagnostics(ProgramDiagnostics diagnostics) {
+    _diagnostics = diagnostics;
+  }
 
   /// Whether the DevTools bridge is currently active.
   bool get isRunning => _running;
+
+  /// Number of messages accepted by the interceptor but not yet processed.
+  int get pendingMessageCount => _queuedMessageCount;
 
   // -----------------------------------------------------------------------
   // ProgramInterceptor overrides
@@ -222,6 +237,8 @@ class ArtisanalDevTools extends ProgramInterceptor {
     _send = send;
     _running = true;
     _messageLog.clear();
+    _queuedMessageCount = 0;
+    _messageTimelineTasks.clear();
 
     if (enableServiceExtensions && !_extensionsRegistered) {
       _registerServiceExtensions();
@@ -244,22 +261,26 @@ class ArtisanalDevTools extends ProgramInterceptor {
     // Let inner interceptor transform/drop the message first.
     final innerResult = inner?.onSend(msg);
     // If the inner interceptor exists and dropped the message, propagate.
-    if (inner != null && innerResult == null) return null;
+    if (inner != null && innerResult == null) {
+      _queuedMessageCount--;
+      return null;
+    }
     final transformed = innerResult ?? msg;
 
-    // Begin Timeline span for message processing.
+    // Begin an asynchronous Timeline task. Messages can queue before earlier
+    // messages are processed, so nested synchronous spans are not valid here.
     if (enableTimeline) {
-      _currentMsg = transformed;
-      _messageSw
-        ..reset()
-        ..start();
-      dev.Timeline.startSync(
-        'artisanal.message',
-        arguments: <String, String>{
-          'type': transformed.runtimeType.toString(),
-          'summary': _summarizeMsg(transformed),
-        },
-      );
+      final task = dev.TimelineTask()
+        ..start(
+          'artisanal.message',
+          arguments: <String, String>{
+            'type': transformed.runtimeType.toString(),
+            'summary': summarizeMessage(transformed),
+          },
+        );
+      _messageTimelineTasks
+          .putIfAbsent(transformed, () => <dev.TimelineTask>[])
+          .add(task);
     }
 
     return transformed;
@@ -267,23 +288,27 @@ class ArtisanalDevTools extends ProgramInterceptor {
 
   @override
   void onProcessed(Msg msg, Duration elapsed) {
-    // End Timeline span.
-    if (enableTimeline && identical(msg, _currentMsg)) {
-      dev.Timeline.finishSync();
-      _messageSw.stop();
-      _currentMsg = null;
+    // End the task paired with this particular queued message.
+    if (enableTimeline) {
+      final tasks = _messageTimelineTasks[msg];
+      if (tasks != null && tasks.isNotEmpty) {
+        tasks.removeAt(0).finish();
+        if (tasks.isEmpty) _messageTimelineTasks.remove(msg);
+      }
     }
 
     // Record in the message log ring buffer.
     final entry = DevToolsMessageEntry(
       timestamp: DateTime.now(),
       messageType: msg.runtimeType.toString(),
-      summary: _summarizeMsg(msg),
+      summary: summarizeMessage(msg),
       processingTime: elapsed,
     );
-    _messageLog.add(entry);
-    if (_messageLog.length > maxLogEntries) {
-      _messageLog.removeAt(0);
+    if (_diagnostics == null) {
+      _messageLog.add(entry);
+      if (_messageLog.length > maxLogEntries) {
+        _messageLog.removeAt(0);
+      }
     }
 
     // Emit live event.
@@ -291,7 +316,7 @@ class ArtisanalDevTools extends ProgramInterceptor {
       dev.postEvent('artisanal:message', <String, Object?>{...entry.toJson()});
     }
 
-    _queuedMessageCount--;
+    if (_queuedMessageCount > 0) _queuedMessageCount--;
     inner?.onProcessed(msg, elapsed);
   }
 
@@ -309,7 +334,7 @@ class ArtisanalDevTools extends ProgramInterceptor {
     List<TerminalNativeSpanDelta>? nativeSpanDelta,
   }) {
     _renderGeneration = renderGeneration;
-    _renderStats.record(
+    renderStats.record(
       renderDuration: renderDuration,
       degradationLevel: degradationLevel,
       width: width,
@@ -358,12 +383,19 @@ class ArtisanalDevTools extends ProgramInterceptor {
   @override
   void onStop() {
     _running = false;
+    _queuedMessageCount = 0;
+    for (final tasks in _messageTimelineTasks.values) {
+      for (final task in tasks) {
+        task.finish();
+      }
+    }
+    _messageTimelineTasks.clear();
 
     if (enablePostEvent) {
       dev.postEvent('artisanal:stop', <String, Object?>{
         'timestamp': DateTime.now().toIso8601String(),
-        'totalFrames': _renderStats._frameCount,
-        'totalMessages': _messageLog.length,
+        'totalFrames': renderStats._frameCount,
+        'totalMessages': messageLog.length,
       });
     }
 
@@ -395,11 +427,9 @@ class ArtisanalDevTools extends ProgramInterceptor {
       Map<String, String> parameters,
     ) async {
       final count = int.tryParse(parameters['count'] ?? '') ?? 50;
-      final start = _messageLog.length > count ? _messageLog.length - count : 0;
-      final entries = _messageLog
-          .sublist(start)
-          .map((e) => e.toJson())
-          .toList();
+      final log = messageLog;
+      final start = log.length > count ? log.length - count : 0;
+      final entries = log.sublist(start).map((e) => e.toJson()).toList();
       return dev.ServiceExtensionResponse.result(
         jsonEncode(<String, Object?>{'entries': entries}),
       );
@@ -411,7 +441,7 @@ class ArtisanalDevTools extends ProgramInterceptor {
       Map<String, String> parameters,
     ) async {
       return dev.ServiceExtensionResponse.result(
-        jsonEncode(_renderStats.toJson()),
+        jsonEncode(renderStats.toJson()),
       );
     });
 
@@ -505,7 +535,8 @@ class ArtisanalDevTools extends ProgramInterceptor {
   // Message summarization
   // -----------------------------------------------------------------------
 
-  static String _summarizeMsg(Msg msg) {
+  /// Produces the canonical compact summary used by every diagnostics view.
+  static String summarizeMessage(Msg msg) {
     return switch (msg) {
       KeyMsg(:final key) =>
         'key: ${key.type.name}${key.runes.isNotEmpty ? ' runes=${key.runes}' : ''}',
