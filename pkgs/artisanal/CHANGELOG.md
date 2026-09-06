@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Add `FrameView`, `Frame`, and `FrameRenderable` for immediate-mode TEA views
-  that paint directly into Ultraviolet cell buffers.
+- Add `FrameView`, `FrameArea`, and `FrameRenderable` for immediate-mode TEA
+  views that position Artisanal styled strings without exposing renderer cells.
 
 ## 0.6.0
 

@@ -161,6 +161,7 @@ export 'view.dart'
     show
         View,
         Frame,
+        FrameArea,
         FrameView,
         FramePainter,
         FrameRenderable,

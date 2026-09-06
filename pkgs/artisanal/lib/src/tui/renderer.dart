@@ -83,6 +83,36 @@ abstract interface class NativeFrameInspectableRenderer {
   TerminalNativeCellDeltaFrame? captureNativeCellDelta();
 }
 
+final class _UvFrame implements Frame {
+  _UvFrame(uv_buffer.Screen screen, uv_buffer.Rectangle area)
+    : _screen = screen,
+      area = FrameArea(area.minX, area.minY, area.width, area.height);
+
+  final uv_buffer.Screen _screen;
+
+  @override
+  final FrameArea area;
+
+  @override
+  void write(String content, {FrameArea? target, bool wrap = true}) {
+    if (content.isEmpty) return;
+    final clipped = area.intersect(target ?? area);
+    if (clipped.isEmpty) return;
+    final styled = uv_styled.newStyledString(content)..wrap = wrap;
+    styled.draw(
+      _screen,
+      uv_buffer.rect(clipped.x, clipped.y, clipped.width, clipped.height),
+    );
+  }
+
+  @override
+  void render(FrameRenderable renderable, FrameArea target) {
+    final clipped = area.intersect(target);
+    if (clipped.isEmpty) return;
+    renderable.render(this, clipped);
+  }
+}
+
 /// Options for configuring a [TuiRenderer].
 ///
 /// These values are derived from [ProgramOptions] so the runtime can switch
@@ -716,7 +746,7 @@ class BufferedTuiRenderer implements TuiRenderer {
 /// Ultraviolet-inspired renderer backed by a cell buffer + diffing updates.
 ///
 /// String and [View] output is parsed into a cell buffer. [FrameView] output
-/// paints that buffer directly, avoiding an ANSI serialization and parse pass.
+/// uses the same styled-string parser for each explicitly positioned region.
 /// Both paths use the same Ultraviolet buffer diff and terminal output.
 ///
 /// In full-screen mode this writes UV output directly to the terminal. In
@@ -1379,7 +1409,7 @@ class UltravioletTuiRenderer
           frameArea.height - logHeight,
         );
       }
-      frameView.paint(Frame(screen: scr, area: frameArea));
+      frameView.paint(_UvFrame(scr, frameArea));
     } else {
       ss!.draw(scr, scr.bounds());
     }

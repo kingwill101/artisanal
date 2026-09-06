@@ -4,6 +4,65 @@ import 'degradation.dart';
 import 'msg.dart';
 import 'package:ultraviolet/ultraviolet.dart' hide MouseMode;
 
+/// A rectangular region in a structured terminal [Frame].
+///
+/// Coordinates are zero-based and relative to the frame's viewport.
+final class FrameArea {
+  /// Creates an area from its origin and dimensions.
+  const FrameArea(this.x, this.y, this.width, this.height);
+
+  /// Horizontal origin.
+  final int x;
+
+  /// Vertical origin.
+  final int y;
+
+  /// Width in terminal cells.
+  final int width;
+
+  /// Height in terminal cells.
+  final int height;
+
+  /// The first column outside this area.
+  int get right => x + width;
+
+  /// The first row outside this area.
+  int get bottom => y + height;
+
+  /// Whether this area has no drawable cells.
+  bool get isEmpty => width <= 0 || height <= 0;
+
+  /// Returns the overlap between this area and [other].
+  FrameArea intersect(FrameArea other) {
+    final left = x > other.x ? x : other.x;
+    final top = y > other.y ? y : other.y;
+    final clippedRight = right < other.right ? right : other.right;
+    final clippedBottom = bottom < other.bottom ? bottom : other.bottom;
+    final clippedWidth = clippedRight - left;
+    final clippedHeight = clippedBottom - top;
+    return FrameArea(
+      left,
+      top,
+      clippedWidth > 0 ? clippedWidth : 0,
+      clippedHeight > 0 ? clippedHeight : 0,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is FrameArea &&
+      other.x == x &&
+      other.y == y &&
+      other.width == width &&
+      other.height == height;
+
+  @override
+  int get hashCode => Object.hash(x, y, width, height);
+
+  @override
+  String toString() => 'FrameArea($x, $y, $width, $height)';
+}
+
 /// A value that can paint itself directly into a terminal [Frame].
 ///
 /// Implementations should be short-lived descriptions of the current model
@@ -11,32 +70,28 @@ import 'package:ultraviolet/ultraviolet.dart' hide MouseMode;
 /// renderable.
 abstract interface class FrameRenderable {
   /// Paints this value into [area], clipped to the frame bounds.
-  void render(Frame frame, Rectangle area);
+  void render(Frame frame, FrameArea area);
 }
 
-/// The mutable cell target for one immediate-mode render pass.
+/// Positioned string composition for one immediate-mode render pass.
 ///
-/// A frame is created by the Ultraviolet renderer after the terminal viewport
-/// has been sized and cleared. Use [screen] for low-level cell operations or
-/// [render] to compose [FrameRenderable] values.
+/// A frame is created after the terminal viewport has been sized and cleared.
+/// Content passed to [write] may include ANSI styling produced by Artisanal's
+/// `Style.render`. The renderer owns conversion to terminal cells.
 ///
 /// {@category TUI}
-final class Frame {
-  /// Creates a frame over [screen] restricted to [area].
-  const Frame({required this.screen, required this.area});
-
-  /// The cell surface receiving this frame.
-  final Screen screen;
-
+abstract interface class Frame {
   /// The drawable viewport for this frame.
-  final Rectangle area;
+  FrameArea get area;
 
-  /// Paints [renderable] into [area], clipped to this frame's viewport.
-  void render(FrameRenderable renderable, Rectangle area) {
-    final clipped = this.area.intersect(area);
-    if (clipped.isEmpty) return;
-    renderable.render(this, clipped);
-  }
+  /// Writes plain or ANSI-styled [content] into a positioned region.
+  ///
+  /// The region is clipped to [area]. When [target] is omitted, content is
+  /// written into the complete frame.
+  void write(String content, {FrameArea? target, bool wrap = true});
+
+  /// Paints [renderable] into [target], clipped to this frame's viewport.
+  void render(FrameRenderable renderable, FrameArea target);
 }
 
 /// Signature used by [FrameView] to paint a structured terminal frame.
@@ -157,12 +212,11 @@ class View {
   String toString() => 'View(content: ${content.length} chars)';
 }
 
-/// A [View] that paints cells directly instead of parsing an ANSI string.
+/// A [View] that composes styled strings into positioned terminal regions.
 ///
 /// [FrameView] is the immediate-mode rendering path for foundational TEA
-/// applications. The runtime creates a cleared [Frame] at the current terminal
-/// size and invokes [paint] once per rendered model state. Ultraviolet then
-/// diffs the resulting cell buffer as usual.
+/// applications. The runtime creates a cleared [Frame] at the current viewport
+/// size and invokes [paint] once per rendered model state.
 ///
 /// [content] is an optional fallback used by renderers that do not support
 /// structured frames. It is not parsed by [UltravioletTuiRenderer].
