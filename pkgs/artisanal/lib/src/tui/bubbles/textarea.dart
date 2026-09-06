@@ -2994,6 +2994,20 @@ class TextAreaModel extends ViewComponent {
         execute: (model) => model.moveSelectionsToLineBoundary(forward: true),
       ),
       EditorCommand(
+        id: EditorCommandIds.cursorVisualLineStart,
+        label: 'Move Cursors to Visual Line Start',
+        category: 'Cursor',
+        execute: (model) =>
+            model.moveSelectionsToVisualLineBoundary(forward: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.cursorVisualLineEnd,
+        label: 'Move Cursors to Visual Line End',
+        category: 'Cursor',
+        execute: (model) =>
+            model.moveSelectionsToVisualLineBoundary(forward: true),
+      ),
+      EditorCommand(
         id: EditorCommandIds.deleteLeft,
         label: 'Delete Left at Cursors',
         category: 'Edit',
@@ -3119,6 +3133,20 @@ class TextAreaModel extends ViewComponent {
         label: 'Extend Selections to Line End',
         category: 'Selection',
         execute: (model) => model.extendSelectionsToLineBoundary(forward: true),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectVisualLineStart,
+        label: 'Extend Selections to Visual Line Start',
+        category: 'Selection',
+        execute: (model) =>
+            model.extendSelectionsToVisualLineBoundary(forward: false),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.selectVisualLineEnd,
+        label: 'Extend Selections to Visual Line End',
+        category: 'Selection',
+        execute: (model) =>
+            model.extendSelectionsToVisualLineBoundary(forward: true),
       ),
       EditorCommand(
         id: EditorCommandIds.indentLines,
@@ -3580,19 +3608,33 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (_matchesMovementBinding(key, keyMap.lineStart)) {
-            executeCommand(
-              key.shift
-                  ? EditorCommandIds.selectLineStart
-                  : EditorCommandIds.cursorLineStart,
-            );
+            final visual = key.type == KeyType.home;
+            late final String commandId;
+            if (key.shift) {
+              commandId = visual
+                  ? EditorCommandIds.selectVisualLineStart
+                  : EditorCommandIds.selectLineStart;
+            } else {
+              commandId = visual
+                  ? EditorCommandIds.cursorVisualLineStart
+                  : EditorCommandIds.cursorLineStart;
+            }
+            executeCommand(commandId);
             return (this, null);
           }
           if (_matchesMovementBinding(key, keyMap.lineEnd)) {
-            executeCommand(
-              key.shift
-                  ? EditorCommandIds.selectLineEnd
-                  : EditorCommandIds.cursorLineEnd,
-            );
+            final visual = key.type == KeyType.end;
+            late final String commandId;
+            if (key.shift) {
+              commandId = visual
+                  ? EditorCommandIds.selectVisualLineEnd
+                  : EditorCommandIds.selectLineEnd;
+            } else {
+              commandId = visual
+                  ? EditorCommandIds.cursorVisualLineEnd
+                  : EditorCommandIds.cursorLineEnd;
+            }
+            executeCommand(commandId);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.inputBegin)) {
@@ -3994,6 +4036,19 @@ class TextAreaModel extends ViewComponent {
     );
   }
 
+  /// Moves every active cursor to its projected visual-row boundary.
+  ///
+  /// Without soft wrapping, the visual and logical line boundaries are equal.
+  bool moveSelectionsToVisualLineBoundary({required bool forward}) {
+    _refreshEditorStateSnapshot();
+    _configureTextView();
+    return _applyMappedEnds(
+      forward: forward,
+      mapEnd: (offset, _) =>
+          _offsetForVisualLineBoundary(offset, forward: forward),
+    );
+  }
+
   /// Moves every active cursor up or down by one visible line.
   bool moveSelectionsVertically({required bool below}) {
     return _applyVerticalMappedEnds(below: below);
@@ -4029,6 +4084,18 @@ class TextAreaModel extends ViewComponent {
       forward: forward,
       extend: true,
       mapEnd: (offset, _) => _lineBoundaryOffset(offset, forward: forward),
+    );
+  }
+
+  /// Extends every selection's active edge to its visual-row boundary.
+  bool extendSelectionsToVisualLineBoundary({required bool forward}) {
+    _refreshEditorStateSnapshot();
+    _configureTextView();
+    return _applyMappedEnds(
+      forward: forward,
+      extend: true,
+      mapEnd: (offset, _) =>
+          _offsetForVisualLineBoundary(offset, forward: forward),
     );
   }
 
@@ -4179,6 +4246,16 @@ class TextAreaModel extends ViewComponent {
       lineDelta: below ? 1 : -1,
       desiredDisplayColumn: preferredColumn,
       cursor: position,
+    );
+  }
+
+  int _offsetForVisualLineBoundary(int offset, {required bool forward}) {
+    if (!softWrap) return _lineBoundaryOffset(offset, forward: forward);
+    return _textView.cursorOffsetForVisualLineBoundary(
+      _document,
+      _editorState,
+      end: forward,
+      cursor: _document.positionForOffset(offset),
     );
   }
 

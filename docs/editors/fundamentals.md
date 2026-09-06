@@ -188,6 +188,9 @@ intended column. Reset the preference after horizontal movement or editing.
 `TextAreaModel` does this per cursor automatically. With soft wrapping enabled,
 it navigates adjacent visual rows and retains a terminal-cell display column;
 without wrapping, it navigates logical lines and retains a grapheme column.
+Home/End dispatch the visual-line boundary commands. The distinct
+`cursorLineStart`, `cursorLineEnd`, `selectLineStart`, and `selectLineEnd`
+commands remain available when a host needs explicit logical-line movement.
 
 A host can package a structural motion as an `EditorRangeResolver` and apply it
 to every selection rather than duplicating single- and multi-cursor paths.

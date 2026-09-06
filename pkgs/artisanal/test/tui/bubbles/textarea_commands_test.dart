@@ -80,6 +80,10 @@ void main() {
           EditorCommandIds.clearSelection,
           EditorCommandIds.insertLineBreak,
           EditorCommandIds.insertText,
+          EditorCommandIds.cursorVisualLineStart,
+          EditorCommandIds.cursorVisualLineEnd,
+          EditorCommandIds.selectVisualLineStart,
+          EditorCommandIds.selectVisualLineEnd,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -844,6 +848,39 @@ void main() {
         EditorCommandDispatchResult.handled,
       );
       expect((model.line, model.column), (2, 3));
+    });
+
+    test('home and end follow soft-wrapped visual boundaries', () {
+      var model =
+          TextAreaModel(
+              prompt: '',
+              showLineNumbers: false,
+              softWrap: true,
+              width: 4,
+              height: 4,
+            )
+            ..setText('abcdef', recordHistory: false)
+            ..setCursor(0, 1)
+            ..focus();
+
+      (model, _) = model.update(const tui.KeyMsg(tui.Key(tui.KeyType.end)));
+      expect((model.line, model.column), (0, 4));
+
+      model.setCursor(0, 5);
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.home, shift: true)),
+      );
+      expect((model.line, model.column), (0, 4));
+      expect(model.selectionBase, (line: 0, column: 5));
+      expect(model.selectionExtent, (line: 0, column: 4));
+
+      model
+        ..clearSelection()
+        ..setCursor(0, 1);
+      (model, _) = model.update(
+        const tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [0x65], ctrl: true)),
+      );
+      expect((model.line, model.column), (0, 6));
     });
 
     test('line commands are atomic and duplicate below the source line', () {

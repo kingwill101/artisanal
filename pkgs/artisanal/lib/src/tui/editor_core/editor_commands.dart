@@ -32,6 +32,8 @@ abstract final class EditorCommandIds {
   static const cursorWordRight = 'editor.action.cursorWordRight';
   static const cursorLineStart = 'editor.action.cursorLineStart';
   static const cursorLineEnd = 'editor.action.cursorLineEnd';
+  static const cursorVisualLineStart = 'editor.action.cursorVisualLineStart';
+  static const cursorVisualLineEnd = 'editor.action.cursorVisualLineEnd';
   static const deleteLeft = 'editor.action.deleteLeft';
   static const deleteRight = 'editor.action.deleteRight';
   static const deleteWordLeft = 'editor.action.deleteWordLeft';
@@ -52,6 +54,8 @@ abstract final class EditorCommandIds {
   static const selectWordRight = 'editor.action.selectWordRight';
   static const selectLineStart = 'editor.action.selectLineStart';
   static const selectLineEnd = 'editor.action.selectLineEnd';
+  static const selectVisualLineStart = 'editor.action.selectVisualLineStart';
+  static const selectVisualLineEnd = 'editor.action.selectVisualLineEnd';
   static const indentLines = 'editor.action.indentLines';
   static const outdentLines = 'editor.action.outdentLines';
   static const deleteLine = 'editor.action.deleteLine';
