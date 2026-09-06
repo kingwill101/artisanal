@@ -617,6 +617,40 @@ void main() {
       expect(model.selections.ranges.map((range) => range.endOffset), [2, 6]);
     });
 
+    test('repeated backward selection preserves every cursor anchor', () {
+      final model = TextAreaModel()
+        ..setText('abcdefghij', recordHistory: false)
+        ..setSelections(
+          TextSelectionSet(const [
+            TextSelectionRange(startOffset: 3, endOffset: 3),
+            TextSelectionRange(startOffset: 8, endOffset: 8),
+          ], primaryOffset: 3),
+        );
+
+      for (var i = 0; i < 2; i++) {
+        expect(
+          model.executeCommand(EditorCommandIds.selectLeft),
+          EditorCommandDispatchResult.handled,
+        );
+      }
+
+      expect(model.selections.ranges.map((range) => range.anchorOffset), [
+        3,
+        8,
+      ]);
+      expect(model.selections.ranges.map((range) => range.activeOffset), [
+        1,
+        6,
+      ]);
+      expect(
+        model.selections.ranges.every((range) => range.isReversed),
+        isTrue,
+      );
+      expect(model.cursorOffset, 1);
+      expect(model.selectionBase, (line: 0, column: 3));
+      expect(model.selectionExtent, (line: 0, column: 1));
+    });
+
     test('moves and deletes by word at every cursor atomically', () {
       final model = TextAreaModel()
         ..setText('one two three four', recordHistory: false)

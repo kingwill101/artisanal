@@ -49,6 +49,9 @@
   motions and edits share selection-set transforms; routed textarea keys
   through named commands (including argument-taking insert), and made
   `TextView` skip folded lines without stranding cursors in hidden bodies.
+- Preserved each selection range's anchor and active edge independently, so
+  repeated backward extension, anchor crossing, edit mapping, and primary
+  cursor placement behave consistently for one or many selections.
 - Added `MemoryEditorDocumentStore` plus a file-backed example store for
   save/recovery workflows.
 - Added a full-screen alternate-buffer `advanced-editor` example with find

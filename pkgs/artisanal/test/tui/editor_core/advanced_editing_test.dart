@@ -171,6 +171,18 @@ void main() {
       expect(set.primary, set.ranges.single);
     });
 
+    test('keeps the primary active edge when ranges merge', () {
+      final set = TextSelectionSet([
+        TextSelectionRange.directional(anchorOffset: 4, activeOffset: 1),
+        const TextSelectionRange(startOffset: 2, endOffset: 3),
+      ], primaryOffset: 1);
+
+      expect(set.ranges, hasLength(1));
+      expect(set.primary?.anchorOffset, 4);
+      expect(set.primary?.activeOffset, 1);
+      expect(set.primary?.isReversed, isTrue);
+    });
+
     test('deletions drop covered ranges but keep cursors', () {
       final set = TextSelectionSet(const [
         TextSelectionRange(startOffset: 1, endOffset: 1),
@@ -196,6 +208,23 @@ void main() {
       final result = insertTextAtEachSelection('abc'.split(''), set, ['X']);
       expect(result.graphemes.join(), 'XabcX');
       expect(result.selections.ranges, hasLength(2));
+    });
+
+    test('preserves directional edges while mapping document edits', () {
+      final set = TextSelectionSet([
+        TextSelectionRange.directional(anchorOffset: 6, activeOffset: 2),
+      ], primaryOffset: 2);
+
+      final inserted = set.applyInsertion(offset: 0, length: 2);
+      expect(inserted.primary?.anchorOffset, 8);
+      expect(inserted.primary?.activeOffset, 4);
+      expect(inserted.primary?.isReversed, isTrue);
+
+      final deleted = inserted.applyDeletion(startOffset: 0, endOffset: 1);
+      expect(deleted.primary?.anchorOffset, 7);
+      expect(deleted.primary?.activeOffset, 3);
+      expect(deleted.primary?.isReversed, isTrue);
+      expect(deleted.collapseEach().primary?.activeOffset, 3);
     });
   });
 

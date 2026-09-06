@@ -44,7 +44,7 @@ void main() {
       ]);
     });
 
-    test('extend keeps the start and maps the end', () {
+    test('extend retains the anchor and maps the active edge', () {
       final selections = TextSelectionSet.collapsed(3);
       final extended = mapSelectionEnds(
         selections,
@@ -55,8 +55,56 @@ void main() {
 
       expect(
         extended.ranges.single,
-        const TextSelectionRange(startOffset: 1, endOffset: 3),
+        const TextSelectionRange(
+          startOffset: 1,
+          endOffset: 3,
+          isReversed: true,
+        ),
       );
+      expect(extended.ranges.single.anchorOffset, 3);
+      expect(extended.ranges.single.activeOffset, 1);
+    });
+
+    test('repeated backward extension moves every active edge', () {
+      final selections = TextSelectionSet(const [
+        TextSelectionRange(startOffset: 3, endOffset: 3),
+        TextSelectionRange(startOffset: 8, endOffset: 8),
+      ], primaryOffset: 3);
+
+      TextSelectionSet extendLeft(TextSelectionSet current) {
+        return mapSelectionEnds(
+          current,
+          forward: false,
+          extend: true,
+          mapEnd: (offset, _) => offset - 1,
+        );
+      }
+
+      final extended = extendLeft(extendLeft(selections));
+
+      expect(extended.ranges.map((range) => range.anchorOffset), [3, 8]);
+      expect(extended.ranges.map((range) => range.activeOffset), [1, 6]);
+      expect(extended.ranges.every((range) => range.isReversed), isTrue);
+      expect(extended.primary, extended.ranges.first);
+    });
+
+    test('extension can cross the anchor and change direction', () {
+      final reversed = TextSelectionSet([
+        TextSelectionRange.directional(anchorOffset: 3, activeOffset: 1),
+      ], primaryOffset: 1);
+
+      final crossed = mapSelectionEnds(
+        reversed,
+        forward: true,
+        extend: true,
+        mapEnd: (offset, _) => offset + 4,
+      );
+
+      expect(crossed.ranges.single.startOffset, 3);
+      expect(crossed.ranges.single.endOffset, 5);
+      expect(crossed.ranges.single.isReversed, isFalse);
+      expect(crossed.ranges.single.anchorOffset, 3);
+      expect(crossed.ranges.single.activeOffset, 5);
     });
 
     test('returns the original set when mapping is a no-op', () {

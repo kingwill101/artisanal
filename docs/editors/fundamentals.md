@@ -135,16 +135,19 @@ ranges are cursors:
 ```dart
 var selections = TextSelectionSet([
   const TextSelectionRange(startOffset: 1, endOffset: 1),
-  const TextSelectionRange(startOffset: 8, endOffset: 12),
-], primaryOffset: 12);
+  TextSelectionRange.directional(anchorOffset: 12, activeOffset: 8),
+], primaryOffset: 8);
 
 selections = selections.add(
   const TextSelectionRange(startOffset: 20, endOffset: 20),
 );
 ```
 
-Construction normalizes direction and merges overlapping or touching ranges.
-Use `primary` for status displays and provider requests. Use
+Construction normalizes bounds and merges overlapping or touching ranges.
+`TextSelectionRange` retains direction separately: `anchorOffset` is fixed,
+`activeOffset` moves, and `isReversed` reports whether the active edge is the
+lower bound. Use `TextSelectionRange.directional` when constructing from
+anchor/active offsets. Use `primary` for status displays and provider requests. Use
 `applyInsertion`/`applyDeletion` when maintaining selection state outside an
 integrated editor.
 
@@ -167,11 +170,14 @@ The range helpers are:
 
 - `mapSelectionRanges`, which transforms every complete range and preserves
   the primary selection;
-- `mapSelectionEnds`, which moves or extends every range's moving end.
+- `mapSelectionEnds`, which moves or extends every range's active edge while
+  preserving its anchor.
 
 When `mapSelectionEnds` moves instead of extending, a directional motion first
 collapses an existing selection toward that direction. This is the usual arrow
 key behavior and applies identically to a single selection and a selection set.
+Repeated backward extension remains backward, and crossing the anchor changes
+direction without changing the anchor.
 
 A host can package a structural motion as an `EditorRangeResolver` and apply it
 to every selection rather than duplicating single- and multi-cursor paths.

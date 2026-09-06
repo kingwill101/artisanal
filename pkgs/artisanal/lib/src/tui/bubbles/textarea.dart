@@ -900,12 +900,16 @@ class TextAreaModel extends ViewComponent {
   TextSelectionSet get selections {
     final active = _selections;
     if (active != null) return active;
-    final selection = _currentOffsetStateSnapshot().normalizedSelectionRange;
-    if (selection == null) return TextSelectionSet.collapsed(cursorOffset);
+    final snapshot = _currentOffsetStateSnapshot();
+    final baseOffset = snapshot.selectionBaseOffset;
+    final extentOffset = snapshot.selectionExtentOffset;
+    if (baseOffset == null || extentOffset == null) {
+      return TextSelectionSet.collapsed(cursorOffset);
+    }
     return TextSelectionSet([
-      TextSelectionRange(
-        startOffset: selection.start,
-        endOffset: selection.end,
+      TextSelectionRange.directional(
+        anchorOffset: baseOffset,
+        activeOffset: extentOffset,
       ),
     ], primaryOffset: cursorOffset);
   }
@@ -1158,12 +1162,12 @@ class TextAreaModel extends ViewComponent {
   void setSelections(TextSelectionSet value) {
     final clamped = TextSelectionSet(
       value.ranges.map(
-        (range) => TextSelectionRange(
-          startOffset: range.startOffset.clamp(0, length),
-          endOffset: range.endOffset.clamp(0, length),
+        (range) => TextSelectionRange.directional(
+          anchorOffset: range.anchorOffset.clamp(0, length),
+          activeOffset: range.activeOffset.clamp(0, length),
         ),
       ),
-      primaryOffset: value.primary?.endOffset.clamp(0, length),
+      primaryOffset: value.primary?.activeOffset.clamp(0, length),
     );
     _selections = clamped.ranges.length > 1 ? clamped : null;
     final primary =
@@ -1172,9 +1176,11 @@ class TextAreaModel extends ViewComponent {
     _applyLineStateSnapshot(
       lineSnapshotFromOffsets(
         _document,
-        cursorOffset: primary.endOffset,
-        selectionBaseOffset: primary.isCollapsed ? null : primary.startOffset,
-        selectionExtentOffset: primary.isCollapsed ? null : primary.endOffset,
+        cursorOffset: primary.activeOffset,
+        selectionBaseOffset: primary.isCollapsed ? null : primary.anchorOffset,
+        selectionExtentOffset: primary.isCollapsed
+            ? null
+            : primary.activeOffset,
       ),
     );
     _lastDocumentChange = null;
@@ -1197,7 +1203,7 @@ class TextAreaModel extends ViewComponent {
   bool addCursorVertically({required bool below}) {
     final primary = selections.primary;
     if (primary == null) return false;
-    final position = _document.positionForOffset(primary.endOffset);
+    final position = _document.positionForOffset(primary.activeOffset);
     final targetLine = position.line + (below ? 1 : -1);
     if (targetLine < 0 || targetLine >= lineCount) return false;
     final target = _document.offsetForPosition(
@@ -3347,7 +3353,7 @@ class TextAreaModel extends ViewComponent {
       _selections = result.selections;
       final primary = result.selections.primary!;
       _applyLineStateSnapshot(
-        lineSnapshotFromOffsets(_document, cursorOffset: primary.endOffset),
+        lineSnapshotFromOffsets(_document, cursorOffset: primary.activeOffset),
       );
       _lastDocumentChange = null;
       return;
@@ -3945,7 +3951,7 @@ class TextAreaModel extends ViewComponent {
       _selections = result.selections;
       final primary = result.selections.primary!;
       _applyLineStateSnapshot(
-        lineSnapshotFromOffsets(_document, cursorOffset: primary.endOffset),
+        lineSnapshotFromOffsets(_document, cursorOffset: primary.activeOffset),
       );
       _lastDocumentChange = null;
       return true;
@@ -4149,7 +4155,7 @@ class TextAreaModel extends ViewComponent {
     final next = mapSelectionRanges(
       current,
       transform: (range) {
-        final position = _document.positionForOffset(range.endOffset);
+        final position = _document.positionForOffset(range.activeOffset);
         final visibleLine = folds.visibleLineFor(position.line);
         if (visibleLine == position.line) return range;
         final offset = _document.lineStartOffset(visibleLine);
@@ -4362,6 +4368,7 @@ class TextAreaModel extends ViewComponent {
           (
             start: _document.positionForOffset(range.startOffset),
             end: _document.positionForOffset(range.endOffset),
+            isReversed: range.isReversed,
           ),
       ];
       final primaryIndex = selections.ranges.indexOf(selections.primary!);
@@ -4370,7 +4377,7 @@ class TextAreaModel extends ViewComponent {
       // so joining all logical lines already preserves it.
       _replaceText(lines.join('\n'));
       TextSelectionRange relocate(
-        ({TextPosition start, TextPosition end}) positions,
+        ({TextPosition start, TextPosition end, bool isReversed}) positions,
       ) {
         final startLine = (positions.start.line + delta).clamp(
           0,
@@ -4396,6 +4403,7 @@ class TextAreaModel extends ViewComponent {
               ),
             ),
           ),
+          isReversed: positions.start != positions.end && positions.isReversed,
         );
       }
 
@@ -4405,7 +4413,7 @@ class TextAreaModel extends ViewComponent {
           relocated,
           primaryOffset: relocated.isEmpty
               ? 0
-              : relocated[primaryIndex].endOffset,
+              : relocated[primaryIndex].activeOffset,
         ),
       );
       return true;
@@ -4457,7 +4465,7 @@ class TextAreaModel extends ViewComponent {
     setSelections(
       TextSelectionSet(
         deletionRanges,
-        primaryOffset: active.primary!.endOffset,
+        primaryOffset: active.primary!.activeOffset,
       ),
     );
     return deleteSelections();
@@ -4493,7 +4501,7 @@ class TextAreaModel extends ViewComponent {
     setSelections(
       TextSelectionSet(
         deletionRanges,
-        primaryOffset: active.primary!.endOffset,
+        primaryOffset: active.primary!.activeOffset,
       ),
     );
     return deleteSelections();
@@ -4525,7 +4533,7 @@ class TextAreaModel extends ViewComponent {
     setSelections(
       TextSelectionSet(
         deletionRanges,
-        primaryOffset: active.primary!.endOffset,
+        primaryOffset: active.primary!.activeOffset,
       ),
     );
     return deleteSelections();

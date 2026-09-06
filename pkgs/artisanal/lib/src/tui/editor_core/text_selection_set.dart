@@ -10,30 +10,70 @@ library;
 
 /// One range in a [TextSelectionSet]. Collapsed (`start == end`) ranges are
 /// cursors.
+///
+/// [startOffset] and [endOffset] are normalized bounds once the range belongs
+/// to a selection set. [isReversed] preserves which bound is the active edge,
+/// allowing repeated backward extension without losing the original anchor.
 final class TextSelectionRange {
   const TextSelectionRange({
     required this.startOffset,
     required this.endOffset,
+    this.isReversed = false,
   });
+
+  /// Creates normalized bounds from an anchor and active edge.
+  factory TextSelectionRange.directional({
+    required int anchorOffset,
+    required int activeOffset,
+  }) {
+    return TextSelectionRange(
+      startOffset: anchorOffset < activeOffset ? anchorOffset : activeOffset,
+      endOffset: anchorOffset > activeOffset ? anchorOffset : activeOffset,
+      isReversed: activeOffset < anchorOffset,
+    );
+  }
 
   final int startOffset;
   final int endOffset;
 
+  /// Whether the active edge is [startOffset] instead of [endOffset].
+  final bool isReversed;
+
   bool get isCollapsed => startOffset == endOffset;
   int get length => endOffset - startOffset;
 
-  TextSelectionRange normalized() => startOffset <= endOffset
-      ? this
-      : TextSelectionRange(startOffset: endOffset, endOffset: startOffset);
+  /// Fixed edge from which selection extension starts.
+  int get anchorOffset => isReversed ? endOffset : startOffset;
+
+  /// Moving edge used for cursor placement and further extension.
+  int get activeOffset => isReversed ? startOffset : endOffset;
+
+  TextSelectionRange normalized() {
+    if (startOffset <= endOffset) {
+      if (isCollapsed && isReversed) {
+        return TextSelectionRange(
+          startOffset: startOffset,
+          endOffset: endOffset,
+        );
+      }
+      return this;
+    }
+    return TextSelectionRange(
+      startOffset: endOffset,
+      endOffset: startOffset,
+      isReversed: isReversed,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
       other is TextSelectionRange &&
       other.startOffset == startOffset &&
-      other.endOffset == endOffset;
+      other.endOffset == endOffset &&
+      other.isReversed == isReversed;
 
   @override
-  int get hashCode => Object.hash(startOffset, endOffset);
+  int get hashCode => Object.hash(startOffset, endOffset, isReversed);
 }
 
 /// Sorted, non-overlapping selection ranges with a primary index.
@@ -55,12 +95,27 @@ final class TextSelectionSet {
         continue;
       }
       final last = merged.removeLast();
+      final mergedEnd = range.endOffset > last.endOffset
+          ? range.endOffset
+          : last.endOffset;
+      final directionSource = primaryOffset == range.activeOffset
+          ? range
+          : primaryOffset == last.activeOffset
+          ? last
+          : range;
+      var mergedIsReversed = directionSource.isReversed;
+      if (last.startOffset == mergedEnd) {
+        mergedIsReversed = false;
+      } else if (primaryOffset == last.startOffset) {
+        mergedIsReversed = true;
+      } else if (primaryOffset == mergedEnd) {
+        mergedIsReversed = false;
+      }
       merged.add(
         TextSelectionRange(
           startOffset: last.startOffset,
-          endOffset: range.endOffset > last.endOffset
-              ? range.endOffset
-              : last.endOffset,
+          endOffset: mergedEnd,
+          isReversed: mergedIsReversed,
         ),
       );
     }
@@ -97,21 +152,21 @@ final class TextSelectionSet {
     final next = TextSelectionSet(
       [...ranges, range],
       primaryOffset: makePrimary
-          ? range.normalized().endOffset
-          : primary?.endOffset,
+          ? range.normalized().activeOffset
+          : primary?.activeOffset,
     );
     return next;
   }
 
-  /// Collapses every range to its end offset (cursor per range).
+  /// Collapses every range to its active offset (cursor per range).
   TextSelectionSet collapseEach() => TextSelectionSet(
     ranges.map(
       (range) => TextSelectionRange(
-        startOffset: range.endOffset,
-        endOffset: range.endOffset,
+        startOffset: range.activeOffset,
+        endOffset: range.activeOffset,
       ),
     ),
-    primaryOffset: primary?.endOffset,
+    primaryOffset: primary?.activeOffset,
   );
 
   /// Maps the set through an insertion of [length] graphemes at [offset].
@@ -126,6 +181,7 @@ final class TextSelectionSet {
           endOffset: range.endOffset >= offset
               ? range.endOffset + length
               : range.endOffset,
+          isReversed: range.isReversed,
         ),
       ),
       primaryOffset: _mappedPrimary(offset, length, isInsertion: true),
@@ -149,6 +205,7 @@ final class TextSelectionSet {
     }
     final length = end - start;
     if (length <= 0 || ranges.isEmpty) return this;
+    final primaryRange = primary;
     final kept = <TextSelectionRange>[];
     for (final range in ranges) {
       if (range.endOffset <= start) {
@@ -160,6 +217,7 @@ final class TextSelectionSet {
           TextSelectionRange(
             startOffset: range.startOffset - length,
             endOffset: range.endOffset - length,
+            isReversed: range.isReversed,
           ),
         );
         continue;
@@ -174,19 +232,25 @@ final class TextSelectionSet {
           TextSelectionRange(
             startOffset: range.startOffset,
             endOffset: range.endOffset - length,
+            isReversed: range.isReversed,
           ),
         );
         continue;
       }
       if (range.startOffset < start) {
         kept.add(
-          TextSelectionRange(startOffset: range.startOffset, endOffset: start),
+          TextSelectionRange(
+            startOffset: range.startOffset,
+            endOffset: start,
+            isReversed: range.isReversed,
+          ),
         );
       } else {
         kept.add(
           TextSelectionRange(
             startOffset: start,
             endOffset: range.endOffset - length,
+            isReversed: range.isReversed,
           ),
         );
       }
@@ -194,18 +258,29 @@ final class TextSelectionSet {
     if (kept.isEmpty) {
       return TextSelectionSet.collapsed(start);
     }
-    return TextSelectionSet(kept, primaryOffset: primary?.endOffset);
+    return TextSelectionSet(
+      kept,
+      primaryOffset: primaryRange == null
+          ? null
+          : _mapOffsetThroughDeletion(primaryRange.activeOffset, start, end),
+    );
   }
 
   int? _mappedPrimary(int offset, int length, {required bool isInsertion}) {
     final current = primary;
     if (current == null) return null;
     if (isInsertion) {
-      return current.endOffset >= offset
-          ? current.endOffset + length
-          : current.endOffset;
+      return current.activeOffset >= offset
+          ? current.activeOffset + length
+          : current.activeOffset;
     }
-    return current.endOffset;
+    return current.activeOffset;
+  }
+
+  int _mapOffsetThroughDeletion(int offset, int start, int end) {
+    if (offset <= start) return offset;
+    if (offset >= end) return offset - (end - start);
+    return start;
   }
 }
 
