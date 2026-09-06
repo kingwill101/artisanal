@@ -163,7 +163,7 @@ final class DashboardModel implements Model {
       .render('↑/↓ or j/k: select   enter: inspect   q: quit');
 
   void _paintOverlay(Frame frame) {
-    final area = frame.area.centered(width: 42, height: 7);
+    final area = frame.area.centered(width: 42, height: 8);
     final project = projects[selected];
     frame.write(
       _panel([
@@ -183,7 +183,10 @@ final class DashboardModel implements Model {
     if (area.width < 2 || area.height < 2) return '';
     final innerWidth = area.width - 2;
     final innerHeight = area.height - 2;
-    final rows = sourceRows.take(innerHeight).toList();
+    final rows = sourceRows
+        .take(innerHeight)
+        .map((row) => Style().maxWidth(innerWidth).render(row))
+        .toList();
     while (rows.length < innerHeight) {
       rows.add('');
     }

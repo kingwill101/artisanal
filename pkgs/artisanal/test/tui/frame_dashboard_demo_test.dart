@@ -40,19 +40,46 @@ void main() {
       expect(model.selected, 1);
       expect(model.view(), isA<FrameView>());
     });
+
+    test('centers the model-controlled overlay above both panes', () async {
+      final renderer = await _render(
+        width: 80,
+        height: 20,
+        model: example.DashboardModel(showOverlay: true),
+      );
+      final screen = renderer.screenBuffer!;
+
+      expect(screen.cellAt(19, 6)?.content, '╭');
+      expect(screen.cellAt(60, 6)?.content, '╮');
+      expect(screen.cellAt(19, 13)?.content, '╰');
+      expect(screen.cellAt(60, 13)?.content, '╯');
+      expect(_line(renderer, 7), contains('INSPECT'));
+      renderer.dispose();
+    });
+
+    test('Enter and Escape toggle overlay state in the TEA model', () {
+      final model = example.DashboardModel();
+
+      model.update(const KeyMsg(Key(KeyType.enter)));
+      expect(model.showOverlay, isTrue);
+
+      model.update(const KeyMsg(Key(KeyType.escape)));
+      expect(model.showOverlay, isFalse);
+    });
   });
 }
 
 Future<UltravioletTuiRenderer> _render({
   required int width,
   required int height,
+  example.DashboardModel? model,
 }) async {
   final terminal = StringTerminal(terminalWidth: width, terminalHeight: height);
   final renderer = UltravioletTuiRenderer(
     terminal: terminal,
     options: const TuiRendererOptions(altScreen: false),
   );
-  renderer.render(example.DashboardModel().view());
+  renderer.render((model ?? example.DashboardModel()).view());
   await renderer.flush();
   return renderer;
 }
