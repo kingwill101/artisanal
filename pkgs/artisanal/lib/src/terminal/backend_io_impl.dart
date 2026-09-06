@@ -8,6 +8,7 @@ import 'package:ultraviolet/terminal.dart'
     show enableWindowsVtInput, restoreWindowsVtInput;
 import 'backend.dart';
 import 'stdin_stream.dart';
+import 'stty_flow_control.dart';
 import 'terminal_base.dart';
 
 /// Native stdio backend for [BackendTerminal].
@@ -28,6 +29,7 @@ class StdioTerminalBackend implements TerminalBackend {
   bool _rawModeEnabled = false;
   bool? _originalEchoMode;
   bool? _originalLineMode;
+  String? _savedFlowControl;
 
   StreamController<List<int>>? _inputController;
   StreamSubscription<List<int>>? _inputSubscription;
@@ -224,6 +226,9 @@ class StdioTerminalBackend implements TerminalBackend {
         _stdin.echoMode = false;
         _stdin.lineMode = false;
         if (identical(_stdin, io.stdin)) enableWindowsVtInput();
+        // Dart leaves IXON on, which freezes output on Ctrl+S (XOFF).
+        // Disable it while raw mode owns the terminal; restored below.
+        _savedFlowControl ??= disableTerminalFlowControl();
         _rawModeEnabled = true;
       } catch (_) {}
     }
@@ -246,6 +251,8 @@ class StdioTerminalBackend implements TerminalBackend {
       if (_originalLineMode != null) {
         _stdin.lineMode = _originalLineMode!;
       }
+      restoreTerminalFlowControl(_savedFlowControl);
+      _savedFlowControl = null;
       _rawModeEnabled = false;
     } catch (_) {}
   }
