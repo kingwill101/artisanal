@@ -1,7 +1,7 @@
 import 'dart:async';
 import '_component_foundation.dart';
 import '../navigation/navigator.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
 
@@ -132,7 +132,7 @@ class _DialogPromptState extends State<DialogPrompt> {
 
     return SizedBox(
       width: w,
-      child: Frame(
+      child: widget_frame.Frame(
         background: bg,
         padding: const EdgeInsets.only(left: 2, right: 2, top: 1, bottom: 1),
         child: Column(
@@ -153,7 +153,7 @@ class _DialogPromptState extends State<DialogPrompt> {
             // Description
             if (widget.description != null) widget.description!,
             // Text input
-            Frame(
+            widget_frame.Frame(
               background: searchBg,
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: TextField(

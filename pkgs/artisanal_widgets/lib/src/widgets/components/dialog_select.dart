@@ -2,7 +2,7 @@ import 'dart:async';
 import '_component_foundation.dart';
 import '../navigation/animation_style.dart';
 import '../navigation/navigator.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
 
@@ -392,7 +392,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
     return SizedBox(
       width: w,
       height: h,
-      child: Frame(
+      child: widget_frame.Frame(
         background: dialogBg,
         foreground: dialogFg,
         child: Column(
@@ -471,7 +471,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
   Widget _buildSearchInput(Theme theme, Color searchBg) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Frame(
+      child: widget_frame.Frame(
         background: searchBg,
         padding: const EdgeInsets.symmetric(horizontal: 1),
         child: Row(
@@ -556,7 +556,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
         );
 
       final index = i;
-      Widget row = Frame(
+      Widget row = widget_frame.Frame(
         background: bg,
         padding: const EdgeInsets.symmetric(horizontal: 1),
         child: Column(

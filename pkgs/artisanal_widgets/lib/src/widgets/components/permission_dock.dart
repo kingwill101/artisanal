@@ -112,11 +112,12 @@ class PermissionDock extends StatelessWidget {
           Row(
             gap: 1,
             children: [
-              Text('permission', style: theme.labelSmall.copy()..foreground(accent)),
-              Text('·', style: detailStyle),
-              Expanded(
-                child: Text(title, style: titleStyle, softWrap: false),
+              Text(
+                'permission',
+                style: theme.labelSmall.copy()..foreground(accent),
               ),
+              Text('·', style: detailStyle),
+              Expanded(child: Text(title, style: titleStyle, softWrap: false)),
             ],
           ),
           if (detail != null && detail!.isNotEmpty)

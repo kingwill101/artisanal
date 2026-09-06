@@ -1,6 +1,7 @@
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Style, Border, Color;
-import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/components/frame.dart'
+    as widget_frame;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
 import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
@@ -149,7 +150,7 @@ class _ButtonState extends State<Button> {
         ..borderForeground(colors.borderColor ?? theme.border);
     }
 
-    final content = Frame(
+    final content = widget_frame.Frame(
       style: frameStyle,
       padding: padding,
       background: colors.background,
