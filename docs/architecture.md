@@ -33,7 +33,7 @@ flowchart TB
     end
 
     subgraph presentation["Presentation layer"]
-        style["Style: Lip Gloss styling"]
+        styling["Style: Lip Gloss styling"]
         widgets["Widgets: declarative layouts"]
         bubbles["Bubbles: reusable components"]
     end
@@ -53,11 +53,11 @@ flowchart TB
         colorProfile["Color profile detection"]
     end
 
-    console --> style
+    console --> styling
     program --> widgets
     program --> bubbles
     runner --> console
-    style --> ultraviolet
+    styling --> ultraviolet
     widgets --> ultraviolet
     bubbles --> ultraviolet
     ultraviolet --> terminalApi
@@ -263,8 +263,8 @@ import 'package:artisanal/glamour.dart';
 ```mermaid
 flowchart LR
     user["User code"] --> console["Console"]
-    console --> style["Style.render()"]
-    style --> terminal["Terminal"]
+    console --> styling["Style.render()"]
+    styling --> terminal["Terminal"]
     terminal --> stdout["stdout"]
 ```
 
