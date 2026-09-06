@@ -31,16 +31,24 @@ enum ImageProtocol {
 }
 
 /// Auto-detect the best available terminal image protocol.
+///
+/// Comparisons are case-insensitive: terminals disagree on `TERM_PROGRAM`
+/// casing (`Ghostty` vs `ghostty`), and missing markers mean [ImageProtocol.none].
 ImageProtocol detectImageProtocol() {
-  final termProgram = platform.environmentValue('TERM_PROGRAM');
-  final term = platform.environmentValue('TERM');
-  final termEmulator = platform.environmentValue('TERMINAL_EMULATOR');
+  final termProgram = platform.environmentValue('TERM_PROGRAM').toLowerCase();
+  final term = platform.environmentValue('TERM').toLowerCase();
+  final termEmulator = platform.environmentValue('TERMINAL_EMULATOR').toLowerCase();
   final kittyWindowId = platform.environmentValue('KITTY_WINDOW_ID');
 
-  if (kittyWindowId.isNotEmpty || termProgram == 'Kitty') {
+  if (kittyWindowId.isNotEmpty || termProgram == 'kitty') {
     return ImageProtocol.kitty;
   }
-  if (termProgram == 'iTerm.app' || termProgram == 'iTerm2') {
+  if (termProgram == 'ghostty' || term.contains('ghostty')) {
+    // Ghostty natively supports the Kitty graphics protocol (AOT,
+    // PNG-compressed). Sixel support is limited/experimental.
+    return ImageProtocol.kitty;
+  }
+  if (termProgram == 'iterm.app' || termProgram == 'iterm2') {
     return ImageProtocol.iterm2;
   }
   if (term.contains('sixel') ||
@@ -48,18 +56,13 @@ ImageProtocol detectImageProtocol() {
       term.contains('mlterm')) {
     return ImageProtocol.sixel;
   }
-  if (termProgram == 'WezTerm') {
+  if (termProgram == 'wezterm') {
     return ImageProtocol.sixel;
-  }
-  if (termProgram == 'ghostty') {
-    // Ghostty natively supports the Kitty graphics protocol (AOT,
-    // PNG-compressed). Sixel support is limited/experimental.
-    return ImageProtocol.kitty;
   }
   if (termProgram == 'vscode' || termEmulator == 'vscode') {
     return ImageProtocol.sixel;
   }
-  if (termProgram == 'Windows Terminal' ||
+  if (termProgram == 'windows terminal' ||
       platform.hasEnvironmentValue('WT_SESSION')) {
     return ImageProtocol.sixel;
   }

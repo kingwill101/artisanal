@@ -61,6 +61,34 @@ void main() {
       );
     });
 
+    test('does not wrap Kitty graphics in synchronized output', () {
+      const kitty = '\x1b_Ga=T,f=100,i=1,c=2,r=1,q=2,m=0;AAAA\x1b\\';
+      final terminal = MockPlumbingTerminal(width: 20, height: 4);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(altScreen: true),
+      );
+
+      renderer.render(kitty);
+
+      expect(terminal.output, contains('\x1b_Ga=T'));
+      expect(terminal.output, isNot(contains('\x1b[?2026h')));
+      expect(terminal.output, isNot(contains('\x1b[?2026l')));
+    });
+
+    test('continues synchronizing text-only fullscreen frames', () {
+      final terminal = MockPlumbingTerminal(width: 20, height: 4);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(altScreen: true),
+      );
+
+      renderer.render('plain text');
+
+      expect(terminal.output, contains('\x1b[?2026h'));
+      expect(terminal.output, contains('\x1b[?2026l'));
+    });
+
     test(
       'does not clear retained Kitty placements on text-only diff frames',
       () {
@@ -86,6 +114,22 @@ void main() {
         );
       },
     );
+
+    test('does not clear an unchanged anonymous Kitty placement', () {
+      const deleteAll = '\x1b_Ga=d,d=a,q=2\x1b\\';
+      const kitty = '\x1b_Ga=T,f=100,c=2,r=1,q=2,m=0;AAAA\x1b\\';
+      final terminal = MockPlumbingTerminal(width: 30, height: 4);
+      final renderer = UltravioletTuiRenderer(
+        terminal: terminal,
+        options: const TuiRendererOptions(altScreen: false),
+      );
+
+      renderer.render('$kitty\nstatus: 1');
+      terminal.clear();
+      renderer.render('$kitty\nstatus: 2');
+
+      expect(terminal.output, isNot(contains(deleteAll)));
+    });
 
     test('deletes stale retained image ids while keeping visible images', () {
       const deleteImage1 = '\x1b_Ga=d,d=I,i=1,q=2\x1b\\';
