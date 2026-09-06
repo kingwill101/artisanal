@@ -1,5 +1,78 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added shared command-palette items, scored matches, deterministic matching,
+  editor command state, and a scrolling TEA modal component. Widget and
+  string-view hosts can now build on the same package-owned foundation.
+- Added FFI-free editor seams `text_language.dart` (`EditorLanguageAdapter` +
+  `EditorLanguageRegistry`) and `syntax_tree.dart` (`EditorSyntaxNode` /
+  `EditorSyntaxTree` / `SyntaxTreeProvider` DTOs) so Tree-sitter, LSP, or
+  custom language backends can plug in from their own packages without the
+  core bundling native dependencies.
+- Added `code_extensions.dart` as the opt-in home for builtin language
+  behavior; the minimal `editor_core.dart` barrel now exports only the
+  versatile core.
+- Added `codeShouldIncreaseIndentForAdapter` alongside the legacy
+  string-based indent helper.
+- Added prompt-composer helpers: tracked paste placeholders
+  (`text_placeholders.dart`), prompt normalization + external-editor
+  resolution (`prompt_content.dart`), and IDE selection ingestion
+  (`editor_selection.dart`), with a `prompt-composer` TUI example wiring all
+  four together (`TextAreaModel` + `Cmd.openEditor` + placeholders +
+  selection context).
+- Disabled kernel XOFF flow control (`stty -ixon`, state saved/restored)
+  while stdio raw mode owns the terminal, so `Ctrl+S`/`Ctrl+Q` reach TUI
+  apps as keys instead of freezing output.
+- Added an editor-core boundary test (no `dart:io`/`dart:ffi`, no builtin
+  imports from core, builtins excluded from the minimal barrel).
+- Added advanced editing capabilities: bracket matching
+  (`text_brackets.dart`), regex find/replace with sessions
+  (`text_search.dart`), multi-selection sets (`text_selection_set.dart`),
+  atomic workspace edits with preview (`workspace_edits.dart`), snippets
+  with tabstop sessions (`text_snippets.dart`), and indent folding
+  (`text_folding.dart`).
+- Added portable editor commands and keymaps, completion and code-action
+  provider contracts, asynchronous syntax sessions, configurable work budgets,
+  and document snapshot persistence/recovery.
+- Expanded `TextAreaModel` with command dispatch, undo/redo, dirty revisions,
+  search and diagnostics navigation, completion acceptance, clipboard
+  transactions, and multi-cursor character, word, and line editing.
+- Added a full-screen alternate-buffer `advanced-editor` example with stable
+  line-number gutters, syntax and diagnostic decorations, command-palette
+  scrolling, multiple cursors, revision status, and a viewport-pinned footer.
+- Added inline media: typed chip elements (`text_inline_elements.dart`)
+  plus the attachment lifecycle (`media_attachments.dart`: preview
+  pipeline, viewer state, capability-gated affordances), pasted/dropped
+  path recognition (`media_paths.dart`, via `package:path`), a
+  `cursorOffset` getter on `TextAreaModel` for overlay hit-testing, and a
+  full-screen `media-composer` example wiring the chip → cursor preview →
+  modal viewer workflow (mime types via `package:mime`).
+- Chip elements track edits by position diff, never marker text: pasted
+  marker-looking text cannot hijack elements, typing inside a chip
+  destroys it, chips refuse nesting, and prompts cap at ten images.
+- Added a TEA-native modal popup (`renderModal` + `ModalChrome`, with box
+  chrome from the Style-driven `PanelComponent` and splicing via
+  ultraviolet's `cutAnsiByCells` slicer) and exported the image renderer
+  (`ImageProtocol`, `detectImageProtocol`, `renderImageToAnsi`) from the
+  markdown barrel; the `media-composer` viewer paints halfblock pixels
+  or terminal-native Kitty/iTerm2/Sixel images inside the modal, with a
+  manual protocol cycle (`ctrl+p`) and `esc`/`q` viewer close.
+
+### Changed
+
+- Moved builtin language data out of core logic: `CodeLanguageProfile` now
+  implements `EditorLanguageAdapter`, and the colon-indent rule lives on the
+  Python/YAML adapters instead of a hardcoded branch in `code_edit_policy.dart`.
+  `resolveCodeLanguageProfile` keeps its signature as a registry-backed shim.
+- Split `editing.dart` / `viewing.dart` barrels into core-only exports;
+  `package:artisanal/editor_core.dart` and `package:artisanal/artisanal.dart`
+  re-export `code_extensions.dart` for backwards compatibility.
+- Kept terminal graphics commands outside DEC synchronized-update frames so
+  Kitty placements render correctly in Ghostty.
+
 ## 0.6.0
 
 ### Added
