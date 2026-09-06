@@ -88,27 +88,49 @@ final class TerminalGraphicsFrame {
   const TerminalGraphicsFrame({
     required this.hasRetainedGraphics,
     required this.retainedImageIds,
+    this.untrackedGraphicsFingerprint = 0,
   });
 
   /// Empty retained graphics frame.
   static const empty = TerminalGraphicsFrame(
     hasRetainedGraphics: false,
     retainedImageIds: <int>{},
+    untrackedGraphicsFingerprint: 0,
   );
 
   /// Scans [value] for retained graphics visible in the frame.
   factory TerminalGraphicsFrame.scan(String value) {
     var hasRetainedGraphics = false;
     final retainedImageIds = <int>{};
+    var untrackedGraphicsFingerprint = 0;
+    var hashingUntrackedTransmission = false;
 
     for (final control in parseTerminalGraphicsControls(value)) {
-      if (control.protocol != TerminalGraphicsProtocol.kitty ||
-          !control.displaysImage) {
+      if (control.protocol != TerminalGraphicsProtocol.kitty) {
+        continue;
+      }
+      if (!control.displaysImage) {
+        if (hashingUntrackedTransmission) {
+          untrackedGraphicsFingerprint = Object.hash(
+            untrackedGraphicsFingerprint,
+            control.sequence,
+          );
+          hashingUntrackedTransmission = control.hasMoreChunks;
+        }
         continue;
       }
       hasRetainedGraphics = true;
       final id = control.imageId;
-      if (id != null) retainedImageIds.add(id);
+      if (id != null) {
+        retainedImageIds.add(id);
+        hashingUntrackedTransmission = false;
+      } else {
+        untrackedGraphicsFingerprint = Object.hash(
+          untrackedGraphicsFingerprint,
+          control.sequence,
+        );
+        hashingUntrackedTransmission = control.hasMoreChunks;
+      }
     }
 
     if (!hasRetainedGraphics && retainedImageIds.isEmpty) {
@@ -117,6 +139,7 @@ final class TerminalGraphicsFrame {
     return TerminalGraphicsFrame(
       hasRetainedGraphics: hasRetainedGraphics,
       retainedImageIds: retainedImageIds,
+      untrackedGraphicsFingerprint: untrackedGraphicsFingerprint,
     );
   }
 
@@ -125,6 +148,9 @@ final class TerminalGraphicsFrame {
 
   /// Retained image IDs displayed by this frame.
   final Set<int> retainedImageIds;
+
+  /// Stable-in-process fingerprint for retained graphics without image IDs.
+  final int untrackedGraphicsFingerprint;
 
   /// Deletion sequences needed before rendering this frame after [previous].
   Iterable<String> deletionSequencesSince(
@@ -139,7 +165,9 @@ final class TerminalGraphicsFrame {
     if (!hasRetainedGraphics || previous.retainedImageIds.isEmpty) {
       if (hasRetainedGraphics &&
           previous.hasRetainedGraphics &&
-          previous.retainedImageIds.isEmpty) {
+          previous.retainedImageIds.isEmpty &&
+          untrackedGraphicsFingerprint !=
+              previous.untrackedGraphicsFingerprint) {
         yield deleteAllRetainedGraphics(quiet: quiet);
       }
       return;

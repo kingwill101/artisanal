@@ -25,7 +25,7 @@ String truncateLeftAnsiByCells(String s, int start) =>
 
 // --- ANSI slicing with pen-state restoration --------------------------------
 
-enum _TokenKind { text, newline, csi, osc }
+enum _TokenKind { text, newline, csi, osc, deviceControl }
 
 final class _Token {
   const _Token({
@@ -81,7 +81,9 @@ String _cutAnsiByCells(String s, int start, int end) {
       case _TokenKind.newline:
         if (inRange) out.write(t.raw);
 
-      case _TokenKind.text:
+      case _TokenKind.text || _TokenKind.deviceControl:
+        // Device-control payloads occupy their display width atomically:
+        // included whole when intersecting, never split.
         final nextCell = cell + t.visibleWidth;
         final intersects = nextCell > start && cell < end;
         if (intersects && inRange) out.write(t.raw);
@@ -102,7 +104,9 @@ int _snapAnsiCellBoundary(List<_Token> tokens, int index) {
   var cell = 0;
 
   for (final t in tokens) {
-    if (t.kind != _TokenKind.text) continue;
+    if (t.kind != _TokenKind.text && t.kind != _TokenKind.deviceControl) {
+      continue;
+    }
 
     final nextCell = cell + t.visibleWidth;
     if (index > cell && index < nextCell) return cell;
@@ -130,6 +134,10 @@ String _penStateAt(List<_Token> tokens, int cellIndex) {
           link = _applyOsc8(t.oscData);
         }
 
+      case _TokenKind.deviceControl:
+      // Device-control payloads (Kitty/Sixel pixels) carry no SGR or
+      // hyperlink pen state; the image occupies its cells opaquely.
+      // Fall through to advance the cell counter below.
       case _TokenKind.newline:
       // ANSI pen state typically carries across newlines; keep state.
 
@@ -199,7 +207,61 @@ List<_Token> _tokenizeAnsi(String input) {
           i = osc.endIndex;
           continue;
         }
+      } else if (next == 0x50 ||
+          next == 0x5E ||
+          next == 0x5F ||
+          next == 0x58) {
+        // DCS/APC/PM/SOS: ESC P|^|_|X ... ST (Kitty graphics, Sixel).
+        // Tokenized whole with pixel-display width so cuts never split
+        // a payload — consistent with Ansi.visibleLength's c= rule.
+        var end = _findStringTerminator(input, i + 2);
+        var raw = input.substring(i, end);
+        // A chunked Kitty transmission is one atomic display operation.
+        // Continuation APCs have no c= width of their own, so leaving them as
+        // separate zero-width tokens lets a cut stop after the first chunk and
+        // silently corrupt the image payload.
+        if (next == 0x5F && _kittyChunkHasMore(raw)) {
+          final chunks = StringBuffer()..write(raw);
+          while (end + 2 < input.length &&
+              input.startsWith('\x1b_G', end)) {
+            final chunkEnd = _findStringTerminator(input, end + 3);
+            final chunk = input.substring(end, chunkEnd);
+            chunks.write(chunk);
+            end = chunkEnd;
+            if (!_kittyChunkHasMore(chunk)) break;
+          }
+          raw = chunks.toString();
+        }
+        tokens.add(
+          _Token(
+            kind: _TokenKind.deviceControl,
+            raw: raw,
+            visibleWidth: _deviceControlWidth(raw),
+          ),
+        );
+        i = end;
+        continue;
       }
+    }
+
+    // C1 device-control strings: 0x90/0x98/0x9E/0x9F ... 0x9C.
+    if ((cu == 0x90 || cu == 0x98 || cu == 0x9E || cu == 0x9F) &&
+        i + 1 < input.length) {
+      var end = i + 1;
+      while (end < input.length && input.codeUnitAt(end) != 0x9C) {
+        end++;
+      }
+      if (end < input.length) end++;
+      final raw = input.substring(i, end);
+      tokens.add(
+        _Token(
+          kind: _TokenKind.deviceControl,
+          raw: raw,
+          visibleWidth: _deviceControlWidth(raw),
+        ),
+      );
+      i = end;
+      continue;
     }
 
     if (cu == 0x0A) {
@@ -230,6 +292,68 @@ int _findCsiFinal(String s, int start) {
     if (c >= 0x40 && c <= 0x7E) return i;
   }
   return -1;
+}
+
+/// End index (exclusive) of a DCS/APC/PM/SOS string starting its payload
+/// at [start]: first ST (`ESC \`) or BEL, else end of input.
+int _findStringTerminator(String s, int start) {
+  var i = start;
+  while (i < s.length) {
+    final c = s.codeUnitAt(i);
+    if (c == 0x07) return i + 1;
+    if (c == 0x1B &&
+        i + 1 < s.length &&
+        s.codeUnitAt(i + 1) == 0x5C) {
+      return i + 2;
+    }
+    i++;
+  }
+  return s.length;
+}
+
+/// Display width of a device-control sequence, mirroring
+/// `Ansi.visibleLength`: Kitty transmit/put actions occupy `c` columns,
+/// Sixel occupies one, everything else is zero-width.
+int _deviceControlWidth(String raw) {
+  if (raw.startsWith('\x1bPq') || raw.startsWith('\x90q')) return 1;
+  final params = _kittyDeviceParams(raw);
+  if (params == null) return 0;
+  var action = '';
+  var columns = 0;
+  for (final parameter in params.split(',')) {
+    if (parameter.isEmpty) continue;
+    final equals = parameter.indexOf('=');
+    if (equals <= 0) continue;
+    switch (parameter.substring(0, equals)) {
+      case 'a':
+        action = parameter.substring(equals + 1);
+      case 'c':
+        columns = int.tryParse(parameter.substring(equals + 1)) ?? 0;
+    }
+  }
+  return (action == 'T' || action == 'p') ? columns : 0;
+}
+
+String? _kittyDeviceParams(String raw) {
+  String body;
+  if (raw.startsWith('\x1b_G') &&
+      (raw.endsWith('\x1b\\') || raw.endsWith('\x07'))) {
+    body = raw.endsWith('\x07')
+        ? raw.substring(3, raw.length - 1)
+        : raw.substring(3, raw.length - 2);
+  } else if (raw.startsWith('\x9fG') && raw.endsWith('\x9c')) {
+    body = raw.substring(3, raw.length - 1);
+  } else {
+    return null;
+  }
+  final parameterEnd = body.indexOf(';');
+  return parameterEnd == -1 ? body : body.substring(0, parameterEnd);
+}
+
+bool _kittyChunkHasMore(String raw) {
+  final params = _kittyDeviceParams(raw);
+  if (params == null) return false;
+  return params.split(',').contains('m=1');
 }
 
 final class _Osc {
