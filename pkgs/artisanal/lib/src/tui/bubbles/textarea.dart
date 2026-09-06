@@ -840,6 +840,7 @@ class TextAreaModel extends ViewComponent {
   TextSelectionSet? _selections;
   int _selectionGeneration = 0;
   int _verticalMotionGeneration = -1;
+  bool _verticalMotionSoftWrap = false;
   Map<TextSelectionRange, int> _verticalGoalColumns = const {};
   List<TextDecorationRange> _decorations = const [];
   List<TextLineDecoration> _lineDecorations = const [];
@@ -1977,15 +1978,18 @@ class TextAreaModel extends ViewComponent {
 
   void _syncCoreState() {
     _refreshEditorStateSnapshot();
+    _configureTextView();
+    _textView.ensureCursorVisible(_document, _editorState);
+    _syncImplicitLineDecorations();
+  }
 
+  void _configureTextView() {
     _textView
       ..width = _width
       ..height = _height
       ..softWrap = softWrap
       ..leadingColumns = _leadingColumnsForView()
       ..folds = folds;
-    _textView.ensureCursorVisible(_document, _editorState);
-    _syncImplicitLineDecorations();
   }
 
   void _refreshDocumentSnapshot() {}
@@ -4071,21 +4075,24 @@ class TextAreaModel extends ViewComponent {
   }
 
   bool _applyVerticalMappedEnds({required bool below, bool extend = false}) {
+    _refreshEditorStateSnapshot();
+    _configureTextView();
     final current = selections;
-    final previousGoals = _verticalMotionGeneration == _selectionGeneration
+    final previousGoals =
+        _verticalMotionGeneration == _selectionGeneration &&
+            _verticalMotionSoftWrap == softWrap
         ? _verticalGoalColumns
         : const <TextSelectionRange, int>{};
     if (_selections == null) {
       final currentRange = current.primary!;
       final currentOffset = cursorOffset;
-      final position = _document.positionForOffset(currentOffset);
-      final preferredColumn = previousGoals[currentRange] ?? position.column;
-      final nextOffset = textOffsetOnAdjacentVisibleLine(
-        document: _document,
-        offset: currentOffset,
+      final preferredColumn =
+          previousGoals[currentRange] ??
+          _verticalColumnForOffset(currentOffset);
+      final nextOffset = _offsetForVerticalMove(
+        currentOffset,
         below: below,
         preferredColumn: preferredColumn,
-        isLineHidden: folds.isLineHidden,
       );
       if (nextOffset == currentOffset) return false;
       final nextPosition = _document.positionForOffset(nextOffset);
@@ -4104,6 +4111,7 @@ class TextAreaModel extends ViewComponent {
         selections.primary!: preferredColumn,
       };
       _verticalMotionGeneration = _selectionGeneration;
+      _verticalMotionSoftWrap = softWrap;
       return true;
     }
 
@@ -4113,14 +4121,12 @@ class TextAreaModel extends ViewComponent {
       forward: below,
       extend: extend,
       mapEnd: (offset, range) {
-        final position = _document.positionForOffset(offset);
-        final preferredColumn = previousGoals[range] ?? position.column;
-        final nextOffset = textOffsetOnAdjacentVisibleLine(
-          document: _document,
-          offset: offset,
+        final preferredColumn =
+            previousGoals[range] ?? _verticalColumnForOffset(offset);
+        final nextOffset = _offsetForVerticalMove(
+          offset,
           below: below,
           preferredColumn: preferredColumn,
-          isLineHidden: folds.isLineHidden,
         );
         goalsByActiveOffset[nextOffset] = preferredColumn;
         return nextOffset;
@@ -4132,14 +4138,53 @@ class TextAreaModel extends ViewComponent {
       for (final range in selections.ranges)
         range:
             goalsByActiveOffset[range.activeOffset] ??
-            _document.positionForOffset(range.activeOffset).column,
+            _verticalColumnForOffset(range.activeOffset),
     });
     _verticalMotionGeneration = _selectionGeneration;
+    _verticalMotionSoftWrap = softWrap;
     return true;
+  }
+
+  int _verticalColumnForOffset(int offset) {
+    final position = _document.positionForOffset(offset);
+    if (!softWrap) return position.column;
+    return _textView
+            .resolveCursorVisualPosition(
+              _document,
+              _editorState,
+              cursor: position,
+            )
+            ?.displayColumn ??
+        position.column;
+  }
+
+  int _offsetForVerticalMove(
+    int offset, {
+    required bool below,
+    required int preferredColumn,
+  }) {
+    final position = _document.positionForOffset(offset);
+    if (!softWrap) {
+      return textOffsetOnAdjacentVisibleLine(
+        document: _document,
+        offset: offset,
+        below: below,
+        preferredColumn: preferredColumn,
+        isLineHidden: folds.isLineHidden,
+      );
+    }
+    return _textView.cursorOffsetForVisualLineMove(
+      _document,
+      _editorState,
+      lineDelta: below ? 1 : -1,
+      desiredDisplayColumn: preferredColumn,
+      cursor: position,
+    );
   }
 
   void _invalidateVerticalMotion() {
     _verticalMotionGeneration = -1;
+    _verticalMotionSoftWrap = false;
     _verticalGoalColumns = const {};
   }
 

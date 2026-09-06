@@ -185,6 +185,9 @@ For vertical movement, capture the cursor column at the start of a movement
 sequence and pass it back as `preferredColumn`. Short lines clamp the resulting
 offset without replacing that preference, so a later long line restores the
 intended column. Reset the preference after horizontal movement or editing.
+`TextAreaModel` does this per cursor automatically. With soft wrapping enabled,
+it navigates adjacent visual rows and retains a terminal-cell display column;
+without wrapping, it navigates logical lines and retains a grapheme column.
 
 A host can package a structural motion as an `EditorRangeResolver` and apply it
 to every selection rather than duplicating single- and multi-cursor paths.

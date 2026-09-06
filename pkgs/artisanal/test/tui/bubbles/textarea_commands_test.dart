@@ -725,7 +725,7 @@ void main() {
     });
 
     test('vertical movement retains and resets the preferred column', () {
-      final model = TextAreaModel()
+      final model = TextAreaModel(softWrap: false)
         ..setText('abcdef\nxy\nabcdef', recordHistory: false)
         ..setCursor(0, 5);
 
@@ -757,7 +757,7 @@ void main() {
     });
 
     test('editing resets the preferred vertical column', () {
-      final model = TextAreaModel()
+      final model = TextAreaModel(softWrap: false)
         ..setText('abcdef\nxy\nabcdef', recordHistory: false)
         ..setCursor(0, 5);
 
@@ -778,7 +778,7 @@ void main() {
     });
 
     test('vertical movement retains a preferred column for every cursor', () {
-      final model = TextAreaModel()
+      final model = TextAreaModel(softWrap: false)
         ..setText('abcdef\nxy\nabcdef\nxy', recordHistory: false);
       final document = model.document;
       model.setSelections(
@@ -817,6 +817,33 @@ void main() {
             .map((position) => (position.line, position.column)),
         [(2, 5), (3, 1)],
       );
+    });
+
+    test('vertical movement follows soft-wrapped visual rows', () {
+      final model = TextAreaModel(
+        prompt: '',
+        showLineNumbers: false,
+        softWrap: true,
+        width: 4,
+        height: 8,
+      )..setText('abcdef\nxy\nabcdef', recordHistory: false);
+      model.setCursor(0, 3);
+
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (0, 6));
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (1, 2));
+      expect(
+        model.executeCommand(EditorCommandIds.cursorDown),
+        EditorCommandDispatchResult.handled,
+      );
+      expect((model.line, model.column), (2, 3));
     });
 
     test('line commands are atomic and duplicate below the source line', () {
