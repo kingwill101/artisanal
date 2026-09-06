@@ -22,6 +22,15 @@ void main() {
       expect(textarea.editorState.hasSelection, isTrue);
     });
 
+    test('exposes the cursor offset for overlay hit-testing', () {
+      final textarea = TextAreaModel(width: 6, height: 3, softWrap: true);
+      textarea.setValue('alpha\nbeta');
+      textarea.setCursor(1, 2);
+      expect(textarea.cursorOffset, textarea.document.text.indexOf('ta'));
+      textarea.insertString('X');
+      expect(textarea.cursorOffset, textarea.document.text.indexOf('X') + 1);
+    });
+
     test('wrapped view still renders through textarea view', () {
       final textarea = TextAreaModel(width: 6, height: 3, softWrap: true);
       textarea.setValue('abcdef');
