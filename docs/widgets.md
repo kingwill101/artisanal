@@ -2127,7 +2127,7 @@ Implemented component widgets and companion types include:
 - **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
   `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
   `DebugConsole`, `Wizard`, `WizardFormStep`, `FilePicker`, `CommandPalette`,
-  `CommandPaletteItem`
+  `CommandPaletteItem`, `CommandPaletteMatch`, `CommandPaletteController`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
 - **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,

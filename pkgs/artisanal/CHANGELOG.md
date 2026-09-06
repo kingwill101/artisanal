@@ -5,8 +5,10 @@
 ### Added
 
 - Added shared command-palette items, scored matches, deterministic matching,
-  editor command state, and a scrolling TEA modal component. Widget and
-  string-view hosts can now build on the same package-owned foundation.
+  viewport windows, stable item IDs/payloads, editor command state, and a
+  scrolling TEA modal overlay (`CommandPaletteOverlay` +
+  `CommandPaletteComponent`). Widget and string-view hosts now share one
+  matcher, selection, and visible window.
 - Added FFI-free editor seams `text_language.dart` (`EditorLanguageAdapter` +
   `EditorLanguageRegistry`) and `syntax_tree.dart` (`EditorSyntaxNode` /
   `EditorSyntaxTree` / `SyntaxTreeProvider` DTOs) so Tree-sitter, LSP, or
@@ -39,10 +41,15 @@
   and document snapshot persistence/recovery.
 - Expanded `TextAreaModel` with command dispatch, undo/redo, dirty revisions,
   search and diagnostics navigation, completion acceptance, clipboard
-  transactions, and multi-cursor character, word, and line editing.
-- Added a full-screen alternate-buffer `advanced-editor` example with stable
-  line-number gutters, syntax and diagnostic decorations, command-palette
-  scrolling, multiple cursors, revision status, and a viewport-pinned footer.
+  transactions, and multi-cursor character, word, line, vertical, selection
+  extension, indent/outdent, and line move/duplicate/delete operations.
+- Enforced editor work budgets in search (truncated matches), decoration
+  layers, completion lists, and synchronous syntax scheduling.
+- Added `MemoryEditorDocumentStore` plus a file-backed example store for
+  save/recovery workflows.
+- Added a full-screen alternate-buffer `advanced-editor` example with find
+  and replace, completion and code-action overlays, syntax sessions,
+  persistence/recovery, folding, snippets, and matching brackets.
 - Added inline media: typed chip elements (`text_inline_elements.dart`)
   plus the attachment lifecycle (`media_attachments.dart`: preview
   pipeline, viewer state, capability-gated affordances), pasted/dropped
