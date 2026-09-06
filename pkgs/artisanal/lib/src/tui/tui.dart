@@ -88,6 +88,7 @@ library;
 export 'runtime.dart';
 export 'rendering.dart';
 export 'automation.dart';
+export 'command_palette.dart';
 
 // Harmonica helpers (spring, projectile) used by progress and demos
 export 'harmonica.dart'

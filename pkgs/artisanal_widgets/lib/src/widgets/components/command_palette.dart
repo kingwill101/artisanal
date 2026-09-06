@@ -2,69 +2,17 @@ import 'dart:math' as math;
 import '_component_foundation.dart';
 import 'frame.dart';
 
-import 'package:artisanal/scoring.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/tui.dart' as core;
 
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart' show Color, Border;
 
-/// A single item in a [CommandPalette].
-class CommandPaletteItem {
-  const CommandPaletteItem({
-    required this.label,
-    this.description,
-    this.shortcut,
-    this.group,
-    this.tags = const [],
-    this.onSelect,
-    this.enabled = true,
-  });
+/// Compatibility alias for the shared Artisanal palette item.
+typedef CommandPaletteItem = core.CommandPaletteItem;
 
-  /// Display text for the item.
-  final String label;
-
-  /// Optional secondary description text.
-  final String? description;
-
-  /// Optional keyboard shortcut hint (displayed right-aligned).
-  final String? shortcut;
-
-  /// Group name for section headers. Items with the same group are
-  /// displayed under a shared header.
-  final String? group;
-
-  /// Searchable tags that boost match score when query matches.
-  final List<String> tags;
-
-  /// Callback when this item is selected. Returns a [Cmd] or null.
-  final CmdCallback? onSelect;
-
-  /// Whether the item is selectable.
-  final bool enabled;
-}
-
-/// A scored command palette match with explainable evidence.
-class CommandPaletteMatch {
-  /// Creates a scored match for [item].
-  const CommandPaletteMatch({
-    required this.item,
-    required this.score,
-    required this.evidence,
-    required this.originalIndex,
-  });
-
-  /// Matched item.
-  final CommandPaletteItem item;
-
-  /// Total score for ranking.
-  final double score;
-
-  /// Evidence ledger keyed by named feature.
-  final Map<String, double> evidence;
-
-  /// Original index in the source list.
-  final int originalIndex;
-}
+/// Compatibility alias for the shared Artisanal scored match.
+typedef CommandPaletteMatch = core.CommandPaletteMatch;
 
 /// A searchable, grouped list displayed in a modal overlay.
 ///
@@ -166,194 +114,30 @@ class CommandPalette extends StatefulWidget {
   static List<CommandPaletteMatch> matchItems(
     List<CommandPaletteItem> items,
     String query,
-  ) {
-    final normalizedQuery = query.trim().toLowerCase();
-
-    final matches = <CommandPaletteMatch>[];
-    for (var index = 0; index < items.length; index++) {
-      final item = items[index];
-      if (!item.enabled) continue;
-
-      final evidence = <String, double>{};
-      final label = item.label.toLowerCase();
-      final description = item.description?.toLowerCase();
-      final group = item.group?.toLowerCase();
-      double score = 0;
-
-      if (normalizedQuery.isEmpty) {
-        evidence['query:empty'] = 1.0;
-      } else {
-        if (label == normalizedQuery) {
-          score += 10000;
-          evidence['label:exact'] = 10000;
-        }
-
-        if (label.startsWith(normalizedQuery)) {
-          score += 6000;
-          evidence['label:prefix'] = 6000;
-        }
-
-        if (label.contains(normalizedQuery)) {
-          score += 4000;
-          evidence['label:contains'] = 4000;
-        }
-
-        if (description != null && description.contains(normalizedQuery)) {
-          score += 1800;
-          evidence['description:contains'] = 1800;
-        }
-
-        if (group != null && group.contains(normalizedQuery)) {
-          score += 1200;
-          evidence['group:contains'] = 1200;
-        }
-
-        final subseq = _subsequenceScore(normalizedQuery, label);
-        if (subseq > 0) {
-          score += subseq;
-          evidence['label:subsequence'] = subseq;
-        }
-
-        final typo = _typoScore(normalizedQuery, label);
-        if (typo > 0) {
-          score += typo;
-          evidence['label:typo'] = typo;
-        }
-      }
-
-      if (normalizedQuery.isEmpty || score > 0) {
-        matches.add(
-          CommandPaletteMatch(
-            item: item,
-            score: score,
-            evidence: evidence,
-            originalIndex: index,
-          ),
-        );
-      }
-    }
-
-    if (normalizedQuery.isEmpty) {
-      matches.sort(
-        (lhs, rhs) => lhs.originalIndex.compareTo(rhs.originalIndex),
-      );
-    } else {
-      matches.sort((lhs, rhs) {
-        final byScore = rhs.score.compareTo(lhs.score);
-        if (byScore != 0) return byScore;
-
-        final byLabel = lhs.item.label.compareTo(rhs.item.label);
-        if (byLabel != 0) return byLabel;
-
-        return lhs.originalIndex.compareTo(rhs.originalIndex);
-      });
-    }
-
-    return matches;
-  }
-
-  static double _subsequenceScore(String query, String target) {
-    if (query.isEmpty) return 0;
-
-    var qi = 0;
-    var firstMatchIndex = -1;
-    var lastMatchIndex = -1;
-
-    for (var ti = 0; ti < target.length && qi < query.length; ti++) {
-      if (target[ti] != query[qi]) continue;
-      if (qi == 0) firstMatchIndex = ti;
-      qi++;
-      lastMatchIndex = ti;
-    }
-
-    if (qi != query.length) return 0;
-
-    final span = lastMatchIndex - firstMatchIndex + 1;
-    final gapPenalty = (span - query.length) * 6.0;
-    final leadPenalty = firstMatchIndex.toDouble();
-    final base = 1500.0 - gapPenalty - leadPenalty;
-    if (base <= 0) return 20;
-    return base;
-  }
-
-  static double _typoScore(String query, String target) {
-    if (query.length < 2 || query.length > 8) return 0;
-    if ((target.length - query.length).abs() > 2) return 0;
-
-    final distance = _levenshtein(query, target);
-    if (distance == 0) return 0;
-    if (distance > 2) return 0;
-
-    const maxScore = 2400.0;
-    return maxScore - (distance * 800);
-  }
-
-  static int _levenshtein(String left, String right) {
-    if (left == right) return 0;
-
-    if (left.isEmpty) return right.length;
-    if (right.isEmpty) return left.length;
-
-    var previous = List<int>.generate(right.length + 1, (index) => index);
-    var current = List<int>.filled(right.length + 1, 0);
-
-    for (var leftIndex = 1; leftIndex <= left.length; leftIndex++) {
-      current[0] = leftIndex;
-      for (var rightIndex = 1; rightIndex <= right.length; rightIndex++) {
-        final leftMatch = left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1;
-        current[rightIndex] = [
-          previous[rightIndex] + 1,
-          current[rightIndex - 1] + 1,
-          previous[rightIndex - 1] + leftMatch,
-        ].reduce((lhs, rhs) => lhs < rhs ? lhs : rhs);
-      }
-      final swap = previous;
-      previous = current;
-      current = swap;
-    }
-
-    return previous[right.length];
-  }
+  ) => core.matchCommandPaletteItems(items, query);
 }
 
 class _CommandPaletteState extends State<CommandPalette> {
-  String _query = '';
-  int _selectedIndex = 0;
-  final _scorer = IncrementalScorer();
-  final _ranker = const ConformalRanker();
+  late final core.CommandPaletteController _paletteController;
   final _listController = WidgetScrollController();
-  List<CommandPaletteItem> _cachedItems = [];
+
+  int get _selectedIndex => _paletteController.selectedIndex;
+  set _selectedIndex(int value) => _paletteController.selectedIndex = value;
 
   List<CommandPaletteItem> get _filteredItems {
-    final enabled = widget.items.where((item) => item.enabled).toList();
+    _paletteController.updateItems(widget.items);
+    return _paletteController.filteredItems;
+  }
 
-    if (_query.isEmpty) {
-      _cachedItems = enabled;
-      return _cachedItems;
-    }
-
-    final titles = enabled.map((item) => item.label).toList();
-    final tags = enabled.map((item) => item.tags).toList();
-    final results = _scorer.scoreCorpusWithTags(_query, titles, tags);
-
-    // Rank results and filter to those that matched
-    final ranked = _ranker.rank(results);
-    final filtered = <CommandPaletteItem>[];
-
-    for (final item in ranked.items) {
-      if (item.result.matchType != MatchType.noMatch) {
-        filtered.add(enabled[item.originalIndex]);
-      }
-    }
-
-    _cachedItems = filtered;
-    return _cachedItems;
+  @override
+  void initState() {
+    super.initState();
+    _paletteController = core.CommandPaletteController(items: widget.items);
   }
 
   void _onSearchChanged(String value) {
     setState(() {
-      _query = value;
-      _selectedIndex = 0;
+      _paletteController.updateQuery(value);
       _listController.jumpTo(0);
     });
   }
@@ -367,9 +151,7 @@ class _CommandPaletteState extends State<CommandPalette> {
       return;
     }
 
-    var normalized = nextIndex % items.length;
-    if (normalized < 0) normalized += items.length;
-    _selectedIndex = normalized;
+    _paletteController.selectIndex(nextIndex);
     _scrollSelectedItemIntoView(items);
   }
 
