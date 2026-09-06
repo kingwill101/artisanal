@@ -33,6 +33,18 @@
 - Removed the unused slot registry, plugin mounting, mixed slot region, and
   remote plugin surface widget APIs and examples.
 
+### Fixed
+
+- Fixed a startup panic (`Unsupported operation: Infinity or NaN toInt`)
+  when a scroll viewport had unbounded height: `RenderSingleChildViewport`
+  now shrink-wraps to its content height instead of reporting an infinite
+  size, and the `scrollbar` example bounds its `Scrollbar` with an explicit
+  height like the `scroll` example does.
+- Fixed a reentrant-publish crash (`Bad state: Cannot fire new event`) in
+  `RenderMetricsInjector`: publishes made from inside dispatch (e.g. the
+  metrics listener synchronously triggering another render) are deferred
+  one microtask instead of throwing.
+
 ## 0.3.1
 
 ### Added

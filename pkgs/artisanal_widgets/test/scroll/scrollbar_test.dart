@@ -1241,6 +1241,42 @@ void main() {
       }
     });
   });
+  // ---------------------------------------------------------------------------
+  // Viewport sizing — unbounded height must shrink-wrap, never Infinity
+  // ---------------------------------------------------------------------------
+  group('Viewport unbounded height', () {
+    test('scroll view in unbounded column renders content (no infinite size)', () async {
+      // Regression test: the scrollbar demo (Scrollbar > ScrollView > Column
+      // with no explicit height) used to panic with
+      // "Unsupported operation: Infinity or NaN toInt" because
+      // RenderSingleChildViewport reported constraints.maxHeight verbatim.
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      try {
+        final ctrl = WidgetScrollController();
+        await tester.pumpWidget(
+          Column(
+            children: [
+              Text('Header'),
+              Scrollbar(
+                controller: ctrl,
+                child: ScrollView(
+                  controller: ctrl,
+                  child: Column(
+                    children: List.generate(5, (i) => Text('Row $i')),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        expect(tester.find.text('Header'), isTrue);
+        expect(tester.find.text('Row 0'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+  });
 }
 
 /// Generates [count] lines of "Line 0\nLine 1\n..." text.

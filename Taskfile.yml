@@ -87,6 +87,24 @@ tasks:
       - dart compile kernel pkgs/artisanal/example/sequence_diagram_demo.dart -o build/vhs/artisanal/sequence_diagram_demo.dill
       - dart compile kernel pkgs/artisanal/example/widget_catalog.dart -o build/vhs/artisanal/widget_catalog.dill
       - dart compile kernel pkgs/artisanal/example/minimal_cli.dart -o build/vhs/artisanal/minimal_cli.dill
+      - dart compile kernel pkgs/artisanal/example/lipgloss_table.dart -o build/vhs/artisanal/lipgloss_table.dill
+      - dart compile kernel pkgs/artisanal/example/lipgloss_list.dart -o build/vhs/artisanal/lipgloss_list.dill
+      - dart compile kernel pkgs/artisanal/example/lipgloss_tree.dart -o build/vhs/artisanal/lipgloss_tree.dill
+      - dart compile kernel pkgs/artisanal/example/charting_demo.dart -o build/vhs/artisanal/charting_demo.dill
+      - dart compile kernel pkgs/artisanal/example/markdown_showcase.dart -o build/vhs/artisanal/markdown_showcase.dill
+      - dart compile kernel pkgs/artisanal/example/theme_integration_demo.dart -o build/vhs/artisanal/theme_integration_demo.dill
+      - dart compile kernel pkgs/artisanal/example/compositor_image_demo.dart -o build/vhs/artisanal/compositor_image_demo.dill
+      - dart compile kernel pkgs/artisanal/example/editor_core_demo.dart -o build/vhs/artisanal/editor_core_demo.dill
+      - dart compile kernel pkgs/artisanal/example/fluent_style_example.dart -o build/vhs/artisanal/fluent_style_example.dill
+      - dart compile kernel pkgs/artisanal/example/kitty_image_demo.dart -o build/vhs/artisanal/kitty_image_demo.dill
+      - dart compile kernel pkgs/artisanal/example/lipgloss_console_tags.dart -o build/vhs/artisanal/lipgloss_console_tags.dill
+      - dart compile kernel pkgs/artisanal/example/lipgloss_layout.dart -o build/vhs/artisanal/lipgloss_layout.dill
+      - dart compile kernel pkgs/artisanal/example/render_recorder_demo.dart -o build/vhs/artisanal/render_recorder_demo.dill
+      - dart compile kernel pkgs/artisanal/example/scanner_demo.dart -o build/vhs/artisanal/scanner_demo.dill
+      - dart compile kernel pkgs/artisanal/example/inline_animation_demo.dart -o build/vhs/artisanal/inline_animation_demo.dill
+      - dart compile kernel pkgs/artisanal/example/devtools_demo.dart -o build/vhs/artisanal/devtools_demo.dill
+      - dart compile kernel pkgs/artisanal/example/multi_search_demo.dart -o build/vhs/artisanal/multi_search_demo.dill
+      - dart compile kernel pkgs/artisanal/example/uv_tui_demo.dart -o build/vhs/artisanal/uv_tui_demo.dill
 
   artisanal-demos:
     desc: Record GIFs for the artisanal examples (requires VHS)
@@ -99,19 +117,14 @@ tasks:
         done
 
   widgets-demos-build:
-    desc: Compile the artisanal_widgets examples used by the VHS tapes
+    desc: Compile every artisanal_widgets example with a runnable main (dills for the VHS tapes)
     cmds:
       - mkdir -p build/vhs/widgets
-      - dart compile kernel pkgs/artisanal_widgets/example/artisanal_app/main.dart -o build/vhs/widgets/artisanal_app.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/charting/main.dart -o build/vhs/widgets/charting.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/git-diff/main.dart -o build/vhs/widgets/git-diff.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/data_table/main.dart -o build/vhs/widgets/data_table.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/command_palette/main.dart -o build/vhs/widgets/command_palette.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/code-editor/main.dart -o build/vhs/widgets/code-editor.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/markdown-editor/main.dart -o build/vhs/widgets/markdown-editor.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/dataviz/main.dart -o build/vhs/widgets/dataviz.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/debug_console/main.dart -o build/vhs/widgets/debug_console.dill
-      - dart compile kernel pkgs/artisanal_widgets/example/opencode/main.dart -o build/vhs/widgets/opencode.dill
+      - |
+        for main in pkgs/artisanal_widgets/example/*/main.dart; do
+          name="$(basename "$(dirname "$main")")"
+          dart compile kernel "$main" -o "build/vhs/widgets/$name.dill"
+        done
 
   widgets-demos:
     desc: Record GIFs for the artisanal_widgets examples (requires VHS)
@@ -131,6 +144,25 @@ tasks:
         for example in pkgs/ultraviolet/example/*.dart; do
           name="$(basename "$example" .dart)"
           dart compile kernel "$example" -o "build/vhs/uv/$name.dill"
+        done
+
+  tui-demos-build:
+    desc: Compile the artisanal tui/examples used by the VHS tapes
+    cmds:
+      - mkdir -p build/vhs/tui
+      - |
+        for main in pkgs/artisanal/example/tui/examples/*/main.dart; do
+          name="$(basename "$(dirname "$main")")"
+          dart compile kernel "$main" -o "build/vhs/tui/$name.dill"
+        done
+
+  tui-demos:
+    desc: Record GIFs for the artisanal tui/examples (requires VHS)
+    deps: [tui-demos-build]
+    cmds:
+      - |
+        for tape in pkgs/artisanal/example/tui/examples/.vhs/*.tape; do
+          vhs "$tape"
         done
 
   uv-demos:

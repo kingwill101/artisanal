@@ -417,6 +417,78 @@ in [`example/.vhs/`](example/.vhs/README.md) with `task artisanal-demos`:
 
 ![Sequence diagram demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/sequence_diagram_demo.gif)
 
+**Styled tables** (`example/lipgloss_table.dart`):
+
+![Lip Gloss tables](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/lipgloss_table.gif)
+
+**Styled lists** (`example/lipgloss_list.dart`):
+
+![Lip Gloss lists](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/lipgloss_list.gif)
+
+**Styled trees** (`example/lipgloss_tree.dart`):
+
+![Lip Gloss trees](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/lipgloss_tree.gif)
+
+**Charting** (`example/charting_demo.dart`):
+
+![Charting demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/charting_demo.gif)
+
+**Markdown showcase** (`example/markdown_showcase.dart`):
+
+![Markdown showcase](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/markdown_showcase.gif)
+
+**Theme integration** (`example/theme_integration_demo.dart`):
+
+![Theme integration demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/theme_integration_demo.gif)
+
+**Compositor images** (`example/compositor_image_demo.dart`):
+
+![Compositor image demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/compositor_image_demo.gif)
+
+**Editor core** (`example/editor_core_demo.dart`):
+
+![Editor core demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/editor_core_demo.gif)
+
+**Fluent style API** (`example/fluent_style_example.dart`):
+
+![Fluent style demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/fluent_style_example.gif)
+
+**Kitty images** (`example/kitty_image_demo.dart`):
+
+![Kitty image demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/kitty_image_demo.gif)
+
+**Console tags** (`example/lipgloss_console_tags.dart`):
+
+![Console tags demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/lipgloss_console_tags.gif)
+
+**Lip Gloss layout** (`example/lipgloss_layout.dart`):
+
+![Lip Gloss layout demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/lipgloss_layout.gif)
+
+**Render recorder** (`example/render_recorder_demo.dart`):
+
+![Render recorder demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/render_recorder_demo.gif)
+
+**Scanner spinner** (`example/scanner_demo.dart`):
+
+![Scanner demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/scanner_demo.gif)
+
+**Inline animation** (`example/inline_animation_demo.dart`):
+
+![Inline animation demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/inline_animation_demo.gif)
+
+**DevTools counter** (`example/devtools_demo.dart`):
+
+![DevTools demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/devtools_demo.gif)
+
+**Multi search** (`example/multi_search_demo.dart`):
+
+![Multi search demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/multi_search_demo.gif)
+
+**Artisanal Nexus** (`example/uv_tui_demo.dart`):
+
+![Nexus demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal/assets/uv_tui_demo.gif)
+
 ### Static screenshots
 
 **Log viewer**

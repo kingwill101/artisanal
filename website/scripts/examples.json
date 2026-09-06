@@ -1,0 +1,1788 @@
+{
+  "categories": {
+    "widgets": {
+      "label": "artisanal_widgets",
+      "description": "Examples for the artisanal_widgets package: the Flutter-inspired widget framework built on top of the core TEA runtime. Sources are injected from the real example files at site build time, so the docs never drift from code that runs."
+    },
+    "core": {
+      "label": "artisanal demos",
+      "description": "Examples for the artisanal package: the core TEA runtime (Model / Update / View), console I/O, styling, markdown, and charting. No widget framework involved — this is the foundation everything else builds on."
+    },
+    "tui": {
+      "label": "TEA runtime recipes",
+      "description": "Small artisanal runtime recipes and bubble ports (inputs, lists, views, program plumbing) for the core TEA runtime."
+    }
+  },
+  "entries": [
+    {
+      "slug": "buttons",
+      "title": "Buttons & badges",
+      "tagline": "Every button variant, size, and badge color in one scrollable showcase.",
+      "category": "widgets",
+      "order": 1,
+      "source": "pkgs/artisanal_widgets/example/buttons/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/buttons.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/buttons/main.dart"
+    },
+    {
+      "slug": "inputs",
+      "title": "Form inputs",
+      "tagline": "Checkboxes, switches, and form controls with live feedback.",
+      "category": "widgets",
+      "order": 2,
+      "source": "pkgs/artisanal_widgets/example/inputs/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/inputs.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/inputs/main.dart"
+    },
+    {
+      "slug": "text-field",
+      "title": "Text field",
+      "tagline": "Single-line text input with a live preview.",
+      "category": "widgets",
+      "order": 3,
+      "source": "pkgs/artisanal_widgets/example/text-field/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/text-field.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/text-field/main.dart"
+    },
+    {
+      "slug": "text-area",
+      "title": "Text area",
+      "tagline": "Multi-line editor with focus and blur handling.",
+      "category": "widgets",
+      "order": 4,
+      "source": "pkgs/artisanal_widgets/example/text-area/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/text-area.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/text-area/main.dart"
+    },
+    {
+      "slug": "tree-view",
+      "title": "Tree view",
+      "tagline": "Nested file and configuration trees with keyboard navigation.",
+      "category": "widgets",
+      "order": 5,
+      "source": "pkgs/artisanal_widgets/example/tree_view/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/tree_view.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/tree_view/main.dart"
+    },
+    {
+      "slug": "tabs-nav",
+      "title": "Tabs, breadcrumbs & pagination",
+      "tagline": "Click to navigate between tabs, trails, and pages.",
+      "category": "widgets",
+      "order": 6,
+      "source": "pkgs/artisanal_widgets/example/tabs_nav/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/tabs_nav.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/tabs_nav/main.dart"
+    },
+    {
+      "slug": "selection",
+      "title": "Text selection",
+      "tagline": "Selectable text spanning multiple views.",
+      "category": "widgets",
+      "order": 7,
+      "source": "pkgs/artisanal_widgets/example/selection/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/selection.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/selection/main.dart"
+    },
+    {
+      "slug": "progress-spinner",
+      "title": "Progress & spinner",
+      "tagline": "Progress indicators you can drive with +/-, plus animated spinners.",
+      "category": "widgets",
+      "order": 8,
+      "source": "pkgs/artisanal_widgets/example/progress_spinner/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/progress_spinner.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/progress_spinner/main.dart"
+    },
+    {
+      "slug": "slider",
+      "title": "Slider",
+      "tagline": "Drag the track or use arrow keys when focused.",
+      "category": "widgets",
+      "order": 9,
+      "source": "pkgs/artisanal_widgets/example/slider/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/slider.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/slider/main.dart"
+    },
+    {
+      "slug": "scroll",
+      "title": "Scrolling",
+      "tagline": "Scroll views and standalone scrollbars over long content.",
+      "category": "widgets",
+      "order": 10,
+      "source": "pkgs/artisanal_widgets/example/scroll/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/scroll.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/scroll/main.dart"
+    },
+    {
+      "slug": "file-picker",
+      "title": "File picker",
+      "tagline": "Browse project files with extension filtering.",
+      "category": "widgets",
+      "order": 11,
+      "source": "pkgs/artisanal_widgets/example/file_picker/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/file_picker.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/file_picker/main.dart"
+    },
+    {
+      "slug": "help-view",
+      "title": "Help view",
+      "tagline": "Keybinding help with a ? toggle between compact and full views.",
+      "category": "widgets",
+      "order": 12,
+      "source": "pkgs/artisanal_widgets/example/help_view/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/help_view.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/help_view/main.dart"
+    },
+    {
+      "slug": "lipgloss-table",
+      "title": "Styled tables",
+      "tagline": "Lip Gloss tables: simple, bordered, and themed.",
+      "category": "core",
+      "order": 1,
+      "source": "pkgs/artisanal/example/lipgloss_table.dart",
+      "gif": "pkgs/artisanal/assets/lipgloss_table.gif",
+      "run": "dart run pkgs/artisanal/example/lipgloss_table.dart"
+    },
+    {
+      "slug": "lipgloss-list",
+      "title": "Styled lists",
+      "tagline": "Lip Gloss lists, enumerators, and nested trees-as-lists.",
+      "category": "core",
+      "order": 2,
+      "source": "pkgs/artisanal/example/lipgloss_list.dart",
+      "gif": "pkgs/artisanal/assets/lipgloss_list.gif",
+      "run": "dart run pkgs/artisanal/example/lipgloss_list.dart"
+    },
+    {
+      "slug": "lipgloss-tree",
+      "title": "Styled trees",
+      "tagline": "Lip Gloss file-system and styled trees.",
+      "category": "core",
+      "order": 3,
+      "source": "pkgs/artisanal/example/lipgloss_tree.dart",
+      "gif": "pkgs/artisanal/assets/lipgloss_tree.gif",
+      "run": "dart run pkgs/artisanal/example/lipgloss_tree.dart"
+    },
+    {
+      "slug": "charting-demo",
+      "title": "Charting",
+      "tagline": "Sparklines, line charts, histograms, heatmaps, ribbons, and pies.",
+      "category": "core",
+      "order": 4,
+      "source": "pkgs/artisanal/example/charting_demo.dart",
+      "gif": "pkgs/artisanal/assets/charting_demo.gif",
+      "run": "dart run pkgs/artisanal/example/charting_demo.dart"
+    },
+    {
+      "slug": "markdown-showcase",
+      "title": "Markdown showcase",
+      "tagline": "The full MarkdownRenderer surface next to its Glamour-themed twin.",
+      "category": "core",
+      "order": 5,
+      "source": "pkgs/artisanal/example/markdown_showcase.dart",
+      "gif": "pkgs/artisanal/assets/markdown_showcase.gif",
+      "run": "dart run pkgs/artisanal/example/markdown_showcase.dart"
+    },
+    {
+      "slug": "theme-integration-demo",
+      "title": "Theme integration",
+      "tagline": "One custom OutputTheme driving titles, tasks, spinners, and progress.",
+      "category": "core",
+      "order": 6,
+      "source": "pkgs/artisanal/example/theme_integration_demo.dart",
+      "gif": "pkgs/artisanal/assets/theme_integration_demo.gif",
+      "run": "dart run pkgs/artisanal/example/theme_integration_demo.dart"
+    },
+    {
+      "slug": "action_chip",
+      "title": "ActionChip Showcase",
+      "tagline": "Demonstrates ActionChip interaction callbacks.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/action_chip/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/action_chip.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/action_chip/main.dart",
+      "order": 13
+    },
+    {
+      "slug": "animated_tint",
+      "title": "AnimatedTint & FadeTint",
+      "tagline": "Demonstrates AnimatedTint (animates between two colors) and FadeTint (fades a single color in/out). Press 'a' to restart AnimatedTint, 'f' to toggle FadeTint...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/animated_tint/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/animated_tint.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/animated_tint/main.dart",
+      "order": 14
+    },
+    {
+      "slug": "artisanal_app",
+      "title": "ArtisanalApp",
+      "tagline": "Demonstrates the high-level app shell with title publishing, adaptive theming, and built-in navigator wiring.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/artisanal_app/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/artisanal_app.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/artisanal_app/main.dart",
+      "order": 15
+    },
+    {
+      "slug": "ascii_text",
+      "title": "AsciiText & AsciiFont",
+      "tagline": "Demonstrates AsciiText, StyledAsciiText, and the four built-in AsciiFont styles. Press 'f' to cycle fonts, 's' to toggle styled mode.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/ascii_text/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/ascii_text.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/ascii_text/main.dart",
+      "order": 16
+    },
+    {
+      "slug": "badge_showcase",
+      "title": "Badge Showcase",
+      "tagline": "Demonstrates the Badge widget with per-side padding, width calculation, and various color configurations.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/badge_showcase/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/badge_showcase.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/badge_showcase/main.dart",
+      "order": 17
+    },
+    {
+      "slug": "block_focus",
+      "title": "BlockFocus",
+      "tagline": "Demonstrates blocking keyboard events from reaching child widgets. Toggle blocking on/off with 'b' and observe key events being consumed or passed through to...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/block_focus/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/block_focus.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/block_focus/main.dart",
+      "order": 18
+    },
+    {
+      "slug": "builder",
+      "title": "Builder Widget",
+      "tagline": "Demonstrates using Builder to create widgets with inline callbacks that have access to BuildContext.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/builder/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/builder.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/builder/main.dart",
+      "order": 19
+    },
+    {
+      "slug": "card_panel_frame",
+      "title": "Card, PanelBox, Frame, AlertBox & Toast Showcase",
+      "tagline": "Demonstrates container-style component widgets: Card, PanelBox (with title and actions), Frame, AlertBox (info/success/warning/error), and Toast.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/card_panel_frame/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/card_panel_frame.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/card_panel_frame/main.dart",
+      "order": 20
+    },
+    {
+      "slug": "charting",
+      "title": "Charting Widgets Showcase",
+      "tagline": "Demonstrates all chart types: Sparkline, Line, Bar, Heatmap, Pie, and Ribbon. Uses tabs to switch between charts. The Line chart tab also shows ChartBuilder ...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/charting/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/charting.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/charting/main.dart",
+      "order": 21
+    },
+    {
+      "slug": "chip",
+      "title": "Chip Showcase",
+      "tagline": "Demonstrates Chip with avatar and delete action.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/chip/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/chip.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/chip/main.dart",
+      "order": 22
+    },
+    {
+      "slug": "choice_chip",
+      "title": "ChoiceChip Showcase",
+      "tagline": "Demonstrates single-selection behavior with ChoiceChip.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/choice_chip/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/choice_chip.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/choice_chip/main.dart",
+      "order": 23
+    },
+    {
+      "slug": "circular_progress_indicator",
+      "title": "CircularProgressIndicator Showcase",
+      "tagline": "Demonstrates determinate and indeterminate CircularProgressIndicator.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/circular_progress_indicator/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/circular_progress_indicator.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/circular_progress_indicator/main.dart",
+      "order": 24
+    },
+    {
+      "slug": "clip_rect",
+      "title": "ClipRect Widget",
+      "tagline": "Demonstrates using ClipRect to clip child content to a specified width and/or height without ellipsis.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/clip_rect/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/clip_rect.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/clip_rect/main.dart",
+      "order": 25
+    },
+    {
+      "slug": "code-editor",
+      "title": "Code editor",
+      "tagline": "Full code editor with diagnostics, save (ctrl+s), and navigation.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/code-editor/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/code-editor.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/code-editor/main.dart",
+      "order": 26
+    },
+    {
+      "slug": "colored_box",
+      "title": "ColoredBox Widget",
+      "tagline": "Demonstrates using ColoredBox to apply background colors to child widgets.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/colored_box/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/colored_box.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/colored_box/main.dart",
+      "order": 27
+    },
+    {
+      "slug": "command_palette",
+      "title": "Command Palette Showcase",
+      "tagline": "Demonstrates the CommandPalette widget with Bayesian scoring, tag matching, and incremental filtering. Open with Ctrl+P or 'p'. The palette uses Bayesian sco...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/command_palette/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/command_palette.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/command_palette/main.dart",
+      "order": 28
+    },
+    {
+      "slug": "container_align",
+      "title": "Container & Alignment Showcase",
+      "tagline": "Demonstrates Container, Align, Center, Padding, SizedBox, ConstrainedBox, and ShrinkWrap widgets.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/container_align/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/container_align.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/container_align/main.dart",
+      "order": 29
+    },
+    {
+      "slug": "data_table",
+      "title": "DataTable Showcase",
+      "tagline": "Demonstrates DataTable with all border styles (normal, rounded, heavy, dashed, ascii), custom header/cell styling, and dynamic row management.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/data_table/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/data_table.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/data_table/main.dart",
+      "order": 30
+    },
+    {
+      "slug": "dataviz",
+      "title": "Data Visualization Demo",
+      "tagline": "Matches the Frankentui ftui-demo-showcase DataViz screen layout: Top: Sparklines | Bar Chart (Grouped) | Spectrum Bars (Stacked) Middle: Line Chart (Multi-se...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/dataviz/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/dataviz.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/dataviz/main.dart",
+      "order": 31
+    },
+    {
+      "slug": "debug_console",
+      "title": "Debug console",
+      "tagline": "REPL-style debug console docked inside a widget app.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/debug_console/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/debug_console.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/debug_console/main.dart",
+      "order": 32
+    },
+    {
+      "slug": "debug_overlay",
+      "title": "DebugOverlay",
+      "tagline": "Demonstrates the built-in debug overlay via WidgetApp's debugOverlay parameter and the F12 toggle. Also shows manual PerformanceOverlay usage for the simpler...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/debug_overlay/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/debug_overlay.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/debug_overlay/main.dart",
+      "order": 33
+    },
+    {
+      "slug": "decision_card",
+      "title": "DecisionCard Showcase",
+      "tagline": "Demonstrates the DecisionCard widget with all 4 progressive-disclosure levels: traffic-light badge, plain-English explanation, evidence terms, and full quant...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/decision_card/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/decision_card.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/decision_card/main.dart",
+      "order": 34
+    },
+    {
+      "slug": "decorated_box",
+      "title": "DecoratedBox Widget",
+      "tagline": "Demonstrates using DecoratedBox to apply Decoration and BoxDecoration to child widgets, including borders, backgrounds, and foreground positioning.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/decorated_box/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/decorated_box.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/decorated_box/main.dart",
+      "order": 35
+    },
+    {
+      "slug": "decoration",
+      "title": "BoxDecoration Showcase",
+      "tagline": "Demonstrates border presets, borderRadius, gradient, and combinations. Cards are laid out with Wrap so they reflow as the terminal is resized.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/decoration/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/decoration.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/decoration/main.dart",
+      "order": 36
+    },
+    {
+      "slug": "drag",
+      "title": "Drag Interaction Demo",
+      "tagline": "Demonstrates drag gestures with the recognizer-based gesture system: - Draggable slider with live value feedback - Resizable split-pane with drag handle - Mo...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/drag/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/drag.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/drag/main.dart",
+      "order": 37
+    },
+    {
+      "slug": "dropdown_button",
+      "title": "DropdownButton Showcase",
+      "tagline": "Demonstrates DropdownButton and DropdownMenuItem selection behavior.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/dropdown_button/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/dropdown_button.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/dropdown_button/main.dart",
+      "order": 38
+    },
+    {
+      "slug": "editor-core-playground",
+      "title": "Editor core playground",
+      "tagline": "Live surface for the shared editor-core work.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/editor-core-playground/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/editor-core-playground.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/editor-core-playground/main.dart",
+      "order": 39
+    },
+    {
+      "slug": "error_recovery",
+      "title": "Error Recovery",
+      "tagline": "Demonstrates the global error boundary in WidgetApp. Unhandled exceptions during update/build no longer crash the TUI. Instead, an error screen is shown with...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/error_recovery/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/error_recovery.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/error_recovery/main.dart",
+      "order": 40
+    },
+    {
+      "slug": "error_widget",
+      "title": "TUIErrorWidget",
+      "tagline": "Demonstrates the TUIErrorWidget for displaying error messages with optional details and icon. Press 'd' to toggle details, 'i' to toggle icon.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/error_widget/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/error_widget.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/error_widget/main.dart",
+      "order": 41
+    },
+    {
+      "slug": "fade_modal_barrier",
+      "title": "FadeModalBarrier",
+      "tagline": "Demonstrates the FadeModalBarrier widget that overlays a semi-transparent barrier over content. Press 'm' to toggle visibility, 'd' to toggle dismissible mode.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/fade_modal_barrier/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/fade_modal_barrier.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/fade_modal_barrier/main.dart",
+      "order": 42
+    },
+    {
+      "slug": "filter_chip",
+      "title": "FilterChip Showcase",
+      "tagline": "Demonstrates multi-selection behavior with FilterChip.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/filter_chip/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/filter_chip.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/filter_chip/main.dart",
+      "order": 43
+    },
+    {
+      "slug": "flex_layout",
+      "title": "Flex Layout Showcase",
+      "tagline": "Demonstrates Flexible, Expanded, Flex, and Spacer widgets. Shows how flex distribution works in Row and Column.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/flex_layout/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/flex_layout.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/flex_layout/main.dart",
+      "order": 44
+    },
+    {
+      "slug": "focus",
+      "title": "Focus",
+      "tagline": "Keyboard focus traversal across widgets and scopes.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/focus/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/focus.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/focus/main.dart",
+      "order": 45
+    },
+    {
+      "slug": "gesture",
+      "title": "Gesture & Mouse Showcase",
+      "tagline": "Demonstrates GestureDetector (tap, drag, wheel), MouseRegion (hover enter/exit), and Zone widgets with interactive feedback.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/gesture/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/gesture.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/gesture/main.dart",
+      "order": 46
+    },
+    {
+      "slug": "git-diff",
+      "title": "Git Diff Viewer — Widget",
+      "tagline": "Demonstrates GitDiffViewer widget with a hardcoded sample diff. Scroll with j/k or pgup/pgdn. Press q to quit. Light-theme diff styles.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/git-diff/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/git-diff.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/git-diff/main.dart",
+      "order": 47
+    },
+    {
+      "slug": "history_panel",
+      "title": "HistoryPanel Showcase",
+      "tagline": "Demonstrates the HistoryPanel widget with undo/redo stacks, compact and full modes, custom icons, marker text, and styling.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/history_panel/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/history_panel.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/history_panel/main.dart",
+      "order": 48
+    },
+    {
+      "slug": "hot_reload_test",
+      "title": "Hot reload test",
+      "tagline": "Minimal hot-reload harness (needs --enable-vm-service).",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/hot_reload_test/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/hot_reload_test.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/hot_reload_test/main.dart",
+      "order": 49
+    },
+    {
+      "slug": "hyperlink_text",
+      "title": "HyperlinkText",
+      "tagline": "Text with clickable terminal hyperlinks.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/hyperlink_text/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/hyperlink_text.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/hyperlink_text/main.dart",
+      "order": 50
+    },
+    {
+      "slug": "image",
+      "title": "Image",
+      "tagline": "Demonstrates the Image widget with MemoryImage, UV-backed auto protocol selection, and various BoxFit modes. Uses package:image to generate a synthetic gradi...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/image/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/image.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/image/main.dart",
+      "order": 51
+    },
+    {
+      "slug": "image_probe",
+      "title": "Image protocol probe",
+      "tagline": "Detects terminal image support: Kitty, Sixel, iTerm2, half-blocks.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/image_probe/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/image_probe.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/image_probe/main.dart",
+      "order": 52
+    },
+    {
+      "slug": "implicitly_animated",
+      "title": "ImplicitlyAnimatedWidget",
+      "tagline": "Demonstrates the ImplicitlyAnimatedWidget pattern by creating a concrete AnimatedBox that animates width changes. Press +/- to change width, 'c' to cycle col...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/implicitly_animated/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/implicitly_animated.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/implicitly_animated/main.dart",
+      "order": 53
+    },
+    {
+      "slug": "inherited-widget",
+      "title": "InheritedWidget",
+      "tagline": "Theme and data propagation down the widget tree.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/inherited-widget/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/inherited-widget.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/inherited-widget/main.dart",
+      "order": 54
+    },
+    {
+      "slug": "inline_build_monitor",
+      "title": "Responsive inline build monitor.",
+      "tagline": "The dashboard stays pinned to the bottom of the primary screen while build output flows into native terminal scrollback through Cmd.println.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/inline_build_monitor/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/inline_build_monitor.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/inline_build_monitor/main.dart",
+      "order": 55
+    },
+    {
+      "slug": "inline_status_dashboard",
+      "title": "Inline widget dashboard.",
+      "tagline": "Runs a widget-based dashboard in the primary screen's bottom rows while streaming log lines above it through Cmd.println.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/inline_status_dashboard/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/inline_status_dashboard.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/inline_status_dashboard/main.dart",
+      "order": 56
+    },
+    {
+      "slug": "input_chip",
+      "title": "InputChip Showcase",
+      "tagline": "Demonstrates InputChip selection, press, and delete behavior.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/input_chip/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/input_chip.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/input_chip/main.dart",
+      "order": 57
+    },
+    {
+      "slug": "layout",
+      "title": "Layout primitives",
+      "tagline": "Core layout building blocks composed in one screen.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/layout/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/layout.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/layout/main.dart",
+      "order": 58
+    },
+    {
+      "slug": "layout_builder",
+      "title": "LayoutBuilder Widget",
+      "tagline": "Demonstrates using LayoutBuilder to build responsive layouts based on available constraints from MediaQuery.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/layout_builder/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/layout_builder.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/layout_builder/main.dart",
+      "order": 59
+    },
+    {
+      "slug": "limited_box",
+      "title": "LimitedBox",
+      "tagline": "Demonstrates the LimitedBox widget which limits its child's size only when the parent provides no constraints. Shows different maxWidth and maxHeight configu...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/limited_box/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/limited_box.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/limited_box/main.dart",
+      "order": 60
+    },
+    {
+      "slug": "linear_progress_indicator",
+      "title": "LinearProgressIndicator Showcase",
+      "tagline": "Demonstrates determinate and indeterminate LinearProgressIndicator.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/linear_progress_indicator/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/linear_progress_indicator.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/linear_progress_indicator/main.dart",
+      "order": 61
+    },
+    {
+      "slug": "list_accordion",
+      "title": "ListTile, Accordion, ExpansionTile & Tooltip Showcase",
+      "tagline": "Demonstrates ListTile variants, Accordion (controlled expand/collapse), ExpansionTile with CheckboxListTile/SwitchListTile/RadioListTile, and Tooltip (hover ...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/list_accordion/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/list_accordion.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/list_accordion/main.dart",
+      "order": 62
+    },
+    {
+      "slug": "markdown-editor",
+      "title": "Markdown editor",
+      "tagline": "Markdown editing with live preview.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/markdown-editor/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/markdown-editor.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/markdown-editor/main.dart",
+      "order": 63
+    },
+    {
+      "slug": "markdown_text",
+      "title": "MarkdownText",
+      "tagline": "Demonstrates the MarkdownText widget rendering different Markdown content. Press 't' to cycle through content tabs showing headings, formatting, code blocks,...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/markdown_text/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/markdown_text.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/markdown_text/main.dart",
+      "order": 64
+    },
+    {
+      "slug": "metric_display",
+      "title": "MetricDisplay Showcase",
+      "tagline": "Demonstrates MetricDisplay with various metric values, units, trend indicators, and dynamic value updates.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/metric_display/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/metric_display.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/metric_display/main.dart",
+      "order": 65
+    },
+    {
+      "slug": "modal_drawer",
+      "title": "Modal & Drawer Showcase",
+      "tagline": "Demonstrates Modal dialog overlay and Drawer side panel, both with dismiss handling and interactive open/close.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/modal_drawer/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/modal_drawer.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/modal_drawer/main.dart",
+      "order": 66
+    },
+    {
+      "slug": "navigator",
+      "title": "Navigator",
+      "tagline": "Demonstrates the Navigator widget for stack-based page navigation. Features push, pop, named routes, push result handling, and popUntil. Controls: Enter = pu...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/navigator/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/navigator.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/navigator/main.dart",
+      "order": 67
+    },
+    {
+      "slug": "opencode",
+      "title": "OpenCode Chat UI — Widget",
+      "tagline": "Demonstrates an OpenCode-style chat interface built with artisanal_widgets: session header, scrollable message body with text/tool/reasoning parts, prompt in...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/opencode/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/opencode.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/opencode/main.dart",
+      "order": 68
+    },
+    {
+      "slug": "overflow_box",
+      "title": "OverflowBox & SizedOverflowBox",
+      "tagline": "Demonstrates how OverflowBox overrides child constraints and how SizedOverflowBox provides a fixed size while allowing children to overflow.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/overflow_box/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/overflow_box.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/overflow_box/main.dart",
+      "order": 69
+    },
+    {
+      "slug": "overlay",
+      "title": "Overlay",
+      "tagline": "Demonstrates the Overlay and OverlayEntry widgets for managing layered content. Press 'a' to add an entry, 'r' to remove the last entry, 'c' to clear all ent...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/overlay/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/overlay.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/overlay/main.dart",
+      "order": 70
+    },
+    {
+      "slug": "popup_menu_button",
+      "title": "PopupMenuButton Showcase",
+      "tagline": "Demonstrates PopupMenuButton, PopupMenuItem, CheckedPopupMenuItem, and PopupMenuDivider.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/popup_menu_button/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/popup_menu_button.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart",
+      "order": 71
+    },
+    {
+      "slug": "progress_styles",
+      "title": "Enhanced ProgressIndicator Styles",
+      "tagline": "Demonstrates all ProgressStyle variants, label positioning, custom borders, and labelFormat callbacks.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/progress_styles/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/progress_styles.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/progress_styles/main.dart",
+      "order": 72
+    },
+    {
+      "slug": "range_slider",
+      "title": "RangeSlider Showcase",
+      "tagline": "Demonstrates RangeSlider mouse and keyboard interactions.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/range_slider/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/range_slider.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/range_slider/main.dart",
+      "order": 73
+    },
+    {
+      "slug": "reload",
+      "title": "Reload host",
+      "tagline": "Hot-reload host shell for widget apps.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/reload/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/reload.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/reload/main.dart",
+      "order": 74
+    },
+    {
+      "slug": "rich_text",
+      "title": "RichText & TextSpan",
+      "tagline": "Demonstrates nested styled text spans, text alignment (left/center/right), and overflow modes (clip/ellipsis).",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/rich_text/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/rich_text.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/rich_text/main.dart",
+      "order": 75
+    },
+    {
+      "slug": "row_column",
+      "title": "Row & Column Showcase",
+      "tagline": "Demonstrates Row, Column, HBox, VBox with gap, mainAxisAlignment, crossAxisAlignment, and mainAxisSize options.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/row_column/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/row_column.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/row_column/main.dart",
+      "order": 76
+    },
+    {
+      "slug": "scroll_area",
+      "title": "ScrollArea & ScrollView Showcase",
+      "tagline": "Demonstrates ScrollArea (simple scrollable container with optional scrollbar), ScrollView, and SingleChildScrollView widgets.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/scroll_area/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/scroll_area.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/scroll_area/main.dart",
+      "order": 77
+    },
+    {
+      "slug": "sparkline_enhancements",
+      "title": "Sparkline Enhancements Showcase",
+      "tagline": "Demonstrates the new SparklineChart features: - Color gradient (low → high value coloring) - Configurable baseline (values at/below render as empty) - Explic...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/sparkline_enhancements/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/sparkline_enhancements.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/sparkline_enhancements/main.dart",
+      "order": 78
+    },
+    {
+      "slug": "splitview_sidebar",
+      "title": "SplitView & Sidebar Showcase",
+      "tagline": "Demonstrates SplitView (horizontal/vertical with flex ratios), Sidebar (left/right side panels with fixed width).",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/splitview_sidebar/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/splitview_sidebar.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/splitview_sidebar/main.dart",
+      "order": 79
+    },
+    {
+      "slug": "stack",
+      "title": "Stack & Overlay Showcase",
+      "tagline": "Demonstrates Stack, Positioned, Visibility, and Opacity widgets.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/stack/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/stack.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/stack/main.dart",
+      "order": 80
+    },
+    {
+      "slug": "status_line",
+      "title": "Badge & StatusLine Showcase",
+      "tagline": "Demonstrates the Badge widget with per-side padding and width calculation, and the StatusLine widget with 3-region layout (left/center/right), typed StatusIt...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/status_line/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/status_line.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/status_line/main.dart",
+      "order": 81
+    },
+    {
+      "slug": "step_indicator",
+      "title": "StepIndicator Showcase",
+      "tagline": "Demonstrates StepIndicator with all step statuses (pending, active, completed, error, skipped), descriptions, and dynamic step progression.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/step_indicator/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/step_indicator.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/step_indicator/main.dart",
+      "order": 82
+    },
+    {
+      "slug": "text",
+      "title": "Text Widget Showcase",
+      "tagline": "Demonstrates Text, Text.rich, TextSpan, Label, TextAlign, TextOverflow, and styled text with theme typography.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/text/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/text.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/text/main.dart",
+      "order": 83
+    },
+    {
+      "slug": "text-editor",
+      "title": "Text editor",
+      "tagline": "Multi-line text editor with selection and clipboard.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/text-editor/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/text-editor.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/text-editor/main.dart",
+      "order": 84
+    },
+    {
+      "slug": "text_style",
+      "title": "TextStyle showcase",
+      "tagline": "Demonstrates immutable text declarations, Style composition, nested span inheritance and resets, selectable text, decorations, and ASCII-art fonts.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/text_style/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/text_style.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/text_style/main.dart",
+      "order": 85
+    },
+    {
+      "slug": "theme",
+      "title": "Theme & MediaQuery Showcase",
+      "tagline": "Demonstrates Theme (dark/light/adaptive), ThemeScope for propagating themes down the widget tree, theme color palette, typography styles, and MediaQuery for ...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/theme/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/theme.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/theme/main.dart",
+      "order": 86
+    },
+    {
+      "slug": "tint",
+      "title": "Tint",
+      "tagline": "Demonstrates the Tint widget with different colors and opacity levels. Cycle through colors with 'c' and adjust opacity with +/-.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/tint/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/tint.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/tint/main.dart",
+      "order": 87
+    },
+    {
+      "slug": "tooltip_trace",
+      "title": "Tooltip trace",
+      "tagline": "Tooltip demo with trace recording and replay.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/tooltip_trace/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/tooltip_trace.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/tooltip_trace/main.dart",
+      "order": 88
+    },
+    {
+      "slug": "transform",
+      "title": "Transform",
+      "tagline": "Demonstrates the Transform widget with translate, flipHorizontal, and flipVertical operations. Press 'h' to toggle horizontal flip, 'v' to toggle vertical fl...",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/transform/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/transform.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/transform/main.dart",
+      "order": 89
+    },
+    {
+      "slug": "uv_effects",
+      "title": "UV effects",
+      "tagline": "Ultraviolet effects applied to widget subtrees.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/uv_effects/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/uv_effects.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/uv_effects/main.dart",
+      "order": 90
+    },
+    {
+      "slug": "vertical_divider",
+      "title": "VerticalDivider Widget",
+      "tagline": "Demonstrates using VerticalDivider to separate content horizontally with various characters, heights, and styles.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/vertical_divider/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/vertical_divider.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/vertical_divider/main.dart",
+      "order": 91
+    },
+    {
+      "slug": "widget-app",
+      "title": "WidgetApp counter",
+      "tagline": "The classic counter app running on the WidgetApp shell.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/widget-app/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/widget-app.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/widget-app/main.dart",
+      "order": 92
+    },
+    {
+      "slug": "widget_features",
+      "title": "Artisanal widget and rendering features.",
+      "tagline": "Demonstrates a fixed terminal viewport, cell shadows, UV buffer filters, structured table cells, and the monthly calendar.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/widget_features/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/widget_features.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/widget_features/main.dart",
+      "order": 93
+    },
+    {
+      "slug": "wizard",
+      "title": "Wizard",
+      "tagline": "Multi-step project-creation wizard with validation.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/wizard/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/wizard.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/wizard/main.dart",
+      "order": 94
+    },
+    {
+      "slug": "wrap_divider",
+      "title": "Wrap, Divider, Icon & Spacer Showcase",
+      "tagline": "Demonstrates Wrap with spacing/runSpacing, Divider, Icon with built-in Icons constants, Spacer, and ShrinkWrap widgets.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/wrap_divider/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/wrap_divider.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/wrap_divider/main.dart",
+      "order": 95
+    },
+    {
+      "slug": "compositor-image-demo",
+      "title": "Compositor images",
+      "tagline": "Composited terminal images with capability-based protocol detection.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/compositor_image_demo.dart",
+      "gif": "pkgs/artisanal/assets/compositor_image_demo.gif",
+      "run": "dart run pkgs/artisanal/example/compositor_image_demo.dart",
+      "order": 7
+    },
+    {
+      "slug": "editor-core-demo",
+      "title": "Editor core",
+      "tagline": "Text-buffer primitives: cursor, selection, undo/redo, and journals.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/editor_core_demo.dart",
+      "gif": "pkgs/artisanal/assets/editor_core_demo.gif",
+      "run": "dart run pkgs/artisanal/example/editor_core_demo.dart",
+      "order": 8
+    },
+    {
+      "slug": "fluent-style-example",
+      "title": "Fluent style API",
+      "tagline": "The fluent Style builder: basic styling and semantic colors.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/fluent_style_example.dart",
+      "gif": "pkgs/artisanal/assets/fluent_style_example.gif",
+      "run": "dart run pkgs/artisanal/example/fluent_style_example.dart",
+      "order": 9
+    },
+    {
+      "slug": "kitty-image-demo",
+      "title": "Kitty images",
+      "tagline": "Kitty graphics-protocol image demo.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/kitty_image_demo.dart",
+      "gif": "pkgs/artisanal/assets/kitty_image_demo.gif",
+      "run": "dart run pkgs/artisanal/example/kitty_image_demo.dart",
+      "order": 10
+    },
+    {
+      "slug": "lipgloss-console-tags",
+      "title": "Console tags",
+      "tagline": "Angle-bracket console tags (`<info>` etc.) with Console integration.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/lipgloss_console_tags.dart",
+      "gif": "pkgs/artisanal/assets/lipgloss_console_tags.gif",
+      "run": "dart run pkgs/artisanal/example/lipgloss_console_tags.dart",
+      "order": 11
+    },
+    {
+      "slug": "lipgloss-layout",
+      "title": "Lip Gloss layout",
+      "tagline": "The Lip Gloss layout port: tabbed dialog composition.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/lipgloss_layout.dart",
+      "gif": "pkgs/artisanal/assets/lipgloss_layout.gif",
+      "run": "dart run pkgs/artisanal/example/lipgloss_layout.dart",
+      "order": 12
+    },
+    {
+      "slug": "render-recorder-demo",
+      "title": "Render recorder",
+      "tagline": "Render capture: generations, parsed lines, structured reports.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/render_recorder_demo.dart",
+      "gif": "pkgs/artisanal/assets/render_recorder_demo.gif",
+      "run": "dart run pkgs/artisanal/example/render_recorder_demo.dart",
+      "order": 13
+    },
+    {
+      "slug": "scanner-demo",
+      "title": "Scanner spinner",
+      "tagline": "Knight Rider scanner spinner in styles and colors.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/scanner_demo.dart",
+      "gif": "pkgs/artisanal/assets/scanner_demo.gif",
+      "run": "dart run pkgs/artisanal/example/scanner_demo.dart",
+      "order": 14
+    },
+    {
+      "slug": "inline-animation-demo",
+      "title": "Inline animation",
+      "tagline": "Inline spinners that stay visible or vanish on completion.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/inline_animation_demo.dart",
+      "gif": "pkgs/artisanal/assets/inline_animation_demo.gif",
+      "run": "dart run pkgs/artisanal/example/inline_animation_demo.dart",
+      "order": 15
+    },
+    {
+      "slug": "devtools-demo",
+      "title": "DevTools counter",
+      "tagline": "Counter with the debug overlay; press m to cycle modes.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/devtools_demo.dart",
+      "gif": "pkgs/artisanal/assets/devtools_demo.gif",
+      "run": "dart run pkgs/artisanal/example/devtools_demo.dart",
+      "order": 16
+    },
+    {
+      "slug": "multi-search-demo",
+      "title": "Multi search",
+      "tagline": "Fuzzy multi-select prompt over a fruit list.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/multi_search_demo.dart",
+      "gif": "pkgs/artisanal/assets/multi_search_demo.gif",
+      "run": "dart run pkgs/artisanal/example/multi_search_demo.dart",
+      "order": 17
+    },
+    {
+      "slug": "uv-tui-demo",
+      "title": "Artisanal Nexus",
+      "tagline": "UV metrics dashboard with live telemetry pages.",
+      "category": "core",
+      "source": "pkgs/artisanal/example/uv_tui_demo.dart",
+      "gif": "pkgs/artisanal/assets/uv_tui_demo.gif",
+      "run": "dart run pkgs/artisanal/example/uv_tui_demo.dart",
+      "order": 18
+    },
+    {
+      "slug": "altscreen-toggle",
+      "title": "Alt Screen Toggle",
+      "tagline": "The altscreen-toggle example shows how to transition between the alternative screen buffer and the normal screen buffer using Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/altscreen-toggle/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/altscreen-toggle/altscreen-toggle.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/altscreen-toggle/main.dart",
+      "order": 1
+    },
+    {
+      "slug": "autocomplete",
+      "title": "Autocomplete",
+      "tagline": "The autocomplete example shows tab-completion in a text input.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/autocomplete/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/autocomplete/autocomplete.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/autocomplete/main.dart",
+      "order": 2
+    },
+    {
+      "slug": "border_showcase",
+      "title": "Border Showcase",
+      "tagline": "The border_showcase example shows border styles, titles, and colors.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/border_showcase/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/border_showcase/border_showcase.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/border_showcase/main.dart",
+      "order": 3
+    },
+    {
+      "slug": "cellbuffer",
+      "title": "Cell Buffer",
+      "tagline": "The cellbuffer example demonstrates low-level cell-buffer rendering.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/cellbuffer/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/cellbuffer/cellbuffer.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/cellbuffer/main.dart",
+      "order": 4
+    },
+    {
+      "slug": "chat",
+      "title": "Chat",
+      "tagline": "The chat examples shows a basic chat application with a multi-line textarea input.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/chat/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/chat/chat.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/chat/main.dart",
+      "order": 5
+    },
+    {
+      "slug": "components-host",
+      "title": "Components Host",
+      "tagline": "The components-host example hosts view components in a demo shell.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/components-host/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/components-host/components-host.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/components-host/main.dart",
+      "order": 6
+    },
+    {
+      "slug": "composable-views",
+      "title": "Composable Views",
+      "tagline": "The composable-views example shows how to compose two bubble models (spinner and timer) together in a single application and switch between them.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/composable-views/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/composable-views/composable-views.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/composable-views/main.dart",
+      "order": 7
+    },
+    {
+      "slug": "credit-card-form",
+      "title": "Credit Card Form",
+      "tagline": "The credit-card-form example demonstrates how to build a multi-step form with textinputs bubbles and validation on the inputs.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/credit-card-form/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/credit-card-form/credit-card-form.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/credit-card-form/main.dart",
+      "order": 8
+    },
+    {
+      "slug": "debounce",
+      "title": "Debounce",
+      "tagline": "The debounce example shows how to throttle key presses to avoid overloading your Bubble Tea application.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/debounce/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/debounce/debounce.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/debounce/main.dart",
+      "order": 9
+    },
+    {
+      "slug": "evidence-logging",
+      "title": "Evidence Logging",
+      "tagline": "The evidence-logging examples show how to emit runtime TuiEvidence records to JSONL and how to parse them with TuiEvidence.tryParseLine.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/evidence-logging/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/evidence-logging/evidence-logging.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/evidence-logging/main.dart",
+      "order": 10
+    },
+    {
+      "slug": "exec",
+      "title": "Exec",
+      "tagline": "The exec example shows how to execute a running command during the execution of a Bubble Tea application such as launching an EDITOR.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/exec/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/exec/exec.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/exec/main.dart",
+      "order": 11
+    },
+    {
+      "slug": "eyes",
+      "title": "Eyes",
+      "tagline": "The eyes example is a blinking-eyes animation ported from Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/eyes/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/eyes/eyes.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/eyes/main.dart",
+      "order": 12
+    },
+    {
+      "slug": "file-picker",
+      "title": "File Picker",
+      "tagline": "The file-picker example shows the file-picker bubble.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/file-picker/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/file-picker/file-picker.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/file-picker/main.dart",
+      "order": 13
+    },
+    {
+      "slug": "focus-blur",
+      "title": "Focus Blur",
+      "tagline": "The focus-blur example reports terminal focus and blur events.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/focus-blur/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/focus-blur/focus-blur.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/focus-blur/main.dart",
+      "order": 14
+    },
+    {
+      "slug": "fullscreen",
+      "title": "Full Screen",
+      "tagline": "The fullscreen example shows how to make a Bubble Tea application fullscreen.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/fullscreen/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/fullscreen/fullscreen.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/fullscreen/main.dart",
+      "order": 15
+    },
+    {
+      "slug": "git-diff",
+      "title": "Git Diff",
+      "tagline": "The git-diff example shows the git-diff viewer bubble.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/git-diff/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/git-diff/git-diff.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/git-diff/main.dart",
+      "order": 16
+    },
+    {
+      "slug": "glamour",
+      "title": "Glamour",
+      "tagline": "The glamour example shows how to use [Glamour](https://github.com/charmbracelet/glamour) inside a viewport bubble.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/glamour/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/glamour/glamour.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/glamour/main.dart",
+      "order": 17
+    },
+    {
+      "slug": "harness_demo",
+      "title": "Harness Demo",
+      "tagline": "The harness_demo example demonstrates the program test harness with a counter model.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/harness_demo/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/harness_demo/harness_demo.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/harness_demo/main.dart",
+      "order": 18
+    },
+    {
+      "slug": "help",
+      "title": "Help",
+      "tagline": "The help example shows how to use the help bubble to display help to the user of your application.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/help/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/help/help.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/help/main.dart",
+      "order": 19
+    },
+    {
+      "slug": "hot_reload_test",
+      "title": "Hot Reload Test",
+      "tagline": "The hot_reload_test example is a minimal hot-reload test app.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/hot_reload_test/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/hot_reload_test/hot_reload_test.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/hot_reload_test/main.dart",
+      "order": 20
+    },
+    {
+      "slug": "http",
+      "title": "Http",
+      "tagline": "The http example shows how to make an http call within your Bubble Tea application.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/http/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/http/http.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/http/main.dart",
+      "order": 21
+    },
+    {
+      "slug": "keymap-hub",
+      "title": "Keymap Hub",
+      "tagline": "The keymap-hub example demonstrates the keymap-hub surface.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/keymap-hub/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/keymap-hub/keymap-hub.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/keymap-hub/main.dart",
+      "order": 22
+    },
+    {
+      "slug": "kitchen-sink",
+      "title": "Kitchen Sink",
+      "tagline": "The kitchen-sink example is a composite demo of many bubbles at once.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/kitchen-sink/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/kitchen-sink/kitchen-sink.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/kitchen-sink/main.dart",
+      "order": 23
+    },
+    {
+      "slug": "layout",
+      "title": "Layout",
+      "tagline": "The layout example shows how to use Layout.joinVertical and Layout.joinHorizontal to build a responsive, width-aware card layout.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/layout/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/layout/layout.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/layout/main.dart",
+      "order": 24
+    },
+    {
+      "slug": "layout-breakpoints",
+      "title": "Layout Breakpoints",
+      "tagline": "The layout-breakpoints example demonstrates threshold-based layout decisions using ResponsiveBreakpoints with isAtLeast, isBelow, and resolve.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/layout-breakpoints/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/layout-breakpoints/layout-breakpoints.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/layout-breakpoints/main.dart",
+      "order": 25
+    },
+    {
+      "slug": "list-default",
+      "title": "Default List",
+      "tagline": "The list-default example shows how to use the list bubble.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/list-default/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/list-default/list-default.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/list-default/main.dart",
+      "order": 26
+    },
+    {
+      "slug": "list-fancy",
+      "title": "Fancy List",
+      "tagline": "The list-fancy example shows how to use the list bubble with extra customizations.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/list-fancy/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/list-fancy/list-fancy.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/list-fancy/main.dart",
+      "order": 27
+    },
+    {
+      "slug": "list-simple",
+      "title": "Simple List",
+      "tagline": "The list-simple example shows how to use the list and customize it to have a simpler, more compact, appearance.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/list-simple/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/list-simple/list-simple.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/list-simple/main.dart",
+      "order": 28
+    },
+    {
+      "slug": "macro-recorder",
+      "title": "Macro Recorder/Player",
+      "tagline": "The macro-recorder example records runtime key traffic into a ProgramMacro, replays it, and demonstrates stopping looped playback.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/macro-recorder/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/macro-recorder/macro-recorder.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/macro-recorder/main.dart",
+      "order": 29
+    },
+    {
+      "slug": "markdown",
+      "title": "Markdown",
+      "tagline": "The markdown example parses Markdown with package:markdown, renders ANSI with renderMarkdown, and displays it inside a viewport.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/markdown/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/markdown/markdown.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/markdown/main.dart",
+      "order": 30
+    },
+    {
+      "slug": "mouse",
+      "title": "Mouse",
+      "tagline": "The mouse example shows how to receive mouse events in a Bubble Tea application.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/mouse/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/mouse/mouse.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/mouse/main.dart",
+      "order": 31
+    },
+    {
+      "slug": "package-manager",
+      "title": "Package Manager",
+      "tagline": "The package-manager example shows how to build an interface for a package manager using output commands such as tui.Cmd.println / tui.Cmd.printf.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/package-manager/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/package-manager/package-manager.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/package-manager/main.dart",
+      "order": 32
+    },
+    {
+      "slug": "pager",
+      "title": "Pager",
+      "tagline": "The pager example shows how to build a simple pager application similar to less.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/pager/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/pager/pager.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/pager/main.dart",
+      "order": 33
+    },
+    {
+      "slug": "paginator",
+      "title": "Paginator",
+      "tagline": "The paginator example shows how to build a simple paginated list.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/paginator/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/paginator/paginator.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/paginator/main.dart",
+      "order": 34
+    },
+    {
+      "slug": "pipe",
+      "title": "Pipe",
+      "tagline": "The pipe example demonstrates using shell pipes to communicate with Bubble Tea applications.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/pipe/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/pipe/pipe.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/pipe/main.dart",
+      "order": 35
+    },
+    {
+      "slug": "prevent-quit",
+      "title": "Prevent Quit",
+      "tagline": "The prevent-quit example intercepts quit and asks for confirmation first.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/prevent-quit/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/prevent-quit/prevent-quit.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/prevent-quit/main.dart",
+      "order": 36
+    },
+    {
+      "slug": "progress-animated",
+      "title": "Animated Progress",
+      "tagline": "The progress-animated example shows how to build a progress bar with an animated progression.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/progress-animated/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/progress-animated/progress-animated.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/progress-animated/main.dart",
+      "order": 37
+    },
+    {
+      "slug": "progress-download",
+      "title": "Download Progress",
+      "tagline": "The progress-download example demonstrates how to download a file while indicating download progress through Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/progress-download/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/progress-download/progress-download.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/progress-download/main.dart",
+      "order": 38
+    },
+    {
+      "slug": "progress-static",
+      "title": "Static Progress",
+      "tagline": "The progress-static example shows a progress bar with static incrementation of progress.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/progress-static/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/progress-static/progress-static.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/progress-static/main.dart",
+      "order": 39
+    },
+    {
+      "slug": "realtime",
+      "title": "Real Time",
+      "tagline": "The realtime example demonstrates the use of go channels to perform realtime communication with a Bubble Tea application.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/realtime/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/realtime/realtime.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/realtime/main.dart",
+      "order": 40
+    },
+    {
+      "slug": "result",
+      "title": "Result",
+      "tagline": "The result example shows a choice menu with the ability to select an option.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/result/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/result/result.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/result/main.dart",
+      "order": 41
+    },
+    {
+      "slug": "send-msg",
+      "title": "Send Msg",
+      "tagline": "The send-msg example demonstrates the usage of custom tui.Msgs.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/send-msg/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/send-msg/send-msg.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/send-msg/main.dart",
+      "order": 42
+    },
+    {
+      "slug": "sequence",
+      "title": "Sequence",
+      "tagline": "The sequence example demonstrates the tui.Cmd.sequence command.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/sequence/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/sequence/sequence.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/sequence/main.dart",
+      "order": 43
+    },
+    {
+      "slug": "set-window-title",
+      "title": "Set Window Title",
+      "tagline": "The set-window-title example sets the terminal window title.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/set-window-title/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/set-window-title/set-window-title.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/set-window-title/main.dart",
+      "order": 44
+    },
+    {
+      "slug": "simple",
+      "title": "Simple",
+      "tagline": "The simple example shows a very simple Bubble Tea application.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/simple/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/simple/simple.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/simple/main.dart",
+      "order": 45
+    },
+    {
+      "slug": "spinner",
+      "title": "Spinner",
+      "tagline": "The spinner example demonstrates a spinner bubble being used to indicate loading.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/spinner/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/spinner/spinner.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/spinner/main.dart",
+      "order": 46
+    },
+    {
+      "slug": "spinners",
+      "title": "Spinners",
+      "tagline": "The spinner example shows various spinner types that are available.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/spinners/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/spinners/spinners.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/spinners/main.dart",
+      "order": 47
+    },
+    {
+      "slug": "split-editors",
+      "title": "Split Editors",
+      "tagline": "The split-editors example shows multiple textareas being used in a single application and being able to switch focus between them.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/split-editors/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/split-editors/split-editors.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/split-editors/main.dart",
+      "order": 48
+    },
+    {
+      "slug": "stopwatch",
+      "title": "Stop Watch",
+      "tagline": "The stopwatch example shows a sample stop watch built with Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/stopwatch/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/stopwatch/stopwatch.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/stopwatch/main.dart",
+      "order": 49
+    },
+    {
+      "slug": "suspend",
+      "title": "Suspend",
+      "tagline": "The suspend example demonstrates suspend and resume, ported from Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/suspend/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/suspend/suspend.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/suspend/main.dart",
+      "order": 50
+    },
+    {
+      "slug": "table",
+      "title": "Table",
+      "tagline": "The table example demonstrates the table bubble being used to display tabular data.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/table/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/table/table.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/table/main.dart",
+      "order": 51
+    },
+    {
+      "slug": "table-resize",
+      "title": "Table Resize",
+      "tagline": "The table-resize example shows a resizable data table.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/table-resize/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/table-resize/table-resize.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/table-resize/main.dart",
+      "order": 52
+    },
+    {
+      "slug": "tabs",
+      "title": "Tabs",
+      "tagline": "The tabs example demonstrates tabbed navigation styled with [Lip Gloss](https://github.com/charmbracelet/lipgloss).",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/tabs/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/tabs/tabs.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/tabs/main.dart",
+      "order": 53
+    },
+    {
+      "slug": "textarea",
+      "title": "Text Area",
+      "tagline": "The textarea example demonstrates a simple Bubble Tea application using a textarea bubble.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/textarea/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/textarea/textarea.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/textarea/main.dart",
+      "order": 54
+    },
+    {
+      "slug": "textinput",
+      "title": "Text Input",
+      "tagline": "The textinput example demonstrates a simple Bubble Tea application using a textinput bubble.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/textinput/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/textinput/textinput.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/textinput/main.dart",
+      "order": 55
+    },
+    {
+      "slug": "textinputs",
+      "title": "Multiple Text Inputs",
+      "tagline": "The textinputs example shows multiple textinputs and being able to switch focus between them as well as changing the cursor mode.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/textinputs/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/textinputs/textinputs.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/textinputs/main.dart",
+      "order": 56
+    },
+    {
+      "slug": "timer",
+      "title": "Timer",
+      "tagline": "The timer example shows a simple timer built with Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/timer/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/timer/timer.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/timer/main.dart",
+      "order": 57
+    },
+    {
+      "slug": "tui-daemon-combo",
+      "title": "TUI Daemon",
+      "tagline": "The tui-daemon-combo demonstrates building a text-user interface along with a daemon mode using Bubble Tea.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/tui-daemon-combo/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/tui-daemon-combo/tui-daemon-combo.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/tui-daemon-combo/main.dart",
+      "order": 58
+    },
+    {
+      "slug": "uv-effects",
+      "title": "UV Effects",
+      "tagline": "The uv-effects example shows Ultraviolet terminal effects.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/uv-effects/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/uv-effects/uv-effects.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/uv-effects/main.dart",
+      "order": 59
+    },
+    {
+      "slug": "uv-input",
+      "title": "UV Input",
+      "tagline": "The uv-input example demonstrates the UV input decoder.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/uv-input/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/uv-input/uv-input.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/uv-input/main.dart",
+      "order": 60
+    },
+    {
+      "slug": "views",
+      "title": "Views",
+      "tagline": "The views example demonstrates how to build a Bubble Tea application with multiple views and switch between them.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/views/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/views/views.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/views/main.dart",
+      "order": 61
+    },
+    {
+      "slug": "window-size",
+      "title": "Window Size",
+      "tagline": "The window-size example shows live terminal dimensions and resize handling.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/window-size/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/window-size/window-size.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/window-size/main.dart",
+      "order": 62
+    },
+    {
+      "slug": "zone",
+      "title": "Zone",
+      "tagline": "The zone example demonstrates clickable bubble zones.",
+      "category": "tui",
+      "source": "pkgs/artisanal/example/tui/examples/zone/main.dart",
+      "gif": "pkgs/artisanal/example/tui/examples/zone/zone.gif",
+      "run": "dart run pkgs/artisanal/example/tui/examples/zone/main.dart",
+      "order": 63
+    },
+    {
+      "slug": "scrollbar",
+      "title": "Standalone Scrollbar",
+      "tagline": "Draggable standalone scrollbar over a long signal list.",
+      "category": "widgets",
+      "source": "pkgs/artisanal_widgets/example/scrollbar/main.dart",
+      "gif": "pkgs/artisanal_widgets/assets/scrollbar.gif",
+      "run": "dart run pkgs/artisanal_widgets/example/scrollbar/main.dart",
+      "order": 96
+    }
+  ]
+}

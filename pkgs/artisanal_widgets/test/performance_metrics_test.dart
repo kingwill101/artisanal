@@ -530,6 +530,30 @@ void main() {
       expect(timings, hasLength(1));
     });
 
+    test('reentrant inject defers instead of throwing', () async {
+      // Regression test: publishing from inside dispatch used to throw
+      // "Bad state: Cannot fire new event. Controller is already firing
+      // an event" (seen as a startup crash in the debug_overlay demo,
+      // where the metrics listener synchronously triggers another render).
+      final seen = <String>[];
+      final sub = RenderMetricsInjector.instance.stream.listen((event) {
+        seen.addAll(event.upsertEntries.keys);
+        if (event.upsertEntries.containsKey('outer')) {
+          RenderMetricsInjector.instance.setMetric('inner', '2');
+        }
+      });
+      try {
+        RenderMetricsInjector.instance.setMetric('outer', '1');
+        // Flush the deferred microtask.
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+        expect(seen, containsAll(<String>['outer', 'inner']));
+      } finally {
+        await sub.cancel();
+        RenderMetricsInjector.instance.clearMetrics();
+      }
+    });
+
     test('RenderMetricsInjector stream updates latestRenderMetrics', () async {
       final tester = WidgetTester();
       try {
