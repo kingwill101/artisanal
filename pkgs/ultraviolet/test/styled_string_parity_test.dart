@@ -656,6 +656,18 @@ void main() {
       }
     });
 
+    test('unsafe OSC 8 payload resets the link without throwing', () {
+      final ss = newStyledString(
+        '\x1b]8;;https://example.com\x1b\\A'
+        '\x1b]8;;https://example.com/\nmalformed\x1b\\B',
+      );
+      final scr = ScreenBuffer(2, 1);
+
+      expect(() => ss.draw(scr, scr.bounds()), returnsNormally);
+      expect(scr.cellAt(0, 0)!.link, const Link(url: 'https://example.com'));
+      expect(scr.cellAt(1, 0)!.link, const Link());
+    });
+
     test('TestStyledStringEmptyLines (upstream)', () {
       final input = '\x1b[31;1;4mHello, \x1b[32;22;4mWorld!\x1b[0m';
       final ss = newStyledString(input);
