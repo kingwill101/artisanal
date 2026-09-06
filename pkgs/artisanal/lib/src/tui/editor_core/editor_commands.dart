@@ -35,6 +35,30 @@ abstract final class EditorCommandIds {
   static const previousSearchMatch = 'editor.action.previousSearchMatch';
   static const nextDiagnostic = 'editor.action.nextDiagnostic';
   static const previousDiagnostic = 'editor.action.previousDiagnostic';
+  static const cursorUp = 'editor.action.cursorUp';
+  static const cursorDown = 'editor.action.cursorDown';
+  static const selectLeft = 'editor.action.selectLeft';
+  static const selectRight = 'editor.action.selectRight';
+  static const selectUp = 'editor.action.selectUp';
+  static const selectDown = 'editor.action.selectDown';
+  static const selectWordLeft = 'editor.action.selectWordLeft';
+  static const selectWordRight = 'editor.action.selectWordRight';
+  static const selectLineStart = 'editor.action.selectLineStart';
+  static const selectLineEnd = 'editor.action.selectLineEnd';
+  static const indentLines = 'editor.action.indentLines';
+  static const outdentLines = 'editor.action.outdentLines';
+  static const deleteLine = 'editor.action.deleteLine';
+  static const duplicateLine = 'editor.action.duplicateLine';
+  static const moveLineUp = 'editor.action.moveLineUp';
+  static const moveLineDown = 'editor.action.moveLineDown';
+  static const toggleFold = 'editor.action.toggleFold';
+  static const foldAll = 'editor.action.foldAll';
+  static const unfoldAll = 'editor.action.unfoldAll';
+  static const goToMatchingBracket = 'editor.action.jumpToBracket';
+  static const insertSnippet = 'editor.action.insertSnippet';
+  static const nextSnippetPlaceholder = 'editor.action.nextSnippetPlaceholder';
+  static const previousSnippetPlaceholder =
+      'editor.action.previousSnippetPlaceholder';
 }
 
 /// A stable, discoverable editor operation.
@@ -156,18 +180,18 @@ final class EditorCommandPalette<T> {
   /// Dispatch target used for availability checks and execution.
   final T target;
 
-  final CommandPaletteController _controller = CommandPaletteController();
+  final CommandPaletteController controller = CommandPaletteController();
 
   /// Current filter text.
-  String get query => _controller.query;
-  set query(String value) => _controller.updateQuery(value);
+  String get query => controller.query;
+  set query(String value) => controller.updateQuery(value);
 
   /// Whether the palette is accepting interaction.
   bool isOpen = false;
 
   /// Selected index within [visibleCommands].
-  int get selectedIndex => _controller.selectedIndex;
-  set selectedIndex(int value) => _controller.selectedIndex = value;
+  int get selectedIndex => controller.selectedIndex;
+  set selectedIndex(int value) => controller.selectedIndex = value;
 
   /// Opens the palette and optionally supplies an initial [query].
   void open({String query = ''}) {
@@ -192,22 +216,37 @@ final class EditorCommandPalette<T> {
   /// Enabled commands matching [query], ordered by match quality.
   List<EditorCommand<T>> get visibleCommands {
     final enabled = registry.enabledCommands(target).toList(growable: false);
-    final commandByItem = <CommandPaletteItem, EditorCommand<T>>{};
-    final items = <CommandPaletteItem>[];
-    for (final command in enabled) {
-      final item = CommandPaletteItem(
-        label: command.label,
-        description: command.description,
-        group: command.category,
-        tags: [command.id],
-      );
-      items.add(item);
-      commandByItem[item] = command;
-    }
-    _controller.updateItems(items);
-    return List<EditorCommand<T>>.unmodifiable([
-      for (final item in _controller.filteredItems) commandByItem[item]!,
+    controller.updateItems([
+      for (final command in enabled)
+        CommandPaletteItem(
+          id: command.id,
+          payload: command,
+          label: command.label,
+          description: command.description,
+          group: command.category,
+          tags: [command.id, if (command.category.isNotEmpty) command.category],
+        ),
     ]);
+    return List<EditorCommand<T>>.unmodifiable([
+      for (final item in controller.filteredItems) _commandFor(item),
+    ]);
+  }
+
+  /// Visible slice of [visibleCommands] that keeps the selection on screen.
+  CommandPaletteWindow visibleWindow({int viewportSize = 7}) {
+    visibleCommands;
+    return controller.visibleWindow(viewportSize: viewportSize);
+  }
+
+  EditorCommand<T> _commandFor(CommandPaletteItem item) {
+    final payload = item.payload;
+    if (payload is EditorCommand<T>) return payload;
+    final id = item.id;
+    if (id != null) {
+      final command = registry[id];
+      if (command != null) return command;
+    }
+    throw StateError('Palette item missing command identity: ${item.label}');
   }
 
   /// Currently selected command, if the filtered list is non-empty.
@@ -220,7 +259,7 @@ final class EditorCommandPalette<T> {
   /// Moves selection by [delta], wrapping at either end.
   bool moveSelection(int delta) {
     visibleCommands;
-    return isOpen && delta != 0 && _controller.moveSelection(delta);
+    return isOpen && delta != 0 && controller.moveSelection(delta);
   }
 
   /// Executes the selected command and closes after a handled dispatch.

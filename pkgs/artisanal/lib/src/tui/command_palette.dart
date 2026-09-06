@@ -1,8 +1,7 @@
-/// Shared command-palette data and ranking primitives.
+/// Shared command-palette data, ranking, and viewport primitives.
 library;
 
 import 'cmd.dart';
-import '../scoring/scoring.dart';
 
 /// Callback invoked by a command-palette item.
 typedef CommandPaletteCallback = Cmd? Function();
@@ -11,6 +10,8 @@ typedef CommandPaletteCallback = Cmd? Function();
 final class CommandPaletteItem {
   const CommandPaletteItem({
     required this.label,
+    this.id,
+    this.payload,
     this.description,
     this.shortcut,
     this.group,
@@ -19,6 +20,15 @@ final class CommandPaletteItem {
     this.enabled = true,
   });
 
+  /// Stable identity used to map items across rebuilds.
+  ///
+  /// Editor commands should supply their command ID. When omitted, hosts may
+  /// fall back to [label] or object identity.
+  final String? id;
+
+  /// Host-defined payload such as an editor command or completion item.
+  final Object? payload;
+
   final String label;
   final String? description;
   final String? shortcut;
@@ -26,6 +36,9 @@ final class CommandPaletteItem {
   final List<String> tags;
   final CommandPaletteCallback? onSelect;
   final bool enabled;
+
+  /// Identity used for selection restoration. Prefers [id], then [label].
+  String get identity => id ?? label;
 }
 
 /// A scored palette match with deterministic ranking evidence.
@@ -43,51 +56,119 @@ final class CommandPaletteMatch {
   final int originalIndex;
 }
 
-/// Shared query and selection controller used by palette presentations.
-///
-/// Filtering uses Artisanal's incremental Bayesian scorer, including tags and
-/// conformal ranking, so TEA and widget hosts observe the same ordering.
-final class CommandPaletteController {
-  CommandPaletteController({List<CommandPaletteItem> items = const []})
-    : _items = List<CommandPaletteItem>.of(items);
+/// Inclusive-exclusive window of filtered items that should stay on screen.
+final class CommandPaletteWindow {
+  const CommandPaletteWindow({
+    required this.start,
+    required this.end,
+    required this.selectedIndex,
+    required this.itemCount,
+    required this.viewportSize,
+  });
 
-  final IncrementalScorer _scorer = IncrementalScorer();
-  final ConformalRanker _ranker = const ConformalRanker();
+  /// First visible item index, inclusive.
+  final int start;
+
+  /// Last visible item index, exclusive.
+  final int end;
+
+  final int selectedIndex;
+  final int itemCount;
+  final int viewportSize;
+
+  bool get isEmpty => start >= end;
+  bool get hasMoreAbove => start > 0;
+  bool get hasMoreBelow => end < itemCount;
+  int get length => end - start;
+}
+
+/// Shared query, ranking, selection, and viewport controller.
+///
+/// Filtering always goes through [matchCommandPaletteItems] so static
+/// matching, TEA rendering, and widget rendering produce identical order.
+final class CommandPaletteController {
+  CommandPaletteController({
+    List<CommandPaletteItem> items = const [],
+    this.viewportSize = 7,
+  }) : _items = List<CommandPaletteItem>.of(items);
+
   List<CommandPaletteItem> _items;
   String query = '';
   int selectedIndex = 0;
 
+  /// Number of result rows a host intends to show.
+  int viewportSize;
+
+  List<CommandPaletteItem>? _filterSource;
+  String? _filterQuery;
+  List<CommandPaletteMatch>? _cachedMatches;
+
   List<CommandPaletteItem> get items =>
       List<CommandPaletteItem>.unmodifiable(_items);
 
-  /// Replaces source items and keeps selection in range.
+  /// Replaces source items and keeps the previously selected identity in view.
   void updateItems(List<CommandPaletteItem> value) {
+    final selectedId = selectedItem?.identity;
     _items = List<CommandPaletteItem>.of(value);
-    final count = filteredItems.length;
-    selectedIndex = count == 0 ? 0 : selectedIndex.clamp(0, count - 1);
+    _invalidateFilter();
+    final filtered = filteredItems;
+    if (filtered.isEmpty) {
+      selectedIndex = 0;
+      return;
+    }
+    if (selectedId != null) {
+      final index = filtered.indexWhere((item) => item.identity == selectedId);
+      if (index >= 0) {
+        selectedIndex = index;
+        return;
+      }
+    }
+    selectedIndex = selectedIndex.clamp(0, filtered.length - 1);
   }
 
   /// Updates the query and selects the highest-ranked result.
   void updateQuery(String value) {
     query = value;
+    _invalidateFilter();
     selectedIndex = 0;
   }
 
-  /// Enabled items ordered by the shared Bayesian ranking pipeline.
-  List<CommandPaletteItem> get filteredItems {
-    final enabled = _items.where((item) => item.enabled).toList();
-    if (query.isEmpty) return List<CommandPaletteItem>.unmodifiable(enabled);
-    final results = _scorer.scoreCorpusWithTags(
-      query,
-      enabled.map((item) => item.label).toList(),
-      enabled.map((item) => item.tags).toList(),
+  /// Ranked matches for the current query, including scoring evidence.
+  List<CommandPaletteMatch> get matches {
+    if (_cachedMatches != null &&
+        identical(_filterSource, _items) &&
+        _filterQuery == query) {
+      return _cachedMatches!;
+    }
+    _filterSource = _items;
+    _filterQuery = query;
+    _cachedMatches = matchCommandPaletteItems(_items, query);
+    return _cachedMatches!;
+  }
+
+  /// Enabled items ordered by the shared ranking pipeline.
+  List<CommandPaletteItem> get filteredItems =>
+      List<CommandPaletteItem>.unmodifiable([
+        for (final match in matches) match.item,
+      ]);
+
+  /// Visible slice of [filteredItems] that keeps [selectedIndex] on screen.
+  CommandPaletteWindow visibleWindow({int? viewportSize}) {
+    final filtered = filteredItems;
+    return commandPaletteVisibleWindow(
+      itemCount: filtered.length,
+      selectedIndex: selectedIndex,
+      viewportSize: viewportSize ?? this.viewportSize,
     );
-    final ranked = _ranker.rank(results);
-    return List<CommandPaletteItem>.unmodifiable([
-      for (final rankedItem in ranked.items)
-        if (rankedItem.result.matchType != MatchType.noMatch)
-          enabled[rankedItem.originalIndex],
-    ]);
+  }
+
+  /// Items inside [visibleWindow].
+  List<CommandPaletteItem> visibleItems({int? viewportSize}) {
+    final filtered = filteredItems;
+    final window = visibleWindow(viewportSize: viewportSize);
+    return List<CommandPaletteItem>.unmodifiable(
+      filtered.sublist(window.start, window.end),
+    );
   }
 
   /// Selects [index], wrapping around the current result list.
@@ -98,6 +179,7 @@ final class CommandPaletteController {
       return false;
     }
     selectedIndex = index % count;
+    if (selectedIndex < 0) selectedIndex += count;
     return true;
   }
 
@@ -109,6 +191,65 @@ final class CommandPaletteController {
     final filtered = filteredItems;
     return filtered.isEmpty ? null : filtered[selectedIndex];
   }
+
+  void _invalidateFilter() {
+    _filterSource = null;
+    _filterQuery = null;
+    _cachedMatches = null;
+  }
+}
+
+/// Centers [selectedIndex] inside a window of [viewportSize] items.
+CommandPaletteWindow commandPaletteVisibleWindow({
+  required int itemCount,
+  required int selectedIndex,
+  required int viewportSize,
+}) {
+  final size = viewportSize < 1 ? 1 : viewportSize;
+  if (itemCount <= 0) {
+    return CommandPaletteWindow(
+      start: 0,
+      end: 0,
+      selectedIndex: 0,
+      itemCount: 0,
+      viewportSize: size,
+    );
+  }
+  final selected = selectedIndex.clamp(0, itemCount - 1);
+  final maxStart = (itemCount - size).clamp(0, itemCount);
+  final start = (selected - size ~/ 2).clamp(0, maxStart);
+  final end = (start + size).clamp(start, itemCount);
+  return CommandPaletteWindow(
+    start: start,
+    end: end,
+    selectedIndex: selected,
+    itemCount: itemCount,
+    viewportSize: size,
+  );
+}
+
+/// Renders the shared query, rows, and overflow footer used by TEA hosts.
+List<String> renderCommandPaletteBody({
+  required String query,
+  required List<CommandPaletteItem> items,
+  required int selectedIndex,
+  required CommandPaletteWindow window,
+  String emptyLabel = 'No matching commands',
+}) {
+  final lines = <String>['> $query', ''];
+  for (var index = window.start; index < window.end; index++) {
+    final selected = index == selectedIndex;
+    lines.add('${selected ? '❯' : ' '} ${items[index].label}');
+  }
+  if (items.isEmpty) lines.add('  $emptyLabel');
+  if (items.length > window.viewportSize) {
+    lines.add(
+      '  ${selectedIndex + 1}/${items.length}'
+      '${window.hasMoreAbove ? '  ↑ more' : ''}'
+      '${window.hasMoreBelow ? '  ↓ more' : ''}',
+    );
+  }
+  return lines;
 }
 
 /// Filters and ranks [items] using the established palette matching contract.
@@ -148,6 +289,19 @@ List<CommandPaletteMatch> matchCommandPaletteItems(
       if (group?.contains(normalizedQuery) ?? false) {
         score += 1200;
         evidence['group:contains'] = 1200;
+      }
+      for (final tag in item.tags) {
+        final normalizedTag = tag.toLowerCase();
+        if (normalizedTag == normalizedQuery) {
+          score += 2200;
+          evidence['tag:exact'] = 2200;
+          break;
+        }
+        if (normalizedTag.contains(normalizedQuery)) {
+          score += 1500;
+          evidence['tag:contains'] = 1500;
+          break;
+        }
       }
       final subsequence = _subsequenceScore(normalizedQuery, label);
       if (subsequence > 0) {

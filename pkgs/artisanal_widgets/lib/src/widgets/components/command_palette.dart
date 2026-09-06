@@ -14,13 +14,23 @@ typedef CommandPaletteItem = core.CommandPaletteItem;
 /// Compatibility alias for the shared Artisanal scored match.
 typedef CommandPaletteMatch = core.CommandPaletteMatch;
 
+/// Compatibility alias for the shared Artisanal palette controller.
+typedef CommandPaletteController = core.CommandPaletteController;
+
 /// A searchable, grouped list displayed in a modal overlay.
 ///
-/// Modeled after VS Code's command palette / Ctrl+P picker. Supports:
-/// - Bayesian scoring with match types (exact > prefix > word-start > substring > fuzzy)
-/// - Incremental scoring for query-as-you-type performance
-/// - Conformal rank confidence (stable/marginal/unstable)
-/// - Searchable tags that boost match scores
+/// Modeled after VS Code's command palette / Ctrl+P picker. Matching,
+/// selection, and the visible window are owned by Artisanal's
+/// [CommandPaletteController] so TEA and widget hosts rank items identically.
+///
+/// This widget keeps mouse hit-testing, focus trapping, and theme chrome.
+/// Keyboard-only hosts can instead paint [core.renderCommandPaletteBody]
+/// through Artisanal's TEA `CommandPaletteOverlay`; sharing that ANSI leaf
+/// here would drop pointer targeting and per-row theme styles.
+///
+/// Supports:
+/// - Shared deterministic ranking (exact > prefix > contains > metadata > typo)
+/// - Searchable tags, descriptions, and groups
 /// - Grouped items with section headers
 /// - Keyboard navigation (up/down arrows, enter to select, esc to dismiss)
 /// - Mouse click selection
@@ -124,15 +134,22 @@ class _CommandPaletteState extends State<CommandPalette> {
   int get _selectedIndex => _paletteController.selectedIndex;
   set _selectedIndex(int value) => _paletteController.selectedIndex = value;
 
-  List<CommandPaletteItem> get _filteredItems {
-    _paletteController.updateItems(widget.items);
-    return _paletteController.filteredItems;
-  }
+  List<CommandPaletteItem> get _filteredItems =>
+      _paletteController.filteredItems;
 
   @override
   void initState() {
     super.initState();
     _paletteController = core.CommandPaletteController(items: widget.items);
+  }
+
+  @override
+  Cmd? didUpdateWidget(CommandPalette oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.items, widget.items)) {
+      _paletteController.updateItems(widget.items);
+    }
+    return null;
   }
 
   void _onSearchChanged(String value) {
@@ -162,15 +179,16 @@ class _CommandPaletteState extends State<CommandPalette> {
     final viewportExtent = _listController.viewportExtent;
     if (viewportExtent <= 0) return;
 
-    final row = _itemRowOffset(items, _selectedIndex);
+    // Widget scrolling is measured in rendered rows, including group headers.
+    // Keep the selected row visible directly instead of applying the shared
+    // controller's item-only viewport window to different row geometry.
+    final selectedRow = _itemRowOffset(items, _selectedIndex);
     final offset = _listController.offset;
     final viewportEnd = offset + viewportExtent;
-    if (row < offset) {
-      _listController.jumpTo(row);
-      return;
-    }
-    if (row >= viewportEnd) {
-      _listController.jumpTo(row - viewportExtent + 1);
+    if (selectedRow < offset) {
+      _listController.jumpTo(selectedRow);
+    } else if (selectedRow >= viewportEnd) {
+      _listController.jumpTo(selectedRow - viewportExtent + 1);
     }
   }
 

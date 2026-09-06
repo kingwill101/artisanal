@@ -18,6 +18,10 @@ void main() {
       matchCommandPaletteItems(items, 'write').first.item.label,
       'Save Document',
     );
+    expect(
+      matchCommandPaletteItems(items, 'persist').first.item.label,
+      'Save Document',
+    );
     expect(matchCommandPaletteItems(items, 'opne').first.item.label, 'Open');
     expect(
       matchCommandPaletteItems(items, '').map((match) => match.item.label),
@@ -40,6 +44,44 @@ void main() {
     controller.updateQuery('');
     expect(controller.moveSelection(-1), isTrue);
     expect(controller.selectedItem?.label, 'Save File');
+    final window = controller.visibleWindow(viewportSize: 1);
+    expect((window.start, window.end), (1, 2));
+    expect(controller.visibleItems(viewportSize: 1).single.label, 'Save File');
+  });
+
+  test('controller filtered items match matchCommandPaletteItems order', () {
+    const items = [
+      CommandPaletteItem(id: 'folder', label: 'Open Folder'),
+      CommandPaletteItem(id: 'open', label: 'Open'),
+      CommandPaletteItem(id: 'close', label: 'Close'),
+    ];
+    final controller = CommandPaletteController(items: items)
+      ..updateQuery('open');
+
+    expect(
+      controller.filteredItems.map((item) => item.id),
+      matchCommandPaletteItems(items, 'open').map((match) => match.item.id),
+    );
+    expect(
+      controller.matches.first.evidence,
+      containsPair('label:exact', 10000),
+    );
+  });
+
+  test('controller preserves stable selection when items are rebuilt', () {
+    final controller = CommandPaletteController(
+      items: const [
+        CommandPaletteItem(id: 'open', label: 'Open'),
+        CommandPaletteItem(id: 'save', label: 'Save'),
+      ],
+    )..selectIndex(1);
+
+    controller.updateItems(const [
+      CommandPaletteItem(id: 'open', label: 'Open file'),
+      CommandPaletteItem(id: 'save', label: 'Save file'),
+    ]);
+
+    expect(controller.selectedItem?.id, 'save');
   });
 
   test('keeps the selected command inside its rendered window', () {

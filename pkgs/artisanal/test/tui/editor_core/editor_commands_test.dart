@@ -178,5 +178,31 @@ void main() {
         expect(palette.executeSelected(), EditorCommandDispatchResult.noChange);
       },
     );
+
+    test(
+      'maps filtered items by stable command id rather than object identity',
+      () {
+        final target = _Target();
+        final registry = EditorCommandRegistry<_Target>()
+          ..registerAll([
+            EditorCommand(
+              id: 'editor.alpha',
+              label: 'Alpha',
+              execute: (_) => false,
+            ),
+            EditorCommand(
+              id: 'editor.beta',
+              label: 'Beta',
+              execute: (_) => true,
+            ),
+          ]);
+        final palette = EditorCommandPalette(registry: registry, target: target)
+          ..open(query: 'bet');
+
+        expect(palette.visibleCommands.single.id, 'editor.beta');
+        expect(palette.visibleCommands.single.id, 'editor.beta');
+        expect(palette.controller.filteredItems.single.id, 'editor.beta');
+      },
+    );
   });
 }

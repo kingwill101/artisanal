@@ -5,8 +5,9 @@
 ### Changed
 
 - Moved command-palette item and scored-match primitives plus deterministic
-  matching into `artisanal`; the widget keeps compatibility aliases and
-  delegates its public matching API to the shared foundation.
+  matching, selection, and visible-window calculation into `artisanal`; the
+  widget keeps compatibility aliases, mouse/focus/theme chrome, and
+  delegates ranking plus scrolling to the shared controller.
 - Routed framework internals through Artisanal's narrow runtime entrypoint so
   widget app imports do not load unrelated native Markdown dependencies.
 - Kept both `app.dart` and the complete `widgets.dart` public surface
