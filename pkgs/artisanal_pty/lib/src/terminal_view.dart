@@ -1,4 +1,4 @@
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/runtime.dart' show Cmd;
 import 'package:artisanal_widgets/widgets.dart';
 
 import 'input_encoder.dart';

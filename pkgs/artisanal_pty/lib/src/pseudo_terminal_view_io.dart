@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/runtime.dart' show Cmd, Msg, StreamCmd;
 import 'package:artisanal_widgets/widgets.dart';
 import 'package:pty2/pty2.dart';
 
