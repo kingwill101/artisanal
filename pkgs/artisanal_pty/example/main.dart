@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal_pty/widgets.dart';
 import 'package:artisanal_widgets/app.dart';
 import 'package:pty2/pty2.dart';
@@ -19,6 +20,9 @@ Future<void> main() async {
       ArtisanalApp(
         title: 'Artisanal PTY',
         home: PseudoTerminalView(pty: pty),
+      ),
+      options: ProgramOptions().withFilter(
+        (_, message) => message is InterruptMsg ? const QuitMsg() : message,
       ),
     );
   } finally {
