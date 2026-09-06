@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:artisanal/style.dart';
 import 'package:characters/characters.dart';
 
 final class _Cell {
@@ -29,8 +30,11 @@ final class VirtualTerminal {
   int cursorY = 0;
   String _sgr = '';
   String _pending = '';
-  final _decoder = const Utf8Decoder(allowMalformed: true);
+  final List<int> _pendingBytes = [];
   final List<void Function()> _listeners = [];
+
+  /// Whether the emulated cursor is visible.
+  bool cursorVisible = true;
 
   /// Adds a callback invoked after writes and resizes.
   void addListener(void Function() listener) => _listeners.add(listener);
@@ -63,7 +67,32 @@ final class VirtualTerminal {
   }
 
   /// Processes a chunk of UTF-8 terminal output.
-  void write(List<int> bytes) => writeText(_decoder.convert(bytes));
+  void write(List<int> bytes) {
+    _pendingBytes.addAll(bytes);
+    for (
+      var suffix = 0;
+      suffix <= 3 && suffix <= _pendingBytes.length;
+      suffix++
+    ) {
+      final completeLength = _pendingBytes.length - suffix;
+      try {
+        final text = utf8.decode(
+          _pendingBytes.sublist(0, completeLength),
+          allowMalformed: false,
+        );
+        _pendingBytes.removeRange(0, completeLength);
+        if (text.isNotEmpty) writeText(text);
+        return;
+      } on FormatException {
+        // A trailing UTF-8 sequence may be completed by the next chunk.
+      }
+    }
+    if (_pendingBytes.length > 4) {
+      final text = utf8.decode(_pendingBytes, allowMalformed: true);
+      _pendingBytes.clear();
+      writeText(text);
+    }
+  }
 
   /// Processes terminal output already decoded as text.
   void writeText(String value) {
@@ -83,6 +112,15 @@ final class VirtualTerminal {
           }
           _handleCsi(input.substring(i + 2, end), input[end]);
           i = end + 1;
+          continue;
+        }
+        if (input[i + 1] == ']') {
+          final end = _oscEnd(input, i + 2);
+          if (end < 0) {
+            _pending = input.substring(i);
+            break;
+          }
+          i = input.codeUnitAt(end) == 0x07 ? end + 1 : end + 2;
           continue;
         }
         i += 2;
@@ -109,6 +147,18 @@ final class VirtualTerminal {
     return -1;
   }
 
+  int _oscEnd(String input, int start) {
+    for (var i = start; i < input.length; i++) {
+      if (input.codeUnitAt(i) == 0x07) return i;
+      if (input.codeUnitAt(i) == 0x1b &&
+          i + 1 < input.length &&
+          input[i + 1] == r'\') {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   void _print(String character) {
     switch (character) {
       case '\r':
@@ -128,10 +178,20 @@ final class VirtualTerminal {
       cursorX = 0;
       _lineFeed();
     }
+    final displayWidth = Layout.getWidth(character).clamp(1, 2);
+    if (displayWidth == 2 && cursorX == width - 1) {
+      cursorX = 0;
+      _lineFeed();
+    }
     _rows[cursorY][cursorX]
       ..text = character
       ..sgr = _sgr;
-    cursorX++;
+    if (displayWidth == 2) {
+      _rows[cursorY][cursorX + 1]
+        ..text = ''
+        ..sgr = _sgr;
+    }
+    cursorX += displayWidth;
   }
 
   void _lineFeed() {
@@ -150,7 +210,10 @@ final class VirtualTerminal {
         : raw.split(';').map((v) => int.tryParse(v) ?? 0).toList();
     int param(int index, [int fallback = 1]) =>
         index < params.length && params[index] != 0 ? params[index] : fallback;
-    if (private) return;
+    if (private) {
+      if (params.contains(25)) cursorVisible = command == 'h';
+      return;
+    }
     switch (command) {
       case 'A':
         cursorY = (cursorY - param(0)).clamp(0, height - 1);
@@ -169,9 +232,12 @@ final class VirtualTerminal {
       case 'K':
         _clearLine(params.firstOrNull ?? 0);
       case 'm':
-        _sgr = params.isEmpty || (params.length == 1 && params.first == 0)
-            ? ''
-            : '\x1b[${params.join(';')}m';
+        final effective = params.isEmpty ? const [0] : params;
+        if (effective.contains(0)) _sgr = '';
+        final remaining = effective.where((value) => value != 0).toList();
+        if (remaining.isNotEmpty) {
+          _sgr += '\x1b[${remaining.join(';')}m';
+        }
     }
   }
 
@@ -196,17 +262,30 @@ final class VirtualTerminal {
   }
 
   /// Renders the current screen as ANSI-styled text.
-  String render() {
+  ///
+  /// Set [showCursor] when the host terminal cursor is hidden.
+  String render({bool showCursor = false}) {
     final out = StringBuffer();
     for (var y = 0; y < height; y++) {
       var active = '';
-      for (final cell in _rows[y]) {
+      for (var x = 0; x < width; x++) {
+        final cell = _rows[y][x];
         if (cell.sgr != active) {
           if (active.isNotEmpty) out.write('\x1b[0m');
           if (cell.sgr.isNotEmpty) out.write(cell.sgr);
           active = cell.sgr;
         }
+        final isCursor =
+            showCursor &&
+            cursorVisible &&
+            y == cursorY &&
+            x == cursorX.clamp(0, width - 1);
+        if (isCursor) out.write('\x1b[7m');
         out.write(cell.text);
+        if (isCursor) {
+          out.write('\x1b[27m');
+          if (active.isNotEmpty) out.write(active);
+        }
       }
       if (active.isNotEmpty) out.write('\x1b[0m');
       if (y + 1 < height) out.write('\n');

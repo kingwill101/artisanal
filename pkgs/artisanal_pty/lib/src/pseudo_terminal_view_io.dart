@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:artisanal/runtime.dart';
 import 'package:artisanal_widgets/widgets.dart';
 import 'package:pty2/pty2.dart';
 
@@ -28,18 +29,51 @@ class PseudoTerminalView extends StatefulWidget {
 class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   late final VirtualTerminal _terminal = VirtualTerminal();
   StreamSubscription<String>? _subscription;
+  final StreamController<String> _output = StreamController();
   int _width = 0;
   int _height = 0;
 
   @override
   void initState() {
     super.initState();
-    _subscription = widget.pty.out.listen(_terminal.writeText);
+    _subscribe();
+  }
+
+  void _subscribe() {
+    _subscription = widget.pty.out.listen(_output.add);
+  }
+
+  @override
+  Cmd? handleInit() => StreamCmd<String>(
+    stream: _output.stream,
+    onData: (data) => _PtyOutputMsg(widget.id, data),
+  );
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg case _PtyOutputMsg(
+      :final owner,
+      :final data,
+    ) when owner == widget.id) {
+      _terminal.writeText(data);
+    }
+    return null;
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant PseudoTerminalView oldWidget) {
+    if (!identical(oldWidget.pty, widget.pty)) {
+      _subscription?.cancel();
+      _subscribe();
+      if (_width > 0 && _height > 0) widget.pty.resize(_width, _height);
+    }
+    return super.didUpdateWidget(oldWidget);
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _output.close();
     _terminal.dispose();
     super.dispose();
   }
@@ -56,10 +90,10 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final width = constraints.hasBoundedWidth
-          ? constraints.maxWidth.toInt().clamp(1, 10000)
+          ? constraints.maxWidth.toInt().clamp(1, 10000).toInt()
           : 80;
       final height = constraints.hasBoundedHeight
-          ? constraints.maxHeight.toInt().clamp(1, 10000)
+          ? constraints.maxHeight.toInt().clamp(1, 10000).toInt()
           : 24;
       _resize(width, height);
       return TerminalView(
@@ -71,4 +105,11 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
       );
     },
   );
+}
+
+final class _PtyOutputMsg extends Msg {
+  const _PtyOutputMsg(this.owner, this.data);
+
+  final String owner;
+  final String data;
 }

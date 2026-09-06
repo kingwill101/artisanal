@@ -16,3 +16,4 @@
   applications.
 - Added conditional platform support so non-IO targets receive an informative
   placeholder instead of importing `pty2`.
+- Added Linux, macOS, Windows, and web package platform declarations.

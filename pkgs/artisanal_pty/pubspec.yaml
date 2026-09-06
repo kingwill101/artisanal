@@ -11,6 +11,7 @@ platforms:
   linux:
   macos:
   windows:
+  web:
 
 dependencies:
   artisanal: ^0.6.0

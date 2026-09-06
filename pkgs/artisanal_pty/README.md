@@ -18,7 +18,11 @@ final pty = PseudoTerminal.start(
   environment: {'TERM': 'xterm-256color'},
 );
 
-runWidgetApp(PseudoTerminalView(pty: pty));
+try {
+  await runWidgetApp(PseudoTerminalView(pty: pty));
+} finally {
+  pty.kill();
+}
 ```
 
 For SSH and other transports, feed output to `VirtualTerminal` and use

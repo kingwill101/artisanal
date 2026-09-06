@@ -7,7 +7,9 @@ abstract final class TerminalInputEncoder {
     if (key.isRelease) return '';
     if (key.type == KeyType.runes) {
       var value = String.fromCharCodes(key.runes);
-      if (key.ctrl && value.isNotEmpty) {
+      if (key.ctrl && value == ' ') {
+        value = '\x00';
+      } else if (key.ctrl && value.isNotEmpty) {
         final code = value.toUpperCase().codeUnitAt(0);
         if (code >= 64 && code <= 95) value = String.fromCharCode(code - 64);
       }
@@ -18,6 +20,7 @@ abstract final class TerminalInputEncoder {
       KeyType.tab => '\t',
       KeyType.backspace => '\x7f',
       KeyType.escape => '\x1b',
+      KeyType.space => ' ',
       KeyType.up => '\x1b[A',
       KeyType.down => '\x1b[B',
       KeyType.right => '\x1b[C',

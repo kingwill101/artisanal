@@ -61,6 +61,6 @@ class _TerminalViewState extends State<TerminalView> {
       if (data.isNotEmpty) widget.onInput?.call(data);
       return null;
     },
-    child: Text(widget.terminal.render()),
+    child: Text(widget.terminal.render(showCursor: true)),
   );
 }
