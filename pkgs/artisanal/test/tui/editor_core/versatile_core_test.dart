@@ -4,7 +4,6 @@ import 'package:test/test.dart';
 final class _TestAdapter extends EditorLanguageAdapter {
   const _TestAdapter({
     required this.languageId,
-    this.aliases = const <String>[],
     required this.linePrefix,
     this.colonIndent = false,
   });
@@ -12,7 +11,7 @@ final class _TestAdapter extends EditorLanguageAdapter {
   @override
   final String languageId;
   @override
-  final List<String> aliases;
+  List<String> get aliases => const <String>[];
   final String linePrefix;
   final bool colonIndent;
 
@@ -120,7 +119,10 @@ void main() {
     });
 
     test('colon indent lives on adapters, not core', () {
-      expect(codeShouldIncreaseIndentAfter('if x:', language: 'python'), isTrue);
+      expect(
+        codeShouldIncreaseIndentAfter('if x:', language: 'python'),
+        isTrue,
+      );
       expect(codeShouldIncreaseIndentAfter('if x:', language: 'dart'), isFalse);
       expect(
         codeShouldIncreaseIndentForAdapter(
@@ -133,10 +135,7 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        codeShouldIncreaseIndentForAdapter('if x:'),
-        isFalse,
-      );
+      expect(codeShouldIncreaseIndentForAdapter('if x:'), isFalse);
     });
   });
 
@@ -146,10 +145,7 @@ void main() {
       final tree = provider.parse(text: 'fn main() {}', revision: 3);
       expect(tree.rootId, 1);
       expect(tree.nodeAtOffset(0)?.type, 'identifier');
-      expect(
-        tree.namedAncestorOf(2, {'function'})?.id,
-        1,
-      );
+      expect(tree.namedAncestorOf(2, {'function'})?.id, 1);
       final captures = provider.capturesFor(tree);
       expect(captures, hasLength(1));
       final ranges = syntaxCapturesToRanges(captures);

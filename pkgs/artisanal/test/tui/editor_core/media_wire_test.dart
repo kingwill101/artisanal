@@ -1,6 +1,6 @@
-/// Full-pipeline wire tests: model → view → fullscreen UV renderer →
-/// captured bytes. These prove image escapes reach the wire intact,
-/// which no view-string assertion can (corruption happens downstream).
+// Full-pipeline wire tests: model → view → fullscreen UV renderer →
+// captured bytes. These prove image escapes reach the wire intact,
+// which no view-string assertion can (corruption happens downstream).
 import 'package:artisanal/src/terminal/terminal_base.dart';
 import 'package:artisanal/src/tui/renderer.dart';
 import 'package:artisanal/markdown.dart' as md;
@@ -9,9 +9,8 @@ import 'package:test/test.dart';
 
 import '../../../example/tui/examples/media-composer/main.dart' as composer;
 
-tui.KeyMsg _ctrl(int rune) => tui.KeyMsg(
-  tui.Key(tui.KeyType.runes, runes: [rune], ctrl: true),
-);
+tui.KeyMsg _ctrl(int rune) =>
+    tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [rune], ctrl: true));
 
 String _renderFullscreen(String view) {
   final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
@@ -50,9 +49,7 @@ void main() {
     (next, _) = model.update(composer.ImagePreparedMsg(id));
     model = next as composer.MediaComposerModel;
     model.protocolOverride = md.ImageProtocol.kitty;
-    (next, _) = model.update(
-      tui.KeyMsg(tui.Key(tui.KeyType.enter)),
-    );
+    (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.enter)));
     model = next as composer.MediaComposerModel;
     expect(model.viewer, isNotNull);
 
@@ -73,9 +70,7 @@ void main() {
     final id = model.elements.ofKind('image').single.id;
     (next, _) = model.update(composer.ImagePreparedMsg(id));
     model = next as composer.MediaComposerModel;
-    (next, _) = model.update(
-      tui.KeyMsg(tui.Key(tui.KeyType.enter)),
-    );
+    (next, _) = model.update(tui.KeyMsg(tui.Key(tui.KeyType.enter)));
     model = next as composer.MediaComposerModel;
     // CI default: no terminal markers → halfblock fallback.
     expect(model.paintProtocol.name, 'halfblock');

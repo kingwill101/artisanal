@@ -64,3 +64,4 @@ export 'debug_overlay.dart';
 export 'navigation.dart';
 export 'git_diff.dart';
 export '../editor_core/editor_core.dart';
+export '../editor_core/code_extensions.dart';
