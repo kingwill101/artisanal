@@ -4,6 +4,8 @@ import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/cmd.dart';
+import 'package:artisanal/src/tui/frame_layout.dart';
+import 'package:artisanal/src/tui/view.dart';
 import 'package:test/test.dart';
 
 class MockTerminal extends StringTerminal {
@@ -43,7 +45,21 @@ class SimpleModel implements Model {
   }
 
   @override
-  String view() => 'Hello UV';
+  Object view() => 'Hello UV';
+}
+
+class FrameModel extends SimpleModel {
+  @override
+  Object view() => FrameView(
+    paint: (frame) {
+      final panes = FrameLayout.horizontal(frame.area, const [
+        FrameLength(6),
+        FrameFill(),
+      ]);
+      frame.write('FRAME', target: panes.first);
+      frame.write('VIEW', target: panes.last);
+    },
+  );
 }
 
 Future<void> waitForRender(
@@ -113,6 +129,31 @@ void main() {
       await runFuture;
     },
   );
+
+  test('Program renders a FrameView returned by Model.view()', () async {
+    final terminal = MockTerminal(width: 20, height: 4);
+    final program = Program(
+      FrameModel(),
+      options: const ProgramOptions(
+        useUltravioletRenderer: true,
+        altScreen: false,
+      ),
+      terminal: terminal,
+    );
+
+    final runFuture = program.run();
+    await waitForRender(
+      () =>
+          terminal.output.contains('FRAME') && terminal.output.contains('VIEW'),
+      reason: 'Program did not render the structured model view',
+    );
+
+    expect(terminal.output, contains('FRAME'));
+    expect(terminal.output, contains('VIEW'));
+
+    terminal.simulateTyping('q');
+    await runFuture;
+  });
 
   test('UltravioletTuiRenderer handles resize correctly', () async {
     final terminal = MockTerminal(width: 80, height: 24);

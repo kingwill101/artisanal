@@ -17,6 +17,8 @@
   `FrameView`, including positioned layout and styling guidance.
 - Reserve the actual wrapped height of persistent log lines before painting a
   structured frame.
+- Cover structured frame rendering through `Program` and both supported core
+  runtime entrypoints.
 
 ## 0.6.0
 
