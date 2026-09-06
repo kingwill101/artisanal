@@ -65,6 +65,37 @@ void main() {
       renderer.dispose();
     });
 
+    test(
+      'positions a Style border when content dimensions include its insets',
+      () async {
+        final terminal = StringTerminal(terminalWidth: 5, terminalHeight: 4);
+        final renderer = UltravioletTuiRenderer(
+          terminal: terminal,
+          options: const TuiRendererOptions(altScreen: false),
+        );
+        final bordered = Style()
+            .border(Border.rounded)
+            .width(3)
+            .height(4)
+            .render('x\ny');
+
+        renderer.render(
+          FrameView(
+            paint: (frame) {
+              frame.write(bordered, target: const FrameArea(0, 0, 5, 4));
+            },
+          ),
+        );
+        await renderer.flush();
+
+        expect(renderer.screenBuffer!.cellAt(0, 0)?.content, '╭');
+        expect(renderer.screenBuffer!.cellAt(4, 0)?.content, '╮');
+        expect(renderer.screenBuffer!.cellAt(0, 3)?.content, '╰');
+        expect(renderer.screenBuffer!.cellAt(4, 3)?.content, '╯');
+        renderer.dispose();
+      },
+    );
+
     test('clears cells not repainted by the next frame', () async {
       final terminal = StringTerminal(terminalWidth: 4, terminalHeight: 2);
       final renderer = UltravioletTuiRenderer(

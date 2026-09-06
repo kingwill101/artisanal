@@ -69,7 +69,9 @@ final class CounterPanel implements FrameRenderable {
     final border = Style()
         .foreground(Colors.cyan)
         .border(Border.rounded)
-        .width(panel.width)
+        // Style dimensions describe the content box. Leave one cell on each
+        // horizontal edge for the border so the final output fits the area.
+        .width((panel.width - 2).clamp(0, panel.width))
         .height(panel.height)
         .alignHorizontal(HorizontalAlign.center)
         .alignVertical(VerticalAlign.center);
