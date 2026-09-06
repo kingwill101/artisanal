@@ -1,5 +1,6 @@
 import 'package:artisanal/tui.dart';
 import 'package:test/test.dart';
+import 'package:ultraviolet/core.dart' as ultraviolet;
 
 void main() {
   group('FrameLayout', () {
@@ -55,6 +56,21 @@ void main() {
       ]);
 
       expect(areas.map((area) => area.width), [3, 3, 2]);
+    });
+
+    test('weighted fills preserve Ultraviolet allocation parity', () {
+      const weights = [1, 3, 2, 5];
+      final areas = FrameLayout.horizontal(const FrameArea(0, 0, 29, 1), const [
+        FrameFill(1),
+        FrameFill(3),
+        FrameFill(2),
+        FrameFill(5),
+      ]);
+
+      expect(
+        areas.map((area) => area.width),
+        ultraviolet.splitByLargestRemainder(29, weights),
+      );
     });
 
     test('returns empty regions when insets consume the viewport', () {

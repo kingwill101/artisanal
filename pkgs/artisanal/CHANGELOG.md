@@ -8,6 +8,8 @@
   percentage, weighted-fill, gap, and inset constraints.
 - Add `FrameArea.inset` and `FrameArea.centered` geometry helpers for pane
   content and overlays.
+- Reuse Ultraviolet's stable largest-remainder allocator for weighted frame
+  layout instead of maintaining duplicate allocation logic.
 - Add a responsive, core-only positioned-frame dashboard example covering
   nested layouts, selection state, narrow stacking, and overlays.
 - Document when TEA applications should return `String`, `View`, or

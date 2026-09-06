@@ -1,3 +1,5 @@
+import 'package:ultraviolet/core.dart' as ultraviolet;
+
 import 'view.dart';
 
 /// Axis used by [FrameLayout.split].
@@ -148,36 +150,21 @@ abstract final class FrameLayout {
       }
     }
 
-    final fills = <({int index, int flex, int remainder})>[];
-    var totalFlex = 0;
+    final fillIndices = <int>[];
+    final fillWeights = <int>[];
     for (var i = 0; i < constraints.length; i++) {
       if (constraints[i] case FrameFill(:final flex)) {
-        totalFlex += flex;
-        fills.add((index: i, flex: flex, remainder: 0));
+        fillIndices.add(i);
+        fillWeights.add(flex);
       }
     }
-    if (fills.isNotEmpty && remaining > 0) {
-      var distributed = 0;
-      for (var i = 0; i < fills.length; i++) {
-        final fill = fills[i];
-        final product = remaining * fill.flex;
-        final allocated = product ~/ totalFlex;
-        sizes[fill.index] = allocated;
-        distributed += allocated;
-        fills[i] = (
-          index: fill.index,
-          flex: fill.flex,
-          remainder: product % totalFlex,
-        );
-      }
-      fills.sort((a, b) {
-        final remainderOrder = b.remainder.compareTo(a.remainder);
-        return remainderOrder != 0
-            ? remainderOrder
-            : a.index.compareTo(b.index);
-      });
-      for (var i = 0; i < remaining - distributed; i++) {
-        sizes[fills[i].index]++;
+    if (fillIndices.isNotEmpty && remaining > 0) {
+      final allocations = ultraviolet.splitByLargestRemainder(
+        remaining,
+        fillWeights,
+      );
+      for (var i = 0; i < fillIndices.length; i++) {
+        sizes[fillIndices[i]] = allocations[i];
       }
     }
 
