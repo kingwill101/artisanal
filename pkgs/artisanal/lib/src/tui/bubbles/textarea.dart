@@ -3059,6 +3059,30 @@ class TextAreaModel extends ViewComponent {
             model.deleteToLineBoundaryAtSelections(forward: true),
       ),
       EditorCommand(
+        id: EditorCommandIds.transposeCharacters,
+        label: 'Transpose Characters',
+        category: 'Edit',
+        execute: (model) => model.transposeCharactersBackward(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.uppercaseWord,
+        label: 'Uppercase Word',
+        category: 'Edit',
+        execute: (model) => model.uppercaseWordForward(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.lowercaseWord,
+        label: 'Lowercase Word',
+        category: 'Edit',
+        execute: (model) => model.lowercaseWordForward(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.capitalizeWord,
+        label: 'Capitalize Word',
+        category: 'Edit',
+        execute: (model) => model.capitalizeWordForward(),
+      ),
+      EditorCommand(
         id: EditorCommandIds.nextSearchMatch,
         label: 'Find Next',
         category: 'Find',
@@ -3751,19 +3775,19 @@ class TextAreaModel extends ViewComponent {
             return (this, null);
           }
           if (key.matchesSingle(keyMap.transposeCharacterBackward)) {
-            _transposeBackward();
+            executeCommand(EditorCommandIds.transposeCharacters);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.uppercaseWordForward)) {
-            _uppercaseWordForward();
+            executeCommand(EditorCommandIds.uppercaseWord);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.lowercaseWordForward)) {
-            _lowercaseWordForward();
+            executeCommand(EditorCommandIds.lowercaseWord);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.capitalizeWordForward)) {
-            _capitalizeWordForward();
+            executeCommand(EditorCommandIds.capitalizeWord);
             return (this, null);
           }
           if (key.matchesSingle(keyMap.copy)) {
@@ -3782,38 +3806,22 @@ class TextAreaModel extends ViewComponent {
             final r = key.runes.first;
             if (r == 0x74) {
               // ctrl+t
-              _beginHistoryAction(
-                _TextAreaHistoryAction.transform,
-                breakChain: true,
-              );
-              _transposeBackward();
+              executeCommand(EditorCommandIds.transposeCharacters);
               return (this, null);
             }
           }
           if (key.alt && key.type == KeyType.runes && key.runes.isNotEmpty) {
             final r = key.runes.first;
             if (r == 0x75) {
-              _beginHistoryAction(
-                _TextAreaHistoryAction.transform,
-                breakChain: true,
-              );
-              _uppercaseWordForward();
+              executeCommand(EditorCommandIds.uppercaseWord);
               return (this, null);
             }
             if (r == 0x6c) {
-              _beginHistoryAction(
-                _TextAreaHistoryAction.transform,
-                breakChain: true,
-              );
-              _lowercaseWordForward();
+              executeCommand(EditorCommandIds.lowercaseWord);
               return (this, null);
             }
             if (r == 0x63) {
-              _beginHistoryAction(
-                _TextAreaHistoryAction.transform,
-                breakChain: true,
-              );
-              _capitalizeWordForward();
+              executeCommand(EditorCommandIds.capitalizeWord);
               return (this, null);
             }
           }
@@ -5107,42 +5115,51 @@ class TextAreaModel extends ViewComponent {
     return true;
   }
 
-  void _transposeBackward() {
-    _refreshDocumentSnapshot();
-    _recordUndoSnapshot();
-    final result = textTransposeBackward(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-    );
-    if (!result.changed) return;
-    _applyOffsetCommandResult(result);
+  /// Transposes the grapheme before the cursor with its predecessor.
+  bool transposeCharactersBackward() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      _refreshDocumentSnapshot();
+      final result = textTransposeBackward(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+      );
+      if (!result.changed) return false;
+      _recordUndoSnapshot();
+      _applyOffsetCommandResult(result);
+      return true;
+    });
   }
 
-  void _uppercaseWordForward() {
-    _transformWordForward((text) => text.toUpperCase());
+  /// Uppercases the word at or after the cursor.
+  bool uppercaseWordForward() {
+    return _transformWordForward((text) => text.toUpperCase());
   }
 
-  void _lowercaseWordForward() {
-    _transformWordForward((text) => text.toLowerCase());
+  /// Lowercases the word at or after the cursor.
+  bool lowercaseWordForward() {
+    return _transformWordForward((text) => text.toLowerCase());
   }
 
-  void _capitalizeWordForward() {
-    _transformWordForward(textCapitalizeWords);
+  /// Capitalizes the word at or after the cursor.
+  bool capitalizeWordForward() {
+    return _transformWordForward(textCapitalizeWords);
   }
 
-  void _transformWordForward(String Function(String text) transform) {
-    _refreshDocumentSnapshot();
-    final result = textTransformWordOrAdjacent(
-      document: _document,
-      state: _currentOffsetStateSnapshot(),
-      transform: transform,
-    );
-    if (!result.changed) {
-      return;
-    }
-
-    _recordUndoSnapshot();
-    _applyOffsetCommandResult(result);
+  bool _transformWordForward(String Function(String text) transform) {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      _refreshDocumentSnapshot();
+      final result = textTransformWordOrAdjacent(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        transform: transform,
+      );
+      if (!result.changed) return false;
+      _recordUndoSnapshot();
+      _applyOffsetCommandResult(result);
+      return true;
+    });
   }
 
   bool _transformSelectionOrLineShared(String Function(String text) transform) {

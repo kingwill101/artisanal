@@ -177,6 +177,9 @@ characters dispatch `EditorCommandIds.insertText` with an argument; newline,
 arrows, word/line/document motions, deletion, indentation, and folds dispatch
 their corresponding IDs. There is no separate private behavior path for those
 keys.
+Transpose and word-case bindings likewise dispatch `transposeCharacters`,
+`uppercaseWord`, `lowercaseWord`, and `capitalizeWord`, so palettes and modal
+hosts can invoke the same undoable transforms.
 
 This means a host may consume a key before `TextAreaModel.update` and dispatch
 the same command itself:

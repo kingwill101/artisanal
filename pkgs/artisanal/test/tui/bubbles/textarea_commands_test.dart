@@ -90,6 +90,10 @@ void main() {
           EditorCommandIds.selectPageDown,
           EditorCommandIds.selectDocumentStart,
           EditorCommandIds.selectDocumentEnd,
+          EditorCommandIds.transposeCharacters,
+          EditorCommandIds.uppercaseWord,
+          EditorCommandIds.lowercaseWord,
+          EditorCommandIds.capitalizeWord,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -117,6 +121,32 @@ void main() {
         EditorCommandDispatchResult.handled,
       );
       expect(model.cursorOffset, model.length - 1);
+    });
+
+    test('dispatches transpose and word-case transforms as commands', () {
+      final model = TextAreaModel()
+        ..setText('ab', recordHistory: false)
+        ..setCursor(0, 2);
+
+      expect(
+        model.executeCommand(EditorCommandIds.transposeCharacters),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'ba');
+      expect(model.undo(), isTrue);
+      expect(model.value, 'ab');
+
+      model
+        ..setText('hello', recordHistory: false)
+        ..setCursor(0, 0);
+      expect(
+        model.executeCommand(EditorCommandIds.uppercaseWord),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'HELLO');
+
+      expect(model.undo(), isTrue);
+      expect(model.value, 'hello');
     });
 
     test('command motions preserve a legacy single selection', () {

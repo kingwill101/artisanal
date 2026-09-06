@@ -44,6 +44,10 @@ abstract final class EditorCommandIds {
   static const deleteWordRight = 'editor.action.deleteWordRight';
   static const deleteLineLeft = 'editor.action.deleteLineLeft';
   static const deleteLineRight = 'editor.action.deleteLineRight';
+  static const transposeCharacters = 'editor.action.transposeCharacters';
+  static const uppercaseWord = 'editor.action.uppercaseWord';
+  static const lowercaseWord = 'editor.action.lowercaseWord';
+  static const capitalizeWord = 'editor.action.capitalizeWord';
   static const nextSearchMatch = 'editor.action.nextSearchMatch';
   static const previousSearchMatch = 'editor.action.previousSearchMatch';
   static const nextDiagnostic = 'editor.action.nextDiagnostic';
