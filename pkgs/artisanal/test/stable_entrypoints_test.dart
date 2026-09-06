@@ -38,6 +38,13 @@ void main() {
     expect(runtime.SuspendMsg, isA<Type>());
     expect(runtime.ZoneInBoundsMsg, isA<Type>());
     expect(runtime.TuiTrace.log, isA<Function>());
+    expect(
+      runtime.FrameLayout.vertical(const runtime.FrameArea(0, 0, 10, 4), const [
+        runtime.FrameLength(1),
+        runtime.FrameFill(),
+      ]),
+      const [runtime.FrameArea(0, 0, 10, 1), runtime.FrameArea(0, 1, 10, 3)],
+    );
   });
 
   test('stable hosts entrypoint exposes backend and host helpers', () {

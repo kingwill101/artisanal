@@ -160,9 +160,24 @@ export 'pane_manager.dart'
 export 'view.dart'
     show
         View,
+        Frame,
+        FrameArea,
+        FrameView,
+        FramePainter,
+        FrameRenderable,
         TerminalProgressBar,
         TerminalProgressBarState,
         KeyboardEnhancements;
+
+export 'frame_layout.dart'
+    show
+        FrameAxis,
+        FrameInsets,
+        FrameConstraint,
+        FrameLength,
+        FramePercentage,
+        FrameFill,
+        FrameLayout;
 
 export 'program.dart'
     show

@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- Add `FrameView`, `FrameArea`, and `FrameRenderable` for immediate-mode TEA
+  views that position Artisanal styled strings without exposing renderer cells.
+- Add pure horizontal and vertical `FrameLayout` splitting with fixed,
+  percentage, weighted-fill, gap, and inset constraints.
+- Add `FrameArea.inset` and `FrameArea.centered` geometry helpers for pane
+  content and overlays.
+- Implement the `FrameLayout` facade with Ultraviolet rectangles, fixed and
+  percentage constraints, and stable largest-remainder allocation rather than
+  maintaining duplicate layout primitives.
+- Add a responsive, core-only positioned-frame dashboard example covering
+  nested layouts, selection state, narrow stacking, and overlays.
+- Document when TEA applications should return `String`, `View`, or
+  `FrameView`, including positioned layout and styling guidance.
+- Reserve the actual wrapped height of persistent log lines before painting a
+  structured frame.
+- Cover structured frame rendering through `Program` and both supported core
+  runtime entrypoints.
+
 ## 0.6.0
 
 ### Added
