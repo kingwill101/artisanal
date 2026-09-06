@@ -52,11 +52,16 @@ void main() {
     final backend = hosts.EmbeddedTerminalBackend(output: (_) {});
     final host = hosts.ProgramHost.bridge(bridge);
     const message = hosts.TerminalBridgeMessage.output('hi');
+    const animationResult = hosts.InlineAnimationResult<int>(
+      value: 1,
+      duration: Duration(milliseconds: 10),
+    );
 
     expect(bridge, isA<hosts.TerminalBridge>());
     expect(backend, isA<hosts.TerminalBackend>());
     expect(host, isA<hosts.ProgramHost>());
     expect(message.type, hosts.TerminalBridgeMessageType.output);
+    expect(animationResult.success, isTrue);
     expect(hosts.BrowserTerminalHostServer.defaultPageHtml, isA<Function>());
     expect(
       hosts.SocketTerminalHostServer.resizeControlSequence,

@@ -7,6 +7,32 @@ import '../terminal/terminal.dart';
 import '../tui/bubbles/spinner.dart';
 import 'console_format.dart';
 
+/// Result metadata for an inline animation operation.
+///
+/// This value remains available for callers that want to describe an
+/// operation's result separately from the convenience methods on
+/// [InlineAnimation].
+class InlineAnimationResult<T> {
+  /// Creates an inline animation result.
+  const InlineAnimationResult({
+    required this.value,
+    required this.duration,
+    this.error,
+  });
+
+  /// The operation's value, or null when it did not produce one.
+  final T? value;
+
+  /// How long the operation took.
+  final Duration duration;
+
+  /// The operation error, if any.
+  final Object? error;
+
+  /// Whether the operation completed without an error.
+  bool get success => error == null;
+}
+
 /// Lightweight inline animation runner.
 ///
 /// Provides spinner and progress animations that run inline in the terminal
