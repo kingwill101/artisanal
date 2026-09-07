@@ -1,6 +1,7 @@
 import 'package:artisanal/src/io/component_theme.dart';
 import 'package:artisanal/src/io/console_context.dart';
 import 'package:artisanal/src/io/console_operations.dart';
+import 'package:artisanal/src/io/operation_results.dart';
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/style/style.dart';
 import 'package:artisanal/src/terminal/terminal.dart';
@@ -39,6 +40,32 @@ final class _OperationHost implements ConsoleOperationHost {
 
 void main() {
   group('ConsoleOperations', () {
+    test('renders a plain task through the shared operation host', () async {
+      final host = _OperationHost(interactive: false);
+
+      final result = await ConsoleOperations(
+        host,
+      ).task('Build', run: () async => TaskResult.success);
+
+      expect(result, TaskResult.success);
+      expect(host.output.toString(), contains('Build'));
+      expect(host.output.toString(), contains('DONE'));
+    });
+
+    test('restores the cursor when an interactive task fails', () async {
+      final host = _OperationHost(interactive: true);
+
+      await expectLater(
+        ConsoleOperations(
+          host,
+        ).task('Build', run: () async => throw StateError('failed')),
+        throwsStateError,
+      );
+
+      expect(host.promptTerminal.output, contains('FAIL'));
+      expect(host.promptTerminal.operations.last, 'showCursor');
+    });
+
     test('uses plain output when the host is non-interactive', () async {
       final host = _OperationHost(interactive: false);
 
