@@ -3,7 +3,6 @@ import 'dart:io' as io;
 
 import '../terminal/ansi.dart' show Ansi;
 import '../tui/bubbles/components/base.dart';
-import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
 import '../tui/bubbles/components/tree.dart' show TreeComponent, TreeEnumerator;
 import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
@@ -720,51 +719,11 @@ class Console implements ConsoleOperationHost {
     Iterable<T> iterable, {
     int? max,
     bool clearOnDone = false,
-  }) sync* {
-    final total = max ?? (iterable is List<T> ? iterable.length : 0);
-    final terminal = promptTerminal;
-    // Use actual terminal width for inline animations to prevent line wrapping
-    final actualWidth = terminal.width;
-    final renderConfig = RenderConfig.fromRenderer(
-      _renderer,
-      terminalWidth: actualWidth,
-    );
-
-    terminal.hideCursor();
-    try {
-      var current = 0;
-      terminal.clearLine();
-      terminal.write(
-        ProgressBarComponent(
-          current: current,
-          total: total,
-          renderConfig: renderConfig,
-        ).render(),
-      );
-
-      for (final item in iterable) {
-        yield item;
-        current++;
-        terminal.clearLine();
-        terminal.write(
-          ProgressBarComponent(
-            current: current,
-            total: total,
-            renderConfig: renderConfig,
-          ).render(),
-        );
-      }
-
-      if (clearOnDone) {
-        terminal.clearLine();
-      } else {
-        terminal.writeln();
-        newLine();
-      }
-    } finally {
-      terminal.showCursor();
-    }
-  }
+  }) => _consoleOperations.progressIterate(
+    iterable,
+    max: max,
+    clearOnDone: clearOnDone,
+  );
 
   /// Runs an async task while displaying an animated spinner.
   ///

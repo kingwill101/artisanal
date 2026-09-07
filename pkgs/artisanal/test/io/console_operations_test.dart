@@ -47,6 +47,19 @@ final class _OperationHost implements ConsoleOperationHost {
 
 void main() {
   group('ConsoleOperations', () {
+    test('progress iteration renders through the operation terminal', () {
+      final host = _OperationHost(interactive: true);
+
+      final values = ConsoleOperations(
+        host,
+      ).progressIterate([1, 2], clearOnDone: true).toList();
+
+      expect(values, [1, 2]);
+      expect(host.promptTerminal.operations, contains('hideCursor'));
+      expect(host.promptTerminal.operations, contains('clearLine'));
+      expect(host.promptTerminal.operations.last, 'showCursor');
+    });
+
     test('countdown uses the plain fallback and invokes completion', () async {
       final host = _OperationHost(interactive: false);
       var completed = false;

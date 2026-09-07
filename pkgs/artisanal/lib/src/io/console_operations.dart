@@ -3,6 +3,8 @@ import 'dart:async';
 import '../style/chars.dart';
 import '../style/color.dart';
 import '../style/style.dart';
+import '../tui/bubbles/components/base.dart';
+import '../tui/bubbles/components/progress_bar.dart';
 import '../tui/bubbles/pause.dart';
 import '../tui/bubbles/prompt.dart' show promptProgramOptions;
 import '../tui/bubbles/spinner.dart';
@@ -360,6 +362,52 @@ final class ConsoleOperations {
 
     await onComplete?.call();
     return true;
+  }
+
+  /// Iterates over values while updating an inline progress bar.
+  Iterable<T> progressIterate<T>(
+    Iterable<T> iterable, {
+    int? max,
+    bool clearOnDone = false,
+  }) sync* {
+    final total = max ?? (iterable is List<T> ? iterable.length : 0);
+    final terminal = host.promptTerminal;
+    final config = RenderConfig(
+      terminalWidth: terminal.width,
+      colorProfile: host.renderConfig.colorProfile,
+      hasDarkBackground: host.renderConfig.hasDarkBackground,
+    );
+
+    void renderProgress(int current) {
+      terminal
+        ..clearLine()
+        ..write(
+          ProgressBarComponent(
+            current: current,
+            total: total,
+            renderConfig: config,
+          ).render(),
+        );
+    }
+
+    terminal.hideCursor();
+    try {
+      var current = 0;
+      renderProgress(current);
+      for (final item in iterable) {
+        yield item;
+        renderProgress(++current);
+      }
+
+      if (clearOnDone) {
+        terminal.clearLine();
+      } else {
+        terminal.writeln();
+        host.newLine();
+      }
+    } finally {
+      terminal.showCursor();
+    }
   }
 
   void _appendSkippedSteps(
