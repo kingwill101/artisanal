@@ -4,6 +4,7 @@ import '../style/color.dart';
 import '../style/style.dart';
 import '../style/chars.dart';
 import '../terminal/terminal.dart';
+import '../tui/bubbles/components/base.dart';
 import '../tui/bubbles/spinner.dart';
 import 'console_format.dart';
 
@@ -78,10 +79,16 @@ class InlineAnimationResult<T> {
 /// ```
 class InlineAnimation {
   /// Creates an inline animation runner.
-  InlineAnimation({required this.terminal});
+  InlineAnimation({required this.terminal, this.renderConfig});
 
   /// The terminal to render to.
   final Terminal terminal;
+
+  /// Optional render configuration retained for backwards compatibility.
+  ///
+  /// The animation currently derives its rendering behavior from [terminal].
+  @Deprecated('InlineAnimation derives rendering behavior from terminal.')
+  final RenderConfig? renderConfig;
 
   /// Runs a spinner animation while executing a task.
   ///

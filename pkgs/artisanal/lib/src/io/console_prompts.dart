@@ -162,18 +162,12 @@ final class ConsolePrompts {
         Validators.required(),
         Validators.numeric(min: min, max: max),
       ]);
-      final raw = ask(
-        question,
-        defaultValue: defaultValue?.toString(),
-        validator: (value) {
-          try {
-            return validator(value);
-          } catch (error) {
-            return error.toString();
-          }
-        },
-        attempts: attempts,
-      );
+      final raw = defaultValue?.toString();
+      if (raw == null) {
+        throw StateError('Cannot prompt in non-interactive mode.');
+      }
+      final error = validator(raw);
+      if (error != null) throw StateError(error);
       return num.parse(raw);
     }
 
@@ -228,12 +222,12 @@ final class ConsolePrompts {
     List<int> defaultSelected = const [],
     String Function(T)? display,
   }) async {
-    if (!host.interactive) {
-      return defaultSelected.map((index) => choices[index]).toList();
-    }
     final defaults = defaultSelected
         .where((index) => index >= 0 && index < choices.length)
         .toSet();
+    if (!host.interactive) {
+      return defaults.map((index) => choices[index]).toList();
+    }
     final result = await runMultiSelectPrompt(
       MultiSelectModel<T>(
         items: choices,

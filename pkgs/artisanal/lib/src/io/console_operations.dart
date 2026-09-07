@@ -34,15 +34,15 @@ final class ConsoleOperations {
   }) async {
     final descriptionText = description.trimRight();
     final prefix = '  $descriptionText ';
-    final terminal = host.promptTerminal;
     final animate =
         run != null &&
-        supportsInteractiveConsole(host.interactive, () => terminal);
-    final width = terminal.width;
+        supportsInteractiveConsole(host.interactive, () => host.promptTerminal);
+    final terminal = animate ? host.promptTerminal : null;
+    final width = terminal?.width ?? host.renderConfig.terminalWidth;
 
     if (animate) {
-      terminal.hideCursor();
-    } else {
+      terminal!.hideCursor();
+    } else if (!clearOnDone) {
       host.write(prefix);
     }
 
@@ -66,7 +66,7 @@ final class ConsoleOperations {
             dots =
                 '${dots.substring(0, index)}$frame${dots.substring(index + 1)}';
           }
-          terminal.clearLine();
+          terminal!.clearLine();
           terminal.write('$prefix${_muted(dots)}$elapsed');
         });
       }
@@ -79,7 +79,7 @@ final class ConsoleOperations {
     } finally {
       watch.stop();
       timer?.cancel();
-      if (animate) terminal.clearLine();
+      if (animate) terminal!.clearLine();
 
       if (!clearOnDone) {
         final elapsed = run == null
@@ -97,14 +97,14 @@ final class ConsoleOperations {
         final suffix =
             '${_muted('.' * dots)}${elapsed.isEmpty ? '' : _muted(elapsed)} $status';
         if (animate) {
-          terminal
+          terminal!
             ..write('$prefix$suffix')
             ..writeln();
         } else {
           host.writeln(suffix);
         }
       }
-      if (animate) terminal.showCursor();
+      if (animate) terminal!.showCursor();
     }
   }
 
@@ -218,11 +218,11 @@ final class ConsoleOperations {
       return const StepsResult(completed: [], failed: [], skipped: []);
     }
 
-    final terminal = host.promptTerminal;
     final interactive = supportsInteractiveConsole(
       host.interactive,
-      () => terminal,
+      () => host.promptTerminal,
     );
+    final terminal = interactive ? host.promptTerminal : null;
     final watch = Stopwatch()..start();
     final total = steps.length;
     final numberWidth = total.toString().length;
@@ -242,7 +242,7 @@ final class ConsoleOperations {
       final prefix = '[$number/$total]';
 
       if (interactive) {
-        terminal.hideCursor();
+        terminal!.hideCursor();
         final stepWatch = Stopwatch()..start();
         var spinnerTick = 0;
         const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -340,11 +340,11 @@ final class ConsoleOperations {
     required int seconds,
     FutureOr<void> Function()? onComplete,
   }) async {
-    final terminal = host.promptTerminal;
     final interactive = supportsInteractiveConsole(
       host.interactive,
-      () => terminal,
+      () => host.promptTerminal,
     );
+    final terminal = interactive ? host.promptTerminal : null;
 
     if (!interactive) {
       host.writeln('$message $seconds seconds...');
@@ -356,7 +356,7 @@ final class ConsoleOperations {
           message: message,
         ),
         options: promptProgramOptions,
-        terminal: terminal,
+        terminal: terminal!,
       ).run();
     }
 
@@ -371,6 +371,14 @@ final class ConsoleOperations {
     bool clearOnDone = false,
   }) sync* {
     final total = max ?? (iterable is List<T> ? iterable.length : 0);
+    if (!supportsInteractiveConsole(
+      host.interactive,
+      () => host.promptTerminal,
+    )) {
+      yield* iterable;
+      return;
+    }
+
     final terminal = host.promptTerminal;
     final config = RenderConfig(
       terminalWidth: terminal.width,
@@ -440,7 +448,7 @@ final class ConsoleOperations {
       host.interactive,
       () => host.promptTerminal,
     )) {
-      host.write('$message ');
+      if (!clearOnDone) host.write('$message ');
       final watch = Stopwatch()..start();
       try {
         final result = await run();
@@ -491,7 +499,22 @@ final class ConsoleOperations {
     required FutureOr<T> Function(void Function(double) setProgress) run,
     bool clearOnDone = false,
     String? doneMessage,
-  }) {
+  }) async {
+    if (!supportsInteractiveConsole(
+      host.interactive,
+      () => host.promptTerminal,
+    )) {
+      if (!clearOnDone) host.write('$message ');
+      try {
+        final result = await run((_) {});
+        if (!clearOnDone) host.writeln(doneMessage ?? '');
+        return result;
+      } catch (_) {
+        if (!clearOnDone) host.writeln();
+        rethrow;
+      }
+    }
+
     return InlineAnimation(terminal: host.promptTerminal).progress(
       message: message,
       task: run,

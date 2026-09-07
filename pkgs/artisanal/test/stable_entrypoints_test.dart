@@ -1,4 +1,5 @@
 import 'package:artisanal/artisanal.dart' as hosts;
+import 'package:artisanal/bubbles.dart' as bubbles;
 import 'package:artisanal/terminal.dart' as terminal;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/uv.dart' as uv;
@@ -56,12 +57,18 @@ void main() {
       value: 1,
       duration: Duration(milliseconds: 10),
     );
+    // ignore: deprecated_member_use_from_same_package
+    final animation = hosts.InlineAnimation(
+      terminal: hosts.StringTerminal(),
+      renderConfig: const bubbles.RenderConfig(),
+    );
 
     expect(bridge, isA<hosts.TerminalBridge>());
     expect(backend, isA<hosts.TerminalBackend>());
     expect(host, isA<hosts.ProgramHost>());
     expect(message.type, hosts.TerminalBridgeMessageType.output);
     expect(animationResult.success, isTrue);
+    expect(animation, isA<hosts.InlineAnimation>());
     expect(hosts.BrowserTerminalHostServer.defaultPageHtml, isA<Function>());
     expect(
       hosts.SocketTerminalHostServer.resizeControlSequence,

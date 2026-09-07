@@ -15,14 +15,20 @@ final class _OperationHost implements ConsolePromptHost {
     required this.interactive,
     bool supportsAnsi = true,
     Iterable<String?> input = const [],
-  }) : promptTerminal = StringTerminal(ansiSupport: supportsAnsi),
+  }) : _promptTerminal = StringTerminal(ansiSupport: supportsAnsi),
        _input = input.iterator;
 
   @override
   final bool interactive;
 
+  final StringTerminal _promptTerminal;
+  var terminalAccesses = 0;
+
   @override
-  final StringTerminal promptTerminal;
+  StringTerminal get promptTerminal {
+    terminalAccesses++;
+    return _promptTerminal;
+  }
 
   final output = StringBuffer();
   final errors = StringBuffer();
@@ -108,6 +114,28 @@ void main() {
       expect(host.promptTerminal.operations, isEmpty);
     });
 
+    test('validates non-interactive numeric defaults', () async {
+      final prompts = ConsolePrompts(_OperationHost(interactive: false));
+
+      await expectLater(
+        prompts.number('Port', defaultValue: 0, min: 1),
+        throwsStateError,
+      );
+    });
+
+    test('filters invalid non-interactive multi-select defaults', () async {
+      final prompts = ConsolePrompts(_OperationHost(interactive: false));
+
+      expect(
+        await prompts.multiSelectChoice(
+          'Select',
+          choices: ['zero', 'one'],
+          defaultSelected: [-1, 1, 2],
+        ),
+        ['one'],
+      );
+    });
+
     test('uses a non-interactive secret fallback', () async {
       final host = _OperationHost(interactive: false);
 
@@ -170,7 +198,27 @@ void main() {
       expect(result, isTrue);
       expect(completed, isTrue);
       expect(host.output.toString(), contains('Starting in 0 seconds...'));
-      expect(host.promptTerminal.operations, isEmpty);
+      expect(host.terminalAccesses, 0);
+    });
+
+    test('plain progress APIs do not resolve or write to a terminal', () async {
+      final host = _OperationHost(interactive: false);
+      final operations = ConsoleOperations(host);
+
+      expect(operations.progressIterate([1, 2]).toList(), [1, 2]);
+      expect(
+        await operations.progress(
+          'Loading',
+          run: (setProgress) async {
+            setProgress(0.5);
+            return 42;
+          },
+        ),
+        42,
+      );
+
+      expect(host.terminalAccesses, 0);
+      expect(host.output.toString(), 'Loading \n');
     });
 
     test('steps account for unrun plain operations as skipped', () async {
@@ -246,6 +294,21 @@ void main() {
       expect(result, TaskResult.success);
       expect(host.output.toString(), contains('Build'));
       expect(host.output.toString(), contains('DONE'));
+    });
+
+    test('clear-on-done plain operations emit no prefix', () async {
+      final host = _OperationHost(interactive: false);
+      final operations = ConsoleOperations(host);
+
+      await operations.task(
+        'Build',
+        run: () async => TaskResult.success,
+        clearOnDone: true,
+      );
+      await operations.spin('Loading', run: () async => 42, clearOnDone: true);
+
+      expect(host.output.toString(), isEmpty);
+      expect(host.terminalAccesses, 0);
     });
 
     test('restores the cursor when an interactive task fails', () async {
