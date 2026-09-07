@@ -1,6 +1,7 @@
 import 'package:artisanal/src/io/component_theme.dart';
 import 'package:artisanal/src/io/console_context.dart';
 import 'package:artisanal/src/io/console_operations.dart';
+import 'package:artisanal/src/io/console_prompts.dart';
 import 'package:artisanal/src/io/operation_results.dart';
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/style/style.dart';
@@ -9,9 +10,13 @@ import 'package:artisanal/src/tui/bubbles/components/base.dart';
 import 'package:artisanal/src/tui/bubbles/spinner.dart';
 import 'package:test/test.dart';
 
-final class _OperationHost implements ConsoleOperationHost {
-  _OperationHost({required this.interactive, bool supportsAnsi = true})
-    : promptTerminal = StringTerminal(ansiSupport: supportsAnsi);
+final class _OperationHost implements ConsolePromptHost {
+  _OperationHost({
+    required this.interactive,
+    bool supportsAnsi = true,
+    Iterable<String?> input = const [],
+  }) : promptTerminal = StringTerminal(ansiSupport: supportsAnsi),
+       _input = input.iterator;
 
   @override
   final bool interactive;
@@ -20,6 +25,8 @@ final class _OperationHost implements ConsoleOperationHost {
   final StringTerminal promptTerminal;
 
   final output = StringBuffer();
+  final errors = StringBuffer();
+  final Iterator<String?> _input;
 
   @override
   ComponentTheme get componentTheme => ComponentTheme.dark;
@@ -32,10 +39,16 @@ final class _OperationHost implements ConsoleOperationHost {
   Style? getStyle(String name) => null;
 
   @override
+  String? readConsoleLine() => _input.moveNext() ? _input.current : null;
+
+  @override
   void write(String text) => output.write(text);
 
   @override
   void writeln([String line = '']) => output.writeln(line);
+
+  @override
+  void writelnErr([String line = '']) => errors.writeln(line);
 
   @override
   void newLine([int count = 1]) {
@@ -46,6 +59,29 @@ final class _OperationHost implements ConsoleOperationHost {
 }
 
 void main() {
+  group('ConsolePrompts', () {
+    test('validates text through the shared input host', () {
+      final host = _OperationHost(interactive: true, input: ['bad', 'good']);
+
+      final result = ConsolePrompts(
+        host,
+      ).ask('Value', validator: (value) => value == 'good' ? null : 'invalid');
+
+      expect(result, 'good');
+      expect(host.errors.toString(), contains('Error: invalid'));
+    });
+
+    test('parses numbered multi-select choices', () {
+      final host = _OperationHost(interactive: true, input: ['0, 2']);
+
+      final result = ConsolePrompts(
+        host,
+      ).choice('Select', choices: ['zero', 'one', 'two'], multiSelect: true);
+
+      expect(result, ['zero', 'two']);
+    });
+  });
+
   group('ConsoleOperations', () {
     test('progress iteration renders through the operation terminal', () {
       final host = _OperationHost(interactive: true);

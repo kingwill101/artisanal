@@ -30,6 +30,15 @@ abstract interface class ConsoleOperationHost {
   void newLine([int count = 1]);
 }
 
+/// Internal console capabilities needed by synchronous prompts.
+abstract interface class ConsolePromptHost implements ConsoleOperationHost {
+  /// Reads one line from the configured input source.
+  String? readConsoleLine();
+
+  /// Writes one error line.
+  void writelnErr([String line = '']);
+}
+
 /// Whether a console operation should use cursor-driven interactive output.
 ///
 /// The terminal is resolved lazily so non-interactive consoles do not allocate

@@ -16,6 +16,7 @@ import 'component_theme.dart';
 import 'console_context.dart';
 import 'console_operations.dart';
 import 'console_presentation.dart';
+import 'console_prompts.dart';
 import 'desktop_notifications.dart';
 import 'operation_results.dart';
 import 'output_theme.dart';
@@ -103,7 +104,7 @@ enum TreeStyle {
 ///   });
 /// }
 /// ```
-class Console implements ConsoleOperationHost {
+class Console implements ConsolePromptHost {
   /// Creates a new I/O helper.
   ///
   /// The [outputTheme] parameter allows customizing the colors used for
@@ -236,6 +237,7 @@ class Console implements ConsoleOperationHost {
 
   Components? _components;
   ConsoleOperations? _operations;
+  ConsolePrompts? _prompts;
   static const _desktopNotifications = DesktopNotifications();
 
   /// Whether output is suppressed (quiet mode).
@@ -258,6 +260,11 @@ class Console implements ConsoleOperationHost {
 
   ConsoleOperations get _consoleOperations =>
       _operations ??= ConsoleOperations(this);
+
+  ConsolePrompts get _consolePrompts => _prompts ??= ConsolePrompts(this);
+
+  @override
+  String? readConsoleLine() => _readLine?.call();
 
   /// Disposes of console resources, including any active terminal.
   void dispose() {
@@ -289,6 +296,7 @@ class Console implements ConsoleOperationHost {
   }
 
   /// Writes a line to stderr.
+  @override
   void writelnErr([String line = '']) {
     _err(_tagParser.render(line));
   }
@@ -885,15 +893,7 @@ class Console implements ConsoleOperationHost {
 
   /// Prompts for a yes/no confirmation.
   bool confirm(String question, {bool defaultValue = true}) {
-    if (!interactive) return defaultValue;
-
-    final suffix = defaultValue ? '[Y/n]' : '[y/N]';
-    write('${_promptStyle().render(question)} $suffix ');
-    final input = (_readLine?.call() ?? '').trim().toLowerCase();
-    if (input.isEmpty) return defaultValue;
-    if (input == 'y' || input == 'yes') return true;
-    if (input == 'n' || input == 'no') return false;
-    return defaultValue;
+    return _consolePrompts.confirm(question, defaultValue: defaultValue);
   }
 
   /// Prompts for text input.
@@ -902,29 +902,12 @@ class Console implements ConsoleOperationHost {
     String? defaultValue,
     String? Function(String value)? validator,
     int attempts = 3,
-  }) {
-    if (!interactive) {
-      if (defaultValue != null) return defaultValue;
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    for (var i = 0; i < attempts; i++) {
-      final suffix = defaultValue == null ? '' : ' [$defaultValue]';
-      write('${_promptStyle().render(question)}$suffix: ');
-      final raw = _readLine?.call();
-      final value = (raw == null || raw.isEmpty) ? (defaultValue ?? '') : raw;
-      final error = validator?.call(value);
-      if (error == null) return value;
-      writelnErr(
-        _componentStyle(
-          componentTheme.errorStyle(renderConfig),
-          'error',
-        ).render('Error: $error'),
-      );
-    }
-
-    throw StateError('Too many invalid attempts.');
-  }
+  }) => _consolePrompts.ask(
+    question,
+    defaultValue: defaultValue,
+    validator: validator,
+    attempts: attempts,
+  );
 
   /// Prompts for secret/password input (no echo).
   Future<String> secret(String question, {String? fallback}) async {
@@ -954,54 +937,12 @@ class Console implements ConsoleOperationHost {
     required List<String> choices,
     int? defaultIndex,
     bool multiSelect = false,
-  }) {
-    if (!interactive) {
-      if (defaultIndex != null &&
-          defaultIndex >= 0 &&
-          defaultIndex < choices.length) {
-        return multiSelect
-            ? <String>[choices[defaultIndex]]
-            : choices[defaultIndex];
-      }
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    writeln(_promptStyle().render(question));
-    for (var i = 0; i < choices.length; i++) {
-      writeln('  [$i] ${choices[i]}');
-    }
-
-    if (!multiSelect) {
-      final prompt = defaultIndex == null
-          ? 'Select an option'
-          : 'Select an option [$defaultIndex]';
-      final raw = ask(prompt, defaultValue: defaultIndex?.toString());
-      final parsed = int.tryParse(raw);
-      if (parsed == null || parsed < 0 || parsed >= choices.length) {
-        throw StateError('Invalid selection: $raw');
-      }
-      return choices[parsed];
-    }
-
-    final prompt = defaultIndex == null
-        ? 'Select options (comma separated)'
-        : 'Select options (comma separated) [$defaultIndex]';
-    final raw = ask(prompt, defaultValue: defaultIndex?.toString());
-    final parts = raw
-        .split(',')
-        .map((p) => p.trim())
-        .where((p) => p.isNotEmpty)
-        .toList(growable: false);
-    final selected = <String>[];
-    for (final part in parts) {
-      final parsed = int.tryParse(part);
-      if (parsed == null || parsed < 0 || parsed >= choices.length) {
-        throw StateError('Invalid selection: $part');
-      }
-      selected.add(choices[parsed]);
-    }
-    return selected;
-  }
+  }) => _consolePrompts.choice(
+    question,
+    choices: choices,
+    defaultIndex: defaultIndex,
+    multiSelect: multiSelect,
+  );
 
   /// Prompts for a numeric value.
   ///
@@ -1320,9 +1261,6 @@ class Console implements ConsoleOperationHost {
   // ─────────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
-
-  Style _promptStyle() =>
-      _componentStyle(componentTheme.promptStyle(renderConfig), 'question');
 
   Style _componentStyle(Style themed, String role) {
     return resolveConsoleComponentStyle(themed, getStyle(role));
