@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.4.1
+## 0.4.0
+
+### Added
+
+- Added `example/text_style`, a runnable catalog covering immutable updates,
+  `Style` composition, span inheritance and resets, selectable text,
+  decorations, and the separate ASCII-art font model.
 
 ### Changed
 
@@ -8,11 +14,6 @@
   matching, selection, and visible-window calculation into `artisanal`; the
   widget keeps compatibility aliases, mouse/focus/theme chrome, and
   delegates ranking plus scrolling to the shared controller.
-
-## 0.4.0
-
-### Changed
-
 - Forwarded `RenderMetricsInjector` custom entries to Artisanal's universal
   program developer tools overlay while preserving the existing widget-local
   metrics stream.
@@ -61,17 +62,6 @@
   one microtask instead of throwing.
 - Ensured `ReloadFileWatcher.watch` waits for native watcher installation before
   returning, so immediate file changes are not missed.
-
-## 0.3.1
-
-### Added
-
-- Added `example/text_style`, a runnable catalog covering immutable updates,
-  `Style` composition, span inheritance and resets, selectable text,
-  decorations, and the separate ASCII-art font model.
-
-### Fixed
-
 - Preserved `TextStyle` decoration colors through text rendering copies.
 - Preserved `TextStyle` presentation across soft-wrapped continuation lines
   and made plain and rich `Text` wrap content before resizing `Style` borders

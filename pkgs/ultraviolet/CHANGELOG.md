@@ -1,17 +1,5 @@
 # Changelog
 
-## 0.5.2
-
-### Fixed
-
-- Taught the ANSI cell slicer device-control strings (Kitty APC, Sixel
-  DCS, plus PM/SOS, 7-bit and C1 forms): payloads tokenize whole with
-  display widths matching `Ansi.visibleLength` (Kitty transmit/put
-  occupies `c` columns, Sixel one), so cuts never split base64/sixel
-  data into visible-text garbage. Partially covered images are excluded
-  whole rather than fragmented.
-- Exported `truncateLeftAnsiByCells` alongside `cutAnsiByCells`.
-
 ## 0.5.1
 
 ### Changed
@@ -30,6 +18,13 @@
 
 ### Fixed
 
+- Taught the ANSI cell slicer device-control strings (Kitty APC, Sixel
+  DCS, plus PM/SOS, 7-bit and C1 forms): payloads tokenize whole with
+  display widths matching `Ansi.visibleLength` (Kitty transmit/put
+  occupies `c` columns, Sixel one), so cuts never split base64/sixel
+  data into visible-text garbage. Partially covered images are excluded
+  whole rather than fragmented.
+- Exported `truncateLeftAnsiByCells` alongside `cutAnsiByCells`.
 - Kept the main `ultraviolet.dart` entrypoint browser-compatible by loading
   the Windows native console reader only on `dart:io` platforms.
 - Preserved SGR attributes, underline variants and colors (including explicit

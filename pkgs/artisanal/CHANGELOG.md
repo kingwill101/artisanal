@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.1
+## 0.6.0
 
 ### Added
 
@@ -94,23 +94,6 @@
   markdown barrel; the `media-composer` viewer paints halfblock pixels
   or terminal-native Kitty/iTerm2/Sixel images inside the modal, with a
   manual protocol cycle (`ctrl+p`) and `esc`/`q` viewer close.
-
-### Changed
-
-- Moved builtin language data out of core logic: `CodeLanguageProfile` now
-  implements `EditorLanguageAdapter`, and the colon-indent rule lives on the
-  Python/YAML adapters instead of a hardcoded branch in `code_edit_policy.dart`.
-  `resolveCodeLanguageProfile` keeps its signature as a registry-backed shim.
-- Split `editing.dart` / `viewing.dart` barrels into core-only exports;
-  `package:artisanal/editor_core.dart` and `package:artisanal/artisanal.dart`
-  re-export `code_extensions.dart` for backwards compatibility.
-- Kept terminal graphics commands outside DEC synchronized-update frames so
-  Kitty placements render correctly in Ghostty.
-
-## 0.6.0
-
-### Added
-
 - Added `FrameView`, `FrameArea`, and `FrameRenderable` for immediate-mode TEA
   views that position Artisanal styled strings without exposing renderer cells.
 - Added pure horizontal and vertical `FrameLayout` splitting with fixed,
@@ -133,6 +116,15 @@
 
 ### Changed
 
+- Moved builtin language data out of core logic: `CodeLanguageProfile` now
+  implements `EditorLanguageAdapter`, and the colon-indent rule lives on the
+  Python/YAML adapters instead of a hardcoded branch in `code_edit_policy.dart`.
+  `resolveCodeLanguageProfile` keeps its signature as a registry-backed shim.
+- Split `editing.dart` / `viewing.dart` barrels into core-only exports;
+  `package:artisanal/editor_core.dart` and `package:artisanal/artisanal.dart`
+  re-export `code_extensions.dart` for backwards compatibility.
+- Kept terminal graphics commands outside DEC synchronized-update frames so
+  Kitty placements render correctly in Ghostty.
 - Simplified CLI GUI helpers behind shared presentation, prompt, and operation
   services. `Console` and `Console.components` now use the same capability,
   styling, spinner, progress, task, workflow, countdown, and prompt
@@ -193,6 +185,12 @@
 - Generated Zsh completion wrappers now forward the actual cursor position
   instead of treating every completion request as if the cursor were at the
   start of the command line.
+- Preserved underline colors when copying `Style` and kept a standalone
+  `TextStyle.decorationStyle` from enabling an otherwise unspecified underline.
+- Kept `TextStyle` underline and line-through decorations continuous across
+  interior spaces while preserving `Style`'s explicit whitespace controls.
+- Preserved ANSI styling and hyperlinks across `Layout.wrap()` continuation
+  lines and hard-wrapped overlong text to its requested cell width.
 
 ### Removed
 
@@ -206,17 +204,6 @@
 - Removed the dependency on `artisanal_widgets`, including the widget runner
   APIs and the `widgets.dart` / `testing.dart` re-export entrypoints. Widget
   applications now import those APIs from `package:artisanal_widgets`.
-
-## 0.5.1
-
-### Fixed
-
-- Preserved underline colors when copying `Style` and kept a standalone
-  `TextStyle.decorationStyle` from enabling an otherwise unspecified underline.
-- Kept `TextStyle` underline and line-through decorations continuous across
-  interior spaces while preserving `Style`'s explicit whitespace controls.
-- Preserved ANSI styling and hyperlinks across `Layout.wrap()` continuation
-  lines and hard-wrapped overlong text to its requested cell width.
 
 ## 0.5.0
 
