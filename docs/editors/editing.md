@@ -190,6 +190,9 @@ Markdown-oriented commands expose prefix toggling, numbered-list
 toggle/renumber, heading toggle, and checklist state. Their optional arguments
 use simple portable values: `String` for prefixes/markers and `int` for list
 starts/heading levels.
+Other configurable commands accept an integer indentation width, a boolean
+`cleanupWhitespace` trailing-line policy, or `EditorSortLinesArgument` for
+descending and case-sensitive sorting.
 
 This means a host may consume a key before `TextAreaModel.update` and dispatch
 the same command itself:

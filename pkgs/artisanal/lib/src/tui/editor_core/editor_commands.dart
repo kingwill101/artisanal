@@ -110,6 +110,20 @@ final class EditorWrapSelectionArgument {
   final String? after;
 }
 
+/// Options supplied to the argument-taking `sortSelectedLines` command.
+final class EditorSortLinesArgument {
+  const EditorSortLinesArgument({
+    this.descending = false,
+    this.caseSensitive = false,
+  });
+
+  /// Whether lines are sorted from greatest to least.
+  final bool descending;
+
+  /// Whether letter case participates in comparisons.
+  final bool caseSensitive;
+}
+
 /// A stable, discoverable editor operation.
 ///
 /// Commands separate user intent from key events. A TUI, widget host, command

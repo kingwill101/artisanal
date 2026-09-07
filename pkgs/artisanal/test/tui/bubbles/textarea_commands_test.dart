@@ -207,6 +207,48 @@ void main() {
       expect(model.value, 'AL\npha beta');
     });
 
+    test('line commands accept portable option arguments', () {
+      final model = TextAreaModel()
+        ..setText('beta  \nAlpha\nalpha\n\n', recordHistory: false)
+        ..selectAll();
+
+      expect(
+        model.executeCommand(
+          EditorCommandIds.cleanupWhitespace,
+          argument: false,
+        ),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'beta\nAlpha\nalpha\n\n');
+
+      expect(
+        model.executeCommand(
+          EditorCommandIds.sortSelectedLines,
+          argument: const EditorSortLinesArgument(
+            descending: true,
+            caseSensitive: true,
+          ),
+        ),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'beta\nalpha\nAlpha\n\n');
+
+      expect(
+        model.executeCommand(EditorCommandIds.indentLines, argument: 4),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '    beta\n    alpha\n    Alpha\n    \n');
+      expect(
+        model.executeCommand(EditorCommandIds.outdentLines, argument: 4),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'beta\nalpha\nAlpha\n\n');
+      expect(
+        model.executeCommand(EditorCommandIds.indentLines, argument: 0),
+        EditorCommandDispatchResult.noChange,
+      );
+    });
+
     test('wrap command accepts symmetric and asymmetric delimiters', () {
       final model = TextAreaModel()
         ..setText('word', recordHistory: false)

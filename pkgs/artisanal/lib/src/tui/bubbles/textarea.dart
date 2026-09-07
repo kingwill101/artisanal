@@ -3105,6 +3105,12 @@ class TextAreaModel extends ViewComponent {
         label: 'Clean Up Whitespace',
         category: 'Transform',
         execute: (model) => model.cleanupWhitespace(),
+        executeWith: (model, argument) => switch (argument) {
+          final bool trimTrailingBlankLines => model.cleanupWhitespace(
+            trimTrailingBlankLines: trimTrailingBlankLines,
+          ),
+          _ => false,
+        },
       ),
       EditorCommand(
         id: EditorCommandIds.joinLines,
@@ -3123,6 +3129,13 @@ class TextAreaModel extends ViewComponent {
         label: 'Sort Selected Lines',
         category: 'Transform',
         execute: (model) => model.sortSelectedLines(),
+        executeWith: (model, argument) => switch (argument) {
+          final EditorSortLinesArgument options => model.sortSelectedLines(
+            descending: options.descending,
+            caseSensitive: options.caseSensitive,
+          ),
+          _ => false,
+        },
       ),
       EditorCommand(
         id: EditorCommandIds.wrapSelection,
@@ -3331,12 +3344,20 @@ class TextAreaModel extends ViewComponent {
         label: 'Indent Lines',
         category: 'Edit',
         execute: (model) => model.indentLines(),
+        executeWith: (model, argument) => switch (argument) {
+          final int width when width > 0 => model.indentLines(width: width),
+          _ => false,
+        },
       ),
       EditorCommand(
         id: EditorCommandIds.outdentLines,
         label: 'Outdent Lines',
         category: 'Edit',
         execute: (model) => model.outdentLines(),
+        executeWith: (model, argument) => switch (argument) {
+          final int width when width > 0 => model.outdentLines(width: width),
+          _ => false,
+        },
       ),
       EditorCommand(
         id: EditorCommandIds.deleteLine,

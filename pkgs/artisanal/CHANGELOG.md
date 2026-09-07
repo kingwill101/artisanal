@@ -52,8 +52,8 @@
   through named commands (including argument-taking insert and undoable
   transpose/word-case transforms), exposed line and selection transforms to
   command palettes, added typed selection wrapping and Markdown line-transform
-  commands, and made `TextView` skip folded lines without stranding cursors in
-  hidden bodies.
+  commands, added portable indent/cleanup/sort command options, and made
+  `TextView` skip folded lines without stranding cursors in hidden bodies.
 - Preserved each selection range's anchor and active edge independently, so
   repeated backward extension, anchor crossing, edit mapping, and primary
   cursor placement behave consistently for one or many selections.
