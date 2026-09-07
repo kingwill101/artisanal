@@ -203,6 +203,149 @@ final class ConsoleOperations {
     );
   }
 
+  /// Runs a numbered sequence of workflow steps.
+  Future<StepsResult> steps({
+    String? title,
+    required List<(String name, FutureOr<void> Function() action)> steps,
+    bool continueOnError = false,
+  }) async {
+    if (steps.isEmpty) {
+      return const StepsResult(completed: [], failed: [], skipped: []);
+    }
+
+    final terminal = host.promptTerminal;
+    final interactive = supportsInteractiveConsole(
+      host.interactive,
+      () => terminal,
+    );
+    final watch = Stopwatch()..start();
+    final total = steps.length;
+    final numberWidth = total.toString().length;
+
+    if (title != null) {
+      host.writeln(_baseStyle().bold().render(title));
+      host.newLine();
+    }
+
+    final completed = <String>[];
+    final failed = <(String, Object)>[];
+    final skipped = <String>[];
+
+    for (var index = 0; index < steps.length; index++) {
+      final (name, action) = steps[index];
+      final number = (index + 1).toString().padLeft(numberWidth);
+      final prefix = '[$number/$total]';
+
+      if (interactive) {
+        terminal.hideCursor();
+        final stepWatch = Stopwatch()..start();
+        var spinnerTick = 0;
+        const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        Timer? timer;
+
+        try {
+          void renderRunning() {
+            final style = _styleFor('info');
+            terminal
+              ..clearLine()
+              ..write(
+                '  ${style.render(prefix)} $name ${style.render(frames[spinnerTick % frames.length])}',
+              );
+            spinnerTick++;
+          }
+
+          timer = Timer.periodic(
+            const Duration(milliseconds: 83),
+            (_) => renderRunning(),
+          );
+          renderRunning();
+          await action();
+          stepWatch.stop();
+          terminal
+            ..clearLine()
+            ..writeln(
+              '  ${_styleFor('success').render(prefix)} $name ${_styleFor('success').render(StatusChars.check)} ${_muted(formatConsoleDuration(stepWatch.elapsed))}',
+            );
+          completed.add(name);
+        } catch (error) {
+          stepWatch.stop();
+          terminal
+            ..clearLine()
+            ..writeln(
+              '  ${_styleFor('error').render(prefix)} $name ${_styleFor('error').render(StatusChars.cross)} ${_muted(formatConsoleDuration(stepWatch.elapsed))}',
+            );
+          failed.add((name, error));
+          if (!continueOnError) {
+            _appendSkippedSteps(
+              steps,
+              after: index,
+              total: total,
+              numberWidth: numberWidth,
+              skipped: skipped,
+            );
+            break;
+          }
+        } finally {
+          timer?.cancel();
+          terminal.showCursor();
+        }
+      } else {
+        host.write('  $prefix $name... ');
+        try {
+          await action();
+          host.writeln(_styleFor('success').render('done'));
+          completed.add(name);
+        } catch (error) {
+          host.writeln(_styleFor('error').render('failed'));
+          failed.add((name, error));
+          if (!continueOnError) {
+            _appendSkippedSteps(
+              steps,
+              after: index,
+              total: total,
+              numberWidth: numberWidth,
+              skipped: skipped,
+            );
+            break;
+          }
+        }
+      }
+    }
+
+    watch.stop();
+    host.newLine();
+    final summary = failed.isEmpty
+        ? 'All ${completed.length} step(s) completed in ${formatConsoleDuration(watch.elapsed)}'
+        : 'Steps: ${completed.length} completed, ${failed.length} failed, ${skipped.length} skipped';
+    host.writeln(
+      _styleFor(failed.isEmpty ? 'success' : 'error').render(summary),
+    );
+
+    return StepsResult(
+      completed: completed,
+      failed: failed,
+      skipped: skipped,
+      duration: watch.elapsed,
+    );
+  }
+
+  void _appendSkippedSteps(
+    List<(String name, FutureOr<void> Function() action)> steps, {
+    required int after,
+    required int total,
+    required int numberWidth,
+    required List<String> skipped,
+  }) {
+    for (var index = after + 1; index < steps.length; index++) {
+      final name = steps[index].$1;
+      skipped.add(name);
+      final number = (index + 1).toString().padLeft(numberWidth);
+      host.writeln(
+        '  ${_muted('[$number/$total]')} ${_muted(name)} ${_muted('${PaginationDots.inactive} skipped')}',
+      );
+    }
+  }
+
   /// Runs an operation while displaying a spinner or a plain fallback.
   Future<T> spin<T>(
     String message, {

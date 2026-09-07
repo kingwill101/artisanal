@@ -47,6 +47,44 @@ final class _OperationHost implements ConsoleOperationHost {
 
 void main() {
   group('ConsoleOperations', () {
+    test('steps account for unrun plain operations as skipped', () async {
+      final host = _OperationHost(interactive: false);
+      var skippedOperationRan = false;
+
+      final result = await ConsoleOperations(host).steps(
+        title: 'Deploy',
+        steps: [
+          ('Build', () async {}),
+          ('Test', () async => throw StateError('failed')),
+          (
+            'Publish',
+            () async {
+              skippedOperationRan = true;
+            },
+          ),
+        ],
+      );
+
+      expect(result.completed, ['Build']);
+      expect(result.failed.single.$1, 'Test');
+      expect(result.skipped, ['Publish']);
+      expect(skippedOperationRan, isFalse);
+      expect(host.output.toString(), contains('[3/3] Publish'));
+      expect(host.output.toString(), contains('1 failed, 1 skipped'));
+    });
+
+    test('steps restore the cursor after an interactive failure', () async {
+      final host = _OperationHost(interactive: true);
+
+      final result = await ConsoleOperations(
+        host,
+      ).steps(steps: [('Build', () async => throw StateError('failed'))]);
+
+      expect(result.failed.single.$1, 'Build');
+      expect(host.promptTerminal.output, contains('✗'));
+      expect(host.promptTerminal.operations.last, 'showCursor');
+    });
+
     test('task groups preserve failures and skipped operations', () async {
       final host = _OperationHost(interactive: false);
       var skippedOperationRan = false;

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import '../terminal/ansi.dart' show Ansi;
-import '../style/chars.dart';
 import '../tui/bubbles/components/base.dart';
 import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
@@ -16,7 +15,6 @@ import '../style/verbosity.dart';
 import 'components.dart';
 import 'component_theme.dart';
 import 'console_context.dart';
-import 'console_format.dart';
 import 'console_operations.dart';
 import 'console_presentation.dart';
 import 'operation_results.dart';
@@ -911,136 +909,11 @@ class Console implements ConsoleOperationHost {
     String? title,
     required List<(String name, FutureOr<void> Function() action)> steps,
     bool continueOnError = false,
-  }) async {
-    if (steps.isEmpty) {
-      return const StepsResult(completed: [], failed: [], skipped: []);
-    }
-
-    final terminal = promptTerminal;
-    final supportsInteractive = supportsInteractiveConsole(
-      interactive,
-      () => terminal,
-    );
-    final watch = Stopwatch()..start();
-    final totalSteps = steps.length;
-    final stepWidth = totalSteps.toString().length;
-
-    if (title != null) {
-      writeln(_style.bold().render(title));
-      newLine();
-    }
-
-    final completed = <String>[];
-    final failed = <(String, Object)>[];
-    final skipped = <String>[];
-    var hadError = false;
-
-    for (var i = 0; i < steps.length; i++) {
-      final (name, action) = steps[i];
-      final stepNum = (i + 1).toString().padLeft(stepWidth);
-      final prefix = '[$stepNum/$totalSteps]';
-
-      if (hadError && !continueOnError) {
-        skipped.add(name);
-        writeln(
-          '  ${_style.dim().render(prefix)} ${_style.dim().render(name)} ${_style.dim().render('${PaginationDots.inactive} skipped')}',
-        );
-        continue;
-      }
-
-      if (supportsInteractive) {
-        terminal.hideCursor();
-        final stepWatch = Stopwatch()..start();
-
-        // Show running state
-        var spinnerTick = 0;
-        const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        Timer? spinnerTimer;
-
-        try {
-          spinnerTimer = Timer.periodic(const Duration(milliseconds: 83), (_) {
-            final frame = frames[spinnerTick % frames.length];
-            spinnerTick++;
-            terminal.clearLine();
-            terminal.write(
-              '  ${(getStyle('info') ?? _style.foreground(Colors.info)).render(prefix)} $name ${(getStyle('info') ?? _style.foreground(Colors.info)).render(frame)}',
-            );
-          });
-
-          // Show initial state
-          terminal.write(
-            '  ${(getStyle('info') ?? _style.foreground(Colors.info)).render(prefix)} $name ${(getStyle('info') ?? _style.foreground(Colors.info)).render(frames[0])}',
-          );
-
-          await action();
-
-          spinnerTimer.cancel();
-          stepWatch.stop();
-          terminal.clearLine();
-          terminal.writeln(
-            '  ${(getStyle('success') ?? _style.foreground(Colors.success)).render(prefix)} $name ${(getStyle('success') ?? _style.foreground(Colors.success)).render(StatusChars.check)} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
-          );
-          completed.add(name);
-        } catch (e) {
-          spinnerTimer?.cancel();
-          stepWatch.stop();
-          terminal.clearLine();
-          terminal.writeln(
-            '  ${(getStyle('error') ?? _style.foreground(Colors.error)).render(prefix)} $name ${(getStyle('error') ?? _style.foreground(Colors.error)).render(StatusChars.cross)} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
-          );
-          failed.add((name, e));
-          hadError = true;
-          if (!continueOnError) {
-            // Mark remaining as skipped
-            for (var j = i + 1; j < steps.length; j++) {
-              skipped.add(steps[j].$1);
-              final skipNum = (j + 1).toString().padLeft(stepWidth);
-              writeln(
-                '  ${_style.dim().render('[$skipNum/$totalSteps]')} ${_style.dim().render(steps[j].$1)} ${_style.dim().render('${PaginationDots.inactive} skipped')}',
-              );
-            }
-            break;
-          }
-        } finally {
-          terminal.showCursor();
-        }
-      } else {
-        // Non-interactive fallback
-        write('  $prefix $name... ');
-        try {
-          await action();
-          writeln(_style.foreground(Colors.success).render('done'));
-          completed.add(name);
-        } catch (e) {
-          writeln(_style.foreground(Colors.error).render('failed'));
-          failed.add((name, e));
-          hadError = true;
-          if (!continueOnError) break;
-        }
-      }
-    }
-
-    watch.stop();
-
-    // Summary
-    newLine();
-    if (failed.isEmpty) {
-      success(
-        'All ${completed.length} step(s) completed in ${_formatDuration(watch.elapsed)}',
-      );
-    } else {
-      error(
-        'Steps: ${completed.length} completed, ${failed.length} failed, ${skipped.length} skipped',
-      );
-    }
-
-    return StepsResult(
-      completed: completed,
-      failed: failed,
-      skipped: skipped,
-      duration: watch.elapsed,
-    );
-  }
+  }) => _consoleOperations.steps(
+    title: title,
+    steps: steps,
+    continueOnError: continueOnError,
+  );
 
   /// Displays a countdown timer.
   ///
@@ -1662,8 +1535,6 @@ class Console implements ConsoleOperationHost {
     return message.toString().split('\n');
   }
 }
-
-String _formatDuration(Duration duration) => formatConsoleDuration(duration);
 
 /// Extension to allow [DisplayComponent]s to be written directly to a [Console].
 extension DisplayComponentExtension on DisplayComponent {
