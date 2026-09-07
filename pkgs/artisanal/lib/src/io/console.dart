@@ -16,6 +16,7 @@ import 'component_theme.dart';
 import 'console_context.dart';
 import 'console_operations.dart';
 import 'console_presentation.dart';
+import 'desktop_notifications.dart';
 import 'operation_results.dart';
 import 'output_theme.dart';
 import 'validators.dart';
@@ -235,6 +236,7 @@ class Console implements ConsoleOperationHost {
 
   Components? _components;
   ConsoleOperations? _operations;
+  static const _desktopNotifications = DesktopNotifications();
 
   /// Whether output is suppressed (quiet mode).
   bool get quiet => verbosity == Verbosity.quiet;
@@ -469,86 +471,13 @@ class Console implements ConsoleOperationHost {
     String subtitle = '',
     String sound = '',
     String icon = '',
-  }) async {
-    if (io.Platform.isMacOS) {
-      return _notifyMacOS(title, body: body, subtitle: subtitle, sound: sound);
-    }
-    if (io.Platform.isLinux) {
-      return _notifyLinux(title, body: body, icon: icon);
-    }
-    return false;
-  }
-
-  Future<bool> _notifyMacOS(
-    String title, {
-    String body = '',
-    String subtitle = '',
-    String sound = '',
-  }) async {
-    String esc(String s) =>
-        '"${s.replaceAll(r'\', r'\\').replaceAll('"', '\\"')}"';
-
-    final sb = StringBuffer('display notification ${esc(body)}');
-    sb.write(' with title ${esc(title)}');
-    if (subtitle.isNotEmpty) sb.write(' subtitle ${esc(subtitle)}');
-    if (sound.isNotEmpty) sb.write(' sound name ${esc(sound)}');
-
-    return _runProcess('osascript', ['-e', sb.toString()]);
-  }
-
-  Future<bool> _notifyLinux(
-    String title, {
-    String body = '',
-    String icon = '',
-  }) async {
-    // Try notify-send first.
-    final notifySend = await _findExecutable('notify-send');
-    if (notifySend != null) {
-      final args = <String>[];
-      if (icon.isNotEmpty) {
-        args.addAll(['--icon', icon]);
-      }
-      args.add(title);
-      if (body.isNotEmpty) args.add(body);
-      return _runProcess('notify-send', args);
-    }
-
-    // Fallback to kdialog.
-    final kdialog = await _findExecutable('kdialog');
-    if (kdialog != null) {
-      final message = body.isNotEmpty ? '$title: $body' : title;
-      return _runProcess('kdialog', [
-        '--passivepopup',
-        message,
-        '5',
-        '--title',
-        title,
-      ]);
-    }
-
-    return false;
-  }
-
-  /// Returns the full path of [executable] if it is on PATH, else null.
-  Future<String?> _findExecutable(String executable) async {
-    try {
-      final result = await io.Process.run('which', [executable]);
-      if (result.exitCode == 0) {
-        return (result.stdout as String).trim();
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  /// Runs [executable] with [args] and returns whether it exited successfully.
-  Future<bool> _runProcess(String executable, List<String> args) async {
-    try {
-      final result = await io.Process.run(executable, args);
-      return result.exitCode == 0;
-    } catch (_) {
-      return false;
-    }
-  }
+  }) => _desktopNotifications.send(
+    title,
+    body: body,
+    subtitle: subtitle,
+    sound: sound,
+    icon: icon,
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Message Blocks
