@@ -25,6 +25,9 @@ abstract interface class ConsoleOperationHost {
 
   /// Writes one output line.
   void writeln([String line = '']);
+
+  /// Writes one or more blank lines.
+  void newLine([int count = 1]);
 }
 
 /// Whether a console operation should use cursor-driven interactive output.

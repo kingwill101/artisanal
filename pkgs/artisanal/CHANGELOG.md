@@ -68,6 +68,8 @@
 - `Console.spin` now honors custom completion messages, and generated spinner
   results use the task's completed elapsed time rather than a near-zero
   precomputed duration.
+- Non-interactive task groups now report unrun operations as skipped after a
+  failure, matching the interactive task-group result.
 - Generated Zsh completion wrappers now forward the actual cursor position
   instead of treating every completion request as if the cursor were at the
   start of the command line.

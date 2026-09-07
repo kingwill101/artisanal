@@ -298,6 +298,7 @@ class Console implements ConsoleOperationHost {
   }
 
   /// Outputs one or more blank lines.
+  @override
   void newLine([int count = 1]) {
     for (var i = 0; i < count; i++) {
       writeln();
@@ -875,96 +876,13 @@ class Console implements ConsoleOperationHost {
     bool showProgress = true,
     bool continueOnError = false,
     Spinner spinner = Spinners.miniDot,
-  }) async {
-    if (tasks.isEmpty) {
-      return const TaskGroupResult(completed: [], failed: [], skipped: []);
-    }
-
-    final supportsInteractive = supportsInteractiveConsole(
-      interactive,
-      () => promptTerminal,
-    );
-    final watch = Stopwatch()..start();
-
-    if (title != null) {
-      writeln(_style.bold().render(title));
-    }
-
-    final completed = <String>[];
-    final failed = <(String, Object)>[];
-    final skipped = <String>[];
-    var hadError = false;
-
-    for (var i = 0; i < tasks.length; i++) {
-      final (description, taskFn) = tasks[i];
-
-      if (hadError && !continueOnError) {
-        skipped.add(description);
-        writeln(
-          '  ${_style.dim().render(PaginationDots.inactive)} $description ${_style.dim().render('(skipped)')}',
-        );
-        continue;
-      }
-
-      if (supportsInteractive) {
-        try {
-          await components.spin(
-            description,
-            run: taskFn,
-            spinner: spinner,
-            showResult: true,
-          );
-          completed.add(description);
-        } catch (e) {
-          failed.add((description, e));
-          hadError = true;
-          if (!continueOnError) {
-            // Mark remaining as skipped
-            for (var j = i + 1; j < tasks.length; j++) {
-              skipped.add(tasks[j].$1);
-            }
-            break;
-          }
-        }
-      } else {
-        // Non-interactive fallback
-        write('  $description... ');
-        try {
-          await taskFn();
-          writeln(_style.foreground(Colors.success).render('done'));
-          completed.add(description);
-        } catch (e) {
-          writeln(_style.foreground(Colors.error).render('failed'));
-          failed.add((description, e));
-          hadError = true;
-          if (!continueOnError) break;
-        }
-      }
-    }
-
-    watch.stop();
-
-    // Summary
-    if (title != null) {
-      newLine();
-      if (failed.isEmpty) {
-        success(
-          'Completed ${completed.length} task(s) in ${_formatDuration(watch.elapsed)}',
-        );
-      } else {
-        warn(
-          'Completed ${completed.length}, failed ${failed.length}, skipped ${skipped.length} in ${_formatDuration(watch.elapsed)}',
-        );
-      }
-    }
-
-    return TaskGroupResult(
-      completed: completed,
-      failed: failed,
-      skipped: skipped,
-      duration: watch.elapsed,
-    );
-  }
+  }) => _consoleOperations.taskGroup(
+    title: title,
+    tasks: tasks,
+    showProgress: showProgress,
+    continueOnError: continueOnError,
+    spinner: spinner,
+  );
 
   /// Displays a multi-step workflow with sequential steps.
   ///

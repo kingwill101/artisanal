@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../style/chars.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../tui/bubbles/spinner.dart';
@@ -102,6 +103,106 @@ final class ConsoleOperations {
     }
   }
 
+  /// Runs a sequential group of named operations.
+  Future<TaskGroupResult> taskGroup({
+    String? title,
+    required List<(String description, FutureOr<void> Function() task)> tasks,
+    bool showProgress = true,
+    bool continueOnError = false,
+    Spinner spinner = Spinners.miniDot,
+  }) async {
+    if (tasks.isEmpty) {
+      return const TaskGroupResult(completed: [], failed: [], skipped: []);
+    }
+
+    final interactive = supportsInteractiveConsole(
+      host.interactive,
+      () => host.promptTerminal,
+    );
+    final watch = Stopwatch()..start();
+    if (title != null) host.writeln(_baseStyle().bold().render(title));
+
+    final completed = <String>[];
+    final failed = <(String, Object)>[];
+    final skipped = <String>[];
+    var hadError = false;
+
+    for (var index = 0; index < tasks.length; index++) {
+      final (description, operation) = tasks[index];
+      if (hadError && !continueOnError) {
+        skipped.add(description);
+        host.writeln(
+          '  ${_muted(PaginationDots.inactive)} $description ${_muted('(skipped)')}',
+        );
+        continue;
+      }
+
+      if (interactive) {
+        try {
+          await spin(
+            description,
+            run: operation,
+            spinner: spinner,
+            showResult: true,
+          );
+          completed.add(description);
+        } catch (error) {
+          failed.add((description, error));
+          hadError = true;
+          if (!continueOnError) {
+            for (
+              var remaining = index + 1;
+              remaining < tasks.length;
+              remaining++
+            ) {
+              skipped.add(tasks[remaining].$1);
+            }
+            break;
+          }
+        }
+      } else {
+        host.write('  $description... ');
+        try {
+          await operation();
+          host.writeln(_styleFor('success').render('done'));
+          completed.add(description);
+        } catch (error) {
+          host.writeln(_styleFor('error').render('failed'));
+          failed.add((description, error));
+          hadError = true;
+          if (!continueOnError) {
+            for (
+              var remaining = index + 1;
+              remaining < tasks.length;
+              remaining++
+            ) {
+              skipped.add(tasks[remaining].$1);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    watch.stop();
+    if (title != null) {
+      host.newLine();
+      final summary = failed.isEmpty
+          ? 'Completed ${completed.length} task(s) in ${formatConsoleDuration(watch.elapsed)}'
+          : 'Completed ${completed.length}, failed ${failed.length}, skipped ${skipped.length} in ${formatConsoleDuration(watch.elapsed)}';
+      host.writeln(
+        _styleFor(failed.isEmpty ? 'success' : 'warning').render(summary),
+      );
+    }
+
+    return TaskGroupResult(
+      completed: completed,
+      failed: failed,
+      skipped: skipped,
+      duration: watch.elapsed,
+    );
+  }
+
   /// Runs an operation while displaying a spinner or a plain fallback.
   Future<T> spin<T>(
     String message, {
@@ -176,6 +277,8 @@ final class ConsoleOperations {
   }
 
   String _muted(String text) => _styleFor('muted').render(text);
+
+  Style _baseStyle() => host.renderConfig.configureStyle(Style());
 
   String _taskStatus(TaskResult result) {
     final (role, fallback, label) = switch (result) {

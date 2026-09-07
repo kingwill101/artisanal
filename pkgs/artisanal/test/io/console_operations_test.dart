@@ -36,10 +36,42 @@ final class _OperationHost implements ConsoleOperationHost {
 
   @override
   void writeln([String line = '']) => output.writeln(line);
+
+  @override
+  void newLine([int count = 1]) {
+    for (var index = 0; index < count; index++) {
+      writeln();
+    }
+  }
 }
 
 void main() {
   group('ConsoleOperations', () {
+    test('task groups preserve failures and skipped operations', () async {
+      final host = _OperationHost(interactive: false);
+      var skippedOperationRan = false;
+
+      final result = await ConsoleOperations(host).taskGroup(
+        title: 'Deploy',
+        tasks: [
+          ('Build', () async {}),
+          ('Test', () async => throw StateError('failed')),
+          (
+            'Publish',
+            () async {
+              skippedOperationRan = true;
+            },
+          ),
+        ],
+      );
+
+      expect(result.completed, ['Build']);
+      expect(result.failed.single.$1, 'Test');
+      expect(result.skipped, ['Publish']);
+      expect(skippedOperationRan, isFalse);
+      expect(host.output.toString(), contains('1, failed 1, skipped 1'));
+    });
+
     test('renders a plain task through the shared operation host', () async {
       final host = _OperationHost(interactive: false);
 
