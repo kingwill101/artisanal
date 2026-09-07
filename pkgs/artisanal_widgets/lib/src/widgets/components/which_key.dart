@@ -3,7 +3,8 @@ import '_component_foundation.dart';
 import 'frame.dart';
 
 import 'package:artisanal/style.dart' show Color, Border, Style;
-import 'package:artisanal/runtime.dart' show KeyChordBinding, ShortcutContinuation;
+import 'package:artisanal/runtime.dart'
+    show KeyChordBinding, ShortcutContinuation;
 
 /// Layout mode for [WhichKeyPanel].
 enum WhichKeyLayout {
@@ -193,7 +194,8 @@ class WhichKeyPanel extends StatelessWidget {
       if (groups.length > 1) ...[
         Spacer(),
         Text(
-          groups.map((g) => g == (selectedGroup ?? groups.first) ? '[$g]' : g)
+          groups
+              .map((g) => g == (selectedGroup ?? groups.first) ? '[$g]' : g)
               .join('  '),
           style: headerStyle,
         ),
@@ -221,10 +223,7 @@ class WhichKeyPanel extends StatelessWidget {
           Divider(style: Style().foreground(border)),
           body,
           if (layout == WhichKeyLayout.overlay)
-            Text(
-              'esc cancel',
-              style: headerStyle,
-            ),
+            Text('esc cancel', style: headerStyle),
         ],
       ),
     );

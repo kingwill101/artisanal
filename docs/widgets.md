@@ -195,6 +195,11 @@ await runWidgetApp(
 Set `scanZones: true` when you want automatic zone scanning at the root.
 Use `debugRebuilds: true` to log dirty element rebuilds.
 
+For one diagnostics overlay shared with raw `artisanal` programs, configure
+`ProgramOptions.diagnostics` on the program host. Existing
+`RenderMetricsInjector` custom metrics are forwarded to that universal overlay
+as well as the widget-local metrics provider.
+
 `WidgetApp` runs collected widget/state `handleInit()` commands via
 `ParallelCmd`, which ensures runtime-managed commands (for example
 `EveryCmd`/`StreamCmd`) are started correctly.
@@ -356,15 +361,20 @@ await runWidgetApp(
 
 #### Debug Overlay
 
-Set `debugOverlay: true` on `ArtisanalApp` (or `WidgetApp`) to show an
-always-on HUD that displays FPS, frame timing, and any custom metrics
-injected via `RenderMetricsInjector`. Press **F12** at runtime to toggle.
+Widget hosts use Artisanal's program-owned diagnostics overlay. It displays
+FPS, frame timing, runtime messages, captured output, hot-reload activity, and
+custom metrics injected via `RenderMetricsInjector`. Press **F12** at runtime
+to toggle.
 
 ```dart
-ArtisanalApp(
-  debugOverlay: true,
-  debugOverlayPosition: DebugOverlayPosition.topRight,
-  home: MyApp(),
+runWidgetApp(
+  ArtisanalApp(home: MyApp()),
+  options: ProgramOptions(
+    diagnostics: ProgramDiagnosticsOptions(
+      initiallyVisible: true,
+      position: ProgramDiagnosticsPosition.topRight,
+    ),
+  ),
 )
 ```
 
@@ -374,8 +384,9 @@ ArtisanalApp(
 |-----------|---------|-------------|
 | `enableRenderMetrics` | `true` | Subscribe to `RenderMetricsMsg` from TUI runtime |
 | `enableRenderMetricsInjection` | `true` | Listen to `RenderMetricsInjector` stream |
-| `debugOverlay` | `false` | Show runtime debug overlay on startup |
-| `debugOverlayPosition` | `topRight` | Where the overlay appears |
+The former `WidgetApp.debugOverlay` and `debugOverlayPosition` options were
+removed. Configure `ProgramDiagnosticsOptions` so raw TUI and widget apps use
+the same diagnostics session and presentation.
 
 ### Build Owner and Dirty Elements
 

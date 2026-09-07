@@ -37,6 +37,8 @@
   lines; oversized graphemes now make progress at narrower wrap widths.
 - Prevented style-cache fingerprint collisions from leaking underline and
   other decorations into later text with the same foreground color.
+- Prevented malformed OSC 8 hyperlinks containing control characters from
+  crashing cell-buffer rendering; unsafe links are now discarded.
 
 ## 0.5.0
 

@@ -2,7 +2,7 @@ import 'dart:async';
 import '_component_foundation.dart';
 import '../navigation/navigator.dart';
 import 'action_button.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
 
@@ -129,7 +129,7 @@ class _DialogConfirmState extends State<DialogConfirm> {
 
     return SizedBox(
       width: w,
-      child: Frame(
+      child: widget_frame.Frame(
         background: bg,
         padding: const EdgeInsets.only(left: 2, right: 2, top: 1, bottom: 1),
         child: Column(

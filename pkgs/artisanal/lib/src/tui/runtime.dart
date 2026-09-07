@@ -160,9 +160,24 @@ export 'pane_manager.dart'
 export 'view.dart'
     show
         View,
+        Frame,
+        FrameArea,
+        FrameView,
+        FramePainter,
+        FrameRenderable,
         TerminalProgressBar,
         TerminalProgressBarState,
         KeyboardEnhancements;
+
+export 'frame_layout.dart'
+    show
+        FrameAxis,
+        FrameInsets,
+        FrameConstraint,
+        FrameLength,
+        FramePercentage,
+        FrameFill,
+        FrameLayout;
 
 export 'program.dart'
     show
@@ -184,6 +199,14 @@ export 'program.dart'
         runProgram,
         runProgramWithResult,
         runProgramDebug;
+
+export 'program_devtools.dart'
+    show
+        ProgramDiagnosticsOptions,
+        ProgramDiagnosticsPosition,
+        ProgramDiagnostics,
+        ProgramDiagnosticsMetrics,
+        ProgramDevToolsController;
 
 export 'key_chord.dart'
     show KeyChordInterceptor, KeyChordBinding, chordBindings;

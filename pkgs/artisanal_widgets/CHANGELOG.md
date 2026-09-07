@@ -8,6 +8,12 @@
   matching, selection, and visible-window calculation into `artisanal`; the
   widget keeps compatibility aliases, mouse/focus/theme chrome, and
   delegates ranking plus scrolling to the shared controller.
+- Forwarded `RenderMetricsInjector` custom entries to Artisanal's universal
+  program developer tools overlay while preserving the existing widget-local
+  metrics stream.
+- Removed `WidgetApp`'s separate built-in metrics overlay and F12 handler.
+  Widget hosts now enable program diagnostics by default; configure visibility,
+  position, and shortcuts with `ProgramDiagnosticsOptions`.
 - Routed framework internals through Artisanal's narrow runtime entrypoint so
   widget app imports do not load unrelated native Markdown dependencies.
 - Kept both `app.dart` and the complete `widgets.dart` public surface
@@ -36,6 +42,20 @@
 
 - Removed the unused slot registry, plugin mounting, mixed slot region, and
   remote plugin surface widget APIs and examples.
+
+### Fixed
+
+- Fixed a startup panic (`Unsupported operation: Infinity or NaN toInt`)
+  when a scroll viewport had unbounded height: `RenderSingleChildViewport`
+  now shrink-wraps to its content height instead of reporting an infinite
+  size, and the `scrollbar` example bounds its `Scrollbar` with an explicit
+  height like the `scroll` example does.
+- Fixed a reentrant-publish crash (`Bad state: Cannot fire new event`) in
+  `RenderMetricsInjector`: publishes made from inside dispatch (e.g. the
+  metrics listener synchronously triggering another render) are deferred
+  one microtask instead of throwing.
+- Ensured `ReloadFileWatcher.watch` waits for native watcher installation before
+  returning, so immediate file changes are not missed.
 
 ## 0.3.1
 

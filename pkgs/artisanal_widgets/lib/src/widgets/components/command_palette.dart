@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import '_component_foundation.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' as core;
@@ -448,7 +448,7 @@ class _CommandPaletteState extends State<CommandPalette> {
         width: paletteWidth,
         child: Container(
           color: bg,
-          child: Frame(
+          child: widget_frame.Frame(
             border: bdr,
             borderColor: bdrColor,
             padding: const EdgeInsets.only(top: 1, bottom: 1),

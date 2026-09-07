@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import '_component_foundation.dart';
 import 'button.dart';
 import 'card.dart';
-import 'frame.dart';
+import 'frame.dart' as widget_frame;
 import 'help_view.dart';
 import 'step_indicator.dart';
 
@@ -746,7 +746,7 @@ class _WizardState extends State<Wizard> {
   Widget _buildStepBody(BuildContext context, WizardFormStep step) {
     final theme = ThemeScope.of(context);
     return switch (step) {
-      _WizardTextInputStep current => Frame(
+      _WizardTextInputStep current => widget_frame.Frame(
         background: theme.background,
         padding: const EdgeInsets.symmetric(horizontal: 1),
         child: TextField(
@@ -765,7 +765,7 @@ class _WizardState extends State<Wizard> {
           },
         ),
       ),
-      _WizardPasswordStep current => Frame(
+      _WizardPasswordStep current => widget_frame.Frame(
         background: theme.background,
         padding: const EdgeInsets.symmetric(horizontal: 1),
         child: TextField(

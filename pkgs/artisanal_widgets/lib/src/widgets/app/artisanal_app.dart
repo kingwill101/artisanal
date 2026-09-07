@@ -5,7 +5,6 @@ import 'package:artisanal/runtime.dart' show View;
 
 import '../components/debug_console.dart'
     show DebugConsoleController, DebugConsoleHost;
-import '../components/debug_overlay.dart' show DebugOverlayPosition;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
 import '../layout/image.dart' show ImageAutoMode;
@@ -73,8 +72,6 @@ final class ArtisanalApp extends WidgetApp {
     super.handleFrameTick = false,
     super.enableRenderMetrics = true,
     super.enableRenderMetricsInjection = true,
-    super.debugOverlay = false,
-    super.debugOverlayPosition = DebugOverlayPosition.topRight,
     super.debugRebuilds = false,
   }) : assert(
          child != null ||

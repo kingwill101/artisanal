@@ -530,6 +530,30 @@ void main() {
       expect(timings, hasLength(1));
     });
 
+    test('reentrant inject defers instead of throwing', () async {
+      // Regression test: publishing from inside dispatch used to throw
+      // "Bad state: Cannot fire new event. Controller is already firing
+      // an event" (seen as a startup crash in the debug_overlay demo,
+      // where the metrics listener synchronously triggers another render).
+      final seen = <String>[];
+      final sub = RenderMetricsInjector.instance.stream.listen((event) {
+        seen.addAll(event.upsertEntries.keys);
+        if (event.upsertEntries.containsKey('outer')) {
+          RenderMetricsInjector.instance.setMetric('inner', '2');
+        }
+      });
+      try {
+        RenderMetricsInjector.instance.setMetric('outer', '1');
+        // Flush the deferred microtask.
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+        expect(seen, containsAll(<String>['outer', 'inner']));
+      } finally {
+        await sub.cancel();
+        RenderMetricsInjector.instance.clearMetrics();
+      }
+    });
+
     test('RenderMetricsInjector stream updates latestRenderMetrics', () async {
       final tester = WidgetTester();
       try {
@@ -544,96 +568,6 @@ void main() {
 
         expect(tester.app, isNotNull);
         expect(tester.app!.latestRenderMetrics, same(metrics));
-      } finally {
-        RenderMetricsInjector.instance.clearMetrics();
-        await tester.dispose();
-      }
-    });
-
-    test(
-      'RenderMetricsInjector custom entries appear in built-in overlay',
-      () async {
-        final tester = WidgetTester();
-        try {
-          await tester.pumpWidget(Text('content'), debugOverlay: true);
-
-          RenderMetricsInjector.instance.setMetric('Key->Render p50', '4.8ms');
-          RenderMetricsInjector.instance.setMetric('Queue depth', 2);
-          tester.pump();
-
-          expect(tester.find.text('Key->Render p50: 4.8ms'), isTrue);
-          expect(tester.find.text('Queue depth: 2'), isTrue);
-        } finally {
-          RenderMetricsInjector.instance.clearMetrics();
-          await tester.dispose();
-        }
-      },
-    );
-
-    test(
-      'RenderMetricsInjector render stats appear in built-in overlay',
-      () async {
-        final tester = WidgetTester();
-        try {
-          await tester.pumpWidget(Text('content'), debugOverlay: true);
-
-          const stats = ProgramRenderStats(
-            totalRenders: 12,
-            changedRenders: 9,
-            totalChangedCells: 144,
-            totalChangedSpans: 24,
-            maxDirtyLines: 3,
-            maxChangedCells: 18,
-            maxChangedSpans: 4,
-            totalRenderDuration: Duration(milliseconds: 60),
-            lastRenderGeneration: 12,
-            lastDegradationLevel: DegradationLevel.full,
-            lastChangeSummary: null,
-          );
-
-          RenderMetricsInjector.instance.setRenderStats(
-            stats,
-            prefix: 'Monitor',
-            replace: true,
-          );
-          tester.pump();
-
-          expect(
-            tester.find.text('Monitor renders: 12 (9 changed, 75%)'),
-            isTrue,
-          );
-          expect(tester.find.text('Monitor avg: 5.0ms'), isTrue);
-          expect(
-            tester.find.text('Monitor cells: 144 total / 18 peak'),
-            isTrue,
-          );
-          expect(tester.find.text('Monitor spans: 24 total / 4 peak'), isTrue);
-          expect(tester.find.text('Monitor dirty: 3 peak'), isTrue);
-          expect(tester.find.text('Monitor level: full'), isTrue);
-        } finally {
-          RenderMetricsInjector.instance.clearMetrics();
-          await tester.dispose();
-        }
-      },
-    );
-
-    test('built-in overlay publishes live key->render percentiles', () async {
-      final tester = WidgetTester(screenWidth: 120, screenHeight: 30);
-      try {
-        await tester.pumpWidget(_KeyCounterWidget(), debugOverlay: true);
-
-        tester.sendKey('a');
-        tester.sendKey('b');
-        tester.sendKey('c');
-
-        expect(
-          tester.find.textMatching(RegExp(r'Key->Render p50: \d+\.\d+ms')),
-          isTrue,
-        );
-        expect(
-          tester.find.textMatching(RegExp(r'Key->Render p95: \d+\.\d+ms')),
-          isTrue,
-        );
       } finally {
         RenderMetricsInjector.instance.clearMetrics();
         await tester.dispose();
@@ -685,26 +619,6 @@ void main() {
       expect(output, contains('Frames:'));
       // Should NOT show the estimated ~ prefix since we have real metrics
       expect(output, isNot(contains('FPS: ~')));
-    });
-
-    test('overlay shows runtime frame and render timing labels', () async {
-      final tester = WidgetTester();
-      try {
-        await tester.pumpWidget(Text('content'), debugOverlay: true);
-
-        final metrics = RenderMetrics();
-        metrics.beginFrame();
-        metrics.endFrame();
-
-        RenderMetricsInjector.instance.injectRuntime(metrics);
-        tester.pump();
-
-        expect(tester.view, contains('Frame Time:'));
-        expect(tester.view, contains('Render Time:'));
-      } finally {
-        RenderMetricsInjector.instance.clearMetrics();
-        await tester.dispose();
-      }
     });
 
     test('DebugOverlay stores an injected fallback clock', () {

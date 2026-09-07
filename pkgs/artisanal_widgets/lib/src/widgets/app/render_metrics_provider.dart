@@ -15,6 +15,7 @@ import 'package:meta/meta.dart' show experimental;
 import 'package:artisanal/runtime.dart'
     show
         DegradationLevel,
+        ProgramDiagnosticsMetrics,
         ProgramInterceptor,
         ProgramRenderMonitor,
         ProgramRenderStats,
@@ -68,13 +69,41 @@ class RenderMetricsInjector {
   final StreamController<RenderMetricsInjection> _controller =
       StreamController<RenderMetricsInjection>.broadcast(sync: true);
 
+  /// Tracks synchronous dispatch so reentrant publishes can be deferred
+  /// instead of throwing `Bad state: Cannot fire new event`.
+  bool _dispatching = false;
+
   /// Stream consumed by [WidgetApp].
   Stream<RenderMetricsInjection> get stream => _controller.stream;
 
   /// Injects a full [RenderMetricsInjection] payload.
+  ///
+  /// A listener (e.g. [WidgetApp]) may synchronously trigger another
+  /// render — and therefore another injection — while an event is still
+  /// dispatching. Reentrant publishes are deferred one microtask so the
+  /// bus never throws; order is preserved because the outer dispatch
+  /// always finishes first.
   void inject(RenderMetricsInjection injection) {
     if (injection.isEmpty) return;
-    _controller.add(injection);
+    if (_dispatching) {
+      scheduleMicrotask(() => inject(injection));
+      return;
+    }
+    _dispatching = true;
+    try {
+      if (injection.clearEntries) {
+        ProgramDiagnosticsMetrics.clear();
+      }
+      for (final key in injection.removeKeys) {
+        ProgramDiagnosticsMetrics.removeMetric(key);
+      }
+      if (injection.upsertEntries.isNotEmpty) {
+        ProgramDiagnosticsMetrics.setMetrics(injection.upsertEntries);
+      }
+      _controller.add(injection);
+    } finally {
+      _dispatching = false;
+    }
   }
 
   /// Injects runtime renderer metrics.

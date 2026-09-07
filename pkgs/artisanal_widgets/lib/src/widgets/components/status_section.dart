@@ -67,10 +67,7 @@ class StatusSection extends StatelessWidget {
             ..bold(),
         ),
         if (count != null)
-          Text(
-            '$count',
-            style: theme.labelSmall.copy()..foreground(muted),
-          ),
+          Text('$count', style: theme.labelSmall.copy()..foreground(muted)),
       ],
     );
 
@@ -89,10 +86,7 @@ class StatusSection extends StatelessWidget {
       if (items.isEmpty) {
         if (emptyLabel != null && emptyLabel!.isNotEmpty) {
           body.add(
-            Text(
-              emptyLabel!,
-              style: theme.bodySmall.copy()..foreground(muted),
-            ),
+            Text(emptyLabel!, style: theme.bodySmall.copy()..foreground(muted)),
           );
         }
       } else {
@@ -103,22 +97,13 @@ class StatusSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       gap: 0,
-      children: [
-        headerWidget,
-        ...body,
-      ],
+      children: [headerWidget, ...body],
     );
   }
 }
 
 /// Compact connection / status pill (connected · degraded · offline).
-enum ConnectionStatus {
-  connected,
-  degraded,
-  offline,
-  disabled,
-  unknown,
-}
+enum ConnectionStatus { connected, degraded, offline, disabled, unknown }
 
 /// Colored bullet + label for connection state.
 class ConnectionBadge extends StatelessWidget {
@@ -151,7 +136,8 @@ class ConnectionBadge extends StatelessWidget {
       ConnectionStatus.disabled => mutedColor ?? theme.muted,
       ConnectionStatus.unknown => mutedColor ?? theme.muted,
     };
-    final statusText = detail ??
+    final statusText =
+        detail ??
         switch (status) {
           ConnectionStatus.connected => 'Connected',
           ConnectionStatus.degraded => 'Degraded',

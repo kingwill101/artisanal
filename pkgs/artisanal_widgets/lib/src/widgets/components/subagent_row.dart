@@ -10,12 +10,7 @@ import '../theme/theme_scope.dart' show ThemeScope;
 import 'frame.dart' show Frame;
 
 /// Lifecycle for a [SubagentRow].
-enum SubagentStatus {
-  pending,
-  running,
-  completed,
-  error,
-}
+enum SubagentStatus { pending, running, completed, error }
 
 /// One nested agent / task line for session footers or task lists.
 class SubagentRow extends StatelessWidget {

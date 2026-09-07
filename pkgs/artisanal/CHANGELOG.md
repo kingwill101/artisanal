@@ -111,12 +111,38 @@
 
 ### Added
 
+- Added `FrameView`, `FrameArea`, and `FrameRenderable` for immediate-mode TEA
+  views that position Artisanal styled strings without exposing renderer cells.
+- Added pure horizontal and vertical `FrameLayout` splitting with fixed,
+  percentage, weighted-fill, gap, and inset constraints.
+- Added `FrameArea.inset` and `FrameArea.centered` geometry helpers for pane
+  content and overlays.
+- Added a responsive, core-only positioned-frame dashboard example covering
+  nested layouts, selection state, narrow stacking, and overlays.
+- Documented when TEA applications should return `String`, `View`, or
+  `FrameView`, including positioned layout and styling guidance.
+- Covered structured frame rendering through `Program` and both supported core
+  runtime entrypoints.
+- Added an opt-in, program-owned developer tools overlay for raw TUI and widget
+  applications. It supports a configurable `KeyBinding`, recent messages,
+  captured output, render metrics, hot-reload statuses, and a shared custom
+  metrics registry.
 - Added focused `charting.dart`, `git_diff.dart`, `layout.dart`,
   `markdown.dart`, `runtime.dart`, `scoring.dart`, and `text_editing.dart`
   entrypoints so reusable packages can import only the features they need.
 
 ### Changed
 
+- Implemented the `FrameLayout` facade with Ultraviolet rectangles, fixed and
+  percentage constraints, and stable largest-remainder allocation rather than
+  maintaining duplicate layout primitives.
+- Reserved the actual wrapped height of persistent log lines before painting a
+  structured frame.
+- Simplified and hardened hot-reload initialization: concurrent starts now
+  share one attempt, shutdown waits for watcher disposal, reassembly completes
+  before success is reported, and initialization no longer mutates the
+  process working directory. Entrypoints outside `bin`, `lib`, and `test` are
+  watched directly, including editor saves that replace the original file.
 - Delegated Kitty, iTerm2, and Sixel image protocol encoding to Ultraviolet,
   removing three duplicated renderer implementations while preserving the
   public terminal API.
@@ -131,6 +157,18 @@
   media.
 - Generalized the browser runner as `runBrowserProgram(Model)` and the shared
   network-host lifecycle as `TerminalHostServer`.
+- Added elapsed timestamps and the documented script, capture, and tag metadata
+  to trace output. Reconfiguration now resets paths, headers, and tag filters;
+  test-controlled events use the injected clock, and `clear: true` replaces
+  existing output. Invalid structured fields and filesystem failures no longer
+  allow optional tracing to terminate the running application, and invalid
+  tag-only allow-lists now fail closed instead of enabling every category.
+  Multiline log content is encoded as one record and cannot forge structured
+  events consumed by replay tooling.
+- Changed DevTools message instrumentation to use independently paired
+  asynchronous timeline tasks, preserving valid timelines when several
+  messages are queued together. Dropped messages and shutdown now also clear
+  pending-message accounting.
 
 ### Fixed
 

@@ -80,7 +80,7 @@ The `layout` example shows how to use `Layout.joinVertical` and
 `Layout.joinHorizontal` to build a responsive, width-aware card layout.
 
 <a href="./layout/main.dart">
-  Code
+  <img width="750" src="./layout/layout.gif" />
 </a>
 
 ### Layout Breakpoints
@@ -89,7 +89,7 @@ The `layout-breakpoints` example demonstrates threshold-based layout decisions
 using `ResponsiveBreakpoints` with `isAtLeast`, `isBelow`, and `resolve`.
 
 <a href="./layout-breakpoints/main.dart">
-  Code
+  <img width="750" src="./layout-breakpoints/layout-breakpoints.gif" />
 </a>
 
 ### Evidence Logging
@@ -98,7 +98,7 @@ The `evidence-logging` examples show how to emit runtime `TuiEvidence` records
 to JSONL and how to parse them with `TuiEvidence.tryParseLine`.
 
 <a href="./evidence-logging/main.dart">
-  Code
+  <img width="750" src="./evidence-logging/evidence-logging.gif" />
 </a>
 
 <a href="./evidence-logging/inspect.dart">
@@ -123,7 +123,7 @@ The `macro-recorder` example records runtime key traffic into a
 `ProgramMacro`, replays it, and demonstrates stopping looped playback.
 
 <a href="./macro-recorder/main.dart">
-  Code
+  <img width="750" src="./macro-recorder/macro-recorder.gif" />
 </a>
 
 ### Exec
@@ -157,7 +157,7 @@ The `markdown` example parses Markdown with `package:markdown`, renders ANSI
 with `renderMarkdown`, and displays it inside a viewport.
 
 <a href="./markdown/main.dart">
-  Code
+  <img width="750" src="./markdown/markdown.gif" />
 </a>
 
 ### Help
@@ -230,7 +230,7 @@ The `mouse` example shows how to receive mouse events in a Bubble Tea
 application.
 
 <a href="./mouse/main.dart">
-  Code
+  <img width="750" src="./mouse/mouse.gif" />
 </a>
 
 ### Package Manager
@@ -283,7 +283,7 @@ The `progress-download` example demonstrates how to download a file while
 indicating download progress through Bubble Tea.
 
 <a href="./progress-download/main.dart">
-  Code
+  <img width="750" src="./progress-download/progress-download.gif" />
 </a>
 
 ### Static Progress
@@ -436,4 +436,164 @@ multiple views and switch between them.
 
 <a href="./views/main.dart">
   <img width="750" src="./views/views.gif" />
+</a>
+
+### Autocomplete
+
+The `autocomplete` example shows tab-completion in a text input.
+
+<a href="./autocomplete/main.dart">
+  <img width="750" src="./autocomplete/autocomplete.gif" />
+</a>
+
+### Border Showcase
+
+The `border_showcase` example shows border styles, titles, and colors.
+
+<a href="./border_showcase/main.dart">
+  <img width="750" src="./border_showcase/border_showcase.gif" />
+</a>
+
+### Cell Buffer
+
+The `cellbuffer` example demonstrates low-level cell-buffer rendering.
+
+<a href="./cellbuffer/main.dart">
+  <img width="750" src="./cellbuffer/cellbuffer.gif" />
+</a>
+
+### Components Host
+
+The `components-host` example hosts view components in a demo shell.
+
+<a href="./components-host/main.dart">
+  <img width="750" src="./components-host/components-host.gif" />
+</a>
+
+### Eyes
+
+The `eyes` example is a blinking-eyes animation ported from Bubble Tea.
+
+<a href="./eyes/main.dart">
+  <img width="750" src="./eyes/eyes.gif" />
+</a>
+
+### File Picker
+
+The `file-picker` example shows the file-picker bubble.
+
+<a href="./file-picker/main.dart">
+  <img width="750" src="./file-picker/file-picker.gif" />
+</a>
+
+### Focus Blur
+
+The `focus-blur` example reports terminal focus and blur events.
+
+<a href="./focus-blur/main.dart">
+  <img width="750" src="./focus-blur/focus-blur.gif" />
+</a>
+
+### Git Diff
+
+The `git-diff` example shows the git-diff viewer bubble.
+
+<a href="./git-diff/main.dart">
+  <img width="750" src="./git-diff/git-diff.gif" />
+</a>
+
+### Harness Demo
+
+The `harness_demo` example demonstrates the program test harness with a counter model.
+
+<a href="./harness_demo/main.dart">
+  <img width="750" src="./harness_demo/harness_demo.gif" />
+</a>
+
+### Hot Reload Test
+
+The `hot_reload_test` example is a minimal hot-reload test app.
+
+<a href="./hot_reload_test/main.dart">
+  <img width="750" src="./hot_reload_test/hot_reload_test.gif" />
+</a>
+
+### Keymap Hub
+
+The `keymap-hub` example demonstrates the keymap-hub surface.
+
+<a href="./keymap-hub/main.dart">
+  <img width="750" src="./keymap-hub/keymap-hub.gif" />
+</a>
+
+### Kitchen Sink
+
+The `kitchen-sink` example is a composite demo of many bubbles at once.
+
+<a href="./kitchen-sink/main.dart">
+  <img width="750" src="./kitchen-sink/kitchen-sink.gif" />
+</a>
+
+### Prevent Quit
+
+The `prevent-quit` example intercepts quit and asks for confirmation first.
+
+<a href="./prevent-quit/main.dart">
+  <img width="750" src="./prevent-quit/prevent-quit.gif" />
+</a>
+
+### Set Window Title
+
+The `set-window-title` example sets the terminal window title.
+
+<a href="./set-window-title/main.dart">
+  <img width="750" src="./set-window-title/set-window-title.gif" />
+</a>
+
+### Suspend
+
+The `suspend` example demonstrates suspend and resume, ported from Bubble Tea.
+
+<a href="./suspend/main.dart">
+  <img width="750" src="./suspend/suspend.gif" />
+</a>
+
+### Table Resize
+
+The `table-resize` example shows a resizable data table.
+
+<a href="./table-resize/main.dart">
+  <img width="750" src="./table-resize/table-resize.gif" />
+</a>
+
+### UV Effects
+
+The `uv-effects` example shows Ultraviolet terminal effects.
+
+<a href="./uv-effects/main.dart">
+  <img width="750" src="./uv-effects/uv-effects.gif" />
+</a>
+
+### UV Input
+
+The `uv-input` example demonstrates the UV input decoder.
+
+<a href="./uv-input/main.dart">
+  <img width="750" src="./uv-input/uv-input.gif" />
+</a>
+
+### Window Size
+
+The `window-size` example shows live terminal dimensions and resize handling.
+
+<a href="./window-size/main.dart">
+  <img width="750" src="./window-size/window-size.gif" />
+</a>
+
+### Zone
+
+The `zone` example demonstrates clickable bubble zones.
+
+<a href="./zone/main.dart">
+  <img width="750" src="./zone/zone.gif" />
 </a>

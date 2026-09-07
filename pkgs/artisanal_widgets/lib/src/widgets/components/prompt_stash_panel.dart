@@ -67,10 +67,7 @@ class PromptStashPanel extends StatelessWidget {
           Row(
             gap: 1,
             children: [
-              Text(
-                title,
-                style: theme.labelSmall.copy()..foreground(accent),
-              ),
+              Text(title, style: theme.labelSmall.copy()..foreground(accent)),
               Text('·', style: theme.bodySmall.copy()..foreground(muted)),
               Text(
                 '${entries.length}',
@@ -85,10 +82,7 @@ class PromptStashPanel extends StatelessWidget {
           ),
           Divider(style: Style().foreground(border)),
           if (visible.isEmpty)
-            Text(
-              emptyLabel,
-              style: theme.bodySmall.copy()..foreground(muted),
-            )
+            Text(emptyLabel, style: theme.bodySmall.copy()..foreground(muted))
           else
             for (var i = 0; i < visible.length; i++)
               _entryRow(
@@ -123,11 +117,7 @@ class PromptStashPanel extends StatelessWidget {
       children: [
         Text(selected ? '›' : ' ', style: labelStyle),
         Expanded(
-          child: Text(
-            entry.displayLabel,
-            style: labelStyle,
-            softWrap: false,
-          ),
+          child: Text(entry.displayLabel, style: labelStyle, softWrap: false),
         ),
         if (onRemove != null)
           GestureDetector(
@@ -135,10 +125,7 @@ class PromptStashPanel extends StatelessWidget {
               onRemove(storageIndex, entry);
               return null;
             },
-            child: Text(
-              '×',
-              style: theme.labelSmall.copy()..foreground(muted),
-            ),
+            child: Text('×', style: theme.labelSmall.copy()..foreground(muted)),
           ),
       ],
     );

@@ -180,7 +180,8 @@ Use `Cmd.batch(...)` for finite commands that only need `execute()`.
 
 Recordings of some of the more consequential examples, regenerated from the
 VHS tapes in [`example/.vhs/`](example/.vhs/README.md) with
-`task widgets-demos`:
+`task widgets-demos`. Every recorded example also has a page with a preview
+and its full source on the [documentation site](https://artisanal.dev/docs/examples/widgets/buttons).
 
 **Widget app shell** (`example/artisanal_app/main.dart`):
 
@@ -221,3 +222,51 @@ VHS tapes in [`example/.vhs/`](example/.vhs/README.md) with
 **OpenCode chat UI** (`example/opencode/main.dart`):
 
 ![OpenCode demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/opencode.gif)
+
+**Buttons & badges** (`example/buttons/main.dart`):
+
+![Buttons demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/buttons.gif)
+
+**Form inputs** (`example/inputs/main.dart`):
+
+![Inputs demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/inputs.gif)
+
+**Text field** (`example/text-field/main.dart`):
+
+![Text field demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/text-field.gif)
+
+**Text area** (`example/text-area/main.dart`):
+
+![Text area demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/text-area.gif)
+
+**Tree view** (`example/tree_view/main.dart`):
+
+![Tree view demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/tree_view.gif)
+
+**Tabs & breadcrumbs** (`example/tabs_nav/main.dart`):
+
+![Tabs demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/tabs_nav.gif)
+
+**Text selection** (`example/selection/main.dart`):
+
+![Selection demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/selection.gif)
+
+**Progress & spinner** (`example/progress_spinner/main.dart`):
+
+![Progress spinner demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/progress_spinner.gif)
+
+**Slider** (`example/slider/main.dart`):
+
+![Slider demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/slider.gif)
+
+**Scrolling** (`example/scroll/main.dart`):
+
+![Scroll demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/scroll.gif)
+
+**File picker** (`example/file_picker/main.dart`):
+
+![File picker demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/file_picker.gif)
+
+**Help view** (`example/help_view/main.dart`):
+
+![Help view demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/help_view.gif)

@@ -14,6 +14,17 @@ void main() {
     expect(layout.Layout, isA<Type>());
     expect(markdown.MarkdownRenderer, isA<Type>());
     expect(runtime.ProgramOptions, isA<Type>());
+    final frameView = runtime.FrameView(
+      paint: (frame) {
+        final panes = runtime.FrameLayout.horizontal(frame.area, const [
+          runtime.FrameLength(4),
+          runtime.FrameFill(),
+        ]);
+        frame.write('core', target: panes.first);
+      },
+    );
+    expect(frameView, isA<runtime.View>());
+    expect(frameView.paint, isA<runtime.FramePainter>());
     expect(scoring.BayesianScorer, isA<Type>());
     expect(text_editing.TextDocument, isA<Type>());
   });

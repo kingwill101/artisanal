@@ -39,7 +39,7 @@ import 'package:artisanal/runtime.dart'
         View,
         WindowPixelSizeMsg,
         WindowSizeMsg,
-        DebugOverlayModel;
+        ProgramDiagnosticsMetrics;
 import 'package:artisanal/uv.dart'
     show
         PrimaryDeviceAttributesEvent,
@@ -65,8 +65,7 @@ import '../core/widget.dart';
 import '../core/accessibility.dart';
 import '../components/button.dart' show Button;
 import '../components/component_style.dart' show CmdCallback;
-import '../components/debug_overlay.dart'
-    show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
+import '../components/debug_overlay.dart' show DebugOverlay, PerformanceOverlay;
 import '../theme/theme.dart' show hasDarkBackground, setHasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';
@@ -75,15 +74,6 @@ const int _widgetRenderTraceThresholdUs = 5000;
 
 /// Runs a widget tree using an element hierarchy.
 ///
-/// ## Built-in Debug Overlay
-///
-/// Set [debugOverlay] to `true` to enable a built-in [DebugOverlay] that
-/// shows FPS, frame counts, and timing data. The overlay can be toggled at
-/// runtime by pressing **F12**. The [debugOverlayPosition] parameter
-/// controls where the overlay appears (defaults to [DebugOverlayPosition.topRight]).
-///
-/// The F12 toggle works even when [debugOverlay] starts as `false` — pressing
-/// F12 will enable it on the fly.
 class WidgetApp
     implements Model, FrameTickModel, RenderMetricsModel, ReassemblableModel {
   WidgetApp(
@@ -99,8 +89,6 @@ class WidgetApp
     this.handleFrameTick = false,
     this.enableRenderMetrics = true,
     this.enableRenderMetricsInjection = true,
-    this.debugOverlay = false,
-    this.debugOverlayPosition = .topRight,
     bool debugRebuilds = false,
   }) : _mediaQueryData = MediaQueryData.zero,
        _sessionImageCapabilities =
@@ -108,7 +96,6 @@ class WidgetApp
        _sessionImageCellPixelWidth = initialImageCellPixelWidth,
        _sessionImageCellPixelHeight = initialImageCellPixelHeight,
        _imageAutoMode = imageAutoMode,
-       _debugOverlayEnabled = debugOverlay,
        _metricsHolder = RenderMetricsHolder() {
     _tree = ElementTree(
       _MediaQueryHost(
@@ -119,12 +106,6 @@ class WidgetApp
       ),
       owner: BuildOwner(debugRebuilds: debugRebuilds),
     );
-
-    _runtimeDebugOverlay = DebugOverlayModel.initial(
-      enabled: debugOverlay,
-      rendererLabel: 'UV',
-    );
-    _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
   }
 
   Widget root;
@@ -182,15 +163,6 @@ class WidgetApp
   /// anywhere via [RenderMetricsInjector.instance].
   final bool enableRenderMetricsInjection;
 
-  /// Whether the built-in debug overlay is initially enabled.
-  ///
-  /// When `true`, the root widget is wrapped in a [DebugOverlay] that shows
-  /// FPS and frame timing data. Press **F12** at runtime to toggle.
-  final bool debugOverlay;
-
-  /// Where the debug overlay is positioned on screen.
-  final DebugOverlayPosition debugOverlayPosition;
-
   late final ElementTree _tree;
   static const Key _mediaQueryKey = ValueKey<String>('_media_query_host');
   MediaQueryData _mediaQueryData;
@@ -203,18 +175,6 @@ class WidgetApp
   Color? _cachedBackgroundColor;
   DegradationLevel _degradationLevel = DegradationLevel.full;
   bool _dirty = true;
-
-  /// Current state of the debug overlay (mutable, toggled by F12).
-  bool _debugOverlayEnabled;
-
-  /// Runtime-composed debug overlay (split-dashboard style).
-  late DebugOverlayModel _runtimeDebugOverlay;
-
-  /// Whether overlay composition must be refreshed even if base tree is cached.
-  bool _overlayDirty = false;
-
-  /// Whether the debug overlay is currently visible.
-  bool get debugOverlayEnabled => _debugOverlayEnabled;
 
   /// Mutable holder written to by WidgetApp, read by [RenderMetricsProvider].
   final RenderMetricsHolder _metricsHolder;
@@ -237,7 +197,7 @@ class WidgetApp
   static const int _maxKeyRenderSamples = 240;
 
   @override
-  bool get wantsFrameTicks => handleFrameTick || _debugOverlayEnabled;
+  bool get wantsFrameTicks => handleFrameTick;
 
   @override
   bool get wantsRenderMetrics => enableRenderMetrics;
@@ -384,23 +344,9 @@ class WidgetApp
 
     try {
       if (msg is FrameTickMsg) {
-        if (_debugOverlayEnabled) {
-          _overlayDirty = true;
-        }
         if (!handleFrameTick) {
           return (this, null);
         }
-      }
-
-      // --- F12 toggles the built-in debug overlay ---
-      if (msg is KeyMsg && msg.key.type == KeyType.f12) {
-        _debugOverlayEnabled = !_debugOverlayEnabled;
-        _runtimeDebugOverlay = _runtimeDebugOverlay.setEnabled(
-          _debugOverlayEnabled,
-        );
-        _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-        _overlayDirty = true;
-        return (this, null);
       }
 
       if (msg is _RenderMetricsInjectionMsg) {
@@ -443,14 +389,6 @@ class WidgetApp
             child: _currentRoot(),
           ),
         );
-        _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
-          terminalWidth: msg.width,
-          terminalHeight: msg.height,
-        );
-        _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-        if (_debugOverlayEnabled) {
-          _overlayDirty = true;
-        }
         _dirty = true;
         return (this, _coalesceCommands(cmds));
       }
@@ -483,9 +421,6 @@ class WidgetApp
       }
 
       if (msg is MouseMsg) {
-        if (_debugOverlayEnabled) {
-          _overlayDirty = true;
-        }
         if (msg.action != MouseAction.motion) {
           _lastMouseMotionTargets.removeWhere(
             (element) => !element.state.mounted,
@@ -744,7 +679,6 @@ class WidgetApp
     if (!_dirty &&
         !_tree.hasDirty &&
         !backgroundChanged &&
-        !_overlayDirty &&
         _cachedViewObject != null &&
         !_tree.hasPaintDirty) {
       if (TuiTrace.captureDispatchEnabled) {
@@ -781,27 +715,20 @@ class WidgetApp
 
     _recordAndPublishKeyRenderLatency();
 
-    var composedContent = baseContent;
-    if (_debugOverlayEnabled) {
-      composedContent = _runtimeDebugOverlay.compose(baseContent);
-    }
-
     final resolvedBackgroundColor = _resolveTerminalBackgroundColor(
       backgroundColorBuilder?.call() ?? backgroundColor,
     );
     _cachedBackgroundColor = resolvedBackgroundColor;
-    _overlayDirty = false;
-
     if (resolvedBackgroundColor != null) {
       final viewObj = View(
-        content: composedContent,
+        content: baseContent,
         backgroundColor: resolvedBackgroundColor,
       );
       _cachedViewObject = viewObj;
       return viewObj;
     }
-    _cachedViewObject = composedContent;
-    return composedContent;
+    _cachedViewObject = baseContent;
+    return baseContent;
   }
 
   /// Invalidates all cached state so the next [view] call fully rebuilds
@@ -818,7 +745,6 @@ class WidgetApp
     _cachedView = null;
     _cachedViewObject = null;
     _dirty = true;
-    _overlayDirty = _debugOverlayEnabled;
     _markElementTreeDirty(_tree.root);
   }
 
@@ -920,13 +846,7 @@ class WidgetApp
     );
     if (!changed) return;
 
-    _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
-      customMetrics: _metricsHolder.customMetrics,
-    );
-    if (_debugOverlayEnabled) {
-      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-      _overlayDirty = true;
-    }
+    ProgramDiagnosticsMetrics.setMetrics(_metricsHolder.customMetrics);
   }
 
   int _percentileMicros(List<int> samplesUs, double percentile) {
@@ -947,14 +867,7 @@ class WidgetApp
     if (!changed) return;
 
     _latestRenderMetrics = _metricsHolder.metrics;
-    _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
-      metrics: _latestRenderMetrics,
-      customMetrics: _metricsHolder.customMetrics,
-    );
-    if (_debugOverlayEnabled) {
-      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-      _overlayDirty = true;
-    }
+    ProgramDiagnosticsMetrics.setMetrics(_metricsHolder.customMetrics);
 
     // Legacy/manual overlays rendered inside the widget tree still need
     // a tree update to repaint with the new holder value.
@@ -978,32 +891,6 @@ class WidgetApp
       return widget.child;
     }
     return widget;
-  }
-
-  DebugOverlayModel _positionRuntimeOverlay(DebugOverlayModel overlay) {
-    final width = _mediaQueryData.size.width.toInt();
-    final height = _mediaQueryData.size.height.toInt();
-    if (width <= 0 || height <= 0) return overlay;
-
-    final panelWidth = overlay.panelWidth;
-    final panelHeight = overlay.panelHeight;
-    final maxX = (width - panelWidth).clamp(0, width);
-    final maxY = (height - panelHeight).clamp(0, height);
-
-    final (x, y) = switch (debugOverlayPosition) {
-      DebugOverlayPosition.topLeft => (0, 0),
-      DebugOverlayPosition.topRight => (maxX, 0),
-      DebugOverlayPosition.bottomLeft => (0, maxY),
-      DebugOverlayPosition.bottomRight => (maxX, maxY),
-    };
-
-    return overlay.copyWith(
-      terminalWidth: width,
-      terminalHeight: height,
-      panelX: x,
-      panelY: y,
-      dragging: false,
-    );
   }
 }
 

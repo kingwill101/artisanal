@@ -45,6 +45,10 @@ class _ScrollbarDemoState extends w.State<ScrollbarDemo> {
           ),
           w.Container(
             color: theme.surface,
+            // A viewport needs bounded height: without it the Scrollbar
+            // would size to all 80 rows instead of scrolling (same rule
+            // as Flutter's bounded-viewport requirement).
+            height: 20,
             child: w.Scrollbar(
               controller: _controller,
               thickness: 1,

@@ -1243,11 +1243,17 @@ class RenderSingleChildViewport extends RenderBox {
       _cachedChildSize = child.size;
     }
 
-    // Our size is constrained to the parent.
+    // Our size is constrained to the parent. A viewport must never
+    // report an infinite size: with unbounded height we shrink-wrap to
+    // the content height (mirroring how unbounded width already resolves
+    // to the content width above), so ancestors never see Infinity.
+    final resolvedHeight = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : (child.size.height.isFinite ? child.size.height : 0.0);
     size = constraints.constrain(
       Size(
         constraints.hasBoundedWidth ? constraints.maxWidth : child.size.width,
-        constraints.maxHeight,
+        resolvedHeight,
       ),
     );
 

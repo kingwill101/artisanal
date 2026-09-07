@@ -100,6 +100,8 @@ final class TuiTrace {
   static bool? _captureEnabled;
   static Set<TraceTag>? _enabledTags;
   static bool _resolved = false;
+  static bool _clearOnOpen = false;
+  static final Stopwatch _traceClock = Stopwatch();
   static final Map<String, TraceTag> _traceTagByName = <String, TraceTag>{
     for (final tag in TraceTag.values) tag.name: tag,
   };
@@ -132,7 +134,8 @@ final class TuiTrace {
     _testCaptureEnabled = captureEnabled ? true : null;
     _testTagsRaw = tagsRaw;
     _testNowProvider = nowProvider;
-    _resolved = false;
+    _resetResolvedState();
+    _clearOnOpen = clear;
   }
 
   static void clearTestOverrides() {
@@ -143,7 +146,8 @@ final class TuiTrace {
     _testCaptureEnabled = null;
     _testTagsRaw = null;
     _testNowProvider = null;
-    _resolved = false;
+    _resetResolvedState();
+    _clearOnOpen = false;
   }
 
   static bool isTagEnabled(TraceTag tag) {
@@ -181,12 +185,23 @@ final class TuiTrace {
     if (!enabled || !isTagEnabled(tag)) return;
     final payload = <String, Object?>{
       'v': _eventSchemaVersion,
-      'ts': DateTime.now().microsecondsSinceEpoch,
+      'ts': (_testNowProvider != null ? _testNowProvider!() : DateTime.now())
+          .microsecondsSinceEpoch,
       'tag': tag.name,
       'type': type,
       if (fields.isNotEmpty) 'fields': fields,
     };
-    _writeRaw('$_eventMarker${jsonEncode(payload)}');
+    try {
+      _writeRaw(
+        '[${tag.name}] $_eventMarker${jsonEncode(payload)}',
+        structuredEvent: true,
+      );
+    } on JsonUnsupportedObjectError catch (error) {
+      _writeRaw(
+        '[general] trace event dropped: type=$type '
+        'reason=${error.runtimeType}',
+      );
+    }
   }
 
   static void logTrace(String line) {
@@ -200,6 +215,13 @@ final class TuiTrace {
     final markerIndex = trimmed.indexOf(_eventMarker);
     if (markerIndex == -1) return null;
     final prefix = trimmed.substring(0, markerIndex).trimRight();
+    // Accept an unprefixed event or the tracer's elapsed-time prefix. Do not
+    // scan arbitrary log messages for an embedded marker: message content is
+    // untrusted and must not be able to forge replayable trace events.
+    if (prefix.isNotEmpty &&
+        !RegExp(r'^\[\+\d+us\](?: \[[a-zA-Z]+\])?$').hasMatch(prefix)) {
+      return null;
+    }
     final json = trimmed.substring(markerIndex + _eventMarker.length);
     try {
       final decoded = jsonDecode(json);
@@ -241,7 +263,18 @@ final class TuiTrace {
       parseEventLine(line);
 
   static void close() {
+    _resetResolvedState();
+  }
+
+  static void _resetResolvedState() {
+    _path = null;
     _file = null;
+    _headerWritten = false;
+    _captureEnabled = null;
+    _enabledTags = null;
+    _traceClock
+      ..stop()
+      ..reset();
     _resolved = false;
   }
 
@@ -289,24 +322,53 @@ final class TuiTrace {
       final tag = _traceTagByName[trimmed];
       if (tag != null) tags.add(tag);
     }
-    _enabledTags = tags.isNotEmpty ? tags : null;
+    // A configured allow-list containing no recognized tags means "none",
+    // not "all". This makes typos fail closed instead of unexpectedly enabling
+    // every high-volume trace category.
+    _enabledTags = tags;
     return _enabledTags;
   }
 
   static io.File _openFile() {
     final file = io.File(_path!);
     if (!file.parent.existsSync()) file.parent.createSync(recursive: true);
+    if (_clearOnOpen && file.existsSync()) {
+      file.deleteSync();
+    }
+    _clearOnOpen = false;
+    _traceClock
+      ..reset()
+      ..start();
     _file = file;
     return file;
   }
 
-  static void _writeRaw(String message) {
-    final file = _file ?? _openFile();
-    if (!_headerWritten) {
-      _writeHeaderSync(file);
-      _headerWritten = true;
+  static void _writeRaw(String message, {bool structuredEvent = false}) {
+    try {
+      final file = _file ?? _openFile();
+      if (!_headerWritten) {
+        _writeHeaderSync(file);
+        _headerWritten = true;
+      }
+      final singleLineMessage = message
+          .replaceAll('\r', r'\r')
+          .replaceAll('\n', r'\n')
+          .replaceAll(
+            _eventMarker,
+            structuredEvent ? _eventMarker : '@event\\x20',
+          );
+      file.writeAsStringSync(
+        '[+${_traceClock.elapsedMicroseconds}us] $singleLineMessage\n',
+        mode: io.FileMode.append,
+      );
+    } on io.FileSystemException {
+      // Tracing is diagnostic and must never terminate the application. Disable
+      // it for the rest of this configuration after an output failure so hot
+      // paths do not repeatedly attempt the same failing filesystem operation.
+      _path = null;
+      _file = null;
+      _traceClock.stop();
     }
-    file.writeAsStringSync('$message\n', mode: io.FileMode.append);
   }
 
   static void _writeHeaderSync(io.File file) {
@@ -317,13 +379,23 @@ final class TuiTrace {
       '# pid: ${io.pid}',
       '# cwd: ${io.Directory.current.path}',
       '# executable: ${io.Platform.executable}',
+      '# script: ${io.Platform.script}',
       '# os: ${io.Platform.operatingSystem} ${io.Platform.operatingSystemVersion}',
       '# dart: ${io.Platform.version}',
+      '# capture: ${captureEnabled ? 'enabled' : 'disabled'}',
+      '# tags: ${_describeEnabledTags()}',
     ];
     for (final line in header) {
       buffer.writeln(line);
     }
     file.writeAsStringSync(buffer.toString(), mode: io.FileMode.append);
+  }
+
+  static String _describeEnabledTags() {
+    final tags = _resolveEnabledTags();
+    if (tags == null) return 'all';
+    if (tags.isEmpty) return 'none';
+    return tags.map((tag) => tag.name).join(',');
   }
 
   static String _generateDateBasedPath() {
