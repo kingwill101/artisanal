@@ -94,6 +94,13 @@ void main() {
           EditorCommandIds.uppercaseWord,
           EditorCommandIds.lowercaseWord,
           EditorCommandIds.capitalizeWord,
+          EditorCommandIds.uppercaseSelectionOrLine,
+          EditorCommandIds.lowercaseSelectionOrLine,
+          EditorCommandIds.capitalizeSelectionOrLine,
+          EditorCommandIds.cleanupWhitespace,
+          EditorCommandIds.joinLines,
+          EditorCommandIds.splitLine,
+          EditorCommandIds.sortSelectedLines,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -147,6 +154,50 @@ void main() {
 
       expect(model.undo(), isTrue);
       expect(model.value, 'hello');
+    });
+
+    test('dispatches line and selection transforms as commands', () {
+      final model = TextAreaModel()
+        ..setText('beta  \nalpha', recordHistory: false)
+        ..setSelection(
+          baseLine: 0,
+          baseColumn: 0,
+          extentLine: 1,
+          extentColumn: 5,
+        );
+
+      expect(
+        model.executeCommand(EditorCommandIds.sortSelectedLines),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'alpha\nbeta  ');
+      expect(
+        model.executeCommand(EditorCommandIds.cleanupWhitespace),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'alpha\nbeta');
+
+      model
+        ..clearSelection()
+        ..setCursor(0, 2);
+      expect(
+        model.executeCommand(EditorCommandIds.joinLines),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'alpha beta');
+      model.setCursor(0, 2);
+      expect(
+        model.executeCommand(EditorCommandIds.splitLine),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'al\npha beta');
+
+      model.setCursor(0, 0);
+      expect(
+        model.executeCommand(EditorCommandIds.uppercaseSelectionOrLine),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'AL\npha beta');
     });
 
     test('command motions preserve a legacy single selection', () {

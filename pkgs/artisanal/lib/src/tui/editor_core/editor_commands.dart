@@ -48,6 +48,16 @@ abstract final class EditorCommandIds {
   static const uppercaseWord = 'editor.action.uppercaseWord';
   static const lowercaseWord = 'editor.action.lowercaseWord';
   static const capitalizeWord = 'editor.action.capitalizeWord';
+  static const uppercaseSelectionOrLine =
+      'editor.action.uppercaseSelectionOrLine';
+  static const lowercaseSelectionOrLine =
+      'editor.action.lowercaseSelectionOrLine';
+  static const capitalizeSelectionOrLine =
+      'editor.action.capitalizeSelectionOrLine';
+  static const cleanupWhitespace = 'editor.action.cleanupWhitespace';
+  static const joinLines = 'editor.action.joinLines';
+  static const splitLine = 'editor.action.splitLine';
+  static const sortSelectedLines = 'editor.action.sortSelectedLines';
   static const nextSearchMatch = 'editor.action.nextSearchMatch';
   static const previousSearchMatch = 'editor.action.previousSearchMatch';
   static const nextDiagnostic = 'editor.action.nextDiagnostic';

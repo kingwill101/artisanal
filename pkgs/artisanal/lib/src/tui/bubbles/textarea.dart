@@ -3083,6 +3083,48 @@ class TextAreaModel extends ViewComponent {
         execute: (model) => model.capitalizeWordForward(),
       ),
       EditorCommand(
+        id: EditorCommandIds.uppercaseSelectionOrLine,
+        label: 'Uppercase Selection or Line',
+        category: 'Transform',
+        execute: (model) => model.uppercaseSelectionOrLine(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.lowercaseSelectionOrLine,
+        label: 'Lowercase Selection or Line',
+        category: 'Transform',
+        execute: (model) => model.lowercaseSelectionOrLine(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.capitalizeSelectionOrLine,
+        label: 'Capitalize Selection or Line',
+        category: 'Transform',
+        execute: (model) => model.capitalizeSelectionOrLine(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.cleanupWhitespace,
+        label: 'Clean Up Whitespace',
+        category: 'Transform',
+        execute: (model) => model.cleanupWhitespace(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.joinLines,
+        label: 'Join Lines',
+        category: 'Edit',
+        execute: (model) => model.joinLines(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.splitLine,
+        label: 'Split Line',
+        category: 'Edit',
+        execute: (model) => model.splitLine(),
+      ),
+      EditorCommand(
+        id: EditorCommandIds.sortSelectedLines,
+        label: 'Sort Selected Lines',
+        category: 'Transform',
+        execute: (model) => model.sortSelectedLines(),
+      ),
+      EditorCommand(
         id: EditorCommandIds.nextSearchMatch,
         label: 'Find Next',
         category: 'Find',

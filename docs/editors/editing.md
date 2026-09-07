@@ -180,6 +180,9 @@ keys.
 Transpose and word-case bindings likewise dispatch `transposeCharacters`,
 `uppercaseWord`, `lowercaseWord`, and `capitalizeWord`, so palettes and modal
 hosts can invoke the same undoable transforms.
+The registry also exposes line joining/splitting, whitespace cleanup, sorting,
+and selection-or-line case conversion. These operations are available to
+command palettes without requiring a terminal key binding.
 
 This means a host may consume a key before `TextAreaModel.update` and dispatch
 the same command itself:
