@@ -17,6 +17,12 @@
 library;
 
 export 'ansi_renderer.dart';
+export 'image_renderer.dart'
+    show
+        ImageProtocol,
+        detectImageProtocol,
+        imageCellDimensions,
+        renderImageToAnsi;
 export 'renderer.dart' show MarkdownRenderer;
 export 'fence_language_resolver.dart' show FenceLanguageResolver;
 export 'syntax_highlighter.dart'

@@ -200,6 +200,36 @@ void main() {
       expect(keyMatches(key, [binding]), isTrue);
     });
 
+    test('matches page key aliases', () {
+      expect(
+        keyMatches(const Key(KeyType.pageUp), [
+          KeyBinding(keys: ['pgup']),
+        ]),
+        isTrue,
+      );
+      expect(
+        keyMatches(const Key(KeyType.pageDown), [
+          KeyBinding(keys: ['pgdown']),
+        ]),
+        isTrue,
+      );
+    });
+
+    test('does not match an unmodified alias when modifiers are present', () {
+      expect(
+        keyMatches(const Key(KeyType.pageUp, ctrl: true), [
+          KeyBinding(keys: ['pgup']),
+        ]),
+        isFalse,
+      );
+      expect(
+        keyMatches(const Key(KeyType.tab, shift: true), [
+          KeyBinding(keys: ['\t']),
+        ]),
+        isFalse,
+      );
+    });
+
     test('matches enter key with newline character', () {
       final binding = KeyBinding(keys: ['\n']);
       final key = Key(KeyType.enter);

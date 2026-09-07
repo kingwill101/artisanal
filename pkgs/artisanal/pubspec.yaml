@@ -1,6 +1,6 @@
 name: artisanal
 description: A full-stack terminal toolkit for Dart featuring Lip Gloss styling, Bubble Tea TUI architecture, and Ultraviolet rendering.
-version: 0.6.0
+version: 0.6.1
 homepage: https://github.com/kingwill101/artisanal
 repository: https://github.com/kingwill101/artisanal
 issue_tracker: https://github.com/kingwill101/artisanal/issues
@@ -22,6 +22,7 @@ dependencies:
   liquify: ^1.5.1
   hotreloader: ^4.2.0
   meta: ^1.12.0
+  mime: ^2.1.0
   path: ^1.9.1
   markdown: ^7.3.0
   completion: ^1.0.2

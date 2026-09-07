@@ -7,6 +7,7 @@ import 'package:ultraviolet/terminal.dart'
     show enableWindowsVtInput, restoreWindowsVtInput;
 import 'ansi.dart';
 import 'stdin_stream.dart';
+import 'stty_flow_control.dart';
 import 'terminal_base.dart';
 
 /// Standard terminal implementation using dart:io.
@@ -49,6 +50,7 @@ class StdioTerminal implements Terminal {
   // Original terminal settings
   bool? _originalEchoMode;
   bool? _originalLineMode;
+  String? _savedFlowControl;
 
   // Input stream management
   StreamController<List<int>>? _inputController;
@@ -361,6 +363,9 @@ class StdioTerminal implements Terminal {
         _originalLineMode = _stdin.lineMode;
         wasEchoMode = _originalEchoMode ?? true;
         wasLineMode = _originalLineMode ?? true;
+        // Capture the complete terminal state before Dart changes echo/canonical
+        // mode, otherwise replaying it would restore an already-raw snapshot.
+        _savedFlowControl ??= disableTerminalFlowControl();
         _stdin.echoMode = false;
         _stdin.lineMode = false;
         if (identical(_stdin, io.stdin)) enableWindowsVtInput();
@@ -389,6 +394,8 @@ class StdioTerminal implements Terminal {
       if (_originalLineMode != null) {
         _stdin.lineMode = _originalLineMode!;
       }
+      restoreTerminalFlowControl(_savedFlowControl);
+      _savedFlowControl = null;
       _rawModeEnabled = false;
     } catch (_) {
       // Ignore errors during restoration

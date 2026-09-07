@@ -244,6 +244,7 @@ void main() {
 - Progress/Time: `SpinnerModel`, `ProgressModel`, `TimerModel`, `StopwatchModel`, `CountdownModel`
 - File system: `FilePickerModel`
 - Flow: `WizardModel`
+- Overlays: `CommandPaletteController`, `CommandPaletteOverlay`, `CommandPaletteComponent`, `renderModal`
 
 ## Prompt Options
 

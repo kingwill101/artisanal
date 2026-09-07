@@ -1,7 +1,10 @@
 export 'layout.dart';
 export 'columns.dart';
+export 'command_palette.dart';
+export '../../command_palette.dart';
 export 'box.dart';
 export 'panel_chars.dart';
 export 'panel.dart';
+export 'modal.dart';
 export 'two_column_detail.dart';
 export 'titled_block.dart';

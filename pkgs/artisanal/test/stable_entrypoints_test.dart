@@ -39,6 +39,10 @@ void main() {
     expect(runtime.SuspendMsg, isA<Type>());
     expect(runtime.ZoneInBoundsMsg, isA<Type>());
     expect(runtime.TuiTrace.log, isA<Function>());
+    expect(runtime.CommandPaletteItem, isA<Type>());
+    expect(runtime.CommandPaletteController, isA<Type>());
+    expect(runtime.matchCommandPaletteItems, isA<Function>());
+    expect(runtime.renderCommandPaletteBody, isA<Function>());
     expect(
       runtime.FrameLayout.vertical(const runtime.FrameArea(0, 0, 10, 4), const [
         runtime.FrameLength(1),

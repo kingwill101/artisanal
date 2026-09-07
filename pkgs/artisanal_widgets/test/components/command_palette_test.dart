@@ -11,12 +11,16 @@ void main() {
 
     test('stores all optional properties', () {
       final item = CommandPaletteItem(
+        id: 'file.save',
+        payload: 42,
         label: 'Save',
         description: 'Save the current file',
         shortcut: 'ctrl+s',
         group: 'File',
         enabled: false,
       );
+      expect(item.id, equals('file.save'));
+      expect(item.payload, equals(42));
       expect(item.description, equals('Save the current file'));
       expect(item.shortcut, equals('ctrl+s'));
       expect(item.group, equals('File'));

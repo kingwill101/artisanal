@@ -2,7 +2,9 @@ library;
 
 import 'dart:math' as math;
 
+import 'code_language_profile.dart';
 import 'text_document.dart';
+import 'text_language.dart';
 
 String codeLeadingIndent(String line) {
   final buffer = StringBuffer();
@@ -16,6 +18,29 @@ String codeLeadingIndent(String line) {
   return buffer.toString();
 }
 
+/// Adapter-aware indent check. Prefer this over the string-based overload:
+/// pass the resolved [EditorLanguageAdapter] (builtin, Tree-sitter-backed,
+/// or custom) instead of a language name.
+bool codeShouldIncreaseIndentForAdapter(
+  String prefix, {
+  EditorLanguageAdapter? adapter,
+}) {
+  if (prefix.isEmpty) return false;
+  final trimmed = prefix.trimRight();
+  if (trimmed.isEmpty) return false;
+  final last = trimmed[trimmed.length - 1];
+  if (last == '{' || last == '[' || last == '(') return true;
+  if (adapter == null) return false;
+  return adapter.shouldIncreaseIndent(
+    EditorIndentContext(
+      lineBeforeCursor: prefix,
+      lineAfterCursor: '',
+      baseIndent: codeLeadingIndent(prefix),
+      indentWidth: 2,
+    ),
+  );
+}
+
 bool codeShouldIncreaseIndentAfter(String prefix, {String? language}) {
   if (prefix.isEmpty) {
     return false;
@@ -26,15 +51,21 @@ bool codeShouldIncreaseIndentAfter(String prefix, {String? language}) {
     return true;
   }
 
-  final normalizedLanguage = (language ?? '').toLowerCase();
-  if ((normalizedLanguage == 'python' ||
-          normalizedLanguage == 'py' ||
-          normalizedLanguage == 'yaml' ||
-          normalizedLanguage == 'yml') &&
-      last == ':') {
-    return true;
-  }
-  return false;
+  // Legacy string-based path: resolve via the registry so custom adapters
+  // registered on the shared registry participate without core changes.
+  // The colon rule itself lives on the Python/YAML adapters, not here.
+  if (last != ':') return false;
+  final adapter =
+      EditorLanguageRegistry.shared.lookup(language) ??
+      resolveCodeLanguageProfile(language);
+  return adapter.shouldIncreaseIndent(
+    EditorIndentContext(
+      lineBeforeCursor: prefix,
+      lineAfterCursor: '',
+      baseIndent: codeLeadingIndent(prefix),
+      indentWidth: 2,
+    ),
+  );
 }
 
 ({String text, int consumedColumns})? codeBlockNewlineSuffix({

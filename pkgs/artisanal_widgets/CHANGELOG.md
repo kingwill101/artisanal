@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1
+
+### Changed
+
+- Moved command-palette item and scored-match primitives plus deterministic
+  matching, selection, and visible-window calculation into `artisanal`; the
+  widget keeps compatibility aliases, mouse/focus/theme chrome, and
+  delegates ranking plus scrolling to the shared controller.
+
 ## 0.4.0
 
 ### Changed

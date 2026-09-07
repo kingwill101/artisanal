@@ -6,6 +6,29 @@ This directory mirrors the Bubble Tea examples as Dart ports. Each folder contai
 dart run example/tui/examples/<example>/main.dart
 ```
 
+### Advanced Editor
+
+The `advanced-editor` example is a full-screen alternate-buffer workbench with
+line numbers, incremental syntax highlighting, diagnostics, a find/replace
+overlay, completion and code-action pickers, multiple cursors, folding,
+snippets, matching brackets, a filterable command palette, and file-backed
+save/recovery.
+
+```bash
+dart run example/tui/examples/advanced-editor/main.dart
+```
+
+### Prompt Composer
+
+The `prompt-composer` example demonstrates editor-backed prompt input,
+including atomic large-paste elements. Large bracketed pastes collapse to a
+single visual token, preview when the cursor reaches either edge, and expand
+to their original content on submit or when opened in `$EDITOR`.
+
+```bash
+dart run example/tui/examples/prompt-composer/main.dart
+```
+
 ### Alt Screen Toggle
 
 The `altscreen-toggle` example shows how to transition between the alternative

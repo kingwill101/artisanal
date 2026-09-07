@@ -1443,13 +1443,15 @@ class UltravioletTuiRenderer
     if (isBounded) {
       _flushInline();
     } else {
-      // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
-      // terminal buffers all changes and paints them atomically.  This prevents
-      // visible flashes when scroll optimization emits DL/IL before the
-      // replacement content arrives.  Terminals that don't support mode 2026
-      // silently ignore these sequences.
+      // Wrap text-only flushes in Synchronized Update markers (DEC mode 2026)
+      // so the terminal paints them atomically. Kitty and other terminal
+      // graphics commands must remain outside mode 2026: Ghostty accepts the
+      // payload while synchronized output is active but does not display the
+      // resulting placement when the update ends.
+      final synchronize = !uv_graphics.mayContainTerminalGraphics(textContent);
       _fullscreenCapture.clear();
-      final frame = StringBuffer()..write(UvAnsi.beginSynchronizedUpdate);
+      final frame = StringBuffer();
+      if (synchronize) frame.write(UvAnsi.beginSynchronizedUpdate);
       for (final sequence in graphicsFrame.deletionSequencesSince(
         _lastGraphicsFrame,
       )) {
@@ -1473,9 +1475,8 @@ class UltravioletTuiRenderer
           },
         );
       }
-      frame
-        ..write(_fullscreenCapture)
-        ..write(UvAnsi.endSynchronizedUpdate);
+      frame.write(_fullscreenCapture);
+      if (synchronize) frame.write(UvAnsi.endSynchronizedUpdate);
       terminal.write(frame.toString());
     }
     writeSw?.stop();
