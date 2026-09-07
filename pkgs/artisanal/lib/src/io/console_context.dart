@@ -35,6 +35,9 @@ abstract interface class ConsolePromptHost implements ConsoleOperationHost {
   /// Reads one line from the configured input source.
   String? readConsoleLine();
 
+  /// Uses the configured secret reader, or returns null when none is installed.
+  String? readConfiguredSecret(String prompt, {String? fallback});
+
   /// Writes one error line.
   void writelnErr([String line = '']);
 }

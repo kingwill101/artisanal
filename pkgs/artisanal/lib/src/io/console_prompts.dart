@@ -1,6 +1,11 @@
 import '../style/style.dart';
+import '../tui/bubbles/number_input.dart';
+import '../tui/bubbles/password.dart';
+import '../tui/bubbles/prompt.dart'
+    show runNumberInputPrompt, runPasswordPrompt;
 import 'console_context.dart';
 import 'console_presentation.dart';
+import 'validators.dart';
 
 /// Shared implementation of synchronous console prompts.
 final class ConsolePrompts {
@@ -47,6 +52,28 @@ final class ConsolePrompts {
     }
 
     throw StateError('Too many invalid attempts.');
+  }
+
+  /// Prompts for secret input without echo.
+  Future<String> secret(String question, {String? fallback}) async {
+    if (!host.interactive) {
+      if (fallback != null) return fallback;
+      throw StateError('Cannot prompt in non-interactive mode.');
+    }
+
+    final configured = host.readConfiguredSecret(question, fallback: fallback);
+    if (configured != null) return configured;
+
+    final result = await runPasswordPrompt(
+      PasswordModel(
+        prompt: question,
+        styles: host.componentTheme.passwordStyles(host.renderConfig),
+      ),
+      host.promptTerminal,
+    );
+    if (result != null) return result;
+    if (fallback != null) return fallback;
+    throw StateError('Password prompt cancelled.');
   }
 
   /// Prompts for one or more choices using numbered text input.
@@ -105,6 +132,53 @@ final class ConsolePrompts {
       selected.add(choices[index]);
     }
     return selected;
+  }
+
+  /// Prompts for a numeric value.
+  Future<num> number(
+    String question, {
+    num? defaultValue,
+    num? min,
+    num? max,
+    num step = 1,
+    int attempts = 3,
+    String hint = '',
+  }) async {
+    if (!host.interactive) {
+      final validator = Validators.combine([
+        Validators.required(),
+        Validators.numeric(min: min, max: max),
+      ]);
+      final raw = ask(
+        question,
+        defaultValue: defaultValue?.toString(),
+        validator: (value) {
+          try {
+            return validator(value);
+          } catch (error) {
+            return error.toString();
+          }
+        },
+        attempts: attempts,
+      );
+      return num.parse(raw);
+    }
+
+    final result = await runNumberInputPrompt(
+      NumberInputModel(
+        prompt: question,
+        defaultValue: defaultValue,
+        min: min,
+        max: max,
+        step: step,
+        hint: hint,
+        styles: host.componentTheme.numberInputStyles(host.renderConfig),
+      ),
+      host.promptTerminal,
+    );
+    if (result != null) return result;
+    if (defaultValue != null) return defaultValue;
+    throw StateError('Number prompt cancelled.');
   }
 
   Style _promptStyle() => _styleFor(

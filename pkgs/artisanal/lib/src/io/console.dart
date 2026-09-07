@@ -20,9 +20,7 @@ import 'console_prompts.dart';
 import 'desktop_notifications.dart';
 import 'operation_results.dart';
 import 'output_theme.dart';
-import 'validators.dart';
 import '../terminal/terminal_io_impl.dart' show StdioTerminal;
-import '../tui/bubbles/password.dart' show PasswordModel;
 import '../tui/bubbles/select.dart'
     show MultiSelectModel, SelectModel, SelectStyles, MultiSelectStyles;
 import '../tui/bubbles/search.dart'
@@ -32,14 +30,11 @@ import '../tui/bubbles/table.dart' show Column;
 import '../tui/bubbles/prompt.dart'
     show
         runMultiSelectPrompt,
-        runPasswordPrompt,
         runSelectPrompt,
         runSearchPrompt,
         runMultiSearchPrompt,
         runDataTablePrompt,
-        runNumberInputPrompt,
         runSuggestPrompt;
-import '../tui/bubbles/number_input.dart' show NumberInputModel;
 import '../tui/bubbles/suggest.dart' show SuggestModel, SuggestStyles;
 
 export 'operation_results.dart';
@@ -265,6 +260,10 @@ class Console implements ConsolePromptHost {
 
   @override
   String? readConsoleLine() => _readLine?.call();
+
+  @override
+  String? readConfiguredSecret(String prompt, {String? fallback}) =>
+      _secretReader?.call(prompt, fallback: fallback);
 
   /// Disposes of console resources, including any active terminal.
   void dispose() {
@@ -910,26 +909,8 @@ class Console implements ConsolePromptHost {
   );
 
   /// Prompts for secret/password input (no echo).
-  Future<String> secret(String question, {String? fallback}) async {
-    if (!interactive) {
-      if (fallback != null) return fallback;
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    if (_secretReader != null) {
-      return _secretReader(question, fallback: fallback);
-    }
-
-    final terminal = promptTerminal;
-    final model = PasswordModel(
-      prompt: question,
-      styles: componentTheme.passwordStyles(renderConfig),
-    );
-    final result = await runPasswordPrompt(model, terminal);
-    if (result != null) return result;
-    if (fallback != null) return fallback;
-    throw StateError('Password prompt cancelled.');
-  }
+  Future<String> secret(String question, {String? fallback}) =>
+      _consolePrompts.secret(question, fallback: fallback);
 
   /// Prompts for a choice from a list (basic numbered selection).
   Object choice(
@@ -959,43 +940,15 @@ class Console implements ConsolePromptHost {
     num step = 1,
     int attempts = 3,
     String hint = '',
-  }) async {
-    if (!interactive) {
-      // Non-interactive path: simple readline with validation.
-      final validator = Validators.combine([
-        Validators.required(),
-        Validators.numeric(min: min, max: max),
-      ]);
-      final raw = ask(
-        question,
-        defaultValue: defaultValue?.toString(),
-        validator: (val) {
-          try {
-            return validator(val);
-          } catch (e) {
-            return e.toString();
-          }
-        },
-        attempts: attempts,
-      );
-      return num.parse(raw);
-    }
-
-    final terminal = promptTerminal;
-    final model = NumberInputModel(
-      prompt: question,
-      defaultValue: defaultValue,
-      min: min,
-      max: max,
-      step: step,
-      hint: hint,
-      styles: componentTheme.numberInputStyles(renderConfig),
-    );
-    final result = await runNumberInputPrompt(model, terminal);
-    if (result != null) return result;
-    if (defaultValue != null) return defaultValue;
-    throw StateError('Number prompt cancelled.');
-  }
+  }) => _consolePrompts.number(
+    question,
+    defaultValue: defaultValue,
+    min: min,
+    max: max,
+    step: step,
+    attempts: attempts,
+    hint: hint,
+  );
 
   /// Interactive single-select with arrow-key navigation.
   Future<T?> selectChoice<T>(

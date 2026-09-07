@@ -42,6 +42,9 @@ final class _OperationHost implements ConsolePromptHost {
   String? readConsoleLine() => _input.moveNext() ? _input.current : null;
 
   @override
+  String? readConfiguredSecret(String prompt, {String? fallback}) => null;
+
+  @override
   void write(String text) => output.write(text);
 
   @override
@@ -60,6 +63,28 @@ final class _OperationHost implements ConsolePromptHost {
 
 void main() {
   group('ConsolePrompts', () {
+    test('uses non-interactive numeric defaults', () async {
+      final host = _OperationHost(interactive: false);
+
+      final result = await ConsolePrompts(
+        host,
+      ).number('Port', defaultValue: 8080, min: 1);
+
+      expect(result, 8080);
+      expect(host.promptTerminal.operations, isEmpty);
+    });
+
+    test('uses a non-interactive secret fallback', () async {
+      final host = _OperationHost(interactive: false);
+
+      final result = await ConsolePrompts(
+        host,
+      ).secret('Token', fallback: 'configured');
+
+      expect(result, 'configured');
+      expect(host.promptTerminal.operations, isEmpty);
+    });
+
     test('validates text through the shared input host', () {
       final host = _OperationHost(interactive: true, input: ['bad', 'good']);
 
