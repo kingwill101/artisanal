@@ -139,7 +139,7 @@ Native bindings belong in a dependent package. Editor core remains free of
 `dart:ffi`.
 
 The optional
-[`tree_sitter_language_pack` adapter example](../../pkgs/artisanal/example/tree_sitter_language_pack/)
+[`tree_sitter_language_pack` adapter example](https://github.com/kingwill101/artisanal/tree/artisanal/pkgs/artisanal/example/tree_sitter_language_pack)
 shows this boundary end to end. It owns native runtime initialization,
 implements `AsyncSyntaxTreeProvider`, parses outside the render path, and maps
 the package's UTF-8 byte spans into editor grapheme offsets. Its live editor
