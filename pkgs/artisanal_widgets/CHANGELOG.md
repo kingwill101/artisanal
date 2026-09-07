@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0
+## 0.4.1
 
 ### Changed
 
@@ -8,6 +8,11 @@
   matching, selection, and visible-window calculation into `artisanal`; the
   widget keeps compatibility aliases, mouse/focus/theme chrome, and
   delegates ranking plus scrolling to the shared controller.
+
+## 0.4.0
+
+### Changed
+
 - Forwarded `RenderMetricsInjector` custom entries to Artisanal's universal
   program developer tools overlay while preserving the existing widget-local
   metrics stream.
