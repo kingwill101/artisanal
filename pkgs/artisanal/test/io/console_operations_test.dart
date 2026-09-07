@@ -89,6 +89,14 @@ void main() {
       );
     });
 
+    test('reports non-interactive selection errors asynchronously', () async {
+      final prompts = ConsolePrompts(_OperationHost(interactive: false));
+
+      final result = prompts.selectChoice('Select', choices: ['only']);
+
+      await expectLater(result, throwsStateError);
+    });
+
     test('uses non-interactive numeric defaults', () async {
       final host = _OperationHost(interactive: false);
 

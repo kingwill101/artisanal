@@ -200,16 +200,16 @@ final class ConsolePrompts {
     required List<T> choices,
     int? defaultIndex,
     String Function(T)? display,
-  }) {
+  }) async {
     if (!host.interactive) {
       if (defaultIndex != null &&
           defaultIndex >= 0 &&
           defaultIndex < choices.length) {
-        return Future<T?>.value(choices[defaultIndex]);
+        return choices[defaultIndex];
       }
       throw StateError('Cannot prompt in non-interactive mode.');
     }
-    return runSelectPrompt(
+    return await runSelectPrompt(
       SelectModel<T>(
         items: choices,
         title: question,
@@ -255,11 +255,11 @@ final class ConsolePrompts {
     String Function(T)? display,
     String placeholder = 'Type to search...',
     String noResultsText = 'No matches found',
-  }) {
+  }) async {
     if (!host.interactive) {
-      return Future<T?>.value(items.isNotEmpty ? items.first : null);
+      return items.isNotEmpty ? items.first : null;
     }
-    return runSearchPrompt(
+    return await runSearchPrompt(
       SearchModel<T>(
         items: items,
         title: question,
@@ -304,12 +304,12 @@ final class ConsolePrompts {
     required List<T> items,
     required List<String> Function(T) rowBuilder,
     int pageSize = 10,
-  }) {
+  }) async {
     if (!host.interactive) {
-      return Future<T?>.value(items.isNotEmpty ? items.first : null);
+      return items.isNotEmpty ? items.first : null;
     }
     final themed = host.componentTheme.dataTableStyles(host.renderConfig);
-    return runDataTablePrompt<T>(
+    return await runDataTablePrompt<T>(
       DataTableModel<T>(
         items: items,
         columns: columns,
@@ -338,9 +338,9 @@ final class ConsolePrompts {
     String? defaultValue,
     int scroll = 5,
     String hint = '',
-  }) {
-    if (!host.interactive) return Future<String?>.value(defaultValue);
-    return runSuggestPrompt(
+  }) async {
+    if (!host.interactive) return defaultValue;
+    return await runSuggestPrompt(
       SuggestModel(
         prompt: question,
         options: options,
