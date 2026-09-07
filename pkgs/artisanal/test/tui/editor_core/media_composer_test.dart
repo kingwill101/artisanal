@@ -12,6 +12,10 @@ tui.KeyMsg _ctrl(int rune) =>
 
 tui.KeyMsg _enter() => tui.KeyMsg(tui.Key(tui.KeyType.enter));
 
+String _fileUriPath(String uri) {
+  return Uri.parse(uri).toFilePath(windows: io.Platform.isWindows);
+}
+
 void main() {
   group('pasted file paths', () {
     test('recognizes plain, quoted, and file:// paths', () {
@@ -22,12 +26,14 @@ void main() {
       expect(extractPastedFilePaths('"C:/pics/shot.png"'), [
         'C:/pics/shot.png',
       ]);
-      expect(extractPastedFilePaths('file:///tmp/shot.png'), ['/tmp/shot.png']);
+      expect(extractPastedFilePaths('file:///tmp/shot.png'), [
+        _fileUriPath('file:///tmp/shot.png'),
+      ]);
     });
 
     test('decodes percent-escaped file URLs', () {
       expect(extractPastedFilePaths('file:///tmp/my%20photo.png'), [
-        '/tmp/my photo.png',
+        _fileUriPath('file:///tmp/my%20photo.png'),
       ]);
     });
 
