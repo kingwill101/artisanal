@@ -103,6 +103,11 @@ void main() {
           EditorCommandIds.sortSelectedLines,
           EditorCommandIds.wrapSelection,
           EditorCommandIds.unwrapSelection,
+          EditorCommandIds.toggleLinePrefix,
+          EditorCommandIds.toggleNumberedList,
+          EditorCommandIds.renumberNumberedList,
+          EditorCommandIds.toggleHeading,
+          EditorCommandIds.toggleChecklist,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -231,6 +236,52 @@ void main() {
         EditorCommandDispatchResult.handled,
       );
       expect(model.value, '**word**');
+    });
+
+    test('dispatches Markdown line transforms with typed arguments', () {
+      final model = TextAreaModel()
+        ..setText('alpha\nbeta', recordHistory: false)
+        ..selectAll();
+
+      expect(
+        model.executeCommand(EditorCommandIds.toggleLinePrefix, argument: '-'),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '- alpha\n- beta');
+
+      expect(
+        model.executeCommand(EditorCommandIds.toggleNumberedList, argument: 3),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '3. - alpha\n4. - beta');
+
+      expect(
+        model.executeCommand(
+          EditorCommandIds.renumberNumberedList,
+          argument: 7,
+        ),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '7. - alpha\n8. - beta');
+
+      expect(
+        model.executeCommand(EditorCommandIds.toggleHeading, argument: 2),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '## 7. - alpha\n## 8. - beta');
+
+      model
+        ..setText('- [ ] todo', recordHistory: false)
+        ..selectAll();
+      expect(
+        model.executeCommand(EditorCommandIds.toggleChecklist, argument: 'X'),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '- [X] todo');
+      expect(
+        model.executeCommand(EditorCommandIds.toggleHeading, argument: '2'),
+        EditorCommandDispatchResult.noChange,
+      );
     });
 
     test('command motions preserve a legacy single selection', () {

@@ -186,6 +186,10 @@ command palettes without requiring a terminal key binding.
 `wrapSelection` accepts either a string for symmetric delimiters or an
 `EditorWrapSelectionArgument` for distinct opening and closing text;
 `unwrapSelection` removes recognized surrounding pairs.
+Markdown-oriented commands expose prefix toggling, numbered-list
+toggle/renumber, heading toggle, and checklist state. Their optional arguments
+use simple portable values: `String` for prefixes/markers and `int` for list
+starts/heading levels.
 
 This means a host may consume a key before `TextAreaModel.update` and dispatch
 the same command itself:

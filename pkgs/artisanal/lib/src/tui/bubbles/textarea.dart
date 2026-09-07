@@ -3147,6 +3147,59 @@ class TextAreaModel extends ViewComponent {
         execute: (model) => model.unwrapSelection(),
       ),
       EditorCommand(
+        id: EditorCommandIds.toggleLinePrefix,
+        label: 'Toggle Line Prefix',
+        category: 'Transform',
+        execute: (_) => false,
+        executeWith: (model, argument) => switch (argument) {
+          final String prefix when prefix.isNotEmpty => model.toggleLinePrefix(
+            prefix,
+          ),
+          _ => false,
+        },
+      ),
+      EditorCommand(
+        id: EditorCommandIds.toggleNumberedList,
+        label: 'Toggle Numbered List',
+        category: 'Transform',
+        execute: (model) => model.toggleNumberedList(),
+        executeWith: (model, argument) => switch (argument) {
+          final int startAt => model.toggleNumberedList(startAt: startAt),
+          _ => false,
+        },
+      ),
+      EditorCommand(
+        id: EditorCommandIds.renumberNumberedList,
+        label: 'Renumber Numbered List',
+        category: 'Transform',
+        execute: (model) => model.renumberNumberedList(),
+        executeWith: (model, argument) => switch (argument) {
+          final int startAt => model.renumberNumberedList(startAt: startAt),
+          _ => false,
+        },
+      ),
+      EditorCommand(
+        id: EditorCommandIds.toggleHeading,
+        label: 'Toggle Heading',
+        category: 'Transform',
+        execute: (model) => model.toggleHeadingPrefix(),
+        executeWith: (model, argument) => switch (argument) {
+          final int level => model.toggleHeadingPrefix(level: level),
+          _ => false,
+        },
+      ),
+      EditorCommand(
+        id: EditorCommandIds.toggleChecklist,
+        label: 'Toggle Checklist',
+        category: 'Transform',
+        execute: (model) => model.toggleChecklistState(),
+        executeWith: (model, argument) => switch (argument) {
+          final String marker when marker.isNotEmpty =>
+            model.toggleChecklistState(checkedMarker: marker),
+          _ => false,
+        },
+      ),
+      EditorCommand(
         id: EditorCommandIds.nextSearchMatch,
         label: 'Find Next',
         category: 'Find',
