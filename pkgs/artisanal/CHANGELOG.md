@@ -73,6 +73,14 @@
 - `Console.spin` now honors custom completion messages, and generated spinner
   results use the task's completed elapsed time rather than a near-zero
   precomputed duration.
+- Non-interactive tasks, spinners, and progress operations now avoid terminal
+  allocation, cursor control sequences, and unterminated output when
+  `clearOnDone` is enabled.
+- Non-interactive number prompts now validate configured defaults, and
+  multi-select prompts consistently ignore invalid default indices.
+- Retained the optional `InlineAnimation.renderConfig` constructor parameter
+  for backwards compatibility while deriving animation behavior from the
+  terminal.
 - Non-interactive task groups now report unrun operations as skipped after a
   failure, matching the interactive task-group result.
 - Generated Zsh completion wrappers now forward the actual cursor position
