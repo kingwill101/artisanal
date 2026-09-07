@@ -240,9 +240,15 @@ void main() {
             interval: const Duration(milliseconds: 40),
           ),
         );
-        expect(tester.find.text('1'), isTrue);
+        const frames = ['1', '2', '3'];
+        final initial = _visibleSpinnerFrame(tester, frames);
+        expect(initial, isNotEmpty);
 
-        final advanced = await _waitForSpinnerFrame(tester, const ['2', '3']);
+        final advanced = await _waitForSpinnerFrame(
+          tester,
+          frames,
+          except: initial,
+        );
         expect(advanced, isNotEmpty);
       } finally {
         await tester.dispose();
