@@ -1448,7 +1448,7 @@ class UltravioletTuiRenderer
       // graphics commands must remain outside mode 2026: Ghostty accepts the
       // payload while synchronized output is active but does not display the
       // resulting placement when the update ends.
-      final synchronize = !uv_graphics.mayContainTerminalGraphics(_pendingView);
+      final synchronize = !uv_graphics.mayContainTerminalGraphics(textContent);
       _fullscreenCapture.clear();
       final frame = StringBuffer();
       if (synchronize) frame.write(UvAnsi.beginSynchronizedUpdate);
