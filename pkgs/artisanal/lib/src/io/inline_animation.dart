@@ -4,27 +4,33 @@ import '../style/color.dart';
 import '../style/style.dart';
 import '../style/chars.dart';
 import '../terminal/terminal.dart';
-import '../tui/bubbles/spinner.dart';
 import '../tui/bubbles/components/base.dart';
+import '../tui/bubbles/spinner.dart';
+import 'console_format.dart';
 
-/// Result of an inline animation operation.
+/// Result metadata for an inline animation operation.
+///
+/// This value remains available for callers that want to describe an
+/// operation's result separately from the convenience methods on
+/// [InlineAnimation].
 class InlineAnimationResult<T> {
+  /// Creates an inline animation result.
   const InlineAnimationResult({
     required this.value,
     required this.duration,
     this.error,
   });
 
-  /// The result value from the task.
+  /// The operation's value, or null when it did not produce one.
   final T? value;
 
-  /// How long the task took.
+  /// How long the operation took.
   final Duration duration;
 
-  /// Error if the task failed.
+  /// The operation error, if any.
   final Object? error;
 
-  /// Whether the task succeeded.
+  /// Whether the operation completed without an error.
   bool get success => error == null;
 }
 
@@ -78,7 +84,10 @@ class InlineAnimation {
   /// The terminal to render to.
   final Terminal terminal;
 
-  /// Optional render configuration for styling.
+  /// Optional render configuration retained for backwards compatibility.
+  ///
+  /// The animation currently derives its rendering behavior from [terminal].
+  @Deprecated('InlineAnimation derives rendering behavior from terminal.')
   final RenderConfig? renderConfig;
 
   /// Runs a spinner animation while executing a task.
@@ -105,6 +114,8 @@ class InlineAnimation {
     bool clearOnDone = false,
     String? doneMessage,
     String? errorMessage,
+    String Function(T value, Duration elapsed)? successMessage,
+    String Function(Object error, Duration elapsed)? failureMessage,
   }) async {
     final frames = spinner.frames;
     if (frames.isEmpty) {
@@ -138,25 +149,32 @@ class InlineAnimation {
       // Handle completion
       if (clearOnDone && doneMessage == null) {
         terminal.clearLine();
-      } else if (doneMessage != null) {
+      } else if (successMessage != null || doneMessage != null) {
         terminal.clearLine();
-        terminal.writeln(doneMessage);
+        terminal.writeln(
+          successMessage?.call(result, watch.elapsed) ?? doneMessage!,
+        );
       } else {
         // Leave final frame visible, add newline
         terminal.writeln();
       }
 
       return result;
-    } catch (e) {
+    } catch (error) {
       watch.stop();
       timer?.cancel();
 
       // Handle error display
-      if (clearOnDone && errorMessage == null && doneMessage == null) {
+      if (clearOnDone &&
+          failureMessage == null &&
+          errorMessage == null &&
+          doneMessage == null) {
         terminal.clearLine();
-      } else if (errorMessage != null) {
+      } else if (failureMessage != null || errorMessage != null) {
         terminal.clearLine();
-        terminal.writeln(errorMessage);
+        terminal.writeln(
+          failureMessage?.call(error, watch.elapsed) ?? errorMessage!,
+        );
       } else if (doneMessage != null) {
         // Use done message format for errors too if no specific error message
         terminal.clearLine();
@@ -172,7 +190,7 @@ class InlineAnimation {
   }
 
   void _renderSpinnerFrame(String frame, String message, Duration elapsed) {
-    final elapsedStr = _formatDuration(elapsed);
+    final elapsedStr = formatConsoleDuration(elapsed);
     // Move to start of line, write content, then clear any leftover chars.
     // This avoids the flash caused by clearLine() which clears before writing.
     terminal.cursorToColumn(1);
@@ -268,7 +286,7 @@ class InlineAnimation {
     final empty = width - filled;
 
     final bar = '[${Style().bold().render('=' * filled)}${' ' * empty}]';
-    final elapsedStr = _formatDuration(elapsed);
+    final elapsedStr = formatConsoleDuration(elapsed);
 
     // Move to start of line, write content, then clear any leftover chars.
     // This avoids the flash caused by clearLine() which clears before writing.
@@ -388,11 +406,4 @@ class InlineAnimation {
 
     return results;
   }
-}
-
-String _formatDuration(Duration duration) {
-  final ms = duration.inMilliseconds;
-  if (ms < 1000) return '${ms}ms';
-  final seconds = ms / 1000;
-  return '${seconds.toStringAsFixed(seconds < 10 ? 1 : 0)}s';
 }

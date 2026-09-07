@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import '../terminal/ansi.dart' show Ansi;
-import '../style/chars.dart';
 import '../tui/bubbles/components/base.dart';
-import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
 import '../tui/bubbles/components/tree.dart' show TreeComponent, TreeEnumerator;
 import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
@@ -15,32 +13,17 @@ import '../style/tag_parser.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
 import 'component_theme.dart';
-import 'inline_animation.dart';
+import 'console_context.dart';
+import 'console_operations.dart';
+import 'console_presentation.dart';
+import 'console_prompts.dart';
+import 'desktop_notifications.dart';
+import 'operation_results.dart';
 import 'output_theme.dart';
-import 'validators.dart';
 import '../terminal/terminal_io_impl.dart' show StdioTerminal;
-import '../tui/bubbles/password.dart' show PasswordModel;
-import '../tui/bubbles/select.dart'
-    show MultiSelectModel, SelectModel, SelectStyles, MultiSelectStyles;
-import '../tui/bubbles/search.dart'
-    show MultiSearchModel, SearchModel, SearchStyles;
-import '../tui/bubbles/data_table.dart' show DataTableModel, DataTableStyles;
 import '../tui/bubbles/table.dart' show Column;
-import '../tui/bubbles/prompt.dart'
-    show
-        runMultiSelectPrompt,
-        runPasswordPrompt,
-        runSelectPrompt,
-        runSearchPrompt,
-        runMultiSearchPrompt,
-        runDataTablePrompt,
-        runNumberInputPrompt,
-        runSuggestPrompt,
-        promptProgramOptions;
-import '../tui/bubbles/pause.dart' show CountdownModel;
-import '../tui/bubbles/number_input.dart' show NumberInputModel;
-import '../tui/bubbles/suggest.dart' show SuggestModel, SuggestStyles;
-import '../tui/program.dart' show Program;
+
+export 'operation_results.dart';
 
 /// Callback for writing a complete line to output.
 typedef WriteLine = void Function(String line);
@@ -53,18 +36,6 @@ typedef ReadLine = String? Function();
 
 /// Callback for reading secret/password input without echo.
 typedef SecretReader = String Function(String prompt, {String? fallback});
-
-/// Result of a task operation.
-enum TaskResult {
-  /// Task completed successfully.
-  success,
-
-  /// Task failed.
-  failure,
-
-  /// Task was skipped.
-  skipped,
-}
 
 /// Style presets for tree rendering.
 enum TreeStyle {
@@ -82,64 +53,6 @@ enum TreeStyle {
 
   /// Arrow-style list (→ for all items).
   arrow,
-}
-
-/// Result of a task group operation.
-class TaskGroupResult {
-  /// Creates a task group result.
-  const TaskGroupResult({
-    required this.completed,
-    required this.failed,
-    required this.skipped,
-    this.duration,
-  });
-
-  /// Names of successfully completed tasks.
-  final List<String> completed;
-
-  /// List of (name, error) pairs for failed tasks.
-  final List<(String, Object)> failed;
-
-  /// Names of tasks that were skipped (due to prior failures).
-  final List<String> skipped;
-
-  /// Total duration of the task group execution.
-  final Duration? duration;
-
-  /// Whether all tasks completed successfully.
-  bool get success => failed.isEmpty && skipped.isEmpty;
-
-  /// Total number of tasks.
-  int get total => completed.length + failed.length + skipped.length;
-}
-
-/// Result of a steps workflow operation.
-class StepsResult {
-  /// Creates a steps result.
-  const StepsResult({
-    required this.completed,
-    required this.failed,
-    required this.skipped,
-    this.duration,
-  });
-
-  /// Names of successfully completed steps.
-  final List<String> completed;
-
-  /// List of (name, error) pairs for failed steps.
-  final List<(String, Object)> failed;
-
-  /// Names of steps that were skipped (due to prior failures).
-  final List<String> skipped;
-
-  /// Total duration of the workflow execution.
-  final Duration? duration;
-
-  /// Whether all steps completed successfully.
-  bool get success => failed.isEmpty && skipped.isEmpty;
-
-  /// Total number of steps.
-  int get total => completed.length + failed.length + skipped.length;
 }
 
 /// The main I/O helper for Artisanal-style console output.
@@ -172,7 +85,7 @@ class StepsResult {
 ///   });
 /// }
 /// ```
-class Console {
+class Console implements ConsolePromptHost {
   /// Creates a new I/O helper.
   ///
   /// The [outputTheme] parameter allows customizing the colors used for
@@ -224,6 +137,7 @@ class Console {
   OutputTheme _outputTheme;
 
   /// The theme used by interactive prompts and built-in components.
+  @override
   ComponentTheme get componentTheme => _componentTheme;
 
   set componentTheme(ComponentTheme value) {
@@ -270,16 +184,19 @@ class Console {
   }
 
   /// Gets a registered style by name, or null if not found.
+  @override
   Style? getStyle(String name) => _tagParser.getStyle(name);
 
   /// Returns all registered style names.
   Iterable<String> get styleNames => _tagParser.styleNames;
 
   /// Rendering configuration for bubble-style display components.
+  @override
   RenderConfig get renderConfig =>
       RenderConfig.fromRenderer(_renderer, terminalWidth: terminalWidth);
 
   /// Whether interactive prompts are enabled.
+  @override
   final bool interactive;
 
   /// The current verbosity level.
@@ -300,6 +217,9 @@ class Console {
   final io.Stdout? _stdout;
 
   Components? _components;
+  ConsoleOperations? _operations;
+  ConsolePrompts? _prompts;
+  static const _desktopNotifications = DesktopNotifications();
 
   /// Whether output is suppressed (quiet mode).
   bool get quiet => verbosity == Verbosity.quiet;
@@ -319,6 +239,18 @@ class Console {
   /// ```
   Components get components => _components ??= Components(io: this);
 
+  ConsoleOperations get _consoleOperations =>
+      _operations ??= ConsoleOperations(this);
+
+  ConsolePrompts get _consolePrompts => _prompts ??= ConsolePrompts(this);
+
+  @override
+  String? readConsoleLine() => _readLine?.call();
+
+  @override
+  String? readConfiguredSecret(String prompt, {String? fallback}) =>
+      _secretReader?.call(prompt, fallback: fallback);
+
   /// Disposes of console resources, including any active terminal.
   void dispose() {
     _cachedPromptTerminal?.dispose();
@@ -330,12 +262,14 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Writes a line to stdout.
+  @override
   void writeln([String line = '']) {
     if (quiet) return;
     _out(_tagParser.render(line));
   }
 
   /// Writes raw text to stdout (no newline).
+  @override
   void write(String text) {
     if (quiet) return;
     _outRaw(_tagParser.render(text));
@@ -347,11 +281,13 @@ class Console {
   }
 
   /// Writes a line to stderr.
+  @override
   void writelnErr([String line = '']) {
     _err(_tagParser.render(line));
   }
 
   /// Outputs one or more blank lines.
+  @override
   void newLine([int count = 1]) {
     for (var i = 0; i < count; i++) {
       writeln();
@@ -528,86 +464,13 @@ class Console {
     String subtitle = '',
     String sound = '',
     String icon = '',
-  }) async {
-    if (io.Platform.isMacOS) {
-      return _notifyMacOS(title, body: body, subtitle: subtitle, sound: sound);
-    }
-    if (io.Platform.isLinux) {
-      return _notifyLinux(title, body: body, icon: icon);
-    }
-    return false;
-  }
-
-  Future<bool> _notifyMacOS(
-    String title, {
-    String body = '',
-    String subtitle = '',
-    String sound = '',
-  }) async {
-    String esc(String s) =>
-        '"${s.replaceAll(r'\', r'\\').replaceAll('"', '\\"')}"';
-
-    final sb = StringBuffer('display notification ${esc(body)}');
-    sb.write(' with title ${esc(title)}');
-    if (subtitle.isNotEmpty) sb.write(' subtitle ${esc(subtitle)}');
-    if (sound.isNotEmpty) sb.write(' sound name ${esc(sound)}');
-
-    return _runProcess('osascript', ['-e', sb.toString()]);
-  }
-
-  Future<bool> _notifyLinux(
-    String title, {
-    String body = '',
-    String icon = '',
-  }) async {
-    // Try notify-send first.
-    final notifySend = await _findExecutable('notify-send');
-    if (notifySend != null) {
-      final args = <String>[];
-      if (icon.isNotEmpty) {
-        args.addAll(['--icon', icon]);
-      }
-      args.add(title);
-      if (body.isNotEmpty) args.add(body);
-      return _runProcess('notify-send', args);
-    }
-
-    // Fallback to kdialog.
-    final kdialog = await _findExecutable('kdialog');
-    if (kdialog != null) {
-      final message = body.isNotEmpty ? '$title: $body' : title;
-      return _runProcess('kdialog', [
-        '--passivepopup',
-        message,
-        '5',
-        '--title',
-        title,
-      ]);
-    }
-
-    return false;
-  }
-
-  /// Returns the full path of [executable] if it is on PATH, else null.
-  Future<String?> _findExecutable(String executable) async {
-    try {
-      final result = await io.Process.run('which', [executable]);
-      if (result.exitCode == 0) {
-        return (result.stdout as String).trim();
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  /// Runs [executable] with [args] and returns whether it exited successfully.
-  Future<bool> _runProcess(String executable, List<String> args) async {
-    try {
-      final result = await io.Process.run(executable, args);
-      return result.exitCode == 0;
-    } catch (_) {
-      return false;
-    }
-  }
+  }) => _desktopNotifications.send(
+    title,
+    body: body,
+    subtitle: subtitle,
+    sound: sound,
+    icon: icon,
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Message Blocks
@@ -717,102 +580,8 @@ class Console {
     String description, {
     FutureOr<TaskResult> Function()? run,
     bool clearOnDone = false,
-  }) async {
-    final desc = description.trimRight();
-    final prefix = '  $desc ';
-    final terminal = promptTerminal;
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal;
-    final animate = run != null && interactive && supportsAnsi;
-    // Use actual terminal width, not the configured terminalWidth which may be wrong
-    final actualWidth = terminal.width;
-
-    if (!animate) {
-      write(prefix);
-    } else {
-      terminal.hideCursor();
-    }
-
-    final watch = Stopwatch()..start();
-    TaskResult result = TaskResult.success;
-    Timer? spinnerTimer;
-    var spinnerTick = 0;
-    try {
-      if (animate) {
-        const frames = ['|', '/', '-', '\\'];
-        spinnerTimer = Timer.periodic(const Duration(milliseconds: 120), (_) {
-          final frame = frames[spinnerTick % frames.length];
-          spinnerTick++;
-          final runtime = _formatDuration(watch.elapsed);
-          final runtimeStyled = _style.dim().render(' $runtime');
-          final baseUsed =
-              Style.visibleLength(prefix) + Style.visibleLength(runtimeStyled);
-          final dotsLen = (actualWidth - baseUsed - 2).clamp(0, actualWidth);
-          var dots = '.' * dotsLen;
-          if (dotsLen > 0) {
-            final idx = spinnerTick % dotsLen;
-            dots = '${dots.substring(0, idx)}$frame${dots.substring(idx + 1)}';
-          }
-          terminal.clearLine();
-          terminal.write('$prefix${_style.dim().render(dots)}$runtimeStyled');
-        });
-      }
-
-      final value = await (run?.call() ?? TaskResult.success);
-      result = value;
-      return result;
-    } catch (_) {
-      result = TaskResult.failure;
-      rethrow;
-    } finally {
-      watch.stop();
-      spinnerTimer?.cancel();
-      if (animate) {
-        terminal.clearLine();
-      }
-
-      // If clearOnDone is set, just clear the line and restore cursor
-      if (clearOnDone) {
-        if (animate) {
-          terminal.showCursor();
-        }
-      } else {
-        final runtime = run == null ? '' : ' ${_formatDuration(watch.elapsed)}';
-        final statusLabel = switch (result) {
-          TaskResult.success =>
-            (getStyle('success') ?? _style.bold().foreground(Colors.success))
-                .render('DONE'),
-          TaskResult.skipped =>
-            (getStyle('warning') ?? _style.bold().foreground(Colors.warning))
-                .render('SKIPPED'),
-          TaskResult.failure =>
-            (getStyle('error') ?? _style.bold().foreground(Colors.error))
-                .render('FAIL'),
-        };
-
-        final used =
-            2 +
-            Style.visibleLength(desc) +
-            1 +
-            Style.visibleLength(runtime) +
-            1 +
-            4;
-        final dots = (actualWidth - used).clamp(0, actualWidth);
-        final line =
-            '$prefix${_style.dim().render('.' * dots)}${runtime.isNotEmpty ? _style.dim().render(runtime) : ''} $statusLabel';
-        if (animate) {
-          terminal.write(line);
-          terminal.writeln();
-          terminal.showCursor();
-        } else {
-          write(_style.dim().render('.' * dots));
-          if (runtime.isNotEmpty) {
-            write(_style.dim().render(runtime));
-          }
-          writeln(' $statusLabel');
-        }
-      }
-    }
-  }
+  }) =>
+      _consoleOperations.task(description, run: run, clearOnDone: clearOnDone);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Tables
@@ -831,10 +600,8 @@ class Console {
       headers: headers,
       rows: rows,
       renderConfig: renderConfig,
-    ).render();
-    for (final line in output.split('\n')) {
-      writeln(line);
-    }
+    );
+    writeConsoleComponent(output, writeln);
     newLine();
   }
 
@@ -843,6 +610,7 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Terminal instance used for inline prompts and animations.
+  @override
   StdioTerminal get promptTerminal => _cachedPromptTerminal ??= StdioTerminal(
     stdout: _stdout ?? io.stdout,
     stdin: _stdin ?? io.stdin,
@@ -873,51 +641,11 @@ class Console {
     Iterable<T> iterable, {
     int? max,
     bool clearOnDone = false,
-  }) sync* {
-    final total = max ?? (iterable is List<T> ? iterable.length : 0);
-    final terminal = promptTerminal;
-    // Use actual terminal width for inline animations to prevent line wrapping
-    final actualWidth = terminal.width;
-    final renderConfig = RenderConfig.fromRenderer(
-      _renderer,
-      terminalWidth: actualWidth,
-    );
-
-    terminal.hideCursor();
-    try {
-      var current = 0;
-      terminal.clearLine();
-      terminal.write(
-        ProgressBarComponent(
-          current: current,
-          total: total,
-          renderConfig: renderConfig,
-        ).render(),
-      );
-
-      for (final item in iterable) {
-        yield item;
-        current++;
-        terminal.clearLine();
-        terminal.write(
-          ProgressBarComponent(
-            current: current,
-            total: total,
-            renderConfig: renderConfig,
-          ).render(),
-        );
-      }
-
-      if (clearOnDone) {
-        terminal.clearLine();
-      } else {
-        terminal.writeln();
-        newLine();
-      }
-    } finally {
-      terminal.showCursor();
-    }
-  }
+  }) => _consoleOperations.progressIterate(
+    iterable,
+    max: max,
+    clearOnDone: clearOnDone,
+  );
 
   /// Runs an async task while displaying an animated spinner.
   ///
@@ -950,13 +678,13 @@ class Console {
     bool clearOnDone = false,
     String? doneMessage,
   }) async {
-    // Delegate to components.spin which has the full implementation
-    return components.spin(
+    return _consoleOperations.spin(
       message,
       run: run,
       spinner: spinner,
       clearOnDone: clearOnDone,
       showResult: doneMessage == null && !clearOnDone,
+      doneMessage: doneMessage,
     );
   }
 
@@ -985,10 +713,9 @@ class Console {
     bool clearOnDone = false,
     String? doneMessage,
   }) async {
-    final animation = InlineAnimation(terminal: promptTerminal);
-    return animation.progress(
-      message: message,
-      task: run,
+    return _consoleOperations.progress(
+      message,
+      run: run,
       clearOnDone: clearOnDone,
       doneMessage: doneMessage,
     );
@@ -1025,93 +752,13 @@ class Console {
     bool showProgress = true,
     bool continueOnError = false,
     Spinner spinner = Spinners.miniDot,
-  }) async {
-    if (tasks.isEmpty) {
-      return const TaskGroupResult(completed: [], failed: [], skipped: []);
-    }
-
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
-    final watch = Stopwatch()..start();
-
-    if (title != null) {
-      writeln(_style.bold().render(title));
-    }
-
-    final completed = <String>[];
-    final failed = <(String, Object)>[];
-    final skipped = <String>[];
-    var hadError = false;
-
-    for (var i = 0; i < tasks.length; i++) {
-      final (description, taskFn) = tasks[i];
-
-      if (hadError && !continueOnError) {
-        skipped.add(description);
-        writeln(
-          '  ${_style.dim().render(PaginationDots.inactive)} $description ${_style.dim().render('(skipped)')}',
-        );
-        continue;
-      }
-
-      if (supportsAnsi) {
-        try {
-          await components.spin(
-            description,
-            run: taskFn,
-            spinner: spinner,
-            showResult: true,
-          );
-          completed.add(description);
-        } catch (e) {
-          failed.add((description, e));
-          hadError = true;
-          if (!continueOnError) {
-            // Mark remaining as skipped
-            for (var j = i + 1; j < tasks.length; j++) {
-              skipped.add(tasks[j].$1);
-            }
-            break;
-          }
-        }
-      } else {
-        // Non-interactive fallback
-        write('  $description... ');
-        try {
-          await taskFn();
-          writeln(_style.foreground(Colors.success).render('done'));
-          completed.add(description);
-        } catch (e) {
-          writeln(_style.foreground(Colors.error).render('failed'));
-          failed.add((description, e));
-          hadError = true;
-          if (!continueOnError) break;
-        }
-      }
-    }
-
-    watch.stop();
-
-    // Summary
-    if (title != null) {
-      newLine();
-      if (failed.isEmpty) {
-        success(
-          'Completed ${completed.length} task(s) in ${_formatDuration(watch.elapsed)}',
-        );
-      } else {
-        warn(
-          'Completed ${completed.length}, failed ${failed.length}, skipped ${skipped.length} in ${_formatDuration(watch.elapsed)}',
-        );
-      }
-    }
-
-    return TaskGroupResult(
-      completed: completed,
-      failed: failed,
-      skipped: skipped,
-      duration: watch.elapsed,
-    );
-  }
+  }) => _consoleOperations.taskGroup(
+    title: title,
+    tasks: tasks,
+    showProgress: showProgress,
+    continueOnError: continueOnError,
+    spinner: spinner,
+  );
 
   /// Displays a multi-step workflow with sequential steps.
   ///
@@ -1140,133 +787,11 @@ class Console {
     String? title,
     required List<(String name, FutureOr<void> Function() action)> steps,
     bool continueOnError = false,
-  }) async {
-    if (steps.isEmpty) {
-      return const StepsResult(completed: [], failed: [], skipped: []);
-    }
-
-    final terminal = promptTerminal;
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
-    final watch = Stopwatch()..start();
-    final totalSteps = steps.length;
-    final stepWidth = totalSteps.toString().length;
-
-    if (title != null) {
-      writeln(_style.bold().render(title));
-      newLine();
-    }
-
-    final completed = <String>[];
-    final failed = <(String, Object)>[];
-    final skipped = <String>[];
-    var hadError = false;
-
-    for (var i = 0; i < steps.length; i++) {
-      final (name, action) = steps[i];
-      final stepNum = (i + 1).toString().padLeft(stepWidth);
-      final prefix = '[$stepNum/$totalSteps]';
-
-      if (hadError && !continueOnError) {
-        skipped.add(name);
-        writeln(
-          '  ${_style.dim().render(prefix)} ${_style.dim().render(name)} ${_style.dim().render('${PaginationDots.inactive} skipped')}',
-        );
-        continue;
-      }
-
-      if (supportsAnsi) {
-        terminal.hideCursor();
-        final stepWatch = Stopwatch()..start();
-
-        // Show running state
-        var spinnerTick = 0;
-        const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        Timer? spinnerTimer;
-
-        try {
-          spinnerTimer = Timer.periodic(const Duration(milliseconds: 83), (_) {
-            final frame = frames[spinnerTick % frames.length];
-            spinnerTick++;
-            terminal.clearLine();
-            terminal.write(
-              '  ${(getStyle('info') ?? _style.foreground(Colors.info)).render(prefix)} $name ${(getStyle('info') ?? _style.foreground(Colors.info)).render(frame)}',
-            );
-          });
-
-          // Show initial state
-          terminal.write(
-            '  ${(getStyle('info') ?? _style.foreground(Colors.info)).render(prefix)} $name ${(getStyle('info') ?? _style.foreground(Colors.info)).render(frames[0])}',
-          );
-
-          await action();
-
-          spinnerTimer.cancel();
-          stepWatch.stop();
-          terminal.clearLine();
-          terminal.writeln(
-            '  ${(getStyle('success') ?? _style.foreground(Colors.success)).render(prefix)} $name ${(getStyle('success') ?? _style.foreground(Colors.success)).render(StatusChars.check)} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
-          );
-          completed.add(name);
-        } catch (e) {
-          spinnerTimer?.cancel();
-          stepWatch.stop();
-          terminal.clearLine();
-          terminal.writeln(
-            '  ${(getStyle('error') ?? _style.foreground(Colors.error)).render(prefix)} $name ${(getStyle('error') ?? _style.foreground(Colors.error)).render(StatusChars.cross)} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
-          );
-          failed.add((name, e));
-          hadError = true;
-          if (!continueOnError) {
-            // Mark remaining as skipped
-            for (var j = i + 1; j < steps.length; j++) {
-              skipped.add(steps[j].$1);
-              final skipNum = (j + 1).toString().padLeft(stepWidth);
-              writeln(
-                '  ${_style.dim().render('[$skipNum/$totalSteps]')} ${_style.dim().render(steps[j].$1)} ${_style.dim().render('${PaginationDots.inactive} skipped')}',
-              );
-            }
-            break;
-          }
-        } finally {
-          terminal.showCursor();
-        }
-      } else {
-        // Non-interactive fallback
-        write('  $prefix $name... ');
-        try {
-          await action();
-          writeln(_style.foreground(Colors.success).render('done'));
-          completed.add(name);
-        } catch (e) {
-          writeln(_style.foreground(Colors.error).render('failed'));
-          failed.add((name, e));
-          hadError = true;
-          if (!continueOnError) break;
-        }
-      }
-    }
-
-    watch.stop();
-
-    // Summary
-    newLine();
-    if (failed.isEmpty) {
-      success(
-        'All ${completed.length} step(s) completed in ${_formatDuration(watch.elapsed)}',
-      );
-    } else {
-      error(
-        'Steps: ${completed.length} completed, ${failed.length} failed, ${skipped.length} skipped',
-      );
-    }
-
-    return StepsResult(
-      completed: completed,
-      failed: failed,
-      skipped: skipped,
-      duration: watch.elapsed,
-    );
-  }
+  }) => _consoleOperations.steps(
+    title: title,
+    steps: steps,
+    continueOnError: continueOnError,
+  );
 
   /// Displays a countdown timer.
   ///
@@ -1296,31 +821,11 @@ class Console {
     String message, {
     required int seconds,
     FutureOr<void> Function()? onComplete,
-  }) async {
-    final terminal = promptTerminal;
-    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
-
-    if (!supportsAnsi) {
-      // Non-interactive: just wait
-      writeln('$message $seconds seconds...');
-      await Future<void>.delayed(Duration(seconds: seconds));
-      if (onComplete != null) await onComplete();
-      return true;
-    }
-
-    // Use the TUI CountdownModel which handles rendering properly
-    await Program(
-      CountdownModel(
-        duration: Duration(seconds: seconds),
-        message: message,
-      ),
-      options: promptProgramOptions,
-      terminal: terminal,
-    ).run();
-
-    if (onComplete != null) await onComplete();
-    return true;
-  }
+  }) => _consoleOperations.countdown(
+    message,
+    seconds: seconds,
+    onComplete: onComplete,
+  );
 
   /// Displays a tree structure.
   ///
@@ -1363,9 +868,7 @@ class Console {
       renderConfig: renderConfig,
     );
 
-    for (final line in component.render().split('\n')) {
-      writeln(line);
-    }
+    writeConsoleComponent(component, writeln);
     newLine();
   }
 
@@ -1375,15 +878,7 @@ class Console {
 
   /// Prompts for a yes/no confirmation.
   bool confirm(String question, {bool defaultValue = true}) {
-    if (!interactive) return defaultValue;
-
-    final suffix = defaultValue ? '[Y/n]' : '[y/N]';
-    write('${_promptStyle().render(question)} $suffix ');
-    final input = (_readLine?.call() ?? '').trim().toLowerCase();
-    if (input.isEmpty) return defaultValue;
-    if (input == 'y' || input == 'yes') return true;
-    if (input == 'n' || input == 'no') return false;
-    return defaultValue;
+    return _consolePrompts.confirm(question, defaultValue: defaultValue);
   }
 
   /// Prompts for text input.
@@ -1392,51 +887,16 @@ class Console {
     String? defaultValue,
     String? Function(String value)? validator,
     int attempts = 3,
-  }) {
-    if (!interactive) {
-      if (defaultValue != null) return defaultValue;
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    for (var i = 0; i < attempts; i++) {
-      final suffix = defaultValue == null ? '' : ' [$defaultValue]';
-      write('${_promptStyle().render(question)}$suffix: ');
-      final raw = _readLine?.call();
-      final value = (raw == null || raw.isEmpty) ? (defaultValue ?? '') : raw;
-      final error = validator?.call(value);
-      if (error == null) return value;
-      writelnErr(
-        _componentStyle(
-          componentTheme.errorStyle(renderConfig),
-          'error',
-        ).render('Error: $error'),
-      );
-    }
-
-    throw StateError('Too many invalid attempts.');
-  }
+  }) => _consolePrompts.ask(
+    question,
+    defaultValue: defaultValue,
+    validator: validator,
+    attempts: attempts,
+  );
 
   /// Prompts for secret/password input (no echo).
-  Future<String> secret(String question, {String? fallback}) async {
-    if (!interactive) {
-      if (fallback != null) return fallback;
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    if (_secretReader != null) {
-      return _secretReader(question, fallback: fallback);
-    }
-
-    final terminal = promptTerminal;
-    final model = PasswordModel(
-      prompt: question,
-      styles: componentTheme.passwordStyles(renderConfig),
-    );
-    final result = await runPasswordPrompt(model, terminal);
-    if (result != null) return result;
-    if (fallback != null) return fallback;
-    throw StateError('Password prompt cancelled.');
-  }
+  Future<String> secret(String question, {String? fallback}) =>
+      _consolePrompts.secret(question, fallback: fallback);
 
   /// Prompts for a choice from a list (basic numbered selection).
   Object choice(
@@ -1444,54 +904,12 @@ class Console {
     required List<String> choices,
     int? defaultIndex,
     bool multiSelect = false,
-  }) {
-    if (!interactive) {
-      if (defaultIndex != null &&
-          defaultIndex >= 0 &&
-          defaultIndex < choices.length) {
-        return multiSelect
-            ? <String>[choices[defaultIndex]]
-            : choices[defaultIndex];
-      }
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    writeln(_promptStyle().render(question));
-    for (var i = 0; i < choices.length; i++) {
-      writeln('  [$i] ${choices[i]}');
-    }
-
-    if (!multiSelect) {
-      final prompt = defaultIndex == null
-          ? 'Select an option'
-          : 'Select an option [$defaultIndex]';
-      final raw = ask(prompt, defaultValue: defaultIndex?.toString());
-      final parsed = int.tryParse(raw);
-      if (parsed == null || parsed < 0 || parsed >= choices.length) {
-        throw StateError('Invalid selection: $raw');
-      }
-      return choices[parsed];
-    }
-
-    final prompt = defaultIndex == null
-        ? 'Select options (comma separated)'
-        : 'Select options (comma separated) [$defaultIndex]';
-    final raw = ask(prompt, defaultValue: defaultIndex?.toString());
-    final parts = raw
-        .split(',')
-        .map((p) => p.trim())
-        .where((p) => p.isNotEmpty)
-        .toList(growable: false);
-    final selected = <String>[];
-    for (final part in parts) {
-      final parsed = int.tryParse(part);
-      if (parsed == null || parsed < 0 || parsed >= choices.length) {
-        throw StateError('Invalid selection: $part');
-      }
-      selected.add(choices[parsed]);
-    }
-    return selected;
-  }
+  }) => _consolePrompts.choice(
+    question,
+    choices: choices,
+    defaultIndex: defaultIndex,
+    multiSelect: multiSelect,
+  );
 
   /// Prompts for a numeric value.
   ///
@@ -1508,43 +926,15 @@ class Console {
     num step = 1,
     int attempts = 3,
     String hint = '',
-  }) async {
-    if (!interactive) {
-      // Non-interactive path: simple readline with validation.
-      final validator = Validators.combine([
-        Validators.required(),
-        Validators.numeric(min: min, max: max),
-      ]);
-      final raw = ask(
-        question,
-        defaultValue: defaultValue?.toString(),
-        validator: (val) {
-          try {
-            return validator(val);
-          } catch (e) {
-            return e.toString();
-          }
-        },
-        attempts: attempts,
-      );
-      return num.parse(raw);
-    }
-
-    final terminal = promptTerminal;
-    final model = NumberInputModel(
-      prompt: question,
-      defaultValue: defaultValue,
-      min: min,
-      max: max,
-      step: step,
-      hint: hint,
-      styles: componentTheme.numberInputStyles(renderConfig),
-    );
-    final result = await runNumberInputPrompt(model, terminal);
-    if (result != null) return result;
-    if (defaultValue != null) return defaultValue;
-    throw StateError('Number prompt cancelled.');
-  }
+  }) => _consolePrompts.number(
+    question,
+    defaultValue: defaultValue,
+    min: min,
+    max: max,
+    step: step,
+    attempts: attempts,
+    hint: hint,
+  );
 
   /// Interactive single-select with arrow-key navigation.
   Future<T?> selectChoice<T>(
@@ -1552,26 +942,12 @@ class Console {
     required List<T> choices,
     int? defaultIndex,
     String Function(T)? display,
-  }) async {
-    if (!interactive) {
-      if (defaultIndex != null &&
-          defaultIndex >= 0 &&
-          defaultIndex < choices.length) {
-        return choices[defaultIndex];
-      }
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    final terminal = promptTerminal;
-    final model = SelectModel<T>(
-      items: choices,
-      title: question,
-      initialIndex: defaultIndex ?? 0,
-      display: display,
-      styles: _selectStyles(),
-    );
-    return await runSelectPrompt(model, terminal);
-  }
+  }) => _consolePrompts.selectChoice(
+    question,
+    choices: choices,
+    defaultIndex: defaultIndex,
+    display: display,
+  );
 
   /// Interactive multi-select with arrow-key navigation.
   Future<List<T>> multiSelectChoice<T>(
@@ -1579,26 +955,12 @@ class Console {
     required List<T> choices,
     List<int> defaultSelected = const [],
     String Function(T)? display,
-  }) async {
-    if (!interactive) {
-      return defaultSelected.map((i) => choices[i]).toList();
-    }
-
-    final terminal = promptTerminal;
-    final validDefaults = defaultSelected
-        .where((index) => index >= 0 && index < choices.length)
-        .toSet();
-    final model = MultiSelectModel<T>(
-      items: choices,
-      title: question,
-      initialIndex: validDefaults.isNotEmpty ? validDefaults.first : 0,
-      initialSelected: validDefaults,
-      display: display,
-      styles: _multiSelectStyles(),
-    );
-    final result = await runMultiSelectPrompt(model, terminal);
-    return result ?? [];
-  }
+  }) => _consolePrompts.multiSelectChoice(
+    question,
+    choices: choices,
+    defaultSelected: defaultSelected,
+    display: display,
+  );
 
   /// Displays a persistent menu and returns the selected choice.
   Future<T?> menu<T>(
@@ -1606,14 +968,12 @@ class Console {
     required List<T> choices,
     int? defaultIndex,
     String Function(T)? display,
-  }) async {
-    return selectChoice(
-      title,
-      choices: choices,
-      defaultIndex: defaultIndex,
-      display: display,
-    );
-  }
+  }) => _consolePrompts.selectChoice(
+    title,
+    choices: choices,
+    defaultIndex: defaultIndex,
+    display: display,
+  );
 
   /// Interactive search/filter prompt with fuzzy matching.
   ///
@@ -1643,23 +1003,13 @@ class Console {
     String Function(T)? display,
     String placeholder = 'Type to search...',
     String noResultsText = 'No matches found',
-  }) async {
-    if (!interactive) {
-      if (items.isNotEmpty) return items.first;
-      return null;
-    }
-
-    final terminal = promptTerminal;
-    final model = SearchModel<T>(
-      items: items,
-      title: question,
-      display: display,
-      placeholder: placeholder,
-      noResultsText: noResultsText,
-      styles: _searchStyles(),
-    );
-    return await runSearchPrompt(model, terminal);
-  }
+  }) => _consolePrompts.search(
+    question,
+    items: items,
+    display: display,
+    placeholder: placeholder,
+    noResultsText: noResultsText,
+  );
 
   /// Interactive multi-search/filter prompt with fuzzy matching.
   ///
@@ -1688,24 +1038,14 @@ class Console {
     String placeholder = 'Type to search...',
     String noResultsText = 'No matches found',
     String? hint,
-  }) async {
-    if (!interactive) {
-      return [];
-    }
-
-    final terminal = promptTerminal;
-    final model = MultiSearchModel<T>(
-      items: items,
-      title: question,
-      display: display,
-      placeholder: placeholder,
-      noResultsText: noResultsText,
-      hint: hint ?? '(Space to toggle, ^a to toggle all, Enter to confirm)',
-      styles: _searchStyles(),
-    );
-    final result = await runMultiSearchPrompt(model, terminal);
-    return result ?? [];
-  }
+  }) => _consolePrompts.multiSearch(
+    question,
+    items: items,
+    display: display,
+    placeholder: placeholder,
+    noResultsText: noResultsText,
+    hint: hint,
+  );
 
   /// Interactive data table with fuzzy filtering and row selection.
   ///
@@ -1736,33 +1076,13 @@ class Console {
     required List<T> items,
     required List<String> Function(T) rowBuilder,
     int pageSize = 10,
-  }) async {
-    if (!interactive) {
-      return items.isNotEmpty ? items.first : null;
-    }
-
-    final terminal = promptTerminal;
-
-    final themedStyles = componentTheme.dataTableStyles(renderConfig);
-
-    final model = DataTableModel<T>(
-      items: items,
-      columns: columns,
-      rowBuilder: rowBuilder,
-      title: question,
-      pageSize: pageSize,
-      styles: DataTableStyles(
-        title: _componentStyle(themedStyles.title, 'question'),
-        prompt: _componentStyle(themedStyles.prompt, 'info'),
-        tableHeader: _componentStyle(themedStyles.tableHeader, 'info'),
-        tableCell: themedStyles.tableCell,
-        tableSelected: _componentStyle(themedStyles.tableSelected, 'alert'),
-        dimmed: _componentStyle(themedStyles.dimmed, 'muted'),
-        noResults: themedStyles.noResults,
-      ),
-    );
-    return await runDataTablePrompt<T>(model, terminal);
-  }
+  }) => _consolePrompts.dataTable(
+    question,
+    columns: columns,
+    items: items,
+    rowBuilder: rowBuilder,
+    pageSize: pageSize,
+  );
 
   /// Interactive suggest/autocomplete prompt.
   ///
@@ -1789,98 +1109,18 @@ class Console {
     String? defaultValue,
     int scroll = 5,
     String hint = '',
-  }) async {
-    if (!interactive) {
-      return defaultValue;
-    }
-
-    final terminal = promptTerminal;
-    final model = SuggestModel(
-      prompt: question,
-      options: options,
-      placeholder: placeholder,
-      defaultValue: defaultValue ?? '',
-      scroll: scroll,
-      hint: hint,
-      styles: _suggestStyles(),
-    );
-    return await runSuggestPrompt(model, terminal);
-  }
+  }) => _consolePrompts.suggest(
+    question,
+    options: options,
+    placeholder: placeholder,
+    defaultValue: defaultValue,
+    scroll: scroll,
+    hint: hint,
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
-
-  Style _promptStyle() =>
-      _componentStyle(componentTheme.promptStyle(renderConfig), 'question');
-
-  Style _componentStyle(Style themed, String role) {
-    final override = getStyle(role);
-    if (override == null) return themed;
-    return themed.copy()..inherit(override);
-  }
-
-  SelectStyles _selectStyles() {
-    final themed = componentTheme.selectStyles(renderConfig);
-    return SelectStyles(
-      title: _componentStyle(themed.title, 'question'),
-      item: themed.item,
-      selectedItem: themed.selectedItem,
-      cursor: themed.cursor,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      cursorPrefix: themed.cursorPrefix,
-      itemPrefix: themed.itemPrefix,
-    );
-  }
-
-  MultiSelectStyles _multiSelectStyles() {
-    final themed = componentTheme.multiSelectStyles(renderConfig);
-    return MultiSelectStyles(
-      title: _componentStyle(themed.title, 'question'),
-      item: themed.item,
-      highlightedItem: themed.highlightedItem,
-      selectedIcon: themed.selectedIcon,
-      unselectedIcon: themed.unselectedIcon,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      cursorPrefix: themed.cursorPrefix,
-      selectedIconChar: themed.selectedIconChar,
-      unselectedIconChar: themed.unselectedIconChar,
-    );
-  }
-
-  SearchStyles _searchStyles() {
-    final themed = componentTheme.searchStyles(renderConfig);
-    return SearchStyles(
-      title: _componentStyle(themed.title, 'question'),
-      prompt: _componentStyle(themed.prompt, 'info'),
-      item: themed.item,
-      selectedItem: themed.selectedItem,
-      matchHighlight: themed.matchHighlight,
-      cursor: themed.cursor,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      noResults: themed.noResults,
-      selectedIcon: themed.selectedIcon,
-      unselectedIcon: themed.unselectedIcon,
-      selectedIconChar: themed.selectedIconChar,
-      unselectedIconChar: themed.unselectedIconChar,
-      cursorPrefix: themed.cursorPrefix,
-      itemPrefix: themed.itemPrefix,
-    );
-  }
-
-  SuggestStyles _suggestStyles() {
-    final themed = componentTheme.suggestStyles(renderConfig);
-    return SuggestStyles(
-      title: _componentStyle(themed.title, 'question'),
-      value: themed.value,
-      placeholder: themed.placeholder,
-      highlighted: themed.highlighted,
-      suggestion: themed.suggestion,
-      hint: themed.hint,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      pointer: themed.pointer,
-    );
-  }
 
   List<String> _normalizeLines(Object message) {
     if (message is Iterable) {
@@ -1890,21 +1130,8 @@ class Console {
   }
 }
 
-String _formatDuration(Duration duration) {
-  final ms = duration.inMilliseconds;
-  if (ms < 1000) return '${ms}ms';
-  final seconds = ms / 1000;
-  return '${seconds.toStringAsFixed(seconds < 10 ? 1 : 0)}s';
-}
-
 /// Extension to allow [DisplayComponent]s to be written directly to a [Console].
 extension DisplayComponentExtension on DisplayComponent {
   /// Renders the component and writes it to the console.
-  void writelnTo(Console io) {
-    final output = render();
-    if (output.isEmpty) return;
-    for (final line in output.split('\n')) {
-      io.writeln(line);
-    }
-  }
+  void writelnTo(Console io) => writeConsoleComponent(this, io.writeln);
 }

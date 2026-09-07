@@ -26,6 +26,11 @@
 
 ### Changed
 
+- Simplified CLI GUI helpers behind shared presentation, prompt, and operation
+  services. `Console` and `Console.components` now use the same capability,
+  styling, spinner, progress, task, workflow, countdown, and prompt
+  implementations instead of delegating to each other or maintaining parallel
+  lifecycle code.
 - Implemented the `FrameLayout` facade with Ultraviolet rectangles, fixed and
   percentage constraints, and stable largest-remainder allocation rather than
   maintaining duplicate layout primitives.
@@ -65,6 +70,11 @@
 
 ### Fixed
 
+- `Console.spin` now honors custom completion messages, and generated spinner
+  results use the task's completed elapsed time rather than a near-zero
+  precomputed duration.
+- Non-interactive task groups now report unrun operations as skipped after a
+  failure, matching the interactive task-group result.
 - Generated Zsh completion wrappers now forward the actual cursor position
   instead of treating every completion request as if the cursor were at the
   start of the command line.

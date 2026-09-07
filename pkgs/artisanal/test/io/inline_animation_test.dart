@@ -63,6 +63,27 @@ void main() {
         expect(terminal.output, contains('✓ Complete!'));
       });
 
+      test('builds the success message after measuring the task', () async {
+        Duration? measured;
+
+        await animation.spin(
+          message: 'Loading',
+          task: () async {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            return 'result';
+          },
+          spinner: Spinners.line,
+          successMessage: (value, elapsed) {
+            measured = elapsed;
+            return '$value complete';
+          },
+        );
+
+        expect(measured, isNotNull);
+        expect(measured, isNot(Duration.zero));
+        expect(terminal.output, contains('result complete'));
+      });
+
       test('rethrows on task error', () async {
         expect(
           () => animation.spin(
@@ -98,6 +119,27 @@ void main() {
         } catch (_) {}
 
         expect(terminal.output, contains('✗ Failed!'));
+      });
+
+      test('builds a failure message and restores the cursor', () async {
+        Object? capturedError;
+
+        await expectLater(
+          animation.spin<void>(
+            message: 'Failing',
+            task: () async => throw StateError('oops'),
+            spinner: Spinners.line,
+            failureMessage: (error, elapsed) {
+              capturedError = error;
+              return 'failed after ${elapsed.inMilliseconds}ms';
+            },
+          ),
+          throwsStateError,
+        );
+
+        expect(capturedError, isA<StateError>());
+        expect(terminal.output, contains('failed after'));
+        expect(terminal.operations.last, 'showCursor');
       });
 
       test('handles empty spinner frames gracefully', () async {

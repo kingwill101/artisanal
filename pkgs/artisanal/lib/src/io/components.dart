@@ -16,10 +16,11 @@ import '../tui/bubbles/components/text.dart' show Rule;
 import '../tui/bubbles/prompt.dart'
     show promptProgramOptions, runTextAreaPrompt;
 import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
-import 'inline_animation.dart';
 import '../tui/bubbles/textarea.dart' show TextAreaModel;
 import '../tui/program.dart' show ProgramOptions;
 import 'console.dart';
+import 'console_operations.dart';
+import 'console_presentation.dart';
 
 /// Higher-level console UI components (Laravel-style).
 ///
@@ -41,29 +42,30 @@ class Components {
   /// The I/O instance to use for output.
   final Console io;
 
+  late final ConsoleOperations _operations = ConsoleOperations(io);
+
   /// The style configuration.
   Style get style => io.style;
 
   RenderConfig get _renderConfig => io.renderConfig;
 
-  /// Helper to apply muted styling.
-  String muted(String text) =>
-      (io.getStyle('muted') ?? io.componentTheme.mutedStyle(_renderConfig))
-          .render(text);
+  Style _styleFor(String role, Style themed) =>
+      resolveConsoleComponentStyle(themed, io.getStyle(role));
 
-  void _writeComponent(DisplayComponent component) {
-    final output = component.render();
-    if (output.isEmpty) return;
-    for (final line in output.split('\n')) {
-      io.writeln(line);
-    }
-  }
+  /// Helper to apply muted styling.
+  String muted(String text) => _styleFor(
+    'muted',
+    io.componentTheme.mutedStyle(_renderConfig),
+  ).render(text);
+
+  void _writeComponent(DisplayComponent component) =>
+      writeConsoleComponent(component, io.writeln);
 
   /// Displays a task with dotted fill and DONE/FAIL/SKIPPED status.
   Future<TaskResult> task(
     String description, {
     FutureOr<TaskResult> Function()? run,
-  }) => io.task(description, run: run);
+  }) => _operations.task(description, run: run);
 
   /// Displays two columns aligned with proper spacing.
   void twoColumnDetail(String first, [String? second]) {
@@ -80,7 +82,7 @@ class Components {
   void bulletList(Iterable<Object> items) {
     final bullet = _renderConfig
         .configureStyle(
-          io.getStyle('muted') ?? io.componentTheme.mutedStyle(_renderConfig),
+          _styleFor('muted', io.componentTheme.mutedStyle(_renderConfig)),
         )
         .render(DotChars.bullet);
     _writeComponent(
@@ -102,10 +104,10 @@ class Components {
       ..message(message.toString())
       ..width(_renderConfig.terminalWidth);
 
-    final style =
-        io.getStyle('alert') ??
-        io.getStyle('warning') ??
-        io.componentTheme.warningStyle(_renderConfig);
+    final style = _styleFor(
+      'alert',
+      _styleFor('warning', io.componentTheme.warningStyle(_renderConfig)),
+    );
     component.prefixStyle(style.bold()).borderStyle(style);
 
     _writeComponent(component);
@@ -118,8 +120,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('info') ?? io.componentTheme.infoStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'info',
+          io.componentTheme.infoStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -132,9 +136,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('success') ??
-            io.componentTheme.successStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'success',
+          io.componentTheme.successStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -147,9 +152,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('warning') ??
-            io.componentTheme.warningStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'warning',
+          io.componentTheme.warningStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -162,8 +168,10 @@ class Components {
       TitledBlockComponent(
         title: title,
         message: message,
-        titleStyle:
-            io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig),
+        titleStyle: _styleFor(
+          'error',
+          io.componentTheme.errorStyle(_renderConfig),
+        ),
         renderConfig: _renderConfig,
       ),
     );
@@ -235,67 +243,15 @@ class Components {
     Spinner spinner = Spinners.miniDot,
     bool clearOnDone = false,
     bool showResult = true,
-  }) async {
-    // If not interactive, fall back to simple output
-    if (!io.interactive || !io.promptTerminal.supportsAnsi) {
-      io.write('$message ');
-      final watch = Stopwatch()..start();
-      try {
-        final result = await run();
-        watch.stop();
-        if (showResult && !clearOnDone) {
-          io.writeln(
-            (io.getStyle('success') ??
-                        io.componentTheme.successStyle(_renderConfig))
-                    .render('✓') +
-                muted(' ${_formatDuration(watch.elapsed)}'),
-          );
-        } else if (!clearOnDone) {
-          io.writeln();
-        }
-        return result;
-      } catch (_) {
-        watch.stop();
-        if (showResult && !clearOnDone) {
-          io.writeln(
-            (io.getStyle('error') ??
-                        io.componentTheme.errorStyle(_renderConfig))
-                    .render('✗') +
-                muted(' ${_formatDuration(watch.elapsed)}'),
-          );
-        } else if (!clearOnDone) {
-          io.writeln();
-        }
-        rethrow;
-      }
-    }
-
-    // Use InlineAnimation for actual spinner animation
-    final animation = InlineAnimation(terminal: io.promptTerminal);
-    final watch = Stopwatch()..start();
-
-    try {
-      final result = await animation.spin(
-        message: message,
-        task: run,
-        spinner: spinner,
-        clearOnDone: clearOnDone,
-        doneMessage: showResult && !clearOnDone
-            ? '${(io.getStyle('success') ?? io.componentTheme.successStyle(_renderConfig)).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
-            : null,
-      );
-      return result;
-    } catch (_) {
-      // Animation already cleaned up, just show error if needed
-      if (showResult && !clearOnDone) {
-        io.promptTerminal.clearLine();
-        io.promptTerminal.writeln(
-          '${(io.getStyle('error') ?? io.componentTheme.errorStyle(_renderConfig)).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
-        );
-      }
-      rethrow;
-    }
-  }
+    String? doneMessage,
+  }) => _operations.spin(
+    message,
+    run: run,
+    spinner: spinner,
+    clearOnDone: clearOnDone,
+    showResult: showResult,
+    doneMessage: doneMessage,
+  );
 
   /// Runs a multi-line text editor inline and returns the submitted value.
   Future<String?> textArea(
@@ -341,11 +297,4 @@ class Components {
     );
     io.newLine();
   }
-}
-
-String _formatDuration(Duration duration) {
-  final ms = duration.inMilliseconds;
-  if (ms < 1000) return '${ms}ms';
-  final seconds = ms / 1000;
-  return '${seconds.toStringAsFixed(seconds < 10 ? 1 : 0)}s';
 }
