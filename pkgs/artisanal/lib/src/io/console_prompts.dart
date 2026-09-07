@@ -1,8 +1,21 @@
 import '../style/style.dart';
+import '../tui/bubbles/data_table.dart';
 import '../tui/bubbles/number_input.dart';
 import '../tui/bubbles/password.dart';
 import '../tui/bubbles/prompt.dart'
-    show runNumberInputPrompt, runPasswordPrompt;
+    show
+        runDataTablePrompt,
+        runMultiSearchPrompt,
+        runMultiSelectPrompt,
+        runNumberInputPrompt,
+        runPasswordPrompt,
+        runSearchPrompt,
+        runSelectPrompt,
+        runSuggestPrompt;
+import '../tui/bubbles/search.dart';
+import '../tui/bubbles/select.dart';
+import '../tui/bubbles/suggest.dart';
+import '../tui/bubbles/table.dart' show Column;
 import 'console_context.dart';
 import 'console_presentation.dart';
 import 'validators.dart';
@@ -181,6 +194,166 @@ final class ConsolePrompts {
     throw StateError('Number prompt cancelled.');
   }
 
+  /// Runs an interactive single-select prompt.
+  Future<T?> selectChoice<T>(
+    String question, {
+    required List<T> choices,
+    int? defaultIndex,
+    String Function(T)? display,
+  }) {
+    if (!host.interactive) {
+      if (defaultIndex != null &&
+          defaultIndex >= 0 &&
+          defaultIndex < choices.length) {
+        return Future<T?>.value(choices[defaultIndex]);
+      }
+      throw StateError('Cannot prompt in non-interactive mode.');
+    }
+    return runSelectPrompt(
+      SelectModel<T>(
+        items: choices,
+        title: question,
+        initialIndex: defaultIndex ?? 0,
+        display: display,
+        styles: _selectStyles(),
+      ),
+      host.promptTerminal,
+    );
+  }
+
+  /// Runs an interactive multi-select prompt.
+  Future<List<T>> multiSelectChoice<T>(
+    String question, {
+    required List<T> choices,
+    List<int> defaultSelected = const [],
+    String Function(T)? display,
+  }) async {
+    if (!host.interactive) {
+      return defaultSelected.map((index) => choices[index]).toList();
+    }
+    final defaults = defaultSelected
+        .where((index) => index >= 0 && index < choices.length)
+        .toSet();
+    final result = await runMultiSelectPrompt(
+      MultiSelectModel<T>(
+        items: choices,
+        title: question,
+        initialIndex: defaults.isNotEmpty ? defaults.first : 0,
+        initialSelected: defaults,
+        display: display,
+        styles: _multiSelectStyles(),
+      ),
+      host.promptTerminal,
+    );
+    return result ?? [];
+  }
+
+  /// Runs an interactive fuzzy-search prompt.
+  Future<T?> search<T>(
+    String question, {
+    required List<T> items,
+    String Function(T)? display,
+    String placeholder = 'Type to search...',
+    String noResultsText = 'No matches found',
+  }) {
+    if (!host.interactive) {
+      return Future<T?>.value(items.isNotEmpty ? items.first : null);
+    }
+    return runSearchPrompt(
+      SearchModel<T>(
+        items: items,
+        title: question,
+        display: display,
+        placeholder: placeholder,
+        noResultsText: noResultsText,
+        styles: _searchStyles(),
+      ),
+      host.promptTerminal,
+    );
+  }
+
+  /// Runs an interactive multi-selection fuzzy-search prompt.
+  Future<List<T>> multiSearch<T>(
+    String question, {
+    required List<T> items,
+    String Function(T)? display,
+    String placeholder = 'Type to search...',
+    String noResultsText = 'No matches found',
+    String? hint,
+  }) async {
+    if (!host.interactive) return [];
+    final result = await runMultiSearchPrompt(
+      MultiSearchModel<T>(
+        items: items,
+        title: question,
+        display: display,
+        placeholder: placeholder,
+        noResultsText: noResultsText,
+        hint: hint ?? '(Space to toggle, ^a to toggle all, Enter to confirm)',
+        styles: _searchStyles(),
+      ),
+      host.promptTerminal,
+    );
+    return result ?? [];
+  }
+
+  /// Runs an interactive searchable data-table prompt.
+  Future<T?> dataTable<T>(
+    String question, {
+    required List<Column> columns,
+    required List<T> items,
+    required List<String> Function(T) rowBuilder,
+    int pageSize = 10,
+  }) {
+    if (!host.interactive) {
+      return Future<T?>.value(items.isNotEmpty ? items.first : null);
+    }
+    final themed = host.componentTheme.dataTableStyles(host.renderConfig);
+    return runDataTablePrompt<T>(
+      DataTableModel<T>(
+        items: items,
+        columns: columns,
+        rowBuilder: rowBuilder,
+        title: question,
+        pageSize: pageSize,
+        styles: DataTableStyles(
+          title: _resolve(themed.title, 'question'),
+          prompt: _resolve(themed.prompt, 'info'),
+          tableHeader: _resolve(themed.tableHeader, 'info'),
+          tableCell: themed.tableCell,
+          tableSelected: _resolve(themed.tableSelected, 'alert'),
+          dimmed: _resolve(themed.dimmed, 'muted'),
+          noResults: themed.noResults,
+        ),
+      ),
+      host.promptTerminal,
+    );
+  }
+
+  /// Runs an interactive suggestion prompt.
+  Future<String?> suggest(
+    String question, {
+    required List<String> options,
+    String placeholder = '',
+    String? defaultValue,
+    int scroll = 5,
+    String hint = '',
+  }) {
+    if (!host.interactive) return Future<String?>.value(defaultValue);
+    return runSuggestPrompt(
+      SuggestModel(
+        prompt: question,
+        options: options,
+        placeholder: placeholder,
+        defaultValue: defaultValue ?? '',
+        scroll: scroll,
+        hint: hint,
+        styles: _suggestStyles(),
+      ),
+      host.promptTerminal,
+    );
+  }
+
   Style _promptStyle() => _styleFor(
     'question',
     themed: host.componentTheme.promptStyle(host.renderConfig),
@@ -190,4 +363,69 @@ final class ConsolePrompts {
     themed ?? host.componentTheme.errorStyle(host.renderConfig),
     host.getStyle(role),
   );
+
+  Style _resolve(Style themed, String role) =>
+      resolveConsoleComponentStyle(themed, host.getStyle(role));
+
+  SelectStyles _selectStyles() {
+    final themed = host.componentTheme.selectStyles(host.renderConfig);
+    return SelectStyles(
+      title: _resolve(themed.title, 'question'),
+      item: themed.item,
+      selectedItem: themed.selectedItem,
+      cursor: themed.cursor,
+      dimmed: _resolve(themed.dimmed, 'muted'),
+      cursorPrefix: themed.cursorPrefix,
+      itemPrefix: themed.itemPrefix,
+    );
+  }
+
+  MultiSelectStyles _multiSelectStyles() {
+    final themed = host.componentTheme.multiSelectStyles(host.renderConfig);
+    return MultiSelectStyles(
+      title: _resolve(themed.title, 'question'),
+      item: themed.item,
+      highlightedItem: themed.highlightedItem,
+      selectedIcon: themed.selectedIcon,
+      unselectedIcon: themed.unselectedIcon,
+      dimmed: _resolve(themed.dimmed, 'muted'),
+      cursorPrefix: themed.cursorPrefix,
+      selectedIconChar: themed.selectedIconChar,
+      unselectedIconChar: themed.unselectedIconChar,
+    );
+  }
+
+  SearchStyles _searchStyles() {
+    final themed = host.componentTheme.searchStyles(host.renderConfig);
+    return SearchStyles(
+      title: _resolve(themed.title, 'question'),
+      prompt: _resolve(themed.prompt, 'info'),
+      item: themed.item,
+      selectedItem: themed.selectedItem,
+      matchHighlight: themed.matchHighlight,
+      cursor: themed.cursor,
+      dimmed: _resolve(themed.dimmed, 'muted'),
+      noResults: themed.noResults,
+      selectedIcon: themed.selectedIcon,
+      unselectedIcon: themed.unselectedIcon,
+      selectedIconChar: themed.selectedIconChar,
+      unselectedIconChar: themed.unselectedIconChar,
+      cursorPrefix: themed.cursorPrefix,
+      itemPrefix: themed.itemPrefix,
+    );
+  }
+
+  SuggestStyles _suggestStyles() {
+    final themed = host.componentTheme.suggestStyles(host.renderConfig);
+    return SuggestStyles(
+      title: _resolve(themed.title, 'question'),
+      value: themed.value,
+      placeholder: themed.placeholder,
+      highlighted: themed.highlighted,
+      suggestion: themed.suggestion,
+      hint: themed.hint,
+      dimmed: _resolve(themed.dimmed, 'muted'),
+      pointer: themed.pointer,
+    );
+  }
 }

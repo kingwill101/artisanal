@@ -63,6 +63,32 @@ final class _OperationHost implements ConsolePromptHost {
 
 void main() {
   group('ConsolePrompts', () {
+    test('uses deterministic non-interactive selection fallbacks', () async {
+      final prompts = ConsolePrompts(_OperationHost(interactive: false));
+
+      expect(
+        await prompts.selectChoice(
+          'Select',
+          choices: ['zero', 'one'],
+          defaultIndex: 1,
+        ),
+        'one',
+      );
+      expect(
+        await prompts.search('Search', items: ['first', 'second']),
+        'first',
+      );
+      expect(await prompts.multiSearch('Search', items: ['first']), isEmpty);
+      expect(
+        await prompts.suggest(
+          'Suggest',
+          options: ['first'],
+          defaultValue: 'fallback',
+        ),
+        'fallback',
+      );
+    });
+
     test('uses non-interactive numeric defaults', () async {
       final host = _OperationHost(interactive: false);
 

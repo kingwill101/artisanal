@@ -21,21 +21,7 @@ import 'desktop_notifications.dart';
 import 'operation_results.dart';
 import 'output_theme.dart';
 import '../terminal/terminal_io_impl.dart' show StdioTerminal;
-import '../tui/bubbles/select.dart'
-    show MultiSelectModel, SelectModel, SelectStyles, MultiSelectStyles;
-import '../tui/bubbles/search.dart'
-    show MultiSearchModel, SearchModel, SearchStyles;
-import '../tui/bubbles/data_table.dart' show DataTableModel, DataTableStyles;
 import '../tui/bubbles/table.dart' show Column;
-import '../tui/bubbles/prompt.dart'
-    show
-        runMultiSelectPrompt,
-        runSelectPrompt,
-        runSearchPrompt,
-        runMultiSearchPrompt,
-        runDataTablePrompt,
-        runSuggestPrompt;
-import '../tui/bubbles/suggest.dart' show SuggestModel, SuggestStyles;
 
 export 'operation_results.dart';
 
@@ -956,26 +942,12 @@ class Console implements ConsolePromptHost {
     required List<T> choices,
     int? defaultIndex,
     String Function(T)? display,
-  }) async {
-    if (!interactive) {
-      if (defaultIndex != null &&
-          defaultIndex >= 0 &&
-          defaultIndex < choices.length) {
-        return choices[defaultIndex];
-      }
-      throw StateError('Cannot prompt in non-interactive mode.');
-    }
-
-    final terminal = promptTerminal;
-    final model = SelectModel<T>(
-      items: choices,
-      title: question,
-      initialIndex: defaultIndex ?? 0,
-      display: display,
-      styles: _selectStyles(),
-    );
-    return await runSelectPrompt(model, terminal);
-  }
+  }) => _consolePrompts.selectChoice(
+    question,
+    choices: choices,
+    defaultIndex: defaultIndex,
+    display: display,
+  );
 
   /// Interactive multi-select with arrow-key navigation.
   Future<List<T>> multiSelectChoice<T>(
@@ -983,26 +955,12 @@ class Console implements ConsolePromptHost {
     required List<T> choices,
     List<int> defaultSelected = const [],
     String Function(T)? display,
-  }) async {
-    if (!interactive) {
-      return defaultSelected.map((i) => choices[i]).toList();
-    }
-
-    final terminal = promptTerminal;
-    final validDefaults = defaultSelected
-        .where((index) => index >= 0 && index < choices.length)
-        .toSet();
-    final model = MultiSelectModel<T>(
-      items: choices,
-      title: question,
-      initialIndex: validDefaults.isNotEmpty ? validDefaults.first : 0,
-      initialSelected: validDefaults,
-      display: display,
-      styles: _multiSelectStyles(),
-    );
-    final result = await runMultiSelectPrompt(model, terminal);
-    return result ?? [];
-  }
+  }) => _consolePrompts.multiSelectChoice(
+    question,
+    choices: choices,
+    defaultSelected: defaultSelected,
+    display: display,
+  );
 
   /// Displays a persistent menu and returns the selected choice.
   Future<T?> menu<T>(
@@ -1010,14 +968,12 @@ class Console implements ConsolePromptHost {
     required List<T> choices,
     int? defaultIndex,
     String Function(T)? display,
-  }) async {
-    return selectChoice(
-      title,
-      choices: choices,
-      defaultIndex: defaultIndex,
-      display: display,
-    );
-  }
+  }) => _consolePrompts.selectChoice(
+    title,
+    choices: choices,
+    defaultIndex: defaultIndex,
+    display: display,
+  );
 
   /// Interactive search/filter prompt with fuzzy matching.
   ///
@@ -1047,23 +1003,13 @@ class Console implements ConsolePromptHost {
     String Function(T)? display,
     String placeholder = 'Type to search...',
     String noResultsText = 'No matches found',
-  }) async {
-    if (!interactive) {
-      if (items.isNotEmpty) return items.first;
-      return null;
-    }
-
-    final terminal = promptTerminal;
-    final model = SearchModel<T>(
-      items: items,
-      title: question,
-      display: display,
-      placeholder: placeholder,
-      noResultsText: noResultsText,
-      styles: _searchStyles(),
-    );
-    return await runSearchPrompt(model, terminal);
-  }
+  }) => _consolePrompts.search(
+    question,
+    items: items,
+    display: display,
+    placeholder: placeholder,
+    noResultsText: noResultsText,
+  );
 
   /// Interactive multi-search/filter prompt with fuzzy matching.
   ///
@@ -1092,24 +1038,14 @@ class Console implements ConsolePromptHost {
     String placeholder = 'Type to search...',
     String noResultsText = 'No matches found',
     String? hint,
-  }) async {
-    if (!interactive) {
-      return [];
-    }
-
-    final terminal = promptTerminal;
-    final model = MultiSearchModel<T>(
-      items: items,
-      title: question,
-      display: display,
-      placeholder: placeholder,
-      noResultsText: noResultsText,
-      hint: hint ?? '(Space to toggle, ^a to toggle all, Enter to confirm)',
-      styles: _searchStyles(),
-    );
-    final result = await runMultiSearchPrompt(model, terminal);
-    return result ?? [];
-  }
+  }) => _consolePrompts.multiSearch(
+    question,
+    items: items,
+    display: display,
+    placeholder: placeholder,
+    noResultsText: noResultsText,
+    hint: hint,
+  );
 
   /// Interactive data table with fuzzy filtering and row selection.
   ///
@@ -1140,33 +1076,13 @@ class Console implements ConsolePromptHost {
     required List<T> items,
     required List<String> Function(T) rowBuilder,
     int pageSize = 10,
-  }) async {
-    if (!interactive) {
-      return items.isNotEmpty ? items.first : null;
-    }
-
-    final terminal = promptTerminal;
-
-    final themedStyles = componentTheme.dataTableStyles(renderConfig);
-
-    final model = DataTableModel<T>(
-      items: items,
-      columns: columns,
-      rowBuilder: rowBuilder,
-      title: question,
-      pageSize: pageSize,
-      styles: DataTableStyles(
-        title: _componentStyle(themedStyles.title, 'question'),
-        prompt: _componentStyle(themedStyles.prompt, 'info'),
-        tableHeader: _componentStyle(themedStyles.tableHeader, 'info'),
-        tableCell: themedStyles.tableCell,
-        tableSelected: _componentStyle(themedStyles.tableSelected, 'alert'),
-        dimmed: _componentStyle(themedStyles.dimmed, 'muted'),
-        noResults: themedStyles.noResults,
-      ),
-    );
-    return await runDataTablePrompt<T>(model, terminal);
-  }
+  }) => _consolePrompts.dataTable(
+    question,
+    columns: columns,
+    items: items,
+    rowBuilder: rowBuilder,
+    pageSize: pageSize,
+  );
 
   /// Interactive suggest/autocomplete prompt.
   ///
@@ -1193,93 +1109,18 @@ class Console implements ConsolePromptHost {
     String? defaultValue,
     int scroll = 5,
     String hint = '',
-  }) async {
-    if (!interactive) {
-      return defaultValue;
-    }
-
-    final terminal = promptTerminal;
-    final model = SuggestModel(
-      prompt: question,
-      options: options,
-      placeholder: placeholder,
-      defaultValue: defaultValue ?? '',
-      scroll: scroll,
-      hint: hint,
-      styles: _suggestStyles(),
-    );
-    return await runSuggestPrompt(model, terminal);
-  }
+  }) => _consolePrompts.suggest(
+    question,
+    options: options,
+    placeholder: placeholder,
+    defaultValue: defaultValue,
+    scroll: scroll,
+    hint: hint,
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
-
-  Style _componentStyle(Style themed, String role) {
-    return resolveConsoleComponentStyle(themed, getStyle(role));
-  }
-
-  SelectStyles _selectStyles() {
-    final themed = componentTheme.selectStyles(renderConfig);
-    return SelectStyles(
-      title: _componentStyle(themed.title, 'question'),
-      item: themed.item,
-      selectedItem: themed.selectedItem,
-      cursor: themed.cursor,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      cursorPrefix: themed.cursorPrefix,
-      itemPrefix: themed.itemPrefix,
-    );
-  }
-
-  MultiSelectStyles _multiSelectStyles() {
-    final themed = componentTheme.multiSelectStyles(renderConfig);
-    return MultiSelectStyles(
-      title: _componentStyle(themed.title, 'question'),
-      item: themed.item,
-      highlightedItem: themed.highlightedItem,
-      selectedIcon: themed.selectedIcon,
-      unselectedIcon: themed.unselectedIcon,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      cursorPrefix: themed.cursorPrefix,
-      selectedIconChar: themed.selectedIconChar,
-      unselectedIconChar: themed.unselectedIconChar,
-    );
-  }
-
-  SearchStyles _searchStyles() {
-    final themed = componentTheme.searchStyles(renderConfig);
-    return SearchStyles(
-      title: _componentStyle(themed.title, 'question'),
-      prompt: _componentStyle(themed.prompt, 'info'),
-      item: themed.item,
-      selectedItem: themed.selectedItem,
-      matchHighlight: themed.matchHighlight,
-      cursor: themed.cursor,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      noResults: themed.noResults,
-      selectedIcon: themed.selectedIcon,
-      unselectedIcon: themed.unselectedIcon,
-      selectedIconChar: themed.selectedIconChar,
-      unselectedIconChar: themed.unselectedIconChar,
-      cursorPrefix: themed.cursorPrefix,
-      itemPrefix: themed.itemPrefix,
-    );
-  }
-
-  SuggestStyles _suggestStyles() {
-    final themed = componentTheme.suggestStyles(renderConfig);
-    return SuggestStyles(
-      title: _componentStyle(themed.title, 'question'),
-      value: themed.value,
-      placeholder: themed.placeholder,
-      highlighted: themed.highlighted,
-      suggestion: themed.suggestion,
-      hint: themed.hint,
-      dimmed: _componentStyle(themed.dimmed, 'muted'),
-      pointer: themed.pointer,
-    );
-  }
 
   List<String> _normalizeLines(Object message) {
     if (message is Iterable) {
