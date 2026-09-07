@@ -14,6 +14,7 @@ class PseudoTerminalView extends StatefulWidget {
     this.focusController,
     this.focusId,
     this.autofocus = true,
+    this.quitOnExit = true,
     super.key,
   });
 
@@ -22,15 +23,18 @@ class PseudoTerminalView extends StatefulWidget {
   final String? focusId;
   final bool autofocus;
 
+  /// Whether exiting the child process should quit the widget application.
+  final bool quitOnExit;
+
   @override
   State<PseudoTerminalView> createState() => _PseudoTerminalViewState();
 }
 
 class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   late final VirtualTerminal _terminal = VirtualTerminal();
-  final Object _messageOwner = Object();
+  Object _activeOwner = Object();
   StreamSubscription<String>? _subscription;
-  final StreamController<String> _output = StreamController();
+  final StreamController<_PtyEvent> _events = StreamController();
   int _width = 0;
   int _height = 0;
 
@@ -41,22 +45,37 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   }
 
   void _subscribe() {
-    _subscription = widget.pty.out.listen(_output.add);
+    final owner = Object();
+    _activeOwner = owner;
+    _subscription = widget.pty.out.listen(
+      (data) => _addEvent(_PtyOutputEvent(owner, data)),
+    );
+    widget.pty.exitCode.then(
+      (exitCode) => _addEvent(_PtyExitEvent(owner, exitCode)),
+    );
+  }
+
+  void _addEvent(_PtyEvent event) {
+    if (!_events.isClosed) _events.add(event);
   }
 
   @override
-  runtime.Cmd? handleInit() => runtime.StreamCmd<String>(
-    stream: _output.stream,
-    onData: (data) => _PtyOutputMsg(_messageOwner, data),
+  runtime.Cmd? handleInit() => runtime.StreamCmd<_PtyEvent>(
+    stream: _events.stream,
+    onData: (event) => _PtyEventMsg(event),
   );
 
   @override
   runtime.Cmd? handleUpdate(runtime.Msg msg) {
-    if (msg case _PtyOutputMsg(
-      :final owner,
-      :final data,
-    ) when identical(owner, _messageOwner)) {
-      _terminal.writeText(data);
+    if (msg case _PtyEventMsg(
+      :final event,
+    ) when identical(event.owner, _activeOwner)) {
+      switch (event) {
+        case _PtyOutputEvent(:final data):
+          _terminal.writeText(data);
+        case _PtyExitEvent():
+          if (widget.quitOnExit) return runtime.Cmd.quit();
+      }
     }
     return null;
   }
@@ -74,7 +93,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   @override
   void dispose() {
     _subscription?.cancel();
-    _output.close();
+    _events.close();
     _terminal.dispose();
     super.dispose();
   }
@@ -108,9 +127,26 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   );
 }
 
-final class _PtyOutputMsg extends runtime.Msg {
-  const _PtyOutputMsg(this.owner, this.data);
+sealed class _PtyEvent {
+  const _PtyEvent(this.owner);
 
   final Object owner;
+}
+
+final class _PtyOutputEvent extends _PtyEvent {
+  const _PtyOutputEvent(super.owner, this.data);
+
   final String data;
+}
+
+final class _PtyExitEvent extends _PtyEvent {
+  const _PtyExitEvent(super.owner, this.exitCode);
+
+  final int exitCode;
+}
+
+final class _PtyEventMsg extends runtime.Msg {
+  const _PtyEventMsg(this.event);
+
+  final _PtyEvent event;
 }

@@ -7,6 +7,7 @@ class PseudoTerminalView extends StatelessWidget {
     FocusController? focusController,
     String? focusId,
     bool autofocus = true,
+    bool quitOnExit = true,
     super.key,
   });
 
