@@ -101,6 +101,8 @@ void main() {
           EditorCommandIds.joinLines,
           EditorCommandIds.splitLine,
           EditorCommandIds.sortSelectedLines,
+          EditorCommandIds.wrapSelection,
+          EditorCommandIds.unwrapSelection,
           EditorCommandIds.toggleFold,
           EditorCommandIds.nextDiagnostic,
           EditorCommandIds.previousDiagnostic,
@@ -198,6 +200,37 @@ void main() {
         EditorCommandDispatchResult.handled,
       );
       expect(model.value, 'AL\npha beta');
+    });
+
+    test('wrap command accepts symmetric and asymmetric delimiters', () {
+      final model = TextAreaModel()
+        ..setText('word', recordHistory: false)
+        ..setSelection(
+          baseLine: 0,
+          baseColumn: 0,
+          extentLine: 0,
+          extentColumn: 4,
+        );
+
+      expect(
+        model.executeCommand(
+          EditorCommandIds.wrapSelection,
+          argument: const EditorWrapSelectionArgument('[', after: ']'),
+        ),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '[word]');
+      expect(
+        model.executeCommand(EditorCommandIds.unwrapSelection),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, 'word');
+
+      expect(
+        model.executeCommand(EditorCommandIds.wrapSelection, argument: '**'),
+        EditorCommandDispatchResult.handled,
+      );
+      expect(model.value, '**word**');
     });
 
     test('command motions preserve a legacy single selection', () {

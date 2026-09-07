@@ -3125,6 +3125,28 @@ class TextAreaModel extends ViewComponent {
         execute: (model) => model.sortSelectedLines(),
       ),
       EditorCommand(
+        id: EditorCommandIds.wrapSelection,
+        label: 'Wrap Selection',
+        category: 'Transform',
+        isEnabled: (model) => model.hasSelection,
+        execute: (_) => false,
+        executeWith: (model, argument) => switch (argument) {
+          final String delimiter => model.wrapSelection(delimiter),
+          final EditorWrapSelectionArgument delimiters => model.wrapSelection(
+            delimiters.before,
+            after: delimiters.after,
+          ),
+          _ => false,
+        },
+      ),
+      EditorCommand(
+        id: EditorCommandIds.unwrapSelection,
+        label: 'Unwrap Selection',
+        category: 'Transform',
+        isEnabled: (model) => model.hasSelection,
+        execute: (model) => model.unwrapSelection(),
+      ),
+      EditorCommand(
         id: EditorCommandIds.nextSearchMatch,
         label: 'Find Next',
         category: 'Find',

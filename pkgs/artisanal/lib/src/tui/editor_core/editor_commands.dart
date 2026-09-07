@@ -58,6 +58,8 @@ abstract final class EditorCommandIds {
   static const joinLines = 'editor.action.joinLines';
   static const splitLine = 'editor.action.splitLine';
   static const sortSelectedLines = 'editor.action.sortSelectedLines';
+  static const wrapSelection = 'editor.action.wrapSelection';
+  static const unwrapSelection = 'editor.action.unwrapSelection';
   static const nextSearchMatch = 'editor.action.nextSearchMatch';
   static const previousSearchMatch = 'editor.action.previousSearchMatch';
   static const nextDiagnostic = 'editor.action.nextDiagnostic';
@@ -90,6 +92,17 @@ abstract final class EditorCommandIds {
   static const nextSnippetPlaceholder = 'editor.action.nextSnippetPlaceholder';
   static const previousSnippetPlaceholder =
       'editor.action.previousSnippetPlaceholder';
+}
+
+/// Delimiters supplied to the argument-taking `wrapSelection` command.
+final class EditorWrapSelectionArgument {
+  const EditorWrapSelectionArgument(this.before, {this.after});
+
+  /// Text inserted before the selection.
+  final String before;
+
+  /// Text inserted after the selection, or [before] when omitted.
+  final String? after;
 }
 
 /// A stable, discoverable editor operation.

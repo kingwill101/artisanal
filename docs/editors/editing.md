@@ -183,6 +183,9 @@ hosts can invoke the same undoable transforms.
 The registry also exposes line joining/splitting, whitespace cleanup, sorting,
 and selection-or-line case conversion. These operations are available to
 command palettes without requiring a terminal key binding.
+`wrapSelection` accepts either a string for symmetric delimiters or an
+`EditorWrapSelectionArgument` for distinct opening and closing text;
+`unwrapSelection` removes recognized surrounding pairs.
 
 This means a host may consume a key before `TextAreaModel.update` and dispatch
 the same command itself:
