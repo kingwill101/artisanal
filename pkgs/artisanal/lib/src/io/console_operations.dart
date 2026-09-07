@@ -3,7 +3,10 @@ import 'dart:async';
 import '../style/chars.dart';
 import '../style/color.dart';
 import '../style/style.dart';
+import '../tui/bubbles/pause.dart';
+import '../tui/bubbles/prompt.dart' show promptProgramOptions;
 import '../tui/bubbles/spinner.dart';
+import '../tui/program.dart';
 import 'console_context.dart';
 import 'console_format.dart';
 import 'console_presentation.dart';
@@ -327,6 +330,36 @@ final class ConsoleOperations {
       skipped: skipped,
       duration: watch.elapsed,
     );
+  }
+
+  /// Runs a countdown before invoking an optional completion callback.
+  Future<bool> countdown(
+    String message, {
+    required int seconds,
+    FutureOr<void> Function()? onComplete,
+  }) async {
+    final terminal = host.promptTerminal;
+    final interactive = supportsInteractiveConsole(
+      host.interactive,
+      () => terminal,
+    );
+
+    if (!interactive) {
+      host.writeln('$message $seconds seconds...');
+      await Future<void>.delayed(Duration(seconds: seconds));
+    } else {
+      await Program(
+        CountdownModel(
+          duration: Duration(seconds: seconds),
+          message: message,
+        ),
+        options: promptProgramOptions,
+        terminal: terminal,
+      ).run();
+    }
+
+    await onComplete?.call();
+    return true;
   }
 
   void _appendSkippedSteps(

@@ -47,6 +47,24 @@ final class _OperationHost implements ConsoleOperationHost {
 
 void main() {
   group('ConsoleOperations', () {
+    test('countdown uses the plain fallback and invokes completion', () async {
+      final host = _OperationHost(interactive: false);
+      var completed = false;
+
+      final result = await ConsoleOperations(host).countdown(
+        'Starting in',
+        seconds: 0,
+        onComplete: () {
+          completed = true;
+        },
+      );
+
+      expect(result, isTrue);
+      expect(completed, isTrue);
+      expect(host.output.toString(), contains('Starting in 0 seconds...'));
+      expect(host.promptTerminal.operations, isEmpty);
+    });
+
     test('steps account for unrun plain operations as skipped', () async {
       final host = _OperationHost(interactive: false);
       var skippedOperationRan = false;

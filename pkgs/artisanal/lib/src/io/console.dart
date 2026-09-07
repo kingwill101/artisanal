@@ -37,12 +37,9 @@ import '../tui/bubbles/prompt.dart'
         runMultiSearchPrompt,
         runDataTablePrompt,
         runNumberInputPrompt,
-        runSuggestPrompt,
-        promptProgramOptions;
-import '../tui/bubbles/pause.dart' show CountdownModel;
+        runSuggestPrompt;
 import '../tui/bubbles/number_input.dart' show NumberInputModel;
 import '../tui/bubbles/suggest.dart' show SuggestModel, SuggestStyles;
-import '../tui/program.dart' show Program;
 
 export 'operation_results.dart';
 
@@ -943,34 +940,11 @@ class Console implements ConsoleOperationHost {
     String message, {
     required int seconds,
     FutureOr<void> Function()? onComplete,
-  }) async {
-    final terminal = promptTerminal;
-    final supportsInteractive = supportsInteractiveConsole(
-      interactive,
-      () => terminal,
-    );
-
-    if (!supportsInteractive) {
-      // Non-interactive: just wait
-      writeln('$message $seconds seconds...');
-      await Future<void>.delayed(Duration(seconds: seconds));
-      if (onComplete != null) await onComplete();
-      return true;
-    }
-
-    // Use the TUI CountdownModel which handles rendering properly
-    await Program(
-      CountdownModel(
-        duration: Duration(seconds: seconds),
-        message: message,
-      ),
-      options: promptProgramOptions,
-      terminal: terminal,
-    ).run();
-
-    if (onComplete != null) await onComplete();
-    return true;
-  }
+  }) => _consoleOperations.countdown(
+    message,
+    seconds: seconds,
+    onComplete: onComplete,
+  );
 
   /// Displays a tree structure.
   ///
