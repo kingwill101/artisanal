@@ -533,9 +533,9 @@ class TextAreaKeyMap extends KeyMap {
            linePrevious ??
            KeyBinding.withHelp(['up', 'ctrl+p'], Arrows.up, 'previous line'),
        pageUp =
-           pageUp ?? KeyBinding.withHelp(['pageup'], 'pgup', 'previous page'),
+           pageUp ?? KeyBinding.withHelp(['pgup'], 'pgup', 'previous page'),
        pageDown =
-           pageDown ?? KeyBinding.withHelp(['pagedown'], 'pgdown', 'next page'),
+           pageDown ?? KeyBinding.withHelp(['pgdown'], 'pgdown', 'next page'),
        insertNewline =
            insertNewline ??
            KeyBinding.withHelp(

@@ -28,6 +28,8 @@
 - Disabled kernel XOFF flow control (`stty -ixon`, state saved/restored)
   while stdio raw mode owns the terminal, so `Ctrl+S`/`Ctrl+Q` reach TUI
   apps as keys instead of freezing output.
+- Fixed shared `pgup`/`pgdown` key-binding aliases and prevented unmodified
+  special-key aliases from accidentally matching modified key events.
 - Added an editor-core boundary test (no `dart:io`/`dart:ffi`, no builtin
   imports from core, builtins excluded from the minimal barrel).
 - Added advanced editing capabilities: bracket matching

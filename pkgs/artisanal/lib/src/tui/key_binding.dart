@@ -171,22 +171,25 @@ bool keyMatches(Key key, List<KeyBinding> bindings) {
           : (keyNameCmp == kCmp || keyStrCmp == kCmp);
       if (matches) return true;
 
-      // Handle special key type aliases (e.g., ' ' for space, '\t' for tab)
-      if (_keyTypeMatchesAlias(key.type, k)) return true;
+      // Handle special aliases (e.g., ' ' for space and 'pgup' for Page Up).
+      if (_keyMatchesAlias(key, k)) return true;
     }
   }
   return false;
 }
 
-/// Maps binding string aliases to their corresponding KeyType.
-bool _keyTypeMatchesAlias(KeyType type, String alias) {
+/// Maps unmodified binding aliases to their corresponding key.
+bool _keyMatchesAlias(Key key, String alias) {
+  if (key.hasModifier) return false;
   final aliasLower = alias.toLowerCase();
-  return switch (type) {
+  return switch (key.type) {
     KeyType.space => alias == ' ',
     KeyType.tab => alias == '\t',
     KeyType.enter => alias == '\n' || alias == '\r',
     KeyType.escape =>
       alias == '\x1b' || aliasLower == 'esc' || aliasLower == 'escape',
+    KeyType.pageUp => aliasLower == 'pgup' || aliasLower == 'pageup',
+    KeyType.pageDown => aliasLower == 'pgdown' || aliasLower == 'pagedown',
     _ => false,
   };
 }
