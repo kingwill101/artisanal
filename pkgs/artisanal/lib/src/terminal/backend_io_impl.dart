@@ -223,12 +223,12 @@ class StdioTerminalBackend implements TerminalBackend {
         _originalLineMode = _stdin.lineMode;
         wasEchoMode = _originalEchoMode ?? true;
         wasLineMode = _originalLineMode ?? true;
+        // Capture the complete terminal state before Dart changes echo/canonical
+        // mode, otherwise replaying it would restore an already-raw snapshot.
+        _savedFlowControl ??= disableTerminalFlowControl();
         _stdin.echoMode = false;
         _stdin.lineMode = false;
         if (identical(_stdin, io.stdin)) enableWindowsVtInput();
-        // Dart leaves IXON on, which freezes output on Ctrl+S (XOFF).
-        // Disable it while raw mode owns the terminal; restored below.
-        _savedFlowControl ??= disableTerminalFlowControl();
         _rawModeEnabled = true;
       } catch (_) {}
     }

@@ -41,6 +41,20 @@ void main() {
       );
     });
 
+    test('expands grapheme-coordinate ranges after emoji', () {
+      expect(
+        expandPlaceholderRanges('😀 [Pasted]', const [
+          TrackedPlaceholderRange(
+            startOffset: 2,
+            endOffset: 10,
+            displayText: '[Pasted]',
+            fullText: 'complete text',
+          ),
+        ]),
+        '😀 complete text',
+      );
+    });
+
     test('skips ranges whose display text drifted', () {
       expect(
         expandPlaceholderRanges('hello world', [
@@ -123,14 +137,8 @@ void main() {
       );
       expect(resolveExternalEditorExecutable({'EDITOR': 'hx'}), 'hx');
       expect(resolveExternalEditorExecutable({}), 'vi');
-      expect(
-        resolveExternalEditorExecutable({}, isWindows: true),
-        'notepad',
-      );
-      expect(
-        resolveExternalEditorExecutable({}, allowFallback: false),
-        isNull,
-      );
+      expect(resolveExternalEditorExecutable({}, isWindows: true), 'notepad');
+      expect(resolveExternalEditorExecutable({}, allowFallback: false), isNull);
     });
   });
 
@@ -202,10 +210,7 @@ void main() {
       );
       expect(editorSelectionRangeLabel(collapsed), isNull);
 
-      const selection = EditorSelection(
-        filePath: 'src/a.ts',
-        ranges: [single],
-      );
+      const selection = EditorSelection(filePath: 'src/a.ts', ranges: [single]);
       final context = formatEditorSelectionContext(selection);
       expect(context, contains('src/a.ts'));
       expect(context, contains('#3'));

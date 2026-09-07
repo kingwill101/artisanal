@@ -56,6 +56,27 @@ void main() {
     expect(session.savedRevision, isNull);
   });
 
+  test('serializes saves so stale content cannot finish last', () async {
+    final store = _MemoryDocumentStore()..pauseWrites = true;
+    final session = EditorPersistenceSession(
+      documentId: 'memory:demo',
+      store: store,
+    );
+
+    final older = session.save(TextDocument(text: 'old'), revision: 1);
+    await _waitFor(() => store.pendingWrites.length == 1);
+    final newer = session.save(TextDocument(text: 'new'), revision: 2);
+
+    store.pendingWrites[0].complete();
+    await _waitFor(() => store.pendingWrites.length == 2);
+    store.pendingWrites[1].complete();
+
+    expect(await older, isFalse);
+    expect(await newer, isTrue);
+    expect(store.durable?.document.text, 'new');
+    expect(session.savedRevision, 2);
+  });
+
   test('memory store separates durable and recovery snapshots', () async {
     final store = MemoryEditorDocumentStore();
     final session = EditorPersistenceSession(
@@ -85,7 +106,9 @@ final class _MemoryDocumentStore implements EditorDocumentStore {
   EditorDocumentSnapshot? durable;
   EditorDocumentSnapshot? recovery;
   bool pauseReads = false;
+  bool pauseWrites = false;
   Completer<EditorDocumentSnapshot?>? pendingRead;
+  final List<Completer<void>> pendingWrites = [];
 
   @override
   Future<void> deleteRecovery(String documentId) async {
@@ -106,10 +129,21 @@ final class _MemoryDocumentStore implements EditorDocumentStore {
   @override
   Future<void> write(EditorDocumentSnapshot snapshot) async {
     durable = snapshot;
+    if (pauseWrites) {
+      final pending = Completer<void>();
+      pendingWrites.add(pending);
+      await pending.future;
+    }
   }
 
   @override
   Future<void> writeRecovery(EditorDocumentSnapshot snapshot) async {
     recovery = snapshot;
+  }
+}
+
+Future<void> _waitFor(bool Function() condition) async {
+  while (!condition()) {
+    await Future<void>.delayed(Duration.zero);
   }
 }

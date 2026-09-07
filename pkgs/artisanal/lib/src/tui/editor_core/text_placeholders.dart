@@ -1,5 +1,7 @@
 library;
 
+import 'text_document.dart';
+
 /// Tracked placeholder ranges for prompt composers.
 ///
 /// Large pasted content is inserted as a short display placeholder (e.g.
@@ -43,19 +45,28 @@ String expandPlaceholderRanges(
   final ordered = ranges.toList(growable: false)
     ..sort((a, b) => b.startOffset.compareTo(a.startOffset));
   var result = text;
-  var floor = result.length + 1;
+  var floor = TextDocument(text: result).length + 1;
   for (final range in ordered) {
     final start = range.startOffset;
     final end = range.endOffset;
-    if (start < 0 || end < start || end > result.length || end > floor) {
+    final document = TextDocument(text: result);
+    if (start < 0 || end < start || end > document.length || end > floor) {
       continue;
     }
+    final graphemes = document.graphemesInRange(
+      startOffset: 0,
+      endOffset: document.length,
+    );
     // Guard against placeholder/display drift: only expand when the
     // display text matches what the range claims.
-    if (result.substring(start, end) != range.displayText) {
+    if (graphemes.sublist(start, end).join() != range.displayText) {
       continue;
     }
-    result = result.substring(0, start) + range.fullText + result.substring(end);
+    result = [
+      ...graphemes.take(start),
+      range.fullText,
+      ...graphemes.skip(end),
+    ].join();
     floor = start;
   }
   return result;

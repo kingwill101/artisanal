@@ -74,9 +74,8 @@ List<EditConflict> validateFileEdits(
   String filePath,
   List<FileTextEdit> edits,
 ) {
-  final ordered = edits.toList(growable: false)..sort(
-    (a, b) => a.startOffset.compareTo(b.startOffset),
-  );
+  final ordered = edits.toList(growable: false)
+    ..sort((a, b) => a.startOffset.compareTo(b.startOffset));
   final conflicts = <EditConflict>[];
   for (var i = 1; i < ordered.length; i++) {
     final previous = ordered[i - 1];
@@ -124,12 +123,20 @@ AppliedFileEdit applyFileEdits(
     final end = edit.endOffset.clamp(start, result.length);
     result =
         result.substring(0, start) + edit.replacement + result.substring(end);
-    applied.add(
-      (
-        startOffset: start,
-        endOffset: start + edit.replacement.length,
-      ),
-    );
+    final delta = edit.replacement.length - (end - start);
+    if (delta != 0) {
+      for (var index = 0; index < applied.length; index++) {
+        final range = applied[index];
+        applied[index] = (
+          startOffset: range.startOffset + delta,
+          endOffset: range.endOffset + delta,
+        );
+      }
+    }
+    applied.add((
+      startOffset: start,
+      endOffset: start + edit.replacement.length,
+    ));
   }
   applied.sort((a, b) => a.startOffset.compareTo(b.startOffset));
   return AppliedFileEdit(
@@ -147,11 +154,7 @@ Map<String, AppliedFileEdit> applyWorkspaceEdit(
 ) {
   return {
     for (final entry in edit.files.entries)
-      entry.key: applyFileEdits(
-        entry.key,
-        files[entry.key] ?? '',
-        entry.value,
-      ),
+      entry.key: applyFileEdits(entry.key, files[entry.key] ?? '', entry.value),
   };
 }
 
@@ -343,7 +346,8 @@ final class _LineTable {
     return line;
   }
 
-  List<String> get _allLines => _text.isEmpty ? const <String>[] : _text.split('\n');
+  List<String> get _allLines =>
+      _text.isEmpty ? const <String>[] : _text.split('\n');
 
   String lineAt(int index) {
     final lines = _allLines;

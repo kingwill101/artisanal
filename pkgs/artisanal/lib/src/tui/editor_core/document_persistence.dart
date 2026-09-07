@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async';
+
 import 'text_document.dart';
 
 /// Serializable editor document state supplied to persistence adapters.
@@ -60,6 +62,7 @@ final class EditorPersistenceSession {
 
   int _generation = 0;
   int? _savedRevision;
+  Future<void> _writeTail = Future<void>.value();
 
   /// Most recent revision whose durable write completed successfully.
   int? get savedRevision => _savedRevision;
@@ -91,11 +94,14 @@ final class EditorPersistenceSession {
   }) async {
     final generation = ++_generation;
     final snapshot = _snapshot(document, revision, metadata);
-    await store.write(snapshot);
-    if (generation != _generation) return false;
-    _savedRevision = revision;
-    await store.deleteRecovery(documentId);
-    return generation == _generation;
+    return _serializeWrite(() async {
+      if (generation != _generation) return false;
+      await store.write(snapshot);
+      if (generation != _generation) return false;
+      _savedRevision = revision;
+      await store.deleteRecovery(documentId);
+      return generation == _generation;
+    });
   }
 
   /// Writes recovery state without changing the durable saved revision.
@@ -105,13 +111,29 @@ final class EditorPersistenceSession {
     Map<String, Object?> metadata = const {},
   }) async {
     final generation = ++_generation;
-    await store.writeRecovery(_snapshot(document, revision, metadata));
-    return generation == _generation;
+    final snapshot = _snapshot(document, revision, metadata);
+    return _serializeWrite(() async {
+      if (generation != _generation) return false;
+      await store.writeRecovery(snapshot);
+      return generation == _generation;
+    });
   }
 
   /// Invalidates outstanding operations.
   void cancel() {
     _generation++;
+  }
+
+  Future<T> _serializeWrite<T>(Future<T> Function() operation) async {
+    final previous = _writeTail;
+    final done = Completer<void>();
+    _writeTail = done.future;
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      done.complete();
+    }
   }
 
   EditorDocumentSnapshot _snapshot(

@@ -256,6 +256,19 @@ void main() {
       expect(applied.conflicts, hasLength(1));
     });
 
+    test('reports final ranges after lower edits shift replacements', () {
+      final applied = applyFileEdits('a.dart', 'abcdef', const [
+        FileTextEdit(startOffset: 0, endOffset: 0, replacement: '++'),
+        FileTextEdit(startOffset: 4, endOffset: 6, replacement: 'Z'),
+      ]);
+
+      expect(applied.newText, '++abcdZ');
+      expect(applied.appliedRanges, [
+        (startOffset: 0, endOffset: 2),
+        (startOffset: 6, endOffset: 7),
+      ]);
+    });
+
     test('preview renders hunks, conflicts, and unchanged files', () {
       final preview = previewWorkspaceEdit(
         const {'a.dart': 'line1\nline2\nline3\n', 'b.dart': 'same\n'},
@@ -298,6 +311,18 @@ void main() {
     test('lenient sequences emit literally', () {
       expect(parseSnippet(r'cost is $5 and ${x}').text, r'cost is  and ${x}');
       expect(parseSnippet('a\$b').text, r'a$b');
+    });
+
+    test('reports tabstops in grapheme coordinates', () {
+      final snippet = parseSnippet('😀\${1:x} e\u0301\${2:y}');
+
+      expect(snippet.text, '😀x e\u0301y');
+      expect(
+        snippet.tabstops
+            .map((stop) => (stop.startOffset, stop.endOffset))
+            .toList(),
+        [(1, 2), (4, 5)],
+      );
     });
 
     test('sessions visit each index once with \$0 last', () {

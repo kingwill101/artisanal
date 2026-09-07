@@ -1,5 +1,7 @@
 library;
 
+import 'package:characters/characters.dart';
+
 /// Snippet parsing (`${1:default}`, `$1`, `$0`) with tabstop sessions.
 ///
 /// Covers the reusable core: parsing, placeholder expansion, ordered
@@ -49,6 +51,8 @@ ParsedSnippet parseSnippet(String source) {
   final tabstops = <SnippetTabstop>[];
   final defaults = <int, String?>{};
   var i = 0;
+  int textOffset() => text.toString().characters.length;
+
   int takeDigits(int from) {
     var j = from;
     while (j < source.length &&
@@ -75,13 +79,13 @@ ParsedSnippet parseSnippet(String source) {
   void addMirror(int index) {
     final echo = defaults[index];
     if (echo != null && echo.isNotEmpty) {
-      final start = text.length;
+      final start = textOffset();
       text.write(echo);
       tabstops.add(
         SnippetTabstop(
           index: index,
           startOffset: start,
-          endOffset: text.length,
+          endOffset: textOffset(),
           isMirror: true,
         ),
       );
@@ -89,8 +93,8 @@ ParsedSnippet parseSnippet(String source) {
       tabstops.add(
         SnippetTabstop(
           index: index,
-          startOffset: text.length,
-          endOffset: text.length,
+          startOffset: textOffset(),
+          endOffset: textOffset(),
           isMirror: true,
         ),
       );
@@ -130,7 +134,7 @@ ParsedSnippet parseSnippet(String source) {
           if (defaults.containsKey(index)) {
             addMirror(index);
           } else {
-            addStop(index, text.length, text.length);
+            addStop(index, textOffset(), textOffset());
           }
           i = digitsEnd + 1;
           continue;
@@ -144,9 +148,9 @@ ParsedSnippet parseSnippet(String source) {
               // first occurrence's value.
               addMirror(index);
             } else {
-              final start = text.length;
+              final start = textOffset();
               text.write(placeholder);
-              addStop(index, start, text.length, placeholder);
+              addStop(index, start, textOffset(), placeholder);
             }
             i = close + 1;
             continue;
@@ -164,7 +168,7 @@ ParsedSnippet parseSnippet(String source) {
       if (defaults.containsKey(index)) {
         addMirror(index);
       } else {
-        addStop(index, text.length, text.length);
+        addStop(index, textOffset(), textOffset());
       }
       i = digitsEnd;
       continue;
