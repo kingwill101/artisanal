@@ -1,5 +1,8 @@
 library;
 
+import 'text_change.dart';
+import 'text_document.dart';
+
 /// Pure-Dart syntax-tree DTOs for Tree-sitter-style backends.
 ///
 /// The core never imports `dart:ffi` and never links a native parser. An
@@ -91,8 +94,9 @@ final class EditorSyntaxTree {
   final List<EditorSyntaxNode> nodes;
   final int? rootId;
 
-  Map<int, EditorSyntaxNode> get byId =>
-      <int, EditorSyntaxNode>{for (final n in nodes) n.id: n};
+  Map<int, EditorSyntaxNode> get byId => <int, EditorSyntaxNode>{
+    for (final n in nodes) n.id: n,
+  };
 
   EditorSyntaxNode? nodeAtOffset(int offset) {
     EditorSyntaxNode? best;
@@ -137,8 +141,118 @@ abstract class SyntaxTreeProvider {
   List<EditorSyntaxCapture> capturesFor(
     EditorSyntaxTree tree, {
     Set<String>? captureNames,
-  }) =>
-      const <EditorSyntaxCapture>[];
+  }) => const <EditorSyntaxCapture>[];
+}
+
+/// Asynchronous backend interface for incremental syntax trees.
+///
+/// Implementations may call native workers, isolates, or remote parsers. The
+/// current and previous documents use grapheme coordinates; adapters translate
+/// them to their backend's coordinate system.
+abstract class AsyncSyntaxTreeProvider {
+  const AsyncSyntaxTreeProvider();
+
+  String get languageId;
+  bool get supportsIncremental => false;
+
+  Future<EditorSyntaxTree> parse({
+    required TextDocument document,
+    String? languageId,
+    TextDocument? previousDocument,
+    EditorSyntaxTree? previous,
+    List<SyntaxTreeEdit>? edits,
+    int? revision,
+  });
+
+  Future<List<EditorSyntaxCapture>> capturesFor(
+    EditorSyntaxTree tree, {
+    Set<String>? captureNames,
+  }) async => const <EditorSyntaxCapture>[];
+}
+
+/// Coordinates asynchronous tree builds and rejects stale responses.
+final class AsyncSyntaxTreeSession {
+  AsyncSyntaxTreeSession({required this.provider, this.languageId});
+
+  final AsyncSyntaxTreeProvider provider;
+  String? languageId;
+
+  int _generation = 0;
+  EditorSyntaxTree? _snapshot;
+  TextDocument? _document;
+
+  /// Most recently accepted syntax tree.
+  EditorSyntaxTree? get snapshot => _snapshot;
+
+  /// Document snapshot corresponding to [snapshot].
+  TextDocument? get document => _document;
+
+  /// Parses [document], returning `null` if a newer request supersedes it.
+  Future<EditorSyntaxTree?> request(
+    TextDocument document, {
+    String? languageId,
+    TextDocumentChange? change,
+    bool force = false,
+  }) async {
+    final generation = ++_generation;
+    final requestedDocument = document.copy();
+    final resolvedLanguage =
+        languageId ?? this.languageId ?? provider.languageId;
+    final previousTree = _snapshot;
+    final previousDocument = _document;
+    final unchanged =
+        !force &&
+        previousTree != null &&
+        previousDocument != null &&
+        previousTree.languageId == resolvedLanguage &&
+        previousDocument.storageIdentity == requestedDocument.storageIdentity &&
+        previousDocument.revision == requestedDocument.revision &&
+        (change == null || change.isNoop);
+    if (unchanged) return previousTree;
+
+    final incremental =
+        !force &&
+        provider.supportsIncremental &&
+        previousTree != null &&
+        previousDocument != null &&
+        previousTree.languageId == resolvedLanguage;
+    final resolvedChange = incremental
+        ? change ??
+              computeTextDocumentChangeForDocuments(
+                previousDocument: previousDocument,
+                nextDocument: requestedDocument,
+              )
+        : null;
+    final edits = resolvedChange == null || resolvedChange.isNoop
+        ? incremental
+              ? const <SyntaxTreeEdit>[]
+              : null
+        : syntaxTreeEditsForDocumentChange(resolvedChange);
+    final tree = await provider.parse(
+      document: requestedDocument.copy(),
+      languageId: resolvedLanguage,
+      previousDocument: incremental ? previousDocument.copy() : null,
+      previous: incremental ? previousTree : null,
+      edits: edits,
+      revision: requestedDocument.revision,
+    );
+    if (generation != _generation) return null;
+    _snapshot = tree;
+    _document = requestedDocument;
+    return tree;
+  }
+
+  /// Invalidates every outstanding request without clearing accepted state.
+  void cancel() {
+    _generation++;
+  }
+
+  /// Clears accepted state and invalidates every outstanding request.
+  void reset() {
+    cancel();
+    _snapshot = null;
+    _document = null;
+  }
 }
 
 /// Maps [EditorSyntaxCapture]s to core decoration ranges.
@@ -147,8 +261,10 @@ abstract class SyntaxTreeProvider {
 /// range type while giving Tree-sitter adapters a one-call path to
 /// highlighting.
 List<({int startOffset, int endOffset, String? styleKey, int priority})>
-    syntaxCapturesToRanges(Iterable<EditorSyntaxCapture> captures) {
-  return List<({int startOffset, int endOffset, String? styleKey, int priority})>.unmodifiable(
+syntaxCapturesToRanges(Iterable<EditorSyntaxCapture> captures) {
+  return List<
+    ({int startOffset, int endOffset, String? styleKey, int priority})
+  >.unmodifiable(
     captures.map(
       (capture) => (
         startOffset: capture.startOffset,
@@ -177,3 +293,12 @@ List<SyntaxTreeEdit> syntaxTreeEditsForReplacement({
     ),
   ];
 }
+
+/// Converts a document change into the backend-neutral syntax-tree edit shape.
+List<SyntaxTreeEdit> syntaxTreeEditsForDocumentChange(
+  TextDocumentChange change,
+) => syntaxTreeEditsForReplacement(
+  startOffset: change.startOffset,
+  oldEndOffset: change.oldEndOffset,
+  newEndOffset: change.newEndOffset,
+);

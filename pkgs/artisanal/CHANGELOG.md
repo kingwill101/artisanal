@@ -41,6 +41,9 @@
 - Added portable editor commands and keymaps, completion and code-action
   provider contracts, asynchronous syntax sessions, configurable work budgets,
   and document snapshot persistence/recovery.
+- Added reusable UTF-8 byte/grapheme coordinate conversion and a
+  generation-safe `AsyncSyntaxTreeSession` for optional native or isolate-based
+  structural parser adapters.
 - Expanded `TextAreaModel` with command dispatch, undo/redo, dirty revisions,
   search and diagnostics navigation, completion acceptance, clipboard
   transactions, and multi-cursor character, word, line, vertical, selection

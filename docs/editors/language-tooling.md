@@ -121,6 +121,10 @@ Consult `EditorWorkBudget` before synchronous whole-document parsing.
 `EditorSyntaxNode`, `EditorSyntaxTree`, `EditorSyntaxCapture`, and
 `SyntaxTreeEdit` are pure Dart DTOs for structural backends.
 `SyntaxTreeProvider` is the integration boundary for a Tree-sitter-like parser.
+For native workers, isolates, and other future-based parsers, implement
+`AsyncSyntaxTreeProvider` and submit snapshots through
+`AsyncSyntaxTreeSession`. The session retains the previous document/tree for
+incremental parsing and rejects responses superseded by newer requests.
 
 Use syntax trees for:
 
@@ -133,6 +137,22 @@ Use syntax trees for:
 
 Native bindings belong in a dependent package. Editor core remains free of
 `dart:ffi`.
+
+Tree-sitter-style parsers usually report UTF-8 byte coordinates, while editor
+documents use grapheme coordinates. Create one `TextUtf8CoordinateIndex` for
+each parser request and reuse it when mapping nodes and captures:
+
+```dart
+final coordinates = TextUtf8CoordinateIndex(document);
+final start = coordinates.offsetForPoint(
+  TextUtf8Point(row: capture.startRow, byteColumn: capture.startByteColumn),
+);
+final end = coordinates.offsetForByteOffset(capture.endByteOffset);
+```
+
+Byte positions inside a multi-byte grapheme round down to its leading
+boundary. The standalone conversion functions are convenient for one-off
+lookups; the index avoids rescanning the document for every parser range.
 
 ## Search and replace
 
