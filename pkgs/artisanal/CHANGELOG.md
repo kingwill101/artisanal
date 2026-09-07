@@ -26,6 +26,11 @@
 
 ### Changed
 
+- Simplified CLI GUI helpers behind shared presentation, prompt, and operation
+  services. `Console` and `Console.components` now use the same capability,
+  styling, spinner, progress, task, workflow, countdown, and prompt
+  implementations instead of delegating to each other or maintaining parallel
+  lifecycle code.
 - Implemented the `FrameLayout` facade with Ultraviolet rectangles, fixed and
   percentage constraints, and stable largest-remainder allocation rather than
   maintaining duplicate layout primitives.

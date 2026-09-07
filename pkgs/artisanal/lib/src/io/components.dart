@@ -65,7 +65,7 @@ class Components {
   Future<TaskResult> task(
     String description, {
     FutureOr<TaskResult> Function()? run,
-  }) => io.task(description, run: run);
+  }) => _operations.task(description, run: run);
 
   /// Displays two columns aligned with proper spacing.
   void twoColumnDetail(String first, [String? second]) {

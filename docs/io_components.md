@@ -4,6 +4,12 @@
 messages, bullet lists, and spinners. Use it when a basic `Console` method is
 too small but a full TUI would be too much.
 
+`Console` is the primary facade for output, prompts, and operations.
+`Console.components` is a namespaced facade for structured display blocks.
+Overlapping conveniences such as `task` and `spin` use the same underlying
+operation lifecycle, so capability detection, cursor cleanup, timing, and
+fallback behavior are consistent.
+
 ## Quick Start
 
 ```dart
@@ -35,6 +41,24 @@ Future<void> main() async {
 - `bulletList`, `line`, `rule`
 - `spin`, `textArea`
 - `renderException`
+
+## Console lines versus component blocks
+
+Direct semantic methods write one message line:
+
+```dart
+io.info('Ready');
+```
+
+The similarly named component methods render titled blocks:
+
+```dart
+io.components.info('Status', 'Ready');
+```
+
+Prefer direct `Console` methods for ordinary output, prompts, tasks, spinners,
+and progress. Use `Console.components` for titled blocks, definition lists,
+horizontal tables, comments, exceptions, and other structured presentation.
 
 ## Text Area Prompt
 
