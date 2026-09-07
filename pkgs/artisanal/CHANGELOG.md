@@ -44,6 +44,10 @@
 - Added reusable UTF-8 byte/grapheme coordinate conversion and a
   generation-safe `AsyncSyntaxTreeSession` for optional native or isolate-based
   structural parser adapters.
+- Added an optional `tree_sitter_language_pack` example package demonstrating
+  native runtime ownership, asynchronous parsing, syntax-tree DTO conversion,
+  UTF-8 byte-to-grapheme span mapping, and live syntax decorations in an
+  editable `TextAreaModel` without adding FFI to editor core.
 - Expanded `TextAreaModel` with command dispatch, undo/redo, dirty revisions,
   search and diagnostics navigation, completion acceptance, clipboard
   transactions, and multi-cursor character, word, line, vertical, selection

@@ -138,6 +138,15 @@ Use syntax trees for:
 Native bindings belong in a dependent package. Editor core remains free of
 `dart:ffi`.
 
+The optional
+[`tree_sitter_language_pack` adapter example](../../pkgs/artisanal/example/tree_sitter_language_pack/)
+shows this boundary end to end. It owns native runtime initialization,
+implements `AsyncSyntaxTreeProvider`, parses outside the render path, and maps
+the package's UTF-8 byte spans into editor grapheme offsets. Its live editor
+walks the complete native tree to decorate lexical syntax nodes. The high-level
+language-pack API performs full parses; adapters that retain native trees should
+additionally apply `SyntaxTreeEdit`s and opt into incremental parsing.
+
 Tree-sitter-style parsers usually report UTF-8 byte coordinates, while editor
 documents use grapheme coordinates. Create one `TextUtf8CoordinateIndex` for
 each parser request and reuse it when mapping nodes and captures:

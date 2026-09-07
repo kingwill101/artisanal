@@ -2,6 +2,7 @@ name: artisanal_workspace
 publish_to: none
 workspace:
   - pkgs/artisanal
+  - pkgs/artisanal/example/tree_sitter_language_pack
   - pkgs/artisanal_widgets
   - pkgs/artisanal_widgets/example/github_cli
   - pkgs/artisanal_widgets/example/flutter_cli_port
