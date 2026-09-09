@@ -141,6 +141,7 @@ class ExecProcessMsg extends Msg {
     required this.onComplete,
     this.workingDirectory,
     this.environment,
+    this.releaseTerminal = true,
   });
 
   /// The executable to run.
@@ -154,6 +155,9 @@ class ExecProcessMsg extends Msg {
 
   /// Environment variables for the process.
   final Map<String, String>? environment;
+
+  /// Whether the program releases its terminal while the process runs.
+  final bool releaseTerminal;
 
   /// Callback to create a message from the process result.
   final Msg Function(ExecResult result) onComplete;
@@ -649,6 +653,9 @@ class Cmd {
   /// This is useful for opening editors, running shell commands,
   /// or any external program that needs terminal access.
   ///
+  /// Set [releaseTerminal] to false for background helpers. Their output is
+  /// captured and the TUI keeps processing input and rendering while they run.
+  ///
   /// ```dart
   /// // Open a file in the user's editor
   /// Cmd.exec(
@@ -670,6 +677,7 @@ class Cmd {
     required Msg Function(ExecResult result) onComplete,
     String? workingDirectory,
     Map<String, String>? environment,
+    bool releaseTerminal = true,
   }) {
     return Cmd(
       () async => ExecProcessMsg(
@@ -678,6 +686,7 @@ class Cmd {
         onComplete: onComplete,
         workingDirectory: workingDirectory,
         environment: environment,
+        releaseTerminal: releaseTerminal,
       ),
     );
   }
@@ -707,6 +716,9 @@ class Cmd {
 
   /// A command that opens a URL in the default browser.
   ///
+  /// Runs in the background with captured output, without releasing the
+  /// terminal or interrupting input and rendering.
+  ///
   /// Uses the platform-appropriate command:
   /// - macOS: `open <url>`
   /// - Linux: `xdg-open <url>`
@@ -728,7 +740,12 @@ class Cmd {
         ? 'cmd'
         : 'xdg-open';
     final arguments = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
-    return exec(executable, arguments, onComplete: onComplete);
+    return exec(
+      executable,
+      arguments,
+      onComplete: onComplete,
+      releaseTerminal: false,
+    );
   }
 
   /// A command that sends a message after a delay.

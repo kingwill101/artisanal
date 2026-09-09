@@ -17,6 +17,9 @@
 
 ### Fixed
 
+- `Cmd.openUrl` now runs the browser launcher without releasing the terminal,
+  keeping the alternate screen, input, and rendering active. `Cmd.exec` also
+  supports `releaseTerminal: false` for non-interactive background helpers.
 - Corrected split-view anchors after context lines that wrap differently in
   the left and right panels.
 

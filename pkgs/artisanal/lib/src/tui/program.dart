@@ -3275,6 +3275,7 @@ class Program<M extends Model> with HotReloadMixin {
         :final onComplete,
         :final workingDirectory,
         :final environment,
+        :final releaseTerminal,
       ):
         _executeExternalProcess(
           executable,
@@ -3282,6 +3283,7 @@ class Program<M extends Model> with HotReloadMixin {
           onComplete,
           workingDirectory: workingDirectory,
           environment: environment,
+          releaseTerminal: releaseTerminal,
         );
         return true;
 
@@ -3299,19 +3301,23 @@ class Program<M extends Model> with HotReloadMixin {
     }
   }
 
-  /// Executes an external process, blocking until it completes.
+  /// Executes an external process asynchronously.
   ///
-  /// The terminal is released before the process starts and restored after
-  /// it finishes. The [onComplete] callback receives the process result.
+  /// Unless [releaseTerminal] is false, releases the terminal before starting
+  /// and restores it afterward. Background helpers leave the runtime active.
+  /// The [onComplete] callback receives the process result.
   Future<void> _executeExternalProcess(
     String executable,
     List<String> arguments,
     Msg Function(ExecResult result) onComplete, {
     String? workingDirectory,
     Map<String, String>? environment,
+    bool releaseTerminal = true,
   }) async {
-    final releaseGeneration = ++_terminalReleaseGeneration;
-    await _releaseTerminal();
+    final releaseGeneration = releaseTerminal
+        ? ++_terminalReleaseGeneration
+        : _terminalReleaseGeneration;
+    if (releaseTerminal) await _releaseTerminal();
 
     ExecResult result;
     try {
@@ -3334,6 +3340,10 @@ class Program<M extends Model> with HotReloadMixin {
       result = const ExecResult(exitCode: -1, stdout: '', stderr: '');
     }
 
+    if (!releaseTerminal) {
+      if (_running) send(onComplete(result));
+      return;
+    }
     if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
     _restoreTerminal();
     final restoreSizeChanged = _dispatchRestoreSizeIfChanged();

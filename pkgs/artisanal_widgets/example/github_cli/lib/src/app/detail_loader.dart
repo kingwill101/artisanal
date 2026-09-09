@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:io' as io;
-
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -169,18 +166,12 @@ final class GithubDashboardDetailLoader {
   }
 
   tui.Cmd _openUrl(String url) {
-    return tui.Cmd(() async {
-      final executable = io.Platform.isMacOS
-          ? 'open'
-          : io.Platform.isWindows
-          ? 'cmd'
-          : 'xdg-open';
-      final args = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
-      unawaited(
-        io.Process.start(executable, args, mode: io.ProcessStartMode.detached),
-      );
-      return const GithubOpenedUrlMsg();
-    });
+    return tui.Cmd.openUrl(
+      url,
+      onComplete: (result) => result.success
+          ? const GithubOpenedUrlMsg()
+          : const GithubActionFailedMsg('Could not open the browser.'),
+    );
   }
 
   tui.Cmd openSelectedDetail() {

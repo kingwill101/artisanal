@@ -346,6 +346,20 @@ void main() {
     },
   );
 
+  test('background processes are not terminal lifecycle interruptions', () {
+    expect(
+      isCriticalStartupProbeMsg(
+        ExecProcessMsg(
+          executable: 'echo',
+          arguments: const [],
+          releaseTerminal: false,
+          onComplete: (_) => const QuitMsg(),
+        ),
+      ),
+      isFalse,
+    );
+  });
+
   test('StartupProbeRunner can be aborted directly', () async {
     final started = Completer<void>();
     final probe = _GatingProbe(started);
