@@ -8,3 +8,4 @@ library;
 
 export 'src/tui/bubbles/git_diff.dart';
 export 'src/tui/bubbles/diff_review.dart';
+export 'src/tui/bubbles/diff_review_blocks.dart';

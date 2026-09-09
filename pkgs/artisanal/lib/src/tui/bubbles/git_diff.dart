@@ -1036,6 +1036,33 @@ class DiffLayout {
   /// Exact source lookup. Missing or outdated positions are not approximated.
   DiffCommentAnchor? anchorFor(DiffCommentLineKey key) => _byKey[key];
 
+  /// Source anchors actually occupying [row], found by indexed row lookup.
+  ///
+  /// Split-panel padding is not attributed to a shorter source line. Header
+  /// rows have no anchors. Anchors are emitted in ascending row order.
+  List<DiffCommentAnchor> anchorsAtRow(int row) {
+    var low = 0;
+    var high = anchors.length;
+    while (low < high) {
+      final mid = (low + high) ~/ 2;
+      if (anchors[mid].renderLine <= row) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    if (low == 0) return const [];
+    var start = low - 1;
+    final groupRow = anchors[start].renderLine;
+    while (start > 0 && anchors[start - 1].renderLine == groupRow) {
+      start--;
+    }
+    return [
+      for (var i = start; i < low; i++)
+        if (row < anchors[i].renderLineEnd) anchors[i],
+    ];
+  }
+
   /// First row after the aligned source group starting at [startRow].
   ///
   /// In split view this includes the taller of the left and right wrapped

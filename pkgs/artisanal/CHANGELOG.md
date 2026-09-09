@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added `DiffReviewBlocks`, a sparse code/thread display sequence with indexed
+  source-row and thread lookup, and `DiffLayout.anchorsAtRow` for hit testing.
 - Added `DiffReviewModel` and semantic TEA messages for source-key selection,
   range navigation, side switching, thread expansion, and revision-scoped
   updates. `DiffReviewDocument` indexes both source sides independently of

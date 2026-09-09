@@ -78,7 +78,9 @@ final target = review.commentTarget; // null if the range crosses omitted contex
 
 1. Extend the source document with explicit hunk identities and
    unavailable-content states.
-2. Add the mixed code/thread display-block sequence over the shared layout.
+2. The mixed sequence is implemented as `DiffReviewBlocks`: it stores only
+   thread insertion positions, derives code slots on demand, and retains
+   unmapped/outdated threads after the patch. Connect it to widget measurement.
 3. Compose code and threads through one variable-height virtual viewport,
    reusing existing list infrastructure where appropriate. Preserve stable
    block identity plus intra-block offset as measurements change.
