@@ -107,6 +107,25 @@ clicking code below comments, narrow split fallback, and a 10,000-line patch
 where a distant jump builds only the visited thread bodies. These are
 bounded-work checks, not terminal frame-time benchmarks.
 
+## Implemented: GitHub thread adapter
+
+The demo's `GithubPullRequestReviewComment` preserves multiline starts,
+`in_reply_to_id`, and whether a fallback position belongs to the original
+revision. `GithubDiffReviewThreads` converts these into core thread descriptors
+and immutable host-owned body lists, grouped by root comment ID rather than
+source position. Old-side rename paths come from the patch file pairs.
+Repository-relative paths are kept literally, including `a/` or `b/` directories.
+
+Outdated threads stay outdated even if their original line exists in the current
+patch. Missing source lines become unmapped; no nearest-line fallback is used.
+Orphan replies and unsupported cross-side ranges remain in an explicit host
+collection rather than receiving invented anchors. The parser still excludes
+comments with no usable current or original line; file-level comments need a
+separate attachment representation.
+
+This adapter is tested independently but is not yet wired into the dashboard or
+single-PR view. Those screens still use the legacy mapping and controllers.
+
 ## Remaining implementation stages
 
 1. Extend the source document with explicit hunk identities and

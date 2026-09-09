@@ -9,6 +9,10 @@
   widgets, sparse height indexing, source-anchored selection, and shared
   split-panel geometry. Measured thread size changes preserve the visible
   content anchor. The legacy `GitDiffViewer` remains available unchanged.
+- Added a GitHub demo source-thread adapter preserving multiline ranges,
+  root/reply identity, renamed old-side paths, and outdated positions, ready for
+  the review viewport migration. Existing demo screens still use the legacy
+  viewer.
 
 ## 0.4.0
 
