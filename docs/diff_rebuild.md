@@ -19,9 +19,9 @@ Viewport-only copies retain the layout snapshot. Width, presentation, source,
 and highlight changes invalidate it. Existing `renderedLines`, `commentAnchors`,
 and viewport APIs remain available during migration.
 
-This is a foundation, not the completed virtualized review implementation.
-Rendering still eagerly produces ANSI rows, and the widget's existing inline
-comment scrolling path is unchanged.
+Rendering still eagerly produces ANSI rows. The new review viewport below
+virtualizes their display and rich thread widgets; the legacy viewer's inline
+comment scrolling path remains unchanged until consumers migrate.
 
 ## Implemented: source-anchored TEA review state
 
@@ -74,20 +74,47 @@ var review = DiffReviewModel(
 final target = review.commentTarget; // null if the range crosses omitted context
 ```
 
+## Implemented: virtualized review widgets
+
+`package:artisanal_widgets/widgets.dart` exports `DiffReviewController` and
+`DiffReviewViewport`. The controller hosts the TEA review model and owns one
+`WidgetScrollController`: its offsets include both code and comment rows.
+Do not combine these offsets with the base patch model's viewport offsets.
+
+The viewport paints visible ANSI code rows directly and mounts only visible
+thread widgets through the framework's lazy child manager. A sparse extent
+index stores thread heights rather than allocating a widget or extent entry
+for every code row. Unmeasured threads initially occupy one estimated row;
+the total scroll extent becomes more accurate as threads are visited.
+Visible thread bodies are measured and cached, including asynchronous size
+changes. Source/thread identity and intra-block position preserve the reader's
+location when measured content above it grows or shrinks.
+
+The host supplies expanded content through `threadBuilder(context, placement)`.
+Keep fetched bodies and editable drafts outside these lazily mounted widgets,
+scoped by document, revision, and thread ID. The built-in header toggles
+expansion in the TEA model. Attached split-view threads use the same panel
+geometry as the code renderer; narrow fallback, unmapped, and outdated threads
+use the full width.
+
+Arrow/page/home/end keys scroll composed rows; `j`/`k` move source selection,
+`h`/`l` switch sides, and `v` toggles a range. Set `handleKeys: false` while a
+host editor owns the keyboard. Mouse selection and thread widgets share the
+render tree's hit testing.
+
+Regression tests cover tall threads, asynchronous growth/shrink, expansion,
+clicking code below comments, narrow split fallback, and a 10,000-line patch
+where a distant jump builds only the visited thread bodies. These are
+bounded-work checks, not terminal frame-time benchmarks.
+
 ## Remaining implementation stages
 
 1. Extend the source document with explicit hunk identities and
    unavailable-content states.
-2. The mixed sequence is implemented as `DiffReviewBlocks`: it stores only
-   thread insertion positions, derives code slots on demand, and retains
-   unmapped/outdated threads after the patch. Connect it to widget measurement.
-3. Compose code and threads through one variable-height virtual viewport,
-   reusing existing list infrastructure where appropriate. Preserve stable
-   block identity plus intra-block offset as measurements change.
-4. Move GitHub integration off rendered-row comment mapping and height
+2. Move GitHub integration off rendered-row comment mapping and height
    estimates. Preserve left/right thread identity and explicitly show unmapped
    or outdated comments.
-5. Add full review workflow tests and benchmarks for large patches, tall
+3. Add full review workflow tests and benchmarks for large patches, tall
    threads, expansion, resize, asynchronous content, and scrollbar dragging.
 
 ## Performance acceptance rules

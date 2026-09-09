@@ -1221,6 +1221,24 @@ class GitDiffModel extends ViewComponent {
   /// The parsed diff files.
   List<DiffFile> get files => _files;
 
+  /// Effective split-panel geometry, shared with rich review hosts.
+  ///
+  /// Null in other modes or when the viewport falls back to unified display.
+  /// Widths exclude the single separator column; gutters are inside each panel.
+  late final ({int leftWidth, int rightWidth, int gutterWidth})? splitColumns =
+      viewMode == DiffViewMode.sideBySide ? _splitColumnsFor(_files) : null;
+
+  ({int leftWidth, int rightWidth, int gutterWidth})? _splitColumnsFor(
+    List<DiffFile> files,
+  ) {
+    final digits = '${_computeMaxLineNumber(files)}'.length;
+    final gutter = (showLineNumbers ? (digits < 4 ? 4 : digits) + 1 : 0) + 2;
+    final left = (width - 1) ~/ 2;
+    final right = width - 1 - left;
+    if (left <= gutter || right <= gutter) return null;
+    return (leftWidth: left, rightWidth: right, gutterWidth: gutter);
+  }
+
   /// The embedded viewport model (exposed for widget wrapping).
   ViewportModel get viewport => _viewport;
 
@@ -2159,18 +2177,8 @@ class GitDiffModel extends ViewComponent {
 
     // Layout: [lineNum space] [marker space] content │ [lineNum space] [marker space] content
     // separator = 1 char: " " (thin gap, no box-drawing character)
-    const separatorWidth = 1;
-    // marker = 2 chars: marker + space
-    const markerWidth = 2;
-    final lineNumWidth = showLineNumbers ? effectiveNumWidth + 1 : 0;
-    final gutterWidth = lineNumWidth + markerWidth;
-    final availableWidth = width - separatorWidth;
-    final leftPanelWidth = availableWidth ~/ 2;
-    final rightPanelWidth = availableWidth - leftPanelWidth;
-    final leftContentWidth = leftPanelWidth - gutterWidth;
-    final rightContentWidth = rightPanelWidth - gutterWidth;
-
-    if (leftContentWidth <= 0 || rightContentWidth <= 0) {
+    final columns = _splitColumnsFor(files);
+    if (columns == null) {
       // Too narrow for side-by-side — fall back to unified.
       return _renderLines(
         files,
@@ -2178,6 +2186,10 @@ class GitDiffModel extends ViewComponent {
         anchors: anchors,
       );
     }
+    final leftPanelWidth = columns.leftWidth;
+    final rightPanelWidth = columns.rightWidth;
+    final leftContentWidth = leftPanelWidth - columns.gutterWidth;
+    final rightContentWidth = rightPanelWidth - columns.gutterWidth;
 
     final separator = styles.sideBySideSeparator.render(' ');
 

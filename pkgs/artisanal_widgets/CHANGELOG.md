@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added `DiffReviewController` and `DiffReviewViewport` over the core TEA review
+  model, with one composed code/comment scroll extent, lazy expanded thread
+  widgets, sparse height indexing, source-anchored selection, and shared
+  split-panel geometry. Measured thread size changes preserve the visible
+  content anchor. The legacy `GitDiffViewer` remains available unchanged.
+
 ## 0.4.0
 
 ### Added
