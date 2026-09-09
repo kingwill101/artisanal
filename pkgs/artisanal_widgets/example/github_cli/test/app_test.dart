@@ -1206,6 +1206,7 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
 
     expect(tester.view, contains('All comments PR #9'));
     expect(tester.view, contains('Add gh tui'));
+    expect(RegExp('checks 1/1').allMatches(tester.view), hasLength(1));
     expect(tester.view, isNot(contains('PULL REQUESTS')));
     expect(client.dashboardLoads, isZero);
     expect(client.pullRequestLoads, 1);

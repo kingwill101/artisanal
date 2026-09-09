@@ -1,5 +1,5 @@
 import 'package:artisanal/style.dart'
-    show Color, HorizontalAlign, Style, VerticalAlign;
+    show HorizontalAlign, Style, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -1393,10 +1393,11 @@ bool _sameItem(GithubDisplayItem? left, GithubDisplayItem? right) {
 
 w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
   final statusColor = item.hasWarning ? theme.error : theme.success;
-  final statusText = item.target == GithubDisplayTarget.issue
+  final labels = _displayLabels(item);
+  final statusText =
+      item.target == GithubDisplayTarget.issue && labels.isNotEmpty
       ? ''
       : item.status;
-  final labelBadges = _detailLabelBadges(theme, item, statusColor);
   return w.Column(
     crossAxisAlignment: w.CrossAxisAlignment.stretch,
     children: [
@@ -1420,8 +1421,14 @@ w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
         spacing: 1,
         runSpacing: 0,
         children: [
-          ...labelBadges,
-          if (statusText.trim().isNotEmpty && !item.labels.contains(statusText))
+          for (final label in labels.take(4))
+            w.Badge(
+              label.name,
+              background: labelBackgroundColor(label, fallback: theme.warning),
+              foreground: labelForegroundColor(label),
+            ),
+          if (statusText.trim().isNotEmpty &&
+              !labels.take(4).any((label) => label.name == statusText))
             w.Badge(
               statusText,
               background: theme.surface,
@@ -1446,28 +1453,6 @@ w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
       ),
     ],
   );
-}
-
-List<w.Widget> _detailLabelBadges(
-  w.Theme theme,
-  GithubDisplayItem item,
-  Color statusColor,
-) {
-  final labels = _displayLabels(item);
-  if (labels.isNotEmpty) {
-    return <w.Widget>[
-      for (final label in labels.take(4))
-        w.Badge(
-          label.name,
-          background: labelBackgroundColor(label, fallback: theme.warning),
-          foreground: labelForegroundColor(label),
-        ),
-    ];
-  }
-  if (item.status.trim().isEmpty) return const <w.Widget>[];
-  return <w.Widget>[
-    w.Badge(item.status, background: theme.surface, foreground: statusColor),
-  ];
 }
 
 List<GithubRepositoryLabel> _displayLabels(GithubDisplayItem item) {

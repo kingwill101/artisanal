@@ -27,6 +27,8 @@
 
 ### Fixed
 
+- Show PR status only once in the GitHub detail header when no labels are
+  present, rather than rendering duplicate check-summary badges.
 - Preserve terminal graphics escape sequences when clipping rich diff-review
   cards. Avatar payloads no longer become visible text or consume neighboring
   author text and diff output.
