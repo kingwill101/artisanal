@@ -392,8 +392,8 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
   tui.Cmd _switchDetailShortcut(int index) {
     return switch (index) {
       1 => _detailLoader.openSelectedCommits(),
-      2 => _detailLoader.openSelectedReviewComments(),
-      3 => _detailLoader.openSelectedDiff(),
+      2 => _detailLoader.openSelectedDiff(),
+      3 => _detailLoader.openSelectedReviewComments(),
       _ => tui.Cmd.none(),
     };
   }

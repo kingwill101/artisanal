@@ -56,9 +56,12 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
   final _diffReview = GithubDiffReviewSession();
   final _queueScrollEvents = StreamController<tui.Msg>();
 
+  bool get _atQueueEnd =>
+      _queueScrollController.maxOffset > 0 &&
+      _queueScrollController.offset >= _queueScrollController.maxOffset;
+
   void _onQueueScroll() {
-    if (_queueScrollController.maxOffset > 0 &&
-        _queueScrollController.offset >= _queueScrollController.maxOffset) {
+    if (_atQueueEnd) {
       _queueScrollEvents.add(const GithubQueueEndReachedMsg());
     }
   }
@@ -168,9 +171,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
   @override
   tui.Cmd? handleUpdate(tui.Msg msg) {
     if (msg is GithubQueueEndReachedMsg) {
-      if (_queueScrollController.maxOffset <= 0 ||
-          _queueScrollController.offset < _queueScrollController.maxOffset ||
-          !_queue.canLoadCurrentPage) {
+      if (!_atQueueEnd || !_queue.canLoadCurrentPage) {
         return null;
       }
       return _queue.searchQuery != null

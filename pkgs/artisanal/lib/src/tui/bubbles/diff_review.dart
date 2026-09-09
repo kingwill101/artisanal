@@ -568,9 +568,8 @@ final class DiffReviewModel extends ViewComponent {
         if (anchor == null || diff.viewMode != DiffViewMode.sideBySide) {
           return (this, null);
         }
-        for (final candidate in diff.layout.anchors) {
-          if (candidate.renderLine == anchor.renderLine &&
-              candidate.side == side) {
+        for (final candidate in diff.layout.anchorsAtRow(anchor.renderLine)) {
+          if (candidate.side == side) {
             return (_select(candidate.key), null);
           }
         }

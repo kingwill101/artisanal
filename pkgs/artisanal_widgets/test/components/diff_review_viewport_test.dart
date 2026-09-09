@@ -68,6 +68,48 @@ class _GrowingBodyState extends w.State<_GrowingBody> {
 }
 
 void main() {
+  for (final explicit in [false, true]) {
+    test(
+      'parent bounds control review geometry (explicit: $explicit)',
+      () async {
+        final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+        addTearDown(tester.dispose);
+        final controller = _controller(threads: [], width: 100, height: 30);
+        final viewport = w.DiffReviewViewport(
+          controller: controller,
+          width: explicit ? 100 : null,
+          height: explicit ? 30 : null,
+          threadBuilder: (_, _) => w.Text('BODY'),
+        );
+        for (final width in [24, 12, 32]) {
+          await tester.pumpWidget(
+            w.Align(
+              alignment: w.Alignment.topLeft,
+              child: w.SizedBox(width: width, height: 6, child: viewport),
+            ),
+          );
+          expect(controller.model.diff.width, width);
+          expect(controller.model.diff.height, 6);
+          expect(controller.scrollController.viewportExtent, 6);
+          final expected = d.GitDiffModel(
+            width: width,
+            height: 6,
+          ).setDiff(_patch(50));
+          expect(controller.model.diff.renderedLines, expected.renderedLines);
+          controller.update(d.DiffReviewSelectMsg(_key(30)));
+          controller.revealSelection();
+          tester.pump();
+          final source = controller.firstVisibleSource();
+          expect(source, isNotNull);
+          tester.mouseDown(1, 0);
+          tester.mouseUp(1, 0);
+          tester.pump();
+          expect(controller.model.selected, source);
+        }
+      },
+    );
+  }
+
   for (final mode in [d.DiffViewMode.unified, d.DiffViewMode.sideBySide]) {
     test(
       'rich inline cards preserve Kitty payloads and surrounding code in $mode',
@@ -114,8 +156,9 @@ void main() {
                   .parseTerminalGraphicsControls(tester.view)
                   .where((control) => control.displaysImage)
                   .length ==
-              2)
+              2) {
             break;
+          }
         }
         expect(tester.view, contains('\x1b_G'));
         final displays = uv

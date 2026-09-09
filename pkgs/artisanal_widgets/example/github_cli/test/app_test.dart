@@ -1444,6 +1444,13 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
         tester.sendKey('d');
         await _pumpUntil(tester, () => tester.view.contains('tall-thread ·'));
         await _pumpUntil(tester, () => tester.view.contains('TALL_BODY_0'));
+        final viewport =
+            tester.find.byType<w.DiffReviewViewport>().single.widget
+                as w.DiffReviewViewport;
+        // Start inside the discussion rather than spending the first page on
+        // preceding code; the viewport now uses the actual smaller pane height.
+        viewport.controller.revealThread('tall-thread');
+        tester.pump();
         tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.pageDown)));
         tester.pump();
         expect(tester.view, contains('TALL_BODY_'));
@@ -1539,6 +1546,35 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       expect(client.addedLabels.single.labels, ['bug']);
     },
   );
+
+  test('single PR palette navigation agrees with detail tab order', () async {
+    final tester = WidgetTester(screenWidth: 120, screenHeight: 38);
+    addTearDown(tester.dispose);
+    await tester.pumpWidget(
+      GithubPullRequestView(
+        client: _FakeGithubClient(
+          _sampleDashboard('dart-lang/sdk'),
+          diff: _longSampleDiff,
+        ),
+        target: const GithubPullRequestTarget(
+          repository: 'dart-lang/sdk',
+          number: 9,
+        ),
+      ),
+    );
+    await _pumpUntil(tester, () => tester.view.contains('All comments PR #9'));
+    tester.sendKey('p');
+    tester.typeText('Pull requests tab');
+    tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.enter)));
+    await _pumpUntil(tester, () => tester.view.contains('Files changed PR #9'));
+    tester.sendKey('p');
+    tester.typeText('Actions tab');
+    tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.enter)));
+    await _pumpUntil(
+      tester,
+      () => tester.view.contains('Review comments PR #9'),
+    );
+  });
 
   test('comment avatars request network images by default', () async {
     expect(githubCliNetworkImagesEnabled, isTrue);

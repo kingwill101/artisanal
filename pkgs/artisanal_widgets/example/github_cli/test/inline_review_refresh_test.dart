@@ -76,6 +76,33 @@ void main() {
       )!
       .execute();
 
+  test('another PR completion leaves active detail state unchanged', () {
+    detail.applyNotice('Current notice');
+    detail.openMergeInfo(_item);
+    final result = loader.handleMessage(
+      const GithubActionCompletedMsg(
+        'Other comment added.',
+        reviewItem: GithubDisplayItem(
+          target: GithubDisplayTarget.pullRequest,
+          kind: 'pr',
+          number: 10,
+          title: 'Other review',
+          body: '',
+          url: '',
+          author: 'author',
+          status: '',
+          updatedAt: null,
+          footer: '',
+          repository: 'owner/repo',
+        ),
+      ),
+    );
+    expect(result, isNull);
+    expect(client.requests, isEmpty);
+    expect(detail.notice, 'Current notice');
+    expect(detail.mergeInfoItem, _item);
+  });
+
   test('latest refresh wins when requests finish in reverse order', () async {
     final older = refresh();
     final newer = refresh();

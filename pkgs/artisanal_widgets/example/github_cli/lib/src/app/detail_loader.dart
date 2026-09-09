@@ -98,7 +98,6 @@ final class GithubDashboardDetailLoader {
       return null;
     }
     if (msg is GithubActionCompletedMsg && msg.reviewItem != null) {
-      detail.applyActionCompleted(msg.message);
       final item = detail.diffItem;
       final submitted = msg.reviewItem!;
       if (item == null ||
@@ -106,6 +105,7 @@ final class GithubDashboardDetailLoader {
           item.number != submitted.number) {
         return null;
       }
+      detail.applyActionCompleted(msg.message);
       return _loadDiffReviewComments();
     }
     if (msg is GithubDiffReviewCommentsLoadedMsg) {

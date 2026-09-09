@@ -14,6 +14,8 @@
 
 ### Fixed
 
+- Size `DiffReviewViewport` from actual parent layout constraints, keeping
+  wrapping, scroll metrics, and source hit testing aligned in nested panes.
 - Keep implicit `TextField` and `TextArea` focus IDs stable across parent
   rebuilds, preserving autofocus and keyboard input in newly opened modals.
 - Preserve terminal graphics escape sequences when clipping rich diff-review

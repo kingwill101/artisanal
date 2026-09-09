@@ -406,38 +406,29 @@ class _DiffReviewViewportState extends State<DiffReviewViewport> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final controller = widget.controller;
-      final width =
-          widget.width ??
-          (constraints.hasBoundedWidth
-              ? constraints.maxWidth.toInt()
-              : controller.model.diff.width);
-      final height =
-          widget.height ??
-          (constraints.hasBoundedHeight
-              ? constraints.maxHeight.toInt()
-              : controller.model.diff.height);
-      if (width <= 0 || height <= 0) return SizedBox(width: 0, height: 0);
+  Widget build(BuildContext context) => _ReviewLazyViewport(
+    controller: widget.controller,
+    threadBuilder: widget.threadBuilder,
+    width: widget.width,
+    height: widget.height,
+    onRenderObject: (value) => _viewport = value,
+    onLayout: (width, height) {
       _configuring = true;
       try {
-        controller.update(
+        if (width <= 0 || height <= 0) {
+          widget.controller.scrollController.updateMetrics(
+            viewportExtent: 0,
+            contentExtent: widget.controller._extents.totalHeight,
+          );
+          return;
+        }
+        widget.controller.update(
           DiffReviewPresentationMsg(width: width, height: height),
         );
-        controller._syncMetrics();
+        widget.controller._syncMetrics();
       } finally {
         _configuring = false;
       }
-      return SizedBox(
-        width: width,
-        height: height,
-        child: _ReviewLazyViewport(
-          controller: controller,
-          threadBuilder: widget.threadBuilder,
-          onRenderObject: (value) => _viewport = value,
-        ),
-      );
     },
   );
 }
@@ -447,10 +438,16 @@ class _ReviewLazyViewport extends LazyRenderObjectWidget {
     required this.controller,
     required this.threadBuilder,
     required this.onRenderObject,
+    required this.onLayout,
+    this.width,
+    this.height,
   });
   final DiffReviewController controller;
   final DiffReviewThreadBuilder threadBuilder;
   final void Function(RenderObject) onRenderObject;
+  final void Function(int, int) onLayout;
+  final int? width;
+  final int? height;
 
   @override
   int get childCount => controller.blocks.length;
@@ -501,14 +498,18 @@ class _ReviewLazyViewport extends LazyRenderObjectWidget {
 
   @override
   RenderObject createRenderObject() {
-    final viewport = _RenderReviewViewport(controller);
+    final viewport = _RenderReviewViewport(controller, onLayout, width, height);
     onRenderObject(viewport);
     return viewport;
   }
 
   @override
   void updateRenderObject(RenderObject renderObject) {
-    (renderObject as _RenderReviewViewport).controller = controller;
+    (renderObject as _RenderReviewViewport)
+      ..controller = controller
+      ..onLayout = onLayout
+      ..width = width
+      ..height = height;
     onRenderObject(renderObject);
   }
 
@@ -517,8 +518,16 @@ class _ReviewLazyViewport extends LazyRenderObjectWidget {
 }
 
 class _RenderReviewViewport extends RenderBox implements LazyRenderObjectHost {
-  _RenderReviewViewport(this.controller);
+  _RenderReviewViewport(
+    this.controller,
+    this.onLayout,
+    this.width,
+    this.height,
+  );
   DiffReviewController controller;
+  void Function(int, int) onLayout;
+  int? width;
+  int? height;
   LazyRenderObjectChildManager? _manager;
   final _cache =
       <int, ({RenderObject child, int width, List<String> rows, int height})>{};
@@ -533,17 +542,38 @@ class _RenderReviewViewport extends RenderBox implements LazyRenderObjectHost {
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
-    size = constraints.constrain(
+    // Explicit dimensions bound the viewport even when the host offers a
+    // full-screen slot, but can never exceed the available parent bounds.
+    size = constraints.loosen().constrain(
       Size(
-        controller.model.diff.width.toDouble(),
-        controller.model.diff.height.toDouble(),
+        width?.toDouble() ??
+            (constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : controller.model.diff.width.toDouble()),
+        height?.toDouble() ??
+            (constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : controller.model.diff.height.toDouble()),
       ),
     );
-    controller._syncMetrics();
+    controller.scrollController.updateMetrics(
+      viewportExtent: size.height.toInt(),
+      contentExtent: controller._extents.totalHeight,
+    );
   }
 
   @override
   String paint() {
+    // Parents such as Scrollbar measure more than one candidate width.
+    // Commit source geometry only for the size that will actually be painted.
+    final oldLayout = controller.blocks.layout;
+    onLayout(size.width.toInt(), size.height.toInt());
+    if (!identical(oldLayout, controller.blocks.layout)) {
+      // Row indices and split-panel padding belong to the new layout.
+      _manager?.retainChildIndices({});
+      _cache.clear();
+      _hits.clear();
+    }
     final height = size.height.toInt();
     final width = size.width.toInt();
     if (height <= 0 || width <= 0 || controller.blocks.length == 0) {
