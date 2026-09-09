@@ -130,8 +130,11 @@ scopes state by repository/PR/file and head revision, and supplies host-owned
 Markdown/avatar cards to `DiffReviewViewport`. It filters threads to the selected
 file; other-file comments remain available in Review.
 
-Threads start collapsed. Clicking their headers expands rich content in the same
-scroll extent as code. Selection, range extension, side switching, and submission
+The GitHub session opens new threads by default, showing rich comment bodies in
+the same scroll extent as code. Clicking a header collapses the thread; refreshes
+preserve that choice for existing threads. Successful inline submissions reload
+the active PR's comments without reloading the patch or switching tabs.
+Selection, range extension, side switching, and submission
 targets use the TEA model. Page keys use comment-inclusive offsets and select
 actual visible code, not a nearest diff row; a viewport containing only a tall
 comment has no new line-comment target. The controller's `firstVisibleSource`

@@ -31,7 +31,8 @@ final class GithubDashboardDetailLoader {
   var _diffLoadToken = 0;
 
   bool handlesMessage(tui.Msg msg) {
-    return msg is GithubCommentsLoadedMsg ||
+    return (msg is GithubActionCompletedMsg && msg.reviewItem != null) ||
+        msg is GithubCommentsLoadedMsg ||
         msg is GithubCommentsFailedMsg ||
         msg is GithubCommitsLoadedMsg ||
         msg is GithubCommitsFailedMsg ||
@@ -96,6 +97,17 @@ final class GithubDashboardDetailLoader {
       if (!_isCurrentDiffToken(msg.token)) return null;
       detail.applyDiffError(msg.message);
       return null;
+    }
+    if (msg is GithubActionCompletedMsg && msg.reviewItem != null) {
+      detail.applyActionCompleted(msg.message);
+      final item = detail.diffItem;
+      final submitted = msg.reviewItem!;
+      if (item == null ||
+          item.repository != submitted.repository ||
+          item.number != submitted.number) {
+        return null;
+      }
+      return _loadDiffReviewComments();
     }
     if (msg is GithubDiffReviewCommentsLoadedMsg) {
       if (msg.token != _diffLoadToken || detail.diffItem == null) return null;

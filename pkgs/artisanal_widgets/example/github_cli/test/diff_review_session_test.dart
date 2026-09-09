@@ -60,9 +60,10 @@ void main() {
         viewMode: mode,
       );
       sync();
+      expect(session.controller.model.expandedThreadIds, {'root'});
       final layout = session.controller.model.diff.layout;
       session.controller.update(
-        const d.DiffReviewExpandMsg('root', expanded: true),
+        const d.DiffReviewExpandMsg('root', expanded: false),
       );
       sync();
       expect(session.controller.model.diff.layout, same(layout));
@@ -70,10 +71,10 @@ void main() {
       sync(mode: d.DiffViewMode.sideBySide);
       expect(session.controller.model.document, same(document));
       sync(bodies: [comment('root'), comment('new')]);
-      expect(session.controller.model.expandedThreadIds, {'root'});
+      expect(session.controller.model.expandedThreadIds, {'new'});
       expect(session.threads!.bodiesByThreadId.keys, ['root', 'new']);
       sync(revision: 'new-head');
-      expect(session.controller.model.expandedThreadIds, isEmpty);
+      expect(session.controller.model.expandedThreadIds, {'root'});
       expect(session.controller.scrollController.offset, 0);
     },
   );

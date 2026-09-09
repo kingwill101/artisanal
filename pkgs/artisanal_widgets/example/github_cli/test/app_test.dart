@@ -1246,6 +1246,12 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.path, 'lib/main.dart');
     expect(comment.side, 'RIGHT');
     expect(comment.body, 'Please tighten this line.');
+    await _pumpUntil(
+      tester,
+      () =>
+          tester.view.contains('created-review-1 ·') &&
+          tester.view.contains('Please tighten this line.'),
+    );
   });
 
   test(
@@ -1288,8 +1294,7 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       );
       tester.pump();
       expect(tester.view, contains('r1 ·'));
-      expect(tester.view, isNot(contains('INLINE_REVIEW_BODY_SHOULD_APPEAR')));
-      tester.tap(tester.find.textLocation('r1 ·'));
+      expect(tester.view, contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'));
       await _pumpUntil(
         tester,
         () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
@@ -1343,7 +1348,6 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
       tester.sendKey('d');
       await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
-      tester.tap(tester.find.textLocation('r1 ·'));
       await _pumpUntil(
         tester,
         () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
@@ -1434,7 +1438,6 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
         await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
         tester.sendKey('d');
         await _pumpUntil(tester, () => tester.view.contains('tall-thread ·'));
-        tester.tap(tester.find.textLocation('tall-thread ·'));
         await _pumpUntil(tester, () => tester.view.contains('TALL_BODY_0'));
         tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.pageDown)));
         tester.pump();
@@ -1773,6 +1776,12 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.path, 'lib/main.dart');
     expect(comment.side, 'RIGHT');
     expect(comment.body, 'Inline note from the terminal.');
+    await _pumpUntil(
+      tester,
+      () =>
+          tester.view.contains('created-review-1 ·') &&
+          tester.view.contains('Inline note from the terminal.'),
+    );
   });
 
   test(
@@ -2832,7 +2841,21 @@ final class _FakeGithubClient
     required String repository,
     required int number,
   }) async {
-    return reviewComments;
+    return [
+      ...reviewComments,
+      for (final (index, comment) in addedReviewComments.indexed)
+        if (comment.number == number)
+          GithubPullRequestReviewComment(
+            id: 'created-review-${index + 1}',
+            path: comment.path,
+            line: comment.line,
+            side: comment.side,
+            author: 'you',
+            body: comment.body,
+            url: '',
+            createdAt: null,
+          ),
+    ];
   }
 
   @override

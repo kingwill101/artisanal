@@ -27,6 +27,9 @@
 
 ### Fixed
 
+- GitHub diff discussions now show their bodies by default, while preserving
+  explicit collapses on refresh. Successful inline comment submission reloads
+  the active PR's review comments without reloading the patch or changing tabs.
 - Keep scrollbar content geometry stable while dragging, then apply the latest
   measured extent on release. Growing inline comments no longer trigger a drag
   assertion, and collapsing comments after release can shrink the scroll extent.

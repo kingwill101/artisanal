@@ -196,9 +196,10 @@ final class GithubSearchFailedMsg extends tui.Msg {
 }
 
 final class GithubActionCompletedMsg extends tui.Msg {
-  const GithubActionCompletedMsg(this.message);
+  const GithubActionCompletedMsg(this.message, {this.reviewItem});
 
   final String message;
+  final GithubDisplayItem? reviewItem;
 }
 
 final class GithubActionFailedMsg extends tui.Msg {

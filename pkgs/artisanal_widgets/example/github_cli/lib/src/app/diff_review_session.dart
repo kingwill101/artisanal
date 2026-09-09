@@ -28,6 +28,16 @@ final class GithubDiffReviewSession {
   }) {
     final id = '${item.repository}#${item.number}:$fileIdentity';
     final previous = controller.model;
+    final sameRevision =
+        previous.document.id == id &&
+        previous.document.revision == item.headRefOid;
+    if (sameRevision && _patch == patch && identical(_comments, comments)) {
+      controller.update(d.DiffReviewPresentationMsg(viewMode: viewMode));
+      return;
+    }
+    final knownThreads = sameRevision
+        ? previous.threads.keys.toSet()
+        : <String>{};
     final reload =
         previous.document.id != id ||
         previous.document.revision != item.headRefOid ||
@@ -60,6 +70,13 @@ final class GithubDiffReviewSession {
         ),
       );
       _comments = comments;
+    }
+    // New discussions are visible immediately; preserve explicit collapses for
+    // existing threads across refreshes and presentation changes.
+    for (final thread in controller.model.threads.values) {
+      if (!knownThreads.contains(thread.id)) {
+        controller.update(d.DiffReviewExpandMsg(thread.id, expanded: true));
+      }
     }
     controller.update(d.DiffReviewPresentationMsg(viewMode: viewMode));
   }
