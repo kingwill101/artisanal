@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added `DiffReviewModel` and semantic TEA messages for source-key selection,
+  range navigation, side switching, thread expansion, and revision-scoped
+  updates. `DiffReviewDocument` indexes both source sides independently of
+  presentation; thread placement explicitly distinguishes attached, unmapped,
+  and outdated anchors without nearest-line fallback.
+- Added `GitDiffModel.layout`, an immutable `DiffLayout` snapshot with exact
+  source-key lookup. Rendering now emits source anchors in the same pass as
+  terminal rows, and viewport-only updates reuse the snapshot.
+
+### Fixed
+
+- Corrected split-view anchors after context lines that wrap differently in
+  the left and right panels.
+
 ## 0.6.0
 
 ### Added

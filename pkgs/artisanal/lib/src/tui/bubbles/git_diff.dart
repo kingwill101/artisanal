@@ -1014,6 +1014,53 @@ class DiffLine {
   final int? newLineNumber;
 }
 
+/// Immutable output of a diff layout pass.
+///
+/// Rows and source anchors are emitted together, so wrapping and split-panel
+/// padding cannot make hit testing disagree with the displayed content.
+/// Source keys remain stable when a new layout is produced at another width.
+class DiffLayout {
+  /// Creates a snapshot, defensively copying its rows and anchors.
+  DiffLayout({
+    required Iterable<String> lines,
+    required Iterable<DiffCommentAnchor> anchors,
+  }) : lines = List.unmodifiable(lines),
+       anchors = List.unmodifiable(anchors);
+
+  /// Styled terminal rows, before viewport clipping.
+  final List<String> lines;
+
+  /// Source positions emitted by the same pass as [lines].
+  final List<DiffCommentAnchor> anchors;
+
+  /// Exact source lookup. Missing or outdated positions are not approximated.
+  DiffCommentAnchor? anchorFor(DiffCommentLineKey key) => _byKey[key];
+
+  /// First row after the aligned source group starting at [startRow].
+  ///
+  /// In split view this includes the taller of the left and right wrapped
+  /// lines. Inline blocks should follow this boundary rather than interrupt
+  /// the other panel's continuation rows. Returns null for a non-source row.
+  int? rowGroupEndAt(int startRow) => _rowGroupEnds[startRow];
+
+  late final Map<int, int> _rowGroupEnds = _buildRowGroupEnds();
+
+  Map<int, int> _buildRowGroupEnds() {
+    final result = <int, int>{};
+    for (final anchor in anchors) {
+      final previous = result[anchor.renderLine] ?? 0;
+      if (anchor.renderLineEnd > previous) {
+        result[anchor.renderLine] = anchor.renderLineEnd;
+      }
+    }
+    return result;
+  }
+
+  late final Map<DiffCommentLineKey, DiffCommentAnchor> _byKey = {
+    for (final anchor in anchors) anchor.key: anchor,
+  };
+}
+
 /// A file entry in a parsed diff.
 class DiffFile {
   /// Creates a new diff file entry.
@@ -1072,10 +1119,12 @@ class GitDiffModel extends ViewComponent {
     List<DiffFile>? files,
     List<String>? renderedLines,
     List<DiffCommentLineHighlight>? commentHighlights,
+    DiffLayout? layout,
   }) : styles = styles ?? DiffStyles(),
        keyMap = keyMap ?? GitDiffKeyMap(),
        _files = files ?? const [],
        _renderedLines = renderedLines ?? const [],
+       _layout = layout,
        commentHighlights = commentHighlights ?? const [],
        _viewport = viewport ?? ViewportModel(width: width, height: height);
 
@@ -1131,6 +1180,14 @@ class GitDiffModel extends ViewComponent {
   /// viewport clipping). Each line is an ANSI-formatted string.
   List<String> get renderedLines => _renderedLines;
 
+  final DiffLayout? _layout;
+
+  /// Shared rendered rows and source geometry for this configuration.
+  ///
+  /// Normal load/update paths retain this snapshot across viewport-only updates.
+  /// Models assembled manually through [copyWith] compute it on first access.
+  late final DiffLayout layout = _layout ?? _buildLayout(_files);
+
   /// The underlying viewport for scrolling.
   final ViewportModel _viewport;
 
@@ -1150,9 +1207,7 @@ class GitDiffModel extends ViewComponent {
   ///
   /// The [DiffCommentAnchor.renderLine] values match the model's current
   /// [viewMode], [wrapLines], [width], and line-number settings.
-  late final List<DiffCommentAnchor> commentAnchors = List.unmodifiable(
-    _computeCommentAnchors(_files),
-  );
+  List<DiffCommentAnchor> get commentAnchors => layout.anchors;
 
   late final Map<DiffCommentLineKey, DiffCommentLineHighlightKind>
   _commentHighlightByKey = _buildCommentHighlightMap(commentHighlights);
@@ -1216,6 +1271,7 @@ class GitDiffModel extends ViewComponent {
     List<DiffFile>? files,
     List<String>? renderedLines,
     List<DiffCommentLineHighlight>? commentHighlights,
+    DiffLayout? layout,
   }) {
     return GitDiffModel(
       width: width ?? this.width,
@@ -1231,6 +1287,20 @@ class GitDiffModel extends ViewComponent {
       files: files ?? _files,
       renderedLines: renderedLines ?? _renderedLines,
       commentHighlights: commentHighlights ?? this.commentHighlights,
+      layout:
+          layout ??
+          (width == null &&
+                  showLineNumbers == null &&
+                  wrapLines == null &&
+                  zeroPadLineNumbers == null &&
+                  viewMode == null &&
+                  horizontalOffset == null &&
+                  styles == null &&
+                  files == null &&
+                  renderedLines == null &&
+                  commentHighlights == null
+              ? this.layout
+              : null),
     );
   }
 
@@ -1240,7 +1310,8 @@ class GitDiffModel extends ViewComponent {
   /// the viewport.
   GitDiffModel setDiff(String rawDiff) {
     final parsedFiles = _parseDiff(rawDiff);
-    final rendered = _renderLines(parsedFiles);
+    final layout = copyWith(horizontalOffset: 0)._buildLayout(parsedFiles);
+    final rendered = layout.lines;
     final newViewport = _viewport.copyWith(
       width: width,
       height: height,
@@ -1251,6 +1322,7 @@ class GitDiffModel extends ViewComponent {
       horizontalOffset: 0,
       renderedLines: rendered,
       viewport: newViewport,
+      layout: layout,
     );
   }
 
@@ -1261,13 +1333,18 @@ class GitDiffModel extends ViewComponent {
   /// viewport without re-parsing the diff.
   GitDiffModel rerender() {
     if (_files.isEmpty) return this;
-    final rendered = _renderLines(_files);
+    final layout = _buildLayout(_files);
+    final rendered = layout.lines;
     final newViewport = _viewport.copyWith(
       width: width,
       height: height,
       lines: rendered,
     );
-    return copyWith(renderedLines: rendered, viewport: newViewport);
+    return copyWith(
+      renderedLines: rendered,
+      viewport: newViewport,
+      layout: layout,
+    );
   }
 
   @override
@@ -1280,7 +1357,11 @@ class GitDiffModel extends ViewComponent {
       final modes = DiffViewMode.values;
       final nextMode = modes[(viewMode.index + 1) % modes.length];
       // Reset horizontal offset when switching view modes.
-      final rendered = _renderLines(_files, overrideViewMode: nextMode);
+      final layout = copyWith(
+        viewMode: nextMode,
+        horizontalOffset: 0,
+      )._buildLayout(_files);
+      final rendered = layout.lines;
       final newViewport = _viewport.copyWith(
         width: width,
         height: height,
@@ -1292,6 +1373,7 @@ class GitDiffModel extends ViewComponent {
           horizontalOffset: 0,
           renderedLines: rendered,
           viewport: newViewport,
+          layout: layout,
         ),
         null,
       );
@@ -1315,14 +1397,19 @@ class GitDiffModel extends ViewComponent {
         if (newOffset != null && newOffset != horizontalOffset) {
           // Create model with new offset so _renderLines reads the right value.
           final updated = copyWith(horizontalOffset: newOffset);
-          final rendered = updated._renderLines(_files);
+          final layout = updated._buildLayout(_files);
+          final rendered = layout.lines;
           final newViewport = _viewport.copyWith(
             width: width,
             height: height,
             lines: rendered,
           );
           return (
-            updated.copyWith(renderedLines: rendered, viewport: newViewport),
+            updated.copyWith(
+              renderedLines: rendered,
+              viewport: newViewport,
+              layout: layout,
+            ),
             null,
           );
         }
@@ -1521,201 +1608,6 @@ class GitDiffModel extends ViewComponent {
     return max;
   }
 
-  List<DiffCommentAnchor> _computeCommentAnchors(List<DiffFile> files) {
-    if (files.isEmpty) return const <DiffCommentAnchor>[];
-    return switch (viewMode) {
-      DiffViewMode.sideBySide => _computeSideBySideCommentAnchors(files),
-      DiffViewMode.pretty => _computePrettyCommentAnchors(files),
-      DiffViewMode.unified => _computeUnifiedCommentAnchors(files),
-    };
-  }
-
-  List<DiffCommentAnchor> _computeUnifiedCommentAnchors(List<DiffFile> files) {
-    final maxLineNum = _computeMaxLineNumber(files);
-    final numWidth = '$maxLineNum'.length < 4 ? 4 : '$maxLineNum'.length;
-    final contentWidth = _unifiedContentWidth(numWidth);
-    final anchors = <DiffCommentAnchor>[];
-    var renderLine = 0;
-
-    for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
-      final file = files[fileIndex];
-      if (fileIndex > 0) renderLine++;
-      for (final line in file.lines) {
-        final height = _renderedUnifiedLineHeight(line, contentWidth);
-        final anchor = _anchorForLine(
-          file,
-          line,
-          renderLine,
-          renderLineEnd: renderLine + height,
-        );
-        if (anchor != null) anchors.add(anchor);
-        renderLine += height;
-      }
-    }
-
-    return anchors;
-  }
-
-  List<DiffCommentAnchor> _computePrettyCommentAnchors(List<DiffFile> files) {
-    final maxLineNum = _computeMaxLineNumber(files);
-    final numWidth = '$maxLineNum'.length < 4 ? 4 : '$maxLineNum'.length;
-    final contentWidth = _prettyContentWidth(numWidth);
-    final anchors = <DiffCommentAnchor>[];
-    var renderLine = 0;
-
-    for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
-      final file = files[fileIndex];
-      if (fileIndex > 0) renderLine++;
-      renderLine++; // Pretty file header.
-
-      var previousWasHunk = false;
-      for (final line in file.lines) {
-        if (line.type == DiffLineType.fileHeader) continue;
-        if (line.type == DiffLineType.hunkHeader) {
-          if (!previousWasHunk) renderLine++;
-          previousWasHunk = true;
-          continue;
-        }
-        previousWasHunk = false;
-        if (line.type == DiffLineType.empty) {
-          renderLine++;
-          continue;
-        }
-
-        final height = _renderedLineHeight(line.content, contentWidth);
-        final anchor = _anchorForLine(
-          file,
-          line,
-          renderLine,
-          renderLineEnd: renderLine + height,
-        );
-        if (anchor != null) anchors.add(anchor);
-        renderLine += height;
-      }
-    }
-
-    return anchors;
-  }
-
-  List<DiffCommentAnchor> _computeSideBySideCommentAnchors(
-    List<DiffFile> files,
-  ) {
-    final maxLineNum = _computeMaxLineNumber(files);
-    final numWidth = '$maxLineNum'.length < 4 ? 4 : '$maxLineNum'.length;
-    const separatorWidth = 1;
-    const markerWidth = 2;
-    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
-    final gutterWidth = lineNumWidth + markerWidth;
-    final availableWidth = width - separatorWidth;
-    final leftPanelWidth = availableWidth ~/ 2;
-    final rightPanelWidth = availableWidth - leftPanelWidth;
-    final leftContentWidth = leftPanelWidth - gutterWidth;
-    final rightContentWidth = rightPanelWidth - gutterWidth;
-
-    if (leftContentWidth <= 0 || rightContentWidth <= 0) {
-      return _computeUnifiedCommentAnchors(files);
-    }
-
-    final anchors = <DiffCommentAnchor>[];
-    var renderLine = 0;
-
-    for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
-      final file = files[fileIndex];
-      if (fileIndex > 0) renderLine++;
-      renderLine++; // Side-by-side file header.
-
-      final lines = file.lines;
-      var index = 0;
-      while (index < lines.length) {
-        final line = lines[index];
-        if (line.type == DiffLineType.fileHeader) {
-          index++;
-          continue;
-        }
-        if (line.type == DiffLineType.hunkHeader ||
-            line.type == DiffLineType.empty) {
-          renderLine++;
-          index++;
-          continue;
-        }
-        if (line.type == DiffLineType.context) {
-          final height = _renderedLineHeight(line.content, rightContentWidth);
-          final leftAnchor = _anchorForLine(
-            file,
-            line,
-            renderLine,
-            side: DiffCommentSide.left,
-            renderLineEnd: renderLine + height,
-          );
-          if (leftAnchor != null) anchors.add(leftAnchor);
-          final rightAnchor = _anchorForLine(
-            file,
-            line,
-            renderLine,
-            side: DiffCommentSide.right,
-            renderLineEnd: renderLine + height,
-          );
-          if (rightAnchor != null) anchors.add(rightAnchor);
-          renderLine += height;
-          index++;
-          continue;
-        }
-
-        final removedLines = <DiffLine>[];
-        final addedLines = <DiffLine>[];
-        while (index < lines.length &&
-            lines[index].type == DiffLineType.removed) {
-          removedLines.add(lines[index]);
-          index++;
-        }
-        while (index < lines.length &&
-            lines[index].type == DiffLineType.added) {
-          addedLines.add(lines[index]);
-          index++;
-        }
-
-        final pairCount = removedLines.length > addedLines.length
-            ? removedLines.length
-            : addedLines.length;
-        for (var pairIndex = 0; pairIndex < pairCount; pairIndex++) {
-          final removed = pairIndex < removedLines.length
-              ? removedLines[pairIndex]
-              : null;
-          final added = pairIndex < addedLines.length
-              ? addedLines[pairIndex]
-              : null;
-          final leftHeight = removed == null
-              ? 1
-              : _renderedLineHeight(removed.content, leftContentWidth);
-          final rightHeight = added == null
-              ? 1
-              : _renderedLineHeight(added.content, rightContentWidth);
-          if (removed != null) {
-            final anchor = _anchorForLine(
-              file,
-              removed,
-              renderLine,
-              renderLineEnd: renderLine + leftHeight,
-            );
-            if (anchor != null) anchors.add(anchor);
-          }
-          if (added != null) {
-            final anchor = _anchorForLine(
-              file,
-              added,
-              renderLine,
-              renderLineEnd: renderLine + rightHeight,
-            );
-            if (anchor != null) anchors.add(anchor);
-          }
-          renderLine += leftHeight > rightHeight ? leftHeight : rightHeight;
-        }
-      }
-    }
-
-    return anchors;
-  }
-
   DiffCommentAnchor? _anchorForLine(
     DiffFile file,
     DiffLine line,
@@ -1858,46 +1750,43 @@ class GitDiffModel extends ViewComponent {
     return side == DiffCommentSide.left ? file.newPath : file.oldPath;
   }
 
-  int _unifiedContentWidth(int numWidth) {
-    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
-    const gutterCharWidth = 2;
-    return width - lineNumWidth - gutterCharWidth;
-  }
-
-  int _prettyContentWidth(int numWidth) {
-    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
-    const markerWidth = 3;
-    return width - lineNumWidth - markerWidth;
-  }
-
-  int _renderedLineHeight(String text, int contentWidth) {
-    if (!wrapLines || contentWidth <= 0 || text.length <= contentWidth) {
-      return 1;
-    }
-    return (text.length / contentWidth).ceil();
-  }
-
-  int _renderedUnifiedLineHeight(DiffLine line, int contentWidth) {
-    if (line.type == DiffLineType.fileHeader ||
-        line.type == DiffLineType.hunkHeader ||
-        line.type == DiffLineType.empty ||
-        line.content.startsWith('\\')) {
-      return 1;
-    }
-    return _renderedLineHeight(line.content, contentWidth);
-  }
-
   /// Renders all parsed diff files into styled string lines.
+  DiffLayout _buildLayout(List<DiffFile> files) {
+    final anchors = <DiffCommentAnchor>[];
+    final lines = _renderLines(files, anchors: anchors);
+    return DiffLayout(lines: lines, anchors: anchors);
+  }
+
+  void _recordAnchor(
+    List<DiffCommentAnchor>? anchors,
+    DiffFile file,
+    DiffLine line,
+    int start,
+    int height, {
+    DiffCommentSide? side,
+  }) {
+    if (anchors == null || height == 0) return;
+    final anchor = _anchorForLine(
+      file,
+      line,
+      start,
+      side: side,
+      renderLineEnd: start + height,
+    );
+    if (anchor != null) anchors.add(anchor);
+  }
+
   List<String> _renderLines(
     List<DiffFile> files, {
     DiffViewMode? overrideViewMode,
+    List<DiffCommentAnchor>? anchors,
   }) {
     final mode = overrideViewMode ?? viewMode;
     if (mode == DiffViewMode.pretty) {
-      return _renderLinesPretty(files);
+      return _renderLinesPretty(files, anchors: anchors);
     }
     if (mode == DiffViewMode.sideBySide) {
-      return _renderLinesSideBySide(files);
+      return _renderLinesSideBySide(files, anchors: anchors);
     }
 
     final numWidth = '${_computeMaxLineNumber(files)}'.length;
@@ -1913,7 +1802,9 @@ class GitDiffModel extends ViewComponent {
       }
 
       for (final line in file.lines) {
-        result.addAll(_renderLine(file, line, effectiveNumWidth));
+        final rows = _renderLine(file, line, effectiveNumWidth);
+        _recordAnchor(anchors, file, line, result.length, rows.length);
+        result.addAll(rows);
       }
     }
 
@@ -2063,7 +1954,10 @@ class GitDiffModel extends ViewComponent {
   /// Pretty mode shows clean file headers (← Edit path), hides raw diff
   /// metadata and hunk headers, uses single-column line numbers, and applies
   /// full-width background highlighting.
-  List<String> _renderLinesPretty(List<DiffFile> files) {
+  List<String> _renderLinesPretty(
+    List<DiffFile> files, {
+    List<DiffCommentAnchor>? anchors,
+  }) {
     final maxLineNum = _computeMaxLineNumber(files);
     final numWidth = '$maxLineNum'.length;
     final effectiveNumWidth = numWidth < 4 ? 4 : numWidth;
@@ -2103,7 +1997,9 @@ class GitDiffModel extends ViewComponent {
           continue;
         }
 
-        result.addAll(_renderLinePretty(file, line, effectiveNumWidth));
+        final rows = _renderLinePretty(file, line, effectiveNumWidth);
+        _recordAnchor(anchors, file, line, result.length, rows.length);
+        result.addAll(rows);
       }
     }
 
@@ -2225,7 +2121,10 @@ class GitDiffModel extends ViewComponent {
   /// the right, separated by a thin gap. Added/removed lines are paired
   /// so that a removed line on the left appears next to the corresponding
   /// added line on the right. Each line shows a colored `+`/`-` marker.
-  List<String> _renderLinesSideBySide(List<DiffFile> files) {
+  List<String> _renderLinesSideBySide(
+    List<DiffFile> files, {
+    List<DiffCommentAnchor>? anchors,
+  }) {
     final maxLineNum = _computeMaxLineNumber(files);
     final numWidth = '$maxLineNum'.length;
     final effectiveNumWidth = numWidth < 4 ? 4 : numWidth;
@@ -2246,7 +2145,11 @@ class GitDiffModel extends ViewComponent {
 
     if (leftContentWidth <= 0 || rightContentWidth <= 0) {
       // Too narrow for side-by-side — fall back to unified.
-      return _renderLines(files, overrideViewMode: DiffViewMode.unified);
+      return _renderLines(
+        files,
+        overrideViewMode: DiffViewMode.unified,
+        anchors: anchors,
+      );
     }
 
     final separator = styles.sideBySideSeparator.render(' ');
@@ -2344,6 +2247,22 @@ class GitDiffModel extends ViewComponent {
             contentWidth: rightContentWidth,
             highlight: rightHighlight,
           );
+          _recordAnchor(
+            anchors,
+            file,
+            line,
+            result.length,
+            leftRows.length,
+            side: DiffCommentSide.left,
+          );
+          _recordAnchor(
+            anchors,
+            file,
+            line,
+            result.length,
+            rightRows.length,
+            side: DiffCommentSide.right,
+          );
           _sbsJoinRows(
             result,
             leftRows,
@@ -2428,6 +2347,24 @@ class GitDiffModel extends ViewComponent {
                 )
               : [_sbsEmptyCell(rightPanelWidth)];
 
+          if (hasLeft) {
+            _recordAnchor(
+              anchors,
+              file,
+              removedLines[p],
+              result.length,
+              leftRows.length,
+            );
+          }
+          if (hasRight) {
+            _recordAnchor(
+              anchors,
+              file,
+              addedLines[p],
+              result.length,
+              rightRows.length,
+            );
+          }
           _sbsJoinRows(
             result,
             leftRows,
