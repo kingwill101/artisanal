@@ -27,6 +27,9 @@
 
 ### Fixed
 
+- Preserve terminal graphics escape sequences when clipping rich diff-review
+  cards. Avatar payloads no longer become visible text or consume neighboring
+  author text and diff output.
 - GitHub diff discussions now show their bodies by default, while preserving
   explicit collapses on refresh. Successful inline comment submission reloads
   the active PR's review comments without reloading the patch or changing tabs.

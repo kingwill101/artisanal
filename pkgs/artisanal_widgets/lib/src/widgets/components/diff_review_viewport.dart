@@ -6,12 +6,9 @@ import 'dart:math' as math;
 import 'package:artisanal/git_diff.dart';
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/style.dart'
-    show
-        Style,
-        StyleRange,
-        overlayBackgroundRangesPreservingAnsi,
-        cutAnsiByCells;
-import 'package:artisanal/uv.dart' show suppressOverflowingTerminalGraphics;
+    show Style, StyleRange, overlayBackgroundRangesPreservingAnsi;
+import 'package:artisanal/uv.dart'
+    show cutAnsiByCells, suppressOverflowingTerminalGraphics;
 
 import '../core/element.dart';
 import '../core/framework.dart';

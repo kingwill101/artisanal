@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:artisanal/git_diff.dart' as d;
 import 'package:artisanal/runtime.dart' as tui;
 import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/uv.dart' as uv;
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
+import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
 
 String _patch(int lines) =>
@@ -64,6 +68,87 @@ class _GrowingBodyState extends w.State<_GrowingBody> {
 }
 
 void main() {
+  for (final mode in [d.DiffViewMode.unified, d.DiffViewMode.sideBySide]) {
+    test(
+      'rich inline cards preserve Kitty payloads and surrounding code in $mode',
+      () async {
+        final tester = WidgetTester(screenWidth: 80, screenHeight: 40);
+        addTearDown(tester.dispose);
+        final controller = _controller(
+          width: 80,
+          height: 40,
+          threads: [_thread('first', 1), _thread('second', 5)],
+        );
+        controller.update(d.DiffReviewPresentationMsg(viewMode: mode));
+        final bytes = Uint8List.fromList(
+          img.encodePng(img.Image(width: 4, height: 4)),
+        );
+        await tester.pumpWidget(
+          w.DiffReviewViewport(
+            controller: controller,
+            width: 80,
+            height: 40,
+            threadBuilder: (_, placement) => w.Row(
+              crossAxisAlignment: w.CrossAxisAlignment.start,
+              children: [
+                w.Image(
+                  image: w.MemoryImage(bytes),
+                  width: 8,
+                  height: 4,
+                  renderMode: w.ImageRenderMode.kitty,
+                ),
+                w.Column(
+                  children: [
+                    w.Text('AUTHOR_${placement.thread.id}'),
+                    w.Text('BODY_${placement.thread.id}'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+        for (var i = 0; i < 100; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          tester.pump();
+          if (uv
+                  .parseTerminalGraphicsControls(tester.view)
+                  .where((control) => control.displaysImage)
+                  .length ==
+              2)
+            break;
+        }
+        expect(tester.view, contains('\x1b_G'));
+        final displays = uv
+            .parseTerminalGraphicsControls(tester.view)
+            .where((control) => control.displaysImage)
+            .toList();
+        expect(displays, hasLength(2));
+        for (final display in displays) {
+          expect(display.sequence, endsWith('\x1b\\'));
+          expect(display.sequence, isNot(contains('\n')));
+          expect(display.displayColumns, 8);
+          expect(display.displayRows, 4);
+        }
+        expect(tester.view, contains('AUTHOR_first'));
+        expect(tester.view, contains('BODY_second'));
+        for (var line = 1; line <= 10; line++) {
+          expect(
+            tester.view,
+            contains('CODE${line.toString().padLeft(5, '0')}'),
+          );
+        }
+        final layout = controller.model.diff.layout;
+        controller.scrollController.scrollBy(8);
+        tester.pump();
+        expect(controller.model.diff.layout, same(layout));
+        expect(tester.view, contains('BODY_second'));
+        controller.scrollController.jumpTo(0);
+        tester.pump();
+        expect(tester.view, contains('AUTHOR_first'));
+      },
+    );
+  }
+
   test(
     'real scrollbar drag tolerates body resizing and later collapse',
     () async {
