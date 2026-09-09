@@ -3,6 +3,10 @@ import 'package:artisanal/tui.dart' as tui;
 import '../models/dashboard_data.dart';
 import '../models/display_item.dart';
 
+final class GithubQueueEndReachedMsg extends tui.Msg {
+  const GithubQueueEndReachedMsg();
+}
+
 final class GithubDashboardLoadedMsg extends tui.Msg {
   const GithubDashboardLoadedMsg(this.dashboard);
 

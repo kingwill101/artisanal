@@ -78,6 +78,9 @@ final class GithubDashboardDataCoordinator {
   }
 
   tui.Cmd loadCurrentPage({required bool replace}) {
+    if (data.pageLoading && data.pageLoadingTab == queue.tabIndex) {
+      return tui.Cmd.none();
+    }
     final repository = data.effectiveRepository;
     final tabIndex = queue.tabIndex;
     if (tabIndex == 0) return _loadOverview(replace: replace);
@@ -160,7 +163,7 @@ final class GithubDashboardDataCoordinator {
         overviewFilter: queue.overviewFilter,
       ),
     );
-    keepSelectionVisible();
+    if (msg.replace) keepSelectionVisible();
     return null;
   }
 
@@ -173,7 +176,7 @@ final class GithubDashboardDataCoordinator {
         overviewFilter: queue.overviewFilter,
       ),
     );
-    keepSelectionVisible();
+    if (msg.replace) keepSelectionVisible();
     return null;
   }
 
@@ -186,7 +189,7 @@ final class GithubDashboardDataCoordinator {
         overviewFilter: queue.overviewFilter,
       ),
     );
-    keepSelectionVisible();
+    if (msg.replace) keepSelectionVisible();
     return null;
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:artisanal/git_diff.dart' as d;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
@@ -52,10 +54,19 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
   final _detailScrollController = w.WidgetScrollController();
   final _queueScrollController = w.WidgetScrollController();
   final _diffReview = GithubDiffReviewSession();
+  final _queueScrollEvents = StreamController<tui.Msg>();
+
+  void _onQueueScroll() {
+    if (_queueScrollController.maxOffset > 0 &&
+        _queueScrollController.offset >= _queueScrollController.maxOffset) {
+      _queueScrollEvents.add(const GithubQueueEndReachedMsg());
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _queueScrollController.addListener(_onQueueScroll);
     _data = GithubDataNotifier()
       ..setTarget(repository: widget.repository, owner: widget.owner);
     _queue = GithubQueueNotifier(tabIndex: widget.owner == null ? 2 : 0);
@@ -128,6 +139,8 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
 
   @override
   void dispose() {
+    _queueScrollController.removeListener(_onQueueScroll);
+    _queueScrollEvents.close();
     _navigation.dispose();
     _queue.dispose();
     _data.dispose();
@@ -147,10 +160,23 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
   }
 
   @override
-  tui.Cmd? handleInit() => _dataCoordinator.loadDashboard();
+  tui.Cmd? handleInit() => tui.ParallelCmd([
+    _dataCoordinator.loadDashboard(),
+    tui.Cmd.listen(_queueScrollEvents.stream, onData: (msg) => msg),
+  ]);
 
   @override
   tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is GithubQueueEndReachedMsg) {
+      if (_queueScrollController.maxOffset <= 0 ||
+          _queueScrollController.offset < _queueScrollController.maxOffset ||
+          !_queue.canLoadCurrentPage) {
+        return null;
+      }
+      return _queue.searchQuery != null
+          ? _detailLoader.loadNextSearchPage()
+          : _dataCoordinator.loadCurrentPage(replace: false);
+    }
     if (_dataCoordinator.handlesMessage(msg)) {
       return _dataCoordinator.handleMessage(msg);
     }

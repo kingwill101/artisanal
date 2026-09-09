@@ -31,8 +31,24 @@ final class GhCliClient
       ghRepositoryFields.join(','),
     ]);
 
+    final parts = _repositoryParts(ghString(ghMap(repoJson)['nameWithOwner']));
+    final counts = ghMap(
+      await _runJson([
+        'api',
+        'graphql',
+        '-f',
+        'query=$repositoryCountsQuery',
+        '-F',
+        'owner=${parts.owner}',
+        '-F',
+        'name=${parts.name}',
+      ]),
+    );
     return GithubDashboardData.fromJson(
-      repository: repoJson,
+      repository: {
+        ...ghMap(repoJson),
+        ...ghMap(ghMap(counts['data'])['repository']),
+      },
       issues: const <Object?>[],
       pullRequests: const <Object?>[],
       workflows: const <Object?>[],

@@ -1907,6 +1907,53 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     },
   );
 
+  for (final issues in [false, true]) {
+    test(
+      '${issues ? 'issues' : 'PRs'} wheel scrolling to queue end appends a page without jumping to selection',
+      () async {
+        final tester = WidgetTester(screenWidth: 120, screenHeight: 24);
+        addTearDown(tester.dispose);
+        final client = _LazyPagingGithubClient(pageSize: 10);
+        await tester.pumpWidget(
+          GithubCliDashboard(
+            client: client,
+            repository: 'owner/repo',
+            limit: 10,
+          ),
+        );
+        await _pumpUntil(tester, () => tester.view.contains('#1 Paged PR 1'));
+        final kind = issues ? 'issue' : 'PR';
+        if (issues) {
+          tester.sendKey('2');
+          await _pumpUntil(
+            tester,
+            () => tester.view.contains('#1 Paged issue 1'),
+          );
+        }
+        for (var i = 0; i < 40; i++) {
+          tester.sendMsg(
+            const tui.MouseMsg(
+              action: tui.MouseAction.wheel,
+              button: tui.MouseButton.wheelDown,
+              x: 10,
+              y: 10,
+            ),
+          );
+          tester.pump();
+        }
+        await _pumpUntil(tester, () => tester.view.contains('20/20 loaded'));
+        expect(issues ? client.issuePageCalls : client.pullRequestPageCalls, 2);
+        if (!issues) expect(client.lastPullRequestAfter, 'cursor-1');
+        // The selected item remains in the detail pane, but not the queue.
+        expect(
+          RegExp('#1 Paged $kind 1').allMatches(tester.view),
+          hasLength(1),
+        );
+        expect(tester.view, contains('#10 Paged $kind 10'));
+      },
+    );
+  }
+
   test('initial load is lazy and n pages through large PR lists', () async {
     final tester = WidgetTester(screenWidth: 120, screenHeight: 34);
     addTearDown(() => tester.dispose());
@@ -3030,9 +3077,10 @@ final class _FakeGithubClient
 }
 
 final class _LazyPagingGithubClient implements GithubDashboardClient {
-  _LazyPagingGithubClient({this.pullRequestPageGate});
+  _LazyPagingGithubClient({this.pullRequestPageGate, this.pageSize = 1});
 
   final Future<void>? pullRequestPageGate;
+  final int pageSize;
   var dashboardCalls = 0;
   var issuePageCalls = 0;
   var pullRequestPageCalls = 0;
@@ -3071,6 +3119,22 @@ final class _LazyPagingGithubClient implements GithubDashboardClient {
     String? after,
   }) async {
     issuePageCalls++;
+    if (pageSize > 1) {
+      return GithubPage<GithubIssueItem>(
+        items: [
+          for (var i = 1; i <= pageSize; i++)
+            GithubIssueItem.fromJson({
+              'number': (after == null ? 0 : pageSize) + i,
+              'title': 'Paged issue ${(after == null ? 0 : pageSize) + i}',
+              'author': {'login': 'author'},
+              'body': 'Issue body',
+            }),
+        ],
+        totalCount: pageSize * 2,
+        hasNextPage: after == null,
+        endCursor: after == null ? 'cursor-1' : null,
+      );
+    }
     return const GithubPage<GithubIssueItem>(
       items: <GithubIssueItem>[],
       totalCount: 0,
@@ -3089,8 +3153,11 @@ final class _LazyPagingGithubClient implements GithubDashboardClient {
     lastPullRequestAfter = after;
     final firstPage = after == null;
     return GithubPage<GithubPullRequestItem>(
-      items: <GithubPullRequestItem>[_pagedPullRequest(firstPage ? 1 : 2)],
-      totalCount: 2,
+      items: [
+        for (var i = 1; i <= pageSize; i++)
+          _pagedPullRequest((firstPage ? 0 : pageSize) + i),
+      ],
+      totalCount: pageSize * 2,
       hasNextPage: firstPage,
       endCursor: firstPage ? 'cursor-1' : null,
     );

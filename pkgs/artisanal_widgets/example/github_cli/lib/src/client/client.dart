@@ -146,6 +146,15 @@ final class GhCliException implements Exception {
   String toString() => message;
 }
 
+const repositoryCountsQuery = r'''
+query RepositoryCounts($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    issues(states: OPEN) { totalCount }
+    pullRequests(states: OPEN) { totalCount }
+  }
+}
+''';
+
 const issuesPageQuery = r'''
 query RepoIssues($owner: String!, $name: String!, $first: Int!, $after: String) {
   repository(owner: $owner, name: $name) {
