@@ -98,6 +98,7 @@ final class GithubDashboardDetailLoader {
       return null;
     }
     if (msg is GithubDiffReviewCommentsLoadedMsg) {
+      if (msg.token != _diffLoadToken || detail.diffItem == null) return null;
       detail.applyDiffReviewCommentsLoaded(msg.comments);
       return null;
     }
@@ -174,6 +175,7 @@ final class GithubDashboardDetailLoader {
 
   tui.Cmd? _loadDiffReviewComments() {
     final item = detail.diffItem;
+    final token = _diffLoadToken;
     final repository = data.repositoryFor(item);
     if (item == null ||
         repository == null ||
@@ -186,7 +188,7 @@ final class GithubDashboardDetailLoader {
           repository: repository,
           number: item.number,
         );
-        return GithubDiffReviewCommentsLoadedMsg(comments);
+        return GithubDiffReviewCommentsLoadedMsg(comments, token: token);
       } catch (_) {
         return null;
       }

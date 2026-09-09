@@ -9,6 +9,7 @@ import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:github_cli/src/app/app_io.dart';
+import 'package:github_cli/src/app/messages.dart' as messages;
 import 'package:github_cli/src/app/theme.dart';
 import 'package:github_cli/src/client/fields.dart';
 import 'package:github_cli/src/ui/markdown/body.dart';
@@ -1141,7 +1142,7 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(tester.view, contains('█'));
   });
 
-  test('v opens review comments with a scrollbar', skip: true, () async {
+  test('v opens review comments with a scrollbar', () async {
     final tester = WidgetTester(screenWidth: 110, screenHeight: 34);
     addTearDown(() => tester.dispose());
     final client = _FakeGithubClient(
@@ -1249,8 +1250,7 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
   });
 
   test(
-    'inline review comments render between diff lines',
-    skip: true,
+    'single pull request expands inline review comments across layout changes',
     () async {
       final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
       addTearDown(() => tester.dispose());
@@ -1283,11 +1283,35 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
 
       await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
       tester.sendKey('d');
+      await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
+      tester.sendMsg(
+        const messages.GithubDiffReviewCommentsLoadedMsg([], token: 0),
+      );
+      tester.pump();
+      expect(tester.view, contains('r1 ·'));
+      expect(tester.view, isNot(contains('INLINE_REVIEW_BODY_SHOULD_APPEAR')));
+      tester.tap(tester.find.textLocation('r1 ·'));
       await _pumpUntil(
         tester,
         () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
         timeout: const Duration(seconds: 5),
       );
+      tester.sendKey('s');
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+      );
+      tester.tap(tester.find.textLocation('r1 ·'));
+      tester.pump();
+      expect(tester.view, isNot(contains('INLINE_REVIEW_BODY_SHOULD_APPEAR')));
+      tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.tab)));
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+      );
+      expect(tester.view, contains('Review comments PR #9'));
+      tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.tab, shift: true)));
+      await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
     },
   );
 
@@ -1595,6 +1619,48 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       expect(comment.startSide, 'RIGHT');
     },
   );
+
+  test('single pull request scrolls inside a tall inline thread', () async {
+    final tester = WidgetTester(screenWidth: 120, screenHeight: 24);
+    addTearDown(tester.dispose);
+    final client = _FakeGithubClient(
+      _sampleDashboard('dart-lang/sdk'),
+      diff: _longSampleDiff,
+      reviewComments: [
+        GithubPullRequestReviewComment(
+          id: 'tall-thread',
+          path: 'lib/main.dart',
+          line: 1,
+          side: 'RIGHT',
+          author: 'reviewer',
+          body: List.generate(50, (i) => 'TALL_BODY_$i').join('\n\n'),
+          url: '',
+          createdAt: null,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      GithubPullRequestView(
+        client: client,
+        target: const GithubPullRequestTarget(
+          repository: 'dart-lang/sdk',
+          number: 9,
+        ),
+      ),
+    );
+    await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
+    tester.sendKey('d');
+    await _pumpUntil(tester, () => tester.view.contains('tall-thread ·'));
+    tester.tap(tester.find.textLocation('tall-thread ·'));
+    await _pumpUntil(tester, () => tester.view.contains('TALL_BODY_0'));
+    tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.pageDown)));
+    tester.pump();
+    expect(tester.view, contains('TALL_BODY_'));
+    expect(tester.view, isNot(contains('TALL_BODY_0')));
+    tester.sendKey('a');
+    tester.pump();
+    expect(tester.view, isNot(contains('Add diff comment')));
+  });
 
   test('single pull request diff page keys scroll the full viewport', () async {
     final tester = WidgetTester(screenWidth: 120, screenHeight: 24);

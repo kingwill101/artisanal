@@ -64,6 +64,31 @@ class _GrowingBodyState extends w.State<_GrowingBody> {
 }
 
 void main() {
+  test('visible source lookup skips metadata and tall thread bodies', () async {
+    final tester = WidgetTester();
+    addTearDown(tester.dispose);
+    final controller = _controller(lines: 20, height: 6);
+    await tester.pumpWidget(
+      w.DiffReviewViewport(
+        controller: controller,
+        width: 60,
+        height: 6,
+        threadBuilder: (_, _) => w.Text('BODY\n' * 20),
+      ),
+    );
+    expect(controller.firstVisibleSource(), _key(1));
+    controller.revealThread('thread');
+    tester.pump();
+    controller.scrollController.scrollBy(2);
+    tester.pump();
+    expect(controller.firstVisibleSource(), isNull);
+    controller.update(d.DiffReviewSelectMsg(_key(12)));
+    controller.revealSelection();
+    tester.pump();
+    expect(controller.firstVisibleSource()!.line, greaterThan(1));
+    expect(controller.firstVisibleSource()!.line, lessThanOrEqualTo(12));
+  });
+
   test(
     'rich comments and code share one scroll extent; every tall-card row is reachable',
     () async {

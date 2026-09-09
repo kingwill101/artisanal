@@ -212,8 +212,8 @@ final class GithubDashboardNavigationCoordinator {
   int _activeDetailTabIndex(GithubDisplayItem item) {
     if (item.target == GithubDisplayTarget.pullRequest) {
       if (_isActiveDetailItem(item, detail.commitsItem)) return 1;
-      if (_isActiveDetailItem(item, detail.reviewCommentsItem)) return 2;
-      if (_isActiveDetailItem(item, detail.diffItem)) return 3;
+      if (_isActiveDetailItem(item, detail.diffItem)) return 2;
+      if (_isActiveDetailItem(item, detail.reviewCommentsItem)) return 3;
       return 0;
     }
     return 0;

@@ -4,6 +4,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../../app/compile_time_flags.dart';
+import '../../app/diff_review_session.dart';
 import '../../models/dashboard_data.dart';
 import '../../models/display_item.dart';
 import 'panels.dart';
@@ -40,6 +41,7 @@ w.Widget githubDetailPane({
   List<GithubPullRequestReviewComment> diffReviewComments = const [],
   required w.DiffViewMode diffViewMode,
   w.GitDiffController? diffController,
+  GithubDiffReviewSession? diffReviewSession,
   List<w.DiffCommentLineHighlight> diffCommentHighlights =
       const <w.DiffCommentLineHighlight>[],
   tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
@@ -65,6 +67,7 @@ w.Widget githubDetailPane({
   }
   final showingComments = _sameItem(selectedItem, commentsItem);
   final showingCommits = _sameItem(selectedItem, commitsItem);
+  final showingReview = _sameItem(selectedItem, reviewCommentsItem);
   final showingDiff = _sameItem(selectedItem, diffItem);
   final showingMergeInfo = _sameItem(selectedItem, mergeInfoItem);
   final showingRepositoryLabels = _sameItem(selectedItem, repositoryLabelsItem);
@@ -79,6 +82,7 @@ w.Widget githubDetailPane({
         item: selectedItem,
         showingComments: showingComments,
         showingCommits: showingCommits,
+        showingReview: showingReview,
         showingDiff: showingDiff,
         showingRun: showingRun,
         reviewCommentCount: diffReviewComments.length,
@@ -100,6 +104,7 @@ w.Widget githubDetailPane({
           diffReviewComments: diffReviewComments,
           viewMode: diffViewMode,
           diffController: diffController,
+          diffReviewSession: diffReviewSession,
           diffCommentHighlights: diffCommentHighlights,
           onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
           onDiffFileSelected: onDiffFileSelected,
@@ -131,6 +136,15 @@ w.Widget githubDetailPane({
           detail: runDetail,
           loading: runDetailLoading,
           error: runDetailError,
+          controller: controller,
+        )
+      else if (showingReview)
+        _inlineReviewComments(
+          theme: theme,
+          item: selectedItem,
+          comments: reviewComments,
+          loading: reviewCommentsLoading,
+          error: reviewCommentsError,
           controller: controller,
         )
       else if (showingCommits)
@@ -167,6 +181,7 @@ w.Widget _detailTabs({
   required GithubDisplayItem item,
   required bool showingComments,
   required bool showingCommits,
+  required bool showingReview,
   required bool showingDiff,
   required bool showingRun,
   required int reviewCommentCount,
@@ -181,6 +196,8 @@ w.Widget _detailTabs({
       w.TabItem(
         'Files changed${_fileCountLabel(item)}${_reviewCountLabel(reviewCommentCount)}',
       ),
+    if (item.target == GithubDisplayTarget.pullRequest)
+      const w.TabItem('Review'),
     if (item.target == GithubDisplayTarget.workflowRun)
       const w.TabItem('Run info'),
   ];
@@ -189,6 +206,7 @@ w.Widget _detailTabs({
   final index = switch (item.target) {
     GithubDisplayTarget.pullRequest when showingCommits => 1,
     GithubDisplayTarget.pullRequest when showingDiff => 2,
+    GithubDisplayTarget.pullRequest when showingReview => 3,
     GithubDisplayTarget.workflowRun => 0,
     _ => 0,
   };
@@ -817,6 +835,7 @@ w.Widget _inlineDiff({
   required List<GithubPullRequestReviewComment> diffReviewComments,
   required w.DiffViewMode viewMode,
   w.GitDiffController? diffController,
+  GithubDiffReviewSession? diffReviewSession,
   required List<w.DiffCommentLineHighlight> diffCommentHighlights,
   tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
   tui.Cmd? Function(int index)? onDiffFileSelected,
@@ -855,7 +874,9 @@ w.Widget _inlineDiff({
   // panel when the selected file is collapsed (inline blocks are suppressed
   // for collapsed files).
   final reviewCommentsHeight =
-      diffReviewComments.isNotEmpty && selectedFile?.isCollapsed == true
+      diffReviewSession == null &&
+          diffReviewComments.isNotEmpty &&
+          selectedFile?.isCollapsed == true
       ? (height * 0.35).clamp(8, 30).toInt()
       : 0;
   return w.Expanded(
@@ -880,6 +901,8 @@ w.Widget _inlineDiff({
                   height: viewportHeight,
                   viewMode: viewMode,
                   controller: diffController,
+                  reviewSession: diffReviewSession,
+                  item: item,
                   scrollController: controller,
                   diffCommentHighlights: diffCommentHighlights,
                   onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
@@ -909,6 +932,8 @@ w.Widget _inlineDiff({
                         height: viewportHeight,
                         viewMode: viewMode,
                         controller: diffController,
+                        reviewSession: diffReviewSession,
+                        item: item,
                         scrollController: controller,
                         diffCommentHighlights: diffCommentHighlights,
                         onDiffCommentAnchorSelected:
@@ -1172,11 +1197,57 @@ w.Widget _selectedFileDiff({
   required int height,
   required w.DiffViewMode viewMode,
   w.GitDiffController? controller,
+  GithubDiffReviewSession? reviewSession,
+  GithubDisplayItem? item,
   required w.ScrollController scrollController,
   required List<w.DiffCommentLineHighlight> diffCommentHighlights,
   tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
   required List<GithubPullRequestReviewComment> diffReviewComments,
 }) {
+  if (reviewSession != null && item != null) {
+    reviewSession.synchronize(
+      item: item,
+      patch: diff,
+      fileIdentity: selectedFile?.filename ?? '',
+      comments: diffReviewComments,
+      viewMode: selectedFile?.isCollapsed == true
+          ? w.DiffViewMode.unified
+          : viewMode,
+    );
+    final unsupported = reviewSession.threads?.unsupportedComments.length ?? 0;
+    return w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
+      children: [
+        if (unsupported > 0)
+          w.Text(
+            '$unsupported comments have no supported anchor; see Review.',
+            style: theme.bodySmall,
+          ),
+        w.Expanded(
+          child: w.Scrollbar(
+            controller: reviewSession.controller.scrollController,
+            child: w.DiffReviewViewport(
+              controller: reviewSession.controller,
+              width: width,
+              height: height - (unsupported > 0 ? 1 : 0),
+              handleKeys: false,
+              threadBuilder: (context, placement) => w.Column(
+                crossAxisAlignment: w.CrossAxisAlignment.stretch,
+                gap: 1,
+                children: [
+                  for (final comment
+                      in reviewSession.threads!.bodiesByThreadId[placement
+                          .thread
+                          .id]!)
+                    _commentCard(theme, _reviewCommentToItem(comment)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   if (diffReviewComments.isEmpty) {
     return w.GitDiffViewer(
       diff: diff,

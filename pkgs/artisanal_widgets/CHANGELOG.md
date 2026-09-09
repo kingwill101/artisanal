@@ -11,8 +11,14 @@
   content anchor. The legacy `GitDiffViewer` remains available unchanged.
 - Added a GitHub demo source-thread adapter preserving multiline ranges,
   root/reply identity, renamed old-side paths, and outdated positions, ready for
-  the review viewport migration. Existing demo screens still use the legacy
+  the review viewport migration.
+- Migrated the GitHub single-PR screen to the TEA review controller and lazy
+  viewport, retaining rich Markdown/avatar cards, source-range submission, and
+  comment-inclusive paging. Restored the Review tab and rejected stale diff
+  comment responses. The dashboard and standalone dialog remain on the legacy
   viewer.
+- Added `DiffReviewController.firstVisibleSource` for source lookup in composed
+  viewport coordinates without treating comment rows as diff rows.
 
 ## 0.4.0
 

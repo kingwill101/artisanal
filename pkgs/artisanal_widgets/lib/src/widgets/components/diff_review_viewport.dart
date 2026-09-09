@@ -123,6 +123,28 @@ class DiffReviewController {
     if (index != null) scrollController.jumpTo(_extents.offsetOf(index));
   }
 
+  /// First actual code position visible in the composed viewport.
+  ///
+  /// Skips metadata and thread bodies without interpreting comment-inclusive
+  /// offsets as diff rows. Returns null when only comments are visible.
+  DiffCommentLineKey? firstVisibleSource({DiffCommentSide? preferredSide}) {
+    if (blocks.length == 0 || scrollController.viewportExtent <= 0) return null;
+    final start = _extents.resolve(scrollController.offset);
+    final bottom = scrollController.offset + scrollController.viewportExtent;
+    for (var index = start.index; index < blocks.length; index++) {
+      if (_extents.offsetOf(index) >= bottom) break;
+      final block = blocks[index];
+      if (block is! DiffReviewCodeBlock) continue;
+      final anchors = blocks.layout.anchorsAtRow(block.renderRow);
+      final anchor = anchors
+          .where((a) => preferredSide == null || a.side == preferredSide)
+          .firstOrNull;
+      final key = (anchor ?? anchors.firstOrNull)?.key;
+      if (key != null) return key;
+    }
+    return null;
+  }
+
   /// Observes model updates. Scrolling is observed on [scrollController].
   void addListener(void Function() listener) => _listeners.add(listener);
 

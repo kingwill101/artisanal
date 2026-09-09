@@ -34,8 +34,9 @@ Semantic messages handle selection, source-order movement, side switching,
 range selection, presentation changes, and thread expansion. Selection and
 expansion updates reuse the patch model and its layout, without parsing or
 rendering. `view()` remains the base patch view: selection decorations and
-thread placements are exposed separately for richer hosts. The old widget and
-GitHub interaction state have not yet migrated to this model.
+thread placements are exposed separately for richer hosts. The legacy widget
+remains available; the GitHub single-PR screen now uses this model through its
+review session.
 
 Thread descriptors carry a stable ID, a source range, and an explicit outdated
 flag. They intentionally do not own GitHub payloads or widget children.
@@ -123,16 +124,33 @@ collection rather than receiving invented anchors. The parser still excludes
 comments with no usable current or original line; file-level comments need a
 separate attachment representation.
 
-This adapter is tested independently but is not yet wired into the dashboard or
-single-PR view. Those screens still use the legacy mapping and controllers.
+The single-PR screen now uses this adapter through `GithubDiffReviewSession`.
+The session retains parsed source across presentation and comment-body refreshes,
+scopes state by repository/PR/file and head revision, and supplies host-owned
+Markdown/avatar cards to `DiffReviewViewport`. It filters threads to the selected
+file; other-file comments remain available in Review.
+
+Threads start collapsed. Clicking their headers expands rich content in the same
+scroll extent as code. Selection, range extension, side switching, and submission
+targets use the TEA model. Page keys use comment-inclusive offsets and select
+actual visible code, not a nearest diff row; a viewport containing only a tall
+comment has no new line-comment target. The controller's `firstVisibleSource`
+provides this lookup without exposing internal extent arithmetic to the app.
+
+The Review tab is restored for all comments, including unsupported attachments.
+Tab-key navigation follows the displayed order. Diff-comment responses carry the
+diff load token so stale responses cannot overwrite comments for a newer load.
+The existing action dialog still owns draft input outside lazy thread children.
+
+The dashboard and standalone diff dialog still use the legacy viewer. Their
+migration and removing the obsolete rendered-row mapping are the next stage.
 
 ## Remaining implementation stages
 
 1. Extend the source document with explicit hunk identities and
    unavailable-content states.
-2. Move GitHub integration off rendered-row comment mapping and height
-   estimates. Preserve left/right thread identity and explicitly show unmapped
-   or outdated comments.
+2. Migrate the dashboard and standalone dialog off the legacy viewer, then
+   remove obsolete demo rendered-row comment mapping and height estimates.
 3. Add full review workflow tests and benchmarks for large patches, tall
    threads, expansion, resize, asynchronous content, and scrollbar dragging.
 
