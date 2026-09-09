@@ -124,7 +124,7 @@ collection rather than receiving invented anchors. The parser still excludes
 comments with no usable current or original line; file-level comments need a
 separate attachment representation.
 
-The single-PR screen now uses this adapter through `GithubDiffReviewSession`.
+The single-PR screen and dashboard use this adapter through `GithubDiffReviewSession`.
 The session retains parsed source across presentation and comment-body refreshes,
 scopes state by repository/PR/file and head revision, and supplies host-owned
 Markdown/avatar cards to `DiffReviewViewport`. It filters threads to the selected
@@ -143,18 +143,24 @@ diff load token so stale responses cannot overwrite comments for a newer load.
 The existing action dialog still owns draft input outside lazy thread children.
 
 The dashboard now uses the same session and viewport, including file switching,
-source selection, and comment-inclusive paging. The standalone diff dialog still
-uses the legacy viewer. Migrating it and removing the obsolete rendered-row
-mapping are the next stage.
+source selection, and comment-inclusive paging. The standalone diff dialog also
+uses the session and viewport, preserving its `j`/`k` scrolling, page keys,
+`v` layout shortcut (`s` is an alias), and Escape dismissal.
+
+The demo no longer uses `GitDiffViewer` or `GitDiffController`. Its old
+rendered-anchor interaction state, nearest-line mapper, and comment-height
+estimators have been removed. Submission targets contain only GitHub source
+coordinates, not render-row numbers. The public legacy widget API remains
+available for other consumers.
 
 ## Remaining implementation stages
 
 1. Extend the source document with explicit hunk identities and
    unavailable-content states.
-2. Migrate the standalone dialog off the legacy viewer, then
-   remove obsolete demo rendered-row comment mapping and height estimates.
-3. Add full review workflow tests and benchmarks for large patches, tall
+2. Add full review workflow tests and benchmarks for large patches, tall
    threads, expansion, resize, asynchronous content, and scrollbar dragging.
+3. Profile and reduce eager ANSI layout generation for very large documents;
+   lazy display does not yet imply lazy patch parsing or line formatting.
 
 ## Performance acceptance rules
 

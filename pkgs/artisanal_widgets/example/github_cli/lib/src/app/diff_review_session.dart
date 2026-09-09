@@ -133,7 +133,6 @@ final class GithubDiffReviewSession {
           : file.newPath,
       line: range.end.line,
       side: range.end.side.githubApiValue,
-      renderLine: model.selectedAnchor?.renderLine ?? 0,
       startLine: range.isRange ? range.start.line : null,
       startSide: range.isRange ? range.start.side.githubApiValue : null,
     );

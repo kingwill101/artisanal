@@ -15,12 +15,15 @@
 - Migrated the GitHub single-PR screen to the TEA review controller and lazy
   viewport, retaining rich Markdown/avatar cards, source-range submission, and
   comment-inclusive paging. Restored the Review tab and rejected stale diff
-  comment responses. The dashboard and standalone dialog remain on the legacy
-  viewer.
+  comment responses.
 - Added `DiffReviewController.firstVisibleSource` for source lookup in composed
   viewport coordinates without treating comment rows as diff rows.
 - Migrated the GitHub dashboard to the same review session as the single-PR
   screen, replacing its rendered-anchor selection and diff-only scroll offsets.
+- Migrated the standalone GitHub diff dialog while preserving its scrolling,
+  layout, and dismissal shortcuts. Removed the demo's obsolete rendered-row
+  comment mapper, anchor-index interaction state, and card-height estimators.
+  The public legacy diff widget remains available for other consumers.
 
 ## 0.4.0
 
