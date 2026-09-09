@@ -9,35 +9,14 @@
   widgets, sparse height indexing, source-anchored selection, and shared
   split-panel geometry. Measured thread size changes preserve the visible
   content anchor. The legacy `GitDiffViewer` remains available unchanged.
-- Added a GitHub demo source-thread adapter preserving multiline ranges,
-  root/reply identity, renamed old-side paths, and outdated positions, ready for
-  the review viewport migration.
-- Migrated the GitHub single-PR screen to the TEA review controller and lazy
-  viewport, retaining rich Markdown/avatar cards, source-range submission, and
-  comment-inclusive paging. Restored the Review tab and rejected stale diff
-  comment responses.
 - Added `DiffReviewController.firstVisibleSource` for source lookup in composed
   viewport coordinates without treating comment rows as diff rows.
-- Migrated the GitHub dashboard to the same review session as the single-PR
-  screen, replacing its rendered-anchor selection and diff-only scroll offsets.
-- Migrated the standalone GitHub diff dialog while preserving its scrolling,
-  layout, and dismissal shortcuts. Removed the demo's obsolete rendered-row
-  comment mapper, anchor-index interaction state, and card-height estimators.
-  The public legacy diff widget remains available for other consumers.
 
 ### Fixed
 
-- Order GitHub inline-comment refreshes by request as well as diff load, so a
-  slow earlier response cannot overwrite newer discussions. Refresh failures
-  now appear as notices while preserving the comments already displayed.
-- Show PR status only once in the GitHub detail header when no labels are
-  present, rather than rendering duplicate check-summary badges.
 - Preserve terminal graphics escape sequences when clipping rich diff-review
   cards. Avatar payloads no longer become visible text or consume neighboring
   author text and diff output.
-- GitHub diff discussions now show their bodies by default, while preserving
-  explicit collapses on refresh. Successful inline comment submission reloads
-  the active PR's review comments without reloading the patch or changing tabs.
 - Keep scrollbar content geometry stable while dragging, then apply the latest
   measured extent on release. Growing inline comments no longer trigger a drag
   assertion, and collapsing comments after release can shrink the scroll extent.
