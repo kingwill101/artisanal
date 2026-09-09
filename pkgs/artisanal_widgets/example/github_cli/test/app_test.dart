@@ -1291,7 +1291,11 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       tester.sendKey('d');
       await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
       tester.sendMsg(
-        const messages.GithubDiffReviewCommentsLoadedMsg([], token: 0),
+        const messages.GithubDiffReviewCommentsLoadedMsg(
+          [],
+          token: 0,
+          requestId: 0,
+        ),
       );
       tester.pump();
       expect(tester.view, contains('r1 ·'));

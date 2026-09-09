@@ -29,6 +29,7 @@ final class GithubDashboardDetailLoader {
   final w.WidgetScrollController detailScrollController;
   final tui.Cmd Function(GithubDashboardLayoutMode mode) setLayoutMode;
   var _diffLoadToken = 0;
+  var _diffReviewRequestId = 0;
 
   bool handlesMessage(tui.Msg msg) {
     return (msg is GithubActionCompletedMsg && msg.reviewItem != null) ||
@@ -43,6 +44,7 @@ final class GithubDashboardDetailLoader {
         msg is GithubDiffFinishedMsg ||
         msg is GithubDiffFailedMsg ||
         msg is GithubDiffReviewCommentsLoadedMsg ||
+        msg is GithubDiffReviewCommentsFailedMsg ||
         msg is GithubMergeInfoLoadedMsg ||
         msg is GithubMergeInfoFailedMsg ||
         msg is GithubRepositoryLabelsLoadedMsg ||
@@ -110,8 +112,13 @@ final class GithubDashboardDetailLoader {
       return _loadDiffReviewComments();
     }
     if (msg is GithubDiffReviewCommentsLoadedMsg) {
-      if (msg.token != _diffLoadToken || detail.diffItem == null) return null;
+      if (!_isCurrentReviewRequest(msg.token, msg.requestId)) return null;
       detail.applyDiffReviewCommentsLoaded(msg.comments);
+      return null;
+    }
+    if (msg is GithubDiffReviewCommentsFailedMsg) {
+      if (!_isCurrentReviewRequest(msg.token, msg.requestId)) return null;
+      detail.applyNotice('Could not refresh inline comments: ${msg.message}');
       return null;
     }
     if (msg is GithubMergeInfoLoadedMsg) {
@@ -185,6 +192,11 @@ final class GithubDashboardDetailLoader {
     return setLayoutMode(GithubDashboardLayoutMode.focused);
   }
 
+  bool _isCurrentReviewRequest(int token, int requestId) =>
+      token == _diffLoadToken &&
+      requestId == _diffReviewRequestId &&
+      detail.diffItem != null;
+
   tui.Cmd? _loadDiffReviewComments() {
     final item = detail.diffItem;
     final token = _diffLoadToken;
@@ -194,15 +206,24 @@ final class GithubDashboardDetailLoader {
         item.target != GithubDisplayTarget.pullRequest) {
       return null;
     }
+    final requestId = ++_diffReviewRequestId;
     return tui.Cmd(() async {
       try {
         final comments = await client().loadPullRequestReviewComments(
           repository: repository,
           number: item.number,
         );
-        return GithubDiffReviewCommentsLoadedMsg(comments, token: token);
-      } catch (_) {
-        return null;
+        return GithubDiffReviewCommentsLoadedMsg(
+          comments,
+          token: token,
+          requestId: requestId,
+        );
+      } catch (error) {
+        return GithubDiffReviewCommentsFailedMsg(
+          error.toString(),
+          token: token,
+          requestId: requestId,
+        );
       }
     });
   }

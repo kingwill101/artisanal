@@ -27,6 +27,9 @@
 
 ### Fixed
 
+- Order GitHub inline-comment refreshes by request as well as diff load, so a
+  slow earlier response cannot overwrite newer discussions. Refresh failures
+  now appear as notices while preserving the comments already displayed.
 - Show PR status only once in the GitHub detail header when no labels are
   present, rather than rendering duplicate check-summary badges.
 - Preserve terminal graphics escape sequences when clipping rich diff-review

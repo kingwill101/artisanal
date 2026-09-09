@@ -137,10 +137,27 @@ final class GithubDiffFailedMsg extends tui.Msg {
 }
 
 final class GithubDiffReviewCommentsLoadedMsg extends tui.Msg {
-  const GithubDiffReviewCommentsLoadedMsg(this.comments, {required this.token});
+  const GithubDiffReviewCommentsLoadedMsg(
+    this.comments, {
+    required this.token,
+    required this.requestId,
+  });
 
   final List<GithubPullRequestReviewComment> comments;
   final int token;
+  final int requestId;
+}
+
+final class GithubDiffReviewCommentsFailedMsg extends tui.Msg {
+  const GithubDiffReviewCommentsFailedMsg(
+    this.message, {
+    required this.token,
+    required this.requestId,
+  });
+
+  final String message;
+  final int token;
+  final int requestId;
 }
 
 final class GithubMergeInfoLoadedMsg extends tui.Msg {

@@ -142,7 +142,9 @@ provides this lookup without exposing internal extent arithmetic to the app.
 
 The Review tab is restored for all comments, including unsupported attachments.
 Tab-key navigation follows the displayed order. Diff-comment responses carry the
-diff load token so stale responses cannot overwrite comments for a newer load.
+diff load token and a comment-request sequence so stale responses cannot overwrite
+comments for a newer load or a newer refresh of the same diff. Failed refreshes
+retain existing discussions and display a notice; stale failures are ignored.
 The existing action dialog still owns draft input outside lazy thread children.
 
 The dashboard now uses the same session and viewport, including file switching,
