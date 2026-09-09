@@ -25,6 +25,13 @@
   comment mapper, anchor-index interaction state, and card-height estimators.
   The public legacy diff widget remains available for other consumers.
 
+### Fixed
+
+- Keep scrollbar content geometry stable while dragging, then apply the latest
+  measured extent on release. Growing inline comments no longer trigger a drag
+  assertion, and collapsing comments after release can shrink the scroll extent.
+  Extent-only changes on release now notify listeners even without an offset change.
+
 ## 0.4.0
 
 ### Added

@@ -64,6 +64,56 @@ class _GrowingBodyState extends w.State<_GrowingBody> {
 }
 
 void main() {
+  test(
+    'real scrollbar drag tolerates body resizing and later collapse',
+    () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+      final controller = _controller(width: 58, height: 8);
+      late void Function(int) resizeBody;
+      await tester.pumpWidget(
+        w.SizedBox(
+          width: 60,
+          height: 8,
+          child: w.Scrollbar(
+            controller: controller.scrollController,
+            gap: 1,
+            child: w.DiffReviewViewport(
+              controller: controller,
+              width: 58,
+              height: 8,
+              threadBuilder: (_, _) =>
+                  _GrowingBody((resize) => resizeBody = resize),
+            ),
+          ),
+        ),
+      );
+      final layout = controller.model.diff.layout;
+      final scroll = controller.scrollController;
+      final initialExtent = scroll.contentExtent;
+      tester.mouseDown(59, 0);
+      expect(scroll.thumbDragActive, isTrue);
+      for (final rows in [12, 3, 17]) {
+        resizeBody(rows);
+        tester.pump();
+        expect(scroll.contentExtent, initialExtent);
+        expect(tester.view, contains('GROW_0'));
+      }
+      tester.mouseMove(59, 7);
+      tester.mouseUp(59, 7);
+      tester.pump();
+      expect(scroll.thumbDragActive, isFalse);
+      expect(scroll.contentExtent, layout.lines.length + 18);
+      controller.update(const d.DiffReviewExpandMsg('thread', expanded: false));
+      tester.pump();
+      expect(scroll.contentExtent, layout.lines.length + 1);
+      scroll.jumpTo(scroll.maxOffset);
+      tester.pump();
+      expect(tester.view, contains('CODE00050'));
+      expect(controller.model.diff.layout, same(layout));
+    },
+  );
+
   test('visible source lookup skips metadata and tall thread bodies', () async {
     final tester = WidgetTester();
     addTearDown(tester.dispose);

@@ -111,12 +111,8 @@ class WidgetScrollController implements ScrollController {
   bool _thumbDragActive = false;
 
   // Latest measured content extent while thumb drag is active.
-  // Shrinks are deferred until drag ends to avoid mid-drag remapping/clamping.
+  // Changes are deferred until drag ends to avoid mid-drag remapping/clamping.
   int? _deferredContentExtent;
-
-  // When true, _contentExtent can only grow (never shrink) in updateMetrics.
-  // Set after thumb drag release to prevent snap-back until user scrolls.
-  bool _contentFrozen = false;
 
   /// When true, scrolls to the bottom (maxOffset) on the next updateMetrics
   /// call that has non-zero content. Auto-cleared after the jump.
@@ -160,18 +156,15 @@ class WidgetScrollController implements ScrollController {
   bool get thumbDragActive => _thumbDragActive;
 
   /// Marks whether an attached scrollbar thumb drag is active.
+  ///
+  /// Content extent changes are deferred during the drag. Releasing applies
+  /// the latest measured extent and clamps the offset if the content shrank.
   void setThumbDragActive(bool active) {
     if (_thumbDragActive == active) return;
     _thumbDragActive = active;
     if (!active && _deferredContentExtent != null) {
-      assert(
-        _deferredContentExtent! >= _contentExtent,
-        'setThumbDragActive: deferred content extent $_deferredContentExtent '
-        '< current content extent $_contentExtent',
-      );
-      final target = math.max(_contentExtent, _deferredContentExtent!);
+      final target = _deferredContentExtent!;
       _deferredContentExtent = null;
-      _contentFrozen = true;
       if (target != _contentExtent) {
         final beforeContent = _contentExtent;
         final beforeOffset = _offset;
@@ -182,6 +175,9 @@ class WidgetScrollController implements ScrollController {
         }
 
         final clamped = _clampOffset();
+        // Clamping already notifies. Extent-only changes also need a repaint
+        // so the scrollbar and viewport agree immediately after release.
+        if (!clamped) _notifyListeners();
         _traceScroll(
           'widget_scroll.metrics.deferred '
           'content=$beforeContent->$_contentExtent '
@@ -252,31 +248,13 @@ class WidgetScrollController implements ScrollController {
     final prevOffset = _offset;
     final nextViewport = math.max(0, viewportExtent);
     final incomingContent = math.max(0, contentExtent);
-    assert(
-      !_thumbDragActive ||
-          _deferredContentExtent == null ||
-          _deferredContentExtent! >= incomingContent,
-      'updateMetrics: deferred content shrank during drag '
-      '($_deferredContentExtent -> $incomingContent)',
-    );
 
     _viewportExtent = nextViewport;
     if (_thumbDragActive) {
-      // Track the max content extent observed during drag so releasing at
-      // the bottom never snaps the offset upward even if measurements
-      // temporarily shrink the estimate.
-      _deferredContentExtent = math.max(
-        _deferredContentExtent ?? incomingContent,
-        incomingContent,
-      );
+      _deferredContentExtent = incomingContent;
     } else {
       _deferredContentExtent = null;
-      if (_contentFrozen) {
-        assert(incomingContent >= 0);
-        _contentExtent = math.max(_contentExtent, incomingContent);
-      } else {
-        _contentExtent = incomingContent;
-      }
+      _contentExtent = incomingContent;
     }
 
     final clamped = _clampOffset();
