@@ -142,14 +142,16 @@ Tab-key navigation follows the displayed order. Diff-comment responses carry the
 diff load token so stale responses cannot overwrite comments for a newer load.
 The existing action dialog still owns draft input outside lazy thread children.
 
-The dashboard and standalone diff dialog still use the legacy viewer. Their
-migration and removing the obsolete rendered-row mapping are the next stage.
+The dashboard now uses the same session and viewport, including file switching,
+source selection, and comment-inclusive paging. The standalone diff dialog still
+uses the legacy viewer. Migrating it and removing the obsolete rendered-row
+mapping are the next stage.
 
 ## Remaining implementation stages
 
 1. Extend the source document with explicit hunk identities and
    unavailable-content states.
-2. Migrate the dashboard and standalone dialog off the legacy viewer, then
+2. Migrate the standalone dialog off the legacy viewer, then
    remove obsolete demo rendered-row comment mapping and height estimates.
 3. Add full review workflow tests and benchmarks for large patches, tall
    threads, expansion, resize, asynchronous content, and scrollbar dragging.

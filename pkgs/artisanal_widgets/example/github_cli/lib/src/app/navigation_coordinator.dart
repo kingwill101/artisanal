@@ -151,7 +151,6 @@ final class GithubDashboardNavigationCoordinator {
     final modes = w.DiffViewMode.values;
     final next = modes[(uiState.diffViewMode.index + 1) % modes.length];
     setState(() => uiState.diffViewMode = next);
-    detailScrollController.jumpTo(0);
     return tui.Cmd.none();
   }
 

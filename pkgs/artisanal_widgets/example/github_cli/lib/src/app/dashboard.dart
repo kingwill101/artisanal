@@ -1,3 +1,4 @@
+import 'package:artisanal/git_diff.dart' as d;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -11,7 +12,7 @@ import 'command_items.dart';
 import 'dashboard_content.dart';
 import 'data_coordinator.dart';
 import 'detail_coordinator.dart';
-import 'diff_interaction_state.dart';
+import 'diff_review_session.dart';
 import 'layout_mode.dart';
 import 'messages.dart';
 import 'navigation_coordinator.dart';
@@ -50,8 +51,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
 
   final _detailScrollController = w.WidgetScrollController();
   final _queueScrollController = w.WidgetScrollController();
-  final _diffController = w.GitDiffController();
-  final _diffInteraction = GithubDiffInteractionState();
+  final _diffReview = GithubDiffReviewSession();
 
   @override
   void initState() {
@@ -267,8 +267,8 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
     }
     if (key.isChar('v')) {
       setState(() {
-        _ensureDiffSelection();
-        _diffInteraction.toggleRange(_diffController.commentAnchors);
+        _diffReview.ensureSelection();
+        _diffReview.controller.update(const d.DiffReviewToggleRangeMsg());
       });
       return tui.Cmd.none();
     }
@@ -305,43 +305,30 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
     if (key.isChar('l')) {
       return _selectDiffSide(w.DiffCommentSide.right);
     }
-    if (msg.key.type == tui.KeyType.escape && _diffInteraction.rangeActive) {
-      setState(() => _diffInteraction.rangeStartAnchorIndex = null);
+    if (msg.key.type == tui.KeyType.escape &&
+        _diffReview.controller.model.rangeStart != null) {
+      _diffReview.controller.update(const d.DiffReviewClearRangeMsg());
       return tui.Cmd.none();
     }
     return null;
   }
 
   tui.Cmd _moveDiffAnchor(int delta) {
-    setState(() {
-      final anchors = _diffController.commentAnchors;
-      _ensureDiffSelection();
-      _diffInteraction.moveSelection(anchors, delta);
-      _revealDiffAnchor(_diffInteraction.selectedAnchor(anchors));
-    });
+    _diffReview.move(delta);
     return tui.Cmd.none();
   }
 
   tui.Cmd _selectDiffSide(w.DiffCommentSide side) {
-    setState(() {
-      _diffInteraction.selectSide(_diffController.commentAnchors, side);
-    });
-    return tui.Cmd.none();
-  }
-
-  tui.Cmd? _selectDiffAnchor(w.DiffCommentAnchor anchor) {
-    setState(() {
-      _diffInteraction.selectAnchor(_diffController.commentAnchors, anchor);
-      _revealDiffAnchor(anchor);
-    });
+    _diffReview.ensureSelection();
+    _diffReview.controller.update(d.DiffReviewSideMsg(side));
+    _diffReview.controller.revealSelection();
     return tui.Cmd.none();
   }
 
   tui.Cmd _moveDiffFile(int delta) {
     setState(() {
       if (_detail.moveDiffFile(delta)) {
-        _diffInteraction.reset();
-        _detailScrollController.jumpTo(0);
+        _diffReview.reset();
       }
     });
     return tui.Cmd.none();
@@ -350,8 +337,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
   tui.Cmd? _selectDiffFile(int index) {
     setState(() {
       if (_detail.selectDiffFile(index)) {
-        _diffInteraction.reset();
-        _detailScrollController.jumpTo(0);
+        _diffReview.reset();
       }
     });
     return tui.Cmd.none();
@@ -366,88 +352,19 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
     return _dataCoordinator.loadDashboard(clearDashboard: true);
   }
 
-  void _revealDiffAnchor(w.DiffCommentAnchor? anchor) {
-    if (anchor == null) return;
-    final viewport = _detailScrollController.viewportExtent <= 0
-        ? 24
-        : _detailScrollController.viewportExtent;
-    final top = _detailScrollController.offset;
-    final bottom = top + viewport - 1;
-    if (anchor.renderLine < top) {
-      _detailScrollController.jumpTo(anchor.renderLine);
-    } else if (anchor.renderLine > bottom) {
-      _detailScrollController.jumpTo(anchor.renderLine - viewport + 1);
-    }
-  }
-
   int get _detailPageStep {
-    final extent = _detailScrollController.viewportExtent;
+    final extent = _diffReview.controller.scrollController.viewportExtent;
     return extent <= 2 ? 1 : extent - 2;
   }
 
   tui.Cmd _scrollDiffViewport(int delta) {
-    setState(() {
-      _detailScrollController.scrollBy(delta);
-      _syncDiffSelectionToViewport();
-    });
+    _diffReview.scrollBy(delta);
     return tui.Cmd.none();
-  }
-
-  void _syncDiffSelectionToViewport() {
-    final anchors = _diffController.commentAnchors;
-    if (anchors.isEmpty) return;
-    final viewport = _detailScrollController.viewportExtent <= 0
-        ? 24
-        : _detailScrollController.viewportExtent;
-    final top = _detailScrollController.offset;
-    final bottom = top + viewport - 1;
-    final selected = _diffInteraction.selectedAnchor(anchors);
-    if (selected != null &&
-        selected.renderLine >= top &&
-        selected.renderLine <= bottom) {
-      return;
-    }
-
-    final preferredSide = selected?.side;
-    w.DiffCommentAnchor? anchor = _diffController.commentAnchorAt(
-      top,
-      side: preferredSide,
-    );
-    anchor ??= anchors
-        .where(
-          (candidate) =>
-              candidate.renderLine >= top &&
-              candidate.renderLine <= bottom &&
-              (preferredSide == null || candidate.side == preferredSide),
-        )
-        .firstOrNull;
-    anchor ??= anchors
-        .where(
-          (candidate) =>
-              candidate.renderLine >= top && candidate.renderLine <= bottom,
-        )
-        .firstOrNull;
-    anchor ??= _diffController.nearestCommentAnchor(top);
-    anchor ??= anchors.last;
-    _diffInteraction.selectAnchor(anchors, anchor);
   }
 
   GithubDiffCommentTarget? _currentDiffCommentTarget() {
     if (_detail.diff.trim().isEmpty) return null;
-    final anchors = _diffController.commentAnchors;
-    _ensureDiffSelection();
-    return _diffInteraction.targetFor(anchors);
-  }
-
-  void _ensureDiffSelection() {
-    if (_diffInteraction.hasSelection) return;
-    final renderLine = _detailScrollController.offset;
-    final anchor =
-        _diffController.commentAnchorAt(renderLine) ??
-        _diffController.nearestCommentAnchor(renderLine);
-    if (anchor != null) {
-      _diffInteraction.selectAnchor(_diffController.commentAnchors, anchor);
-    }
+    return _diffReview.commentTarget;
   }
 
   @override
@@ -515,11 +432,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
           commandItems: _commandItems,
           detailScrollController: _detailScrollController,
           queueScrollController: _queueScrollController,
-          diffController: _diffController,
-          diffCommentHighlights: _diffInteraction.highlights(
-            _diffController.commentAnchors,
-          ),
-          onDiffCommentAnchorSelected: _selectDiffAnchor,
+          diffReviewSession: _diffReview,
           onDiffFileSelected: _selectDiffFile,
           onCloseCommandPalette: _navigation.closeCommandPalette,
           onDetailTabChanged: _detailLoader.changeDetailTab,

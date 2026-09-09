@@ -19,6 +19,8 @@
   viewer.
 - Added `DiffReviewController.firstVisibleSource` for source lookup in composed
   viewport coordinates without treating comment rows as diff rows.
+- Migrated the GitHub dashboard to the same review session as the single-PR
+  screen, replacing its rendered-anchor selection and diff-only scroll offsets.
 
 ## 0.4.0
 

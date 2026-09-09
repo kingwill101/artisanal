@@ -10,6 +10,7 @@ import '../ui/dashboard/splash_screen.dart';
 import '../ui/dashboard/top_bar.dart';
 import '../ui/dashboard/work_queue_pane.dart';
 import 'command_items.dart';
+import 'diff_review_session.dart';
 import 'ui_state.dart';
 
 final class GithubDashboardContent extends w.StatelessWidget {
@@ -21,9 +22,7 @@ final class GithubDashboardContent extends w.StatelessWidget {
     required this.commandItems,
     required this.detailScrollController,
     required this.queueScrollController,
-    required this.diffController,
-    required this.diffCommentHighlights,
-    required this.onDiffCommentAnchorSelected,
+    required this.diffReviewSession,
     required this.onDiffFileSelected,
     required this.onCloseCommandPalette,
     required this.onDetailTabChanged,
@@ -40,10 +39,7 @@ final class GithubDashboardContent extends w.StatelessWidget {
   final GithubDashboardCommandItems commandItems;
   final w.ScrollController detailScrollController;
   final w.ScrollController queueScrollController;
-  final w.GitDiffController diffController;
-  final List<w.DiffCommentLineHighlight> diffCommentHighlights;
-  final tui.Cmd? Function(w.DiffCommentAnchor anchor)
-  onDiffCommentAnchorSelected;
+  final GithubDiffReviewSession diffReviewSession;
   final tui.Cmd? Function(int index) onDiffFileSelected;
   final tui.Cmd? Function() onCloseCommandPalette;
   final tui.Cmd? Function(int index) onDetailTabChanged;
@@ -89,9 +85,7 @@ final class GithubDashboardContent extends w.StatelessWidget {
                 uiState: uiState,
                 detailScrollController: detailScrollController,
                 queueScrollController: queueScrollController,
-                diffController: diffController,
-                diffCommentHighlights: diffCommentHighlights,
-                onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+                diffReviewSession: diffReviewSession,
                 onDiffFileSelected: onDiffFileSelected,
                 onDetailTabChanged: onDetailTabChanged,
                 onOverviewFilterChanged: onOverviewFilterChanged,
@@ -172,9 +166,7 @@ final class _MainRegion extends w.StatelessWidget {
     required this.uiState,
     required this.detailScrollController,
     required this.queueScrollController,
-    required this.diffController,
-    required this.diffCommentHighlights,
-    required this.onDiffCommentAnchorSelected,
+    required this.diffReviewSession,
     required this.onDiffFileSelected,
     required this.onDetailTabChanged,
     required this.onOverviewFilterChanged,
@@ -189,10 +181,7 @@ final class _MainRegion extends w.StatelessWidget {
   final GithubDashboardUiState uiState;
   final w.ScrollController detailScrollController;
   final w.ScrollController queueScrollController;
-  final w.GitDiffController diffController;
-  final List<w.DiffCommentLineHighlight> diffCommentHighlights;
-  final tui.Cmd? Function(w.DiffCommentAnchor anchor)
-  onDiffCommentAnchorSelected;
+  final GithubDiffReviewSession diffReviewSession;
   final tui.Cmd? Function(int index) onDiffFileSelected;
   final tui.Cmd? Function(int index) onDetailTabChanged;
   final tui.Cmd? Function(GithubOverviewFilter filter) onOverviewFilterChanged;
@@ -220,9 +209,7 @@ final class _MainRegion extends w.StatelessWidget {
             dashboard: dashboard,
             uiState: uiState,
             controller: detailScrollController,
-            diffController: diffController,
-            diffCommentHighlights: diffCommentHighlights,
-            onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+            diffReviewSession: diffReviewSession,
             onDiffFileSelected: onDiffFileSelected,
             onDetailTabChanged: onDetailTabChanged,
             height: height,
@@ -237,9 +224,7 @@ final class _MainRegion extends w.StatelessWidget {
           uiState: uiState,
           detailScrollController: detailScrollController,
           queueScrollController: queueScrollController,
-          diffController: diffController,
-          diffCommentHighlights: diffCommentHighlights,
-          onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+          diffReviewSession: diffReviewSession,
           onDiffFileSelected: onDiffFileSelected,
           onDetailTabChanged: onDetailTabChanged,
           onOverviewFilterChanged: onOverviewFilterChanged,
@@ -273,9 +258,7 @@ final class _SplitBodyRegion extends w.StatelessWidget {
     required this.uiState,
     required this.detailScrollController,
     required this.queueScrollController,
-    required this.diffController,
-    required this.diffCommentHighlights,
-    required this.onDiffCommentAnchorSelected,
+    required this.diffReviewSession,
     required this.onDiffFileSelected,
     required this.onDetailTabChanged,
     required this.onOverviewFilterChanged,
@@ -291,10 +274,7 @@ final class _SplitBodyRegion extends w.StatelessWidget {
   final GithubDashboardUiState uiState;
   final w.ScrollController detailScrollController;
   final w.ScrollController queueScrollController;
-  final w.GitDiffController diffController;
-  final List<w.DiffCommentLineHighlight> diffCommentHighlights;
-  final tui.Cmd? Function(w.DiffCommentAnchor anchor)
-  onDiffCommentAnchorSelected;
+  final GithubDiffReviewSession diffReviewSession;
   final tui.Cmd? Function(int index) onDiffFileSelected;
   final tui.Cmd? Function(int index) onDetailTabChanged;
   final tui.Cmd? Function(GithubOverviewFilter filter) onOverviewFilterChanged;
@@ -334,9 +314,7 @@ final class _SplitBodyRegion extends w.StatelessWidget {
               dashboard: dashboard,
               uiState: uiState,
               controller: detailScrollController,
-              diffController: diffController,
-              diffCommentHighlights: diffCommentHighlights,
-              onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+              diffReviewSession: diffReviewSession,
               onDiffFileSelected: onDiffFileSelected,
               onDetailTabChanged: onDetailTabChanged,
               height: height,
@@ -406,9 +384,7 @@ final class _DetailRegion extends w.StatelessWidget {
     required this.dashboard,
     required this.uiState,
     required this.controller,
-    required this.diffController,
-    required this.diffCommentHighlights,
-    required this.onDiffCommentAnchorSelected,
+    required this.diffReviewSession,
     required this.onDiffFileSelected,
     required this.onDetailTabChanged,
     required this.height,
@@ -421,10 +397,7 @@ final class _DetailRegion extends w.StatelessWidget {
   final GithubDashboardData dashboard;
   final GithubDashboardUiState uiState;
   final w.ScrollController controller;
-  final w.GitDiffController diffController;
-  final List<w.DiffCommentLineHighlight> diffCommentHighlights;
-  final tui.Cmd? Function(w.DiffCommentAnchor anchor)
-  onDiffCommentAnchorSelected;
+  final GithubDiffReviewSession diffReviewSession;
   final tui.Cmd? Function(int index) onDiffFileSelected;
   final tui.Cmd? Function(int index) onDetailTabChanged;
   final int height;
@@ -462,9 +435,7 @@ final class _DetailRegion extends w.StatelessWidget {
           diffError: detail.diffError,
           diffReviewComments: detail.diffReviewComments,
           diffViewMode: uiState.diffViewMode,
-          diffController: diffController,
-          diffCommentHighlights: diffCommentHighlights,
-          onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+          diffReviewSession: diffReviewSession,
           onDiffFileSelected: onDiffFileSelected,
           mergeInfoItem: null,
           mergeInfo: null,
