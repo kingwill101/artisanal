@@ -14,6 +14,8 @@
 
 ### Fixed
 
+- Keep implicit `TextField` and `TextArea` focus IDs stable across parent
+  rebuilds, preserving autofocus and keyboard input in newly opened modals.
 - Preserve terminal graphics escape sequences when clipping rich diff-review
   cards. Avatar payloads no longer become visible text or consume neighboring
   author text and diff output.

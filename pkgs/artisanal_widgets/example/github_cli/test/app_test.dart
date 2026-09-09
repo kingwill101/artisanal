@@ -559,7 +559,7 @@ void main() {
     },
   );
 
-  test('ctrl+o switches repositories from a GitHub URL', skip: true, () async {
+  test('ctrl+o switches repositories from a GitHub URL', () async {
     final tester = WidgetTester(screenWidth: 110, screenHeight: 32);
     addTearDown(() => tester.dispose());
     final client = _RecordingGithubClient();
