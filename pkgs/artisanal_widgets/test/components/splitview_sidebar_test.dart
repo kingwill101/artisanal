@@ -224,6 +224,67 @@ void main() {
     });
   });
 
+  group('ResizableSplitView', () {
+    test('dragging the separator resizes horizontal panes', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 8);
+      addTearDown(tester.dispose);
+      int? extent;
+
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          height: 8,
+          child: ResizableSplitView(
+            initialFirstExtent: 10,
+            minFirstExtent: 6,
+            minSecondExtent: 10,
+            separator: Text('|'),
+            onChanged: (value) => extent = value,
+            first: Text('Left'),
+            second: Text('Right'),
+          ),
+        ),
+      );
+
+      final before = tester.locateText('Right');
+      final handle = tester.locateText('|');
+      expect(before, isNotNull);
+      expect(handle, isNotNull);
+
+      tester.drag(handle!.x, handle.y, handle.x + 5, handle.y);
+
+      final after = tester.locateText('Right');
+      expect(after, isNotNull);
+      expect(after!.x, greaterThan(before!.x));
+      expect(extent, 15);
+    });
+
+    test('clamps the first pane to preserve the second pane minimum', () async {
+      final tester = WidgetTester(screenWidth: 30, screenHeight: 8);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Container(
+          width: 30,
+          height: 8,
+          child: ResizableSplitView(
+            initialFirstExtent: 10,
+            minFirstExtent: 6,
+            minSecondExtent: 12,
+            separator: Text('|'),
+            first: Text('Left'),
+            second: Text('Right'),
+          ),
+        ),
+      );
+
+      final handle = tester.locateText('|')!;
+      tester.drag(handle.x, handle.y, handle.x + 40, handle.y);
+
+      expect(tester.locateText('Right')!.x, 18);
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // SidebarSide enum
   // ---------------------------------------------------------------------------

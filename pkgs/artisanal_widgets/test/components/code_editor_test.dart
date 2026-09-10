@@ -41,7 +41,7 @@ void main() {
 
       expect(tester.view, contains('main.dart'));
       expect(tester.view, contains('Preview · dart'));
-      expect(tester.view, contains('void main()'));
+      expect(tester.locateText('void main()'), isNotNull);
       expect(tester.view, contains('ctrl+f'));
       expect(tester.view, contains('ctrl+g'));
       expect(tester.view, contains('ctrl+a'));
@@ -72,6 +72,37 @@ void main() {
       expect(tester.view, contains('ctrl+s'));
       expect(tester.view, contains('ctrl+z'));
     });
+
+    test(
+      'renders syntax decoration foreground colors in the editable view',
+      () async {
+        final tester = WidgetTester(screenWidth: 80, screenHeight: 12);
+        addTearDown(tester.dispose);
+        final controller = TextAreaController(
+          text: "import 'dart:async';\nfinal answer = 42;",
+        );
+
+        await tester.pumpWidget(
+          CodeEditor(
+            language: 'dart',
+            controller: controller,
+            height: 6,
+            showChrome: false,
+            showHelpBar: false,
+            showPreview: false,
+            syntaxTheme: ChromaTheme(
+              keyword: Style().foreground(const AnsiColor(13)),
+              literalString: Style().foreground(const AnsiColor(10)),
+              literalNumber: Style().foreground(const AnsiColor(11)),
+            ),
+          ),
+        );
+
+        expect(tester.view, contains('\x1b[38;5;13m'));
+        expect(tester.view, contains('\x1b[38;5;10m'));
+        expect(tester.view, contains('\x1b[38;5;11m'));
+      },
+    );
 
     test(
       'keeps syntax decorations while a higher-priority search layer comes and goes',
@@ -110,22 +141,18 @@ void main() {
           isEmpty,
         );
 
-        controller.setDecorationLayer(
-          textSearchDecorationLayerKey,
-          const [
-            TextDecorationRange(
-              startOffset: 0,
-              endOffset: 4,
-              styleKey: textSearchMatchDecorationKey,
-            ),
-            TextDecorationRange(
-              startOffset: 29,
-              endOffset: 33,
-              styleKey: textSearchMatchDecorationKey,
-            ),
-          ],
-          priority: textSearchDecorationLayerPriority,
-        );
+        controller.setDecorationLayer(textSearchDecorationLayerKey, const [
+          TextDecorationRange(
+            startOffset: 0,
+            endOffset: 4,
+            styleKey: textSearchMatchDecorationKey,
+          ),
+          TextDecorationRange(
+            startOffset: 29,
+            endOffset: 33,
+            styleKey: textSearchMatchDecorationKey,
+          ),
+        ], priority: textSearchDecorationLayerPriority);
 
         expect(
           controller.decorationsForLayer(textSyntaxDecorationLayerKey),
@@ -541,7 +568,7 @@ void main() {
       controller.text = 'final count = 1;';
       tester.pump();
 
-      expect(tester.view, contains('final count = 1;'));
+      expect(tester.locateText('final count = 1;'), isNotNull);
     });
 
     test('ctrl+s saves through the embedded editor', () async {

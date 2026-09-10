@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added a model-backed interactive `TreeView.model` surface for Artisanal's
+  shared `TreeModel`, including focus-aware keyboard navigation, pointer
+  expansion and activation, custom row builders, bounded scrolling, and
+  scrollbars. The original `TreeView(nodes: ...)` API remains compatible.
+- Added `ResizableSplitView`, a reusable horizontal or vertical split with a
+  pointer-draggable separator and minimum pane extents.
+
+### Changed
+
+- Added `showChrome` to `TextEditor` and `CodeEditor` so workbenches that
+  already provide tabs and status bars can use an unboxed editor surface.
+
 ## 0.4.1
 
 ### Added

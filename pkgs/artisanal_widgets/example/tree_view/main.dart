@@ -1,8 +1,8 @@
 // TreeView Showcase
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
-// Demonstrates TreeView with hierarchical data, icons, nested children,
-// and a file-system-like tree structure.
+// Demonstrates the compatibility TreeView node API with interactive
+// expansion, keyboard navigation, icons, and a file-system-like structure.
 //
 // Run with: dart run example/tree_view/main.dart
 
@@ -41,12 +41,17 @@ class _TreeViewShowcaseState extends w.State<TreeViewShowcase> {
         gap: 1,
         children: [
           w.Text('TreeView Showcase', style: theme.titleLarge),
-          w.Text('q: quit', style: label),
+          w.Text(
+            'arrows/hjkl: navigate  space: expand  enter: activate  q: quit',
+            style: label,
+          ),
           w.Divider(width: 60),
 
           // -- File system tree --
           w.Text('Project Structure', style: theme.titleMedium),
           w.TreeView(
+            autofocus: true,
+            showExpandIndicators: true,
             nodes: [
               w.TreeViewNode(
                 label: 'artisanal',

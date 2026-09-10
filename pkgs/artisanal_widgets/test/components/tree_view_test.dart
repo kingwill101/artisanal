@@ -1,3 +1,6 @@
+import 'package:artisanal/bubbles.dart' as bubbles;
+import 'package:artisanal/terminal.dart' show KeyType;
+import 'package:artisanal/tui.dart' show MouseAction, MouseButton, MouseMsg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
@@ -308,6 +311,128 @@ void main() {
     test('respects key', () {
       final t = TreeView(key: ValueKey('tree-key'), nodes: []);
       expect(t.id, equals('tree-key'));
+    });
+
+    test('model constructor toggles branches from pointer input', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      final model = bubbles.TreeModel<String>(
+        items: [
+          bubbles.TreeItem(
+            id: 'lib',
+            label: 'lib',
+            value: 'lib',
+            children: [
+              bubbles.TreeItem(
+                id: 'lib/main.dart',
+                label: 'main.dart',
+                value: 'lib/main.dart',
+              ),
+            ],
+          ),
+        ],
+      );
+      bool? expanded;
+
+      await tester.pumpWidget(
+        TreeView<String>.model(
+          model: model,
+          onToggle: (item, value) {
+            expanded = value;
+            return null;
+          },
+        ),
+      );
+
+      final location = tester.locateText('lib');
+      expect(location, isNotNull);
+      tester.tapAt(location!.x, location.y);
+
+      expect(model.isExpanded('lib'), isFalse);
+      expect(expanded, isFalse);
+      expect(tester.find.text('main.dart'), isFalse);
+    });
+
+    test('model constructor activates leaves from pointer input', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      final model = bubbles.TreeModel<String>(
+        items: [
+          bubbles.TreeItem(
+            id: 'README.md',
+            label: 'README.md',
+            value: 'readme',
+          ),
+        ],
+      );
+      String? activated;
+
+      await tester.pumpWidget(
+        TreeView<String>.model(
+          model: model,
+          onActivated: (item) {
+            activated = item.value;
+            return null;
+          },
+        ),
+      );
+      final location = tester.locateText('README.md');
+      expect(location, isNotNull);
+      tester.tapAt(location!.x, location.y);
+
+      expect(activated, 'readme');
+    });
+
+    test('focused model tree delegates keyboard navigation', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      final model = bubbles.TreeModel<String>(
+        items: [
+          bubbles.TreeItem(id: 'one', label: 'one', value: 'one'),
+          bubbles.TreeItem(id: 'two', label: 'two', value: 'two'),
+        ],
+      );
+      String? selected;
+
+      await tester.pumpWidget(
+        TreeView<String>.model(
+          model: model,
+          autofocus: true,
+          onSelected: (item) {
+            selected = item.value;
+            return null;
+          },
+        ),
+      );
+      tester.sendSpecialKey(KeyType.down);
+
+      expect(model.selectedItem?.id, 'two');
+      expect(selected, 'two');
+    });
+
+    test('constrained model tree exposes shared scroll state', () async {
+      final tester = WidgetTester(screenHeight: 8);
+      addTearDown(() => tester.dispose());
+      final model = bubbles.TreeModel<int>(
+        items: [
+          for (var index = 0; index < 12; index++)
+            bubbles.TreeItem(id: '$index', label: 'item $index', value: index),
+        ],
+      );
+
+      await tester.pumpWidget(TreeView<int>.model(model: model, height: 4));
+      final location = tester.locateText('item 1');
+      expect(location, isNotNull);
+      tester.sendMsg(
+        MouseMsg(
+          action: MouseAction.wheel,
+          button: MouseButton.wheelDown,
+          x: location!.x,
+          y: location.y,
+        ),
+      );
+
+      expect(model.offset, greaterThan(0));
     });
   });
 }

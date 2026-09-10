@@ -66,6 +66,25 @@ void main() {
       expect(tester.view, contains('ctrl+z'));
     });
 
+    test('can omit chrome when embedded in an editor workbench', () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 20);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        TextEditor(
+          title: 'Hidden title',
+          controller: TextAreaController(text: 'visible contents'),
+          height: 6,
+          showChrome: false,
+          showHelpBar: false,
+        ),
+      );
+
+      expect(Layout.stripAnsi(tester.view), contains('visible contents'));
+      expect(tester.view, isNot(contains('Hidden title')));
+      expect(tester.view, isNot(contains('chars')));
+    });
+
     test('header stats update as the controller changes', () async {
       final tester = WidgetTester(screenWidth: 96, screenHeight: 24);
       addTearDown(() => tester.dispose());
