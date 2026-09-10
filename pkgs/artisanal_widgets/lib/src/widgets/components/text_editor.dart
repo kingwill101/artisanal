@@ -86,6 +86,7 @@ class TextEditor extends StatefulWidget {
     this.showHelpBar = true,
     this.helpExpanded = false,
     this.showChrome = true,
+    this.showDiagnosticBanner = true,
     this.headerTrailing,
     this.footer,
     this.onChanged,
@@ -161,6 +162,12 @@ class TextEditor extends StatefulWidget {
   /// Disable this when embedding the editor in an application that already
   /// provides tabs, status information, and pane boundaries.
   final bool showChrome;
+
+  /// Whether to render the active diagnostic's compact message banner.
+  ///
+  /// Applications that compose their own inline diagnostic presentation can
+  /// disable this independently from [showChrome].
+  final bool showDiagnosticBanner;
 
   /// Optional trailing widget in the header row.
   final Widget? headerTrailing;
@@ -1295,7 +1302,10 @@ class _TextEditorState extends State<TextEditor> {
             )
           : textArea,
     );
-    final headerBandChildren = <Widget>[header, ?diagnosticBanner];
+    final headerBandChildren = <Widget>[
+      header,
+      if (widget.showDiagnosticBanner) ?diagnosticBanner,
+    ];
 
     final children = <Widget>[
       if (widget.showChrome)
@@ -1308,6 +1318,7 @@ class _TextEditorState extends State<TextEditor> {
             children: headerBandChildren,
           ),
         ),
+      if (!widget.showChrome && widget.showDiagnosticBanner) ?diagnosticBanner,
       editorBody,
     ];
 

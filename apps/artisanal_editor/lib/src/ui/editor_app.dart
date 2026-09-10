@@ -77,6 +77,16 @@ final class _DirtyCloseResolved extends runtime.Msg {
   final _DirtyCloseAction? action;
 }
 
+final class _DirtyQuitResolved extends runtime.Msg {
+  const _DirtyQuitResolved(this.confirmed);
+
+  final bool? confirmed;
+}
+
+final class _QuitAfterSave extends runtime.Msg {
+  const _QuitAfterSave();
+}
+
 final class _EditorFailure extends runtime.Msg {
   _EditorFailure(this.error);
 
@@ -193,6 +203,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
   EditorLanguageHover? _hover;
   _InlineDiagnostic? _inlineDiagnostic;
   EditorBuffer? _closingDirtyBuffer;
+  bool _quitConfirmationOpen = false;
   bool _paletteOpen = false;
   bool _explorerVisible = true;
   bool _panelVisible = false;
@@ -234,7 +245,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
   @override
   void dispose() {
     for (final pty in List<PseudoTerminal>.of(_ownedTerminals)) {
-      _terminatePty(pty);
+      unawaited(_stopPty(pty));
     }
     _ownedTerminals.clear();
     _terminals.clear();
@@ -248,8 +259,8 @@ class _EditorScreenState extends w.State<EditorScreen> {
 
   @override
   runtime.Cmd? handleIntercept(runtime.Msg message) {
-    if (message is runtime.InterruptMsg) return _shutdownAndQuit();
-    if (_closingDirtyBuffer != null) return null;
+    if (_closingDirtyBuffer != null || _quitConfirmationOpen) return null;
+    if (message is runtime.InterruptMsg) return _requestQuit();
     if (message is! runtime.KeyMsg) return null;
     if (_paletteOpen) return null;
 
@@ -259,12 +270,12 @@ class _EditorScreenState extends w.State<EditorScreen> {
       if (_isControlCharacter(key, '`')) return _toggleTerminal();
       return null;
     }
-    if (_isControlCharacter(key, 'c')) return _shutdownAndQuit();
+    if (_isControlCharacter(key, 'c')) return _requestQuit();
     if (_inlineDiagnostic != null) {
       setState(() => _inlineDiagnostic = null);
       if (key.type == KeyType.escape) return runtime.Cmd.none();
     }
-    if (_isControlCharacter(key, 'q')) return _shutdownAndQuit();
+    if (_isControlCharacter(key, 'q')) return _requestQuit();
     if (_isControlCharacter(key, 'p')) {
       setState(() {
         _hover = null;
@@ -382,9 +393,25 @@ class _EditorScreenState extends w.State<EditorScreen> {
             setState(() => _activity = 'Kept ${buffer.file.name} open');
             _focus.requestFocus('editor');
         }
+      case _DirtyQuitResolved(:final confirmed):
+        setState(() => _quitConfirmationOpen = false);
+        if (confirmed != true) {
+          setState(() => _activity = 'Quit cancelled');
+          _focus.requestFocus('editor');
+          return runtime.Cmd.none();
+        }
+        setState(() => _activity = 'Saving modified buffers…');
+        return runtime.Cmd.perform(
+          _saveDirtyBuffersForQuit,
+          onSuccess: (_) => const _QuitAfterSave(),
+          onError: (error, _) => _EditorFailure(error),
+        );
+      case _QuitAfterSave():
+        return _shutdownAndQuit();
       case _EditorFailure(:final error):
         setState(() {
           _closingDirtyBuffer = null;
+          _quitConfirmationOpen = false;
           _activity = 'Error: $error';
         });
       case _WorkspaceChanged(:final event):
@@ -543,7 +570,6 @@ class _EditorScreenState extends w.State<EditorScreen> {
       const w.CommandPaletteItem(
         id: 'view.problems',
         label: 'Show Problems Panel',
-        shortcut: 'Ctrl+J',
         group: 'View',
         tags: ['diagnostics', 'errors', 'warnings'],
         payload: _PaletteAction.problemsPanel,
@@ -740,6 +766,11 @@ class _EditorScreenState extends w.State<EditorScreen> {
     return runtime.Cmd.perform(
       () async {
         await _workspace.save(buffer);
+        if (buffer.isDirty) {
+          throw StateError(
+            '${buffer.file.name} changed while saving; it remains open.',
+          );
+        }
         return buffer;
       },
       onSuccess: _SavedAndClosed.new,
@@ -879,7 +910,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
       _trackPty(pty);
       final replacement = _EditorTerminalSession(id: terminal.id, pty: pty);
       final index = _terminals.indexOf(terminal);
-      _terminatePty(terminal.pty);
+      unawaited(_stopPty(terminal.pty));
       setState(() {
         _terminals[index] = replacement;
         _terminalFailure = null;
@@ -900,7 +931,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
     if (terminal == null) return _hidePanel();
 
     final closedIndex = _terminals.indexOf(terminal);
-    _terminatePty(terminal.pty);
+    unawaited(_stopPty(terminal.pty));
     setState(() {
       _terminals.removeAt(closedIndex);
       _terminalFailure = null;
@@ -917,11 +948,47 @@ class _EditorScreenState extends w.State<EditorScreen> {
     return runtime.Cmd.none();
   }
 
+  runtime.Cmd _requestQuit() {
+    final dirtyCount = _workspace.openBuffers
+        .where((buffer) => buffer.isDirty)
+        .length;
+    if (dirtyCount == 0) return _shutdownAndQuit();
+
+    setState(() {
+      _quitConfirmationOpen = true;
+      _activity = '$dirtyCount modified buffer${dirtyCount == 1 ? "" : "s"}';
+    });
+    final decision = w.DialogConfirm.show(
+      context,
+      title: 'Save changes before quitting?',
+      message:
+          '$dirtyCount modified buffer${dirtyCount == 1 ? "" : "s"} '
+          'will remain open if saving does not complete.',
+      confirmLabel: 'Save all and quit',
+      cancelLabel: 'Keep editing',
+    );
+    return runtime.Cmd.perform(
+      () => decision,
+      onSuccess: _DirtyQuitResolved.new,
+      onError: (error, _) => _EditorFailure(error),
+    );
+  }
+
+  Future<void> _saveDirtyBuffersForQuit() async {
+    final dirtyBuffers = _workspace.openBuffers
+        .where((buffer) => buffer.isDirty)
+        .toList(growable: false);
+    for (final buffer in dirtyBuffers) {
+      await _workspace.save(buffer);
+    }
+    if (_workspace.openBuffers.any((buffer) => buffer.isDirty)) {
+      throw StateError('A buffer changed while saving; quit was cancelled.');
+    }
+  }
+
   runtime.Cmd _shutdownAndQuit() {
     final terminals = List<PseudoTerminal>.of(_ownedTerminals);
-    for (final pty in terminals) {
-      _terminatePty(pty);
-    }
+    final exits = [for (final pty in terminals) _stopPty(pty)];
     setState(() {
       _terminals.clear();
       _panelVisible = false;
@@ -930,10 +997,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
     if (terminals.isEmpty) return runtime.Cmd.quit();
 
     return runtime.Cmd.perform(
-      () => Future.wait([
-        for (final pty in terminals)
-          pty.exitCode.timeout(const Duration(seconds: 2), onTimeout: () => -1),
-      ]),
+      () => Future.wait(exits),
       onSuccess: (_) => const runtime.QuitMsg(),
       onError: (_, _) => const runtime.QuitMsg(),
     );
@@ -1401,6 +1465,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
               showPreview: false,
               showHelpBar: false,
               showChrome: false,
+              showDiagnosticBanner: false,
               softWrap: false,
               showSaveStatus: false,
               onChanged: (_) => setState(() {}),
@@ -1853,7 +1918,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
             'Unable to start the workspace shell.',
             style: theme.bodyMedium.copy().foreground(theme.error),
           ),
-          if (_terminalFailure case final error)
+          if (_terminalFailure case final error?)
             w.Text(
               '$error',
               style: theme.bodySmall,
@@ -2379,11 +2444,20 @@ PseudoTerminal _startWorkspaceTerminal(String workingDirectory) {
   );
 }
 
-void _terminatePty(PseudoTerminal pty) {
-  if (Platform.isWindows) {
-    pty.kill();
-  } else {
-    pty.kill(ProcessSignal.sigkill);
+Future<int> _stopPty(PseudoTerminal pty) async {
+  pty.kill();
+  try {
+    return await pty.exitCode.timeout(const Duration(milliseconds: 500));
+  } on TimeoutException {
+    if (Platform.isWindows) {
+      pty.kill();
+    } else {
+      pty.kill(ProcessSignal.sigkill);
+    }
+    return pty.exitCode.timeout(
+      const Duration(milliseconds: 1500),
+      onTimeout: () => -1,
+    );
   }
 }
 

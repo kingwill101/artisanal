@@ -3,6 +3,8 @@ import 'package:artisanal/editor_core.dart' show EditorCommandIds;
 /// Editing modes owned by the Artisanal Editor application.
 enum ModalEditingMode { normal, insert, visual, visualLine, operatorPending }
 
+const _maximumCommandCount = 9999;
+
 /// One command invocation emitted by [ModalEditingController].
 final class ModalCommandInvocation {
   const ModalCommandInvocation(this.commandId);
@@ -82,9 +84,19 @@ final class ModalEditingController {
     }
 
     if (chord == 'ctrl+z') {
+      _reset(
+        mode: _mode == ModalEditingMode.insert
+            ? ModalEditingMode.insert
+            : ModalEditingMode.normal,
+      );
       return _commands(EditorCommandIds.undo);
     }
     if (chord == 'ctrl+r') {
+      _reset(
+        mode: _mode == ModalEditingMode.insert
+            ? ModalEditingMode.insert
+            : ModalEditingMode.normal,
+      );
       return _commands(EditorCommandIds.redo);
     }
     if (_mode == ModalEditingMode.insert) return _result(false);
@@ -212,7 +224,10 @@ final class ModalEditingController {
     if (_acceptCount(chord)) return _result(true);
 
     final activeOperator = _operator;
-    final repeat = _operatorCount * _takeCount();
+    final repeat = (_operatorCount * _takeCount()).clamp(
+      1,
+      _maximumCommandCount,
+    );
     final commandId = switch (chord) {
       'd' when activeOperator == 'd' => EditorCommandIds.deleteLine,
       'c' when activeOperator == 'c' => EditorCommandIds.deleteLine,
@@ -257,7 +272,7 @@ final class ModalEditingController {
     if (chord.length != 1) return false;
     final digit = int.tryParse(chord);
     if (digit == null || (digit == 0 && _count == 0)) return false;
-    _count = (_count * 10) + digit;
+    _count = ((_count * 10) + digit).clamp(0, _maximumCommandCount);
     return true;
   }
 
@@ -274,10 +289,11 @@ final class ModalEditingController {
       chord.startsWith('super+');
 
   ModalEditingResult _commands(String commandId, {int repeat = 1}) {
+    final boundedRepeat = repeat.clamp(1, _maximumCommandCount);
     return _result(
       true,
       commands: [
-        for (var index = 0; index < repeat; index++)
+        for (var index = 0; index < boundedRepeat; index++)
           ModalCommandInvocation(commandId),
       ],
     );

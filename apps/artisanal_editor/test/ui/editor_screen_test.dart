@@ -363,14 +363,11 @@ void main() {
     );
 
     tester.sendSpecialKey(KeyType.escape);
-    for (
-      var attempt = 0;
-      attempt < 100 && tester.view.contains('UNSAVED CHANGES');
-      attempt++
-    ) {
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-      tester.pump();
-    }
+    await _waitFor(
+      () => !tester.view.contains('UNSAVED CHANGES'),
+      tester: tester,
+      description: 'dirty close dialog to dismiss',
+    );
     expect(workspace.openBuffers, [same(first)]);
     expect(tester.view, isNot(contains('UNSAVED CHANGES')));
 
@@ -379,14 +376,11 @@ void main() {
     );
     expect(tester.view, contains('UNSAVED CHANGES'));
     tester.sendSpecialKey(KeyType.enter);
-    for (
-      var attempt = 0;
-      attempt < 100 && workspace.openBuffers.isNotEmpty;
-      attempt++
-    ) {
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-    }
-    tester.pump();
+    await _waitFor(
+      () => workspace.openBuffers.isEmpty,
+      tester: tester,
+      description: 'saved buffer to close',
+    );
 
     expect(workspace.openBuffers, isEmpty);
     expect(await firstFile.readAsString(), contains('// changed'));
@@ -419,17 +413,77 @@ void main() {
     );
     tester.sendSpecialKey(KeyType.down);
     tester.sendSpecialKey(KeyType.enter);
-    for (
-      var attempt = 0;
-      attempt < 20 && workspace.openBuffers.isNotEmpty;
-      attempt++
-    ) {
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-      tester.pump();
-    }
+    await _waitFor(
+      () => workspace.openBuffers.isEmpty,
+      tester: tester,
+      description: 'discarded buffer to close',
+    );
 
     expect(workspace.openBuffers, isEmpty);
     expect(await file.readAsString(), original);
+  });
+
+  test('quit saves dirty buffers before terminating every PTY', () async {
+    final sandbox = await Directory.systemTemp.createTemp('editor-quit-');
+    addTearDown(() async => sandbox.delete(recursive: true));
+    final file = File(p.join(sandbox.path, 'main.dart'));
+    await file.writeAsString('void main() {}\n');
+    const repository = EditorFileRepository();
+    final files = await repository.discover(sandbox.path);
+    final workspace = EditorWorkspace(
+      root: sandbox.path,
+      files: files,
+      repository: repository,
+    );
+    final buffer = await workspace.open(files.single);
+    buffer.controller.insertText('// retained\n');
+    final terminals = <_FakePseudoTerminal>[];
+
+    final tester = WidgetTester(screenWidth: 100, screenHeight: 24);
+    addTearDown(tester.dispose);
+    await tester.pumpWidget(
+      Navigator(
+        home: EditorScreen(
+          workspace: workspace,
+          terminalStarter: (_) {
+            final terminal = _FakePseudoTerminal();
+            terminals.add(terminal);
+            return terminal;
+          },
+        ),
+      ),
+    );
+    tester.sendMsg(
+      const runtime.KeyMsg(Key(KeyType.runes, runes: [0x60], ctrl: true)),
+    );
+    tester.tap(tester.find.byKeyLocation(const ValueKey('new-terminal')));
+    tester.sendMsg(
+      const runtime.KeyMsg(Key(KeyType.runes, runes: [0x60], ctrl: true)),
+    );
+
+    tester.sendMsg(
+      const runtime.KeyMsg(Key(KeyType.runes, runes: [0x71], ctrl: true)),
+    );
+    expect(tester.view, contains('Save changes before quitting?'));
+    expect(terminals.every((terminal) => !terminal.killed), isTrue);
+    tester.sendSpecialKey(KeyType.escape);
+    await _waitFor(
+      () => !tester.view.contains('Save changes before quitting?'),
+      tester: tester,
+      description: 'quit confirmation to dismiss',
+    );
+    expect(terminals.every((terminal) => !terminal.killed), isTrue);
+
+    tester.sendMsg(const runtime.InterruptMsg());
+    expect(tester.view, contains('Save changes before quitting?'));
+    tester.sendSpecialKey(KeyType.enter);
+    await _waitFor(
+      () => terminals.every((terminal) => terminal.killed),
+      tester: tester,
+      description: 'owned terminals to stop',
+    );
+
+    expect(await file.readAsString(), contains('// retained'));
   });
 
   test('Ctrl+Space uses the language service in Artisanal popup', () async {
@@ -451,14 +505,11 @@ void main() {
     addTearDown(tester.dispose);
     await tester.pumpWidget(EditorScreen(workspace: workspace));
     tester.sendMsg(const runtime.KeyMsg(Key(KeyType.space, ctrl: true)));
-    for (
-      var attempt = 0;
-      attempt < 20 && !buffer.controller.model.completionVisible;
-      attempt++
-    ) {
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-    }
-    tester.pump();
+    await _waitFor(
+      () => buffer.controller.model.completionVisible,
+      tester: tester,
+      description: 'completion popup to become visible',
+    );
 
     expect(buffer.controller.model.completionVisible, isTrue);
     expect(tester.view, contains('uniqueCompletion'));
@@ -495,6 +546,21 @@ void main() {
     tester.sendSpecialKey(KeyType.escape);
     expect(tester.view, isNot(contains('Fake')));
   });
+}
+
+Future<void> _waitFor(
+  bool Function() condition, {
+  required WidgetTester tester,
+  required String description,
+}) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 2));
+  while (!condition()) {
+    if (DateTime.now().isAfter(deadline)) {
+      fail('Timed out waiting for $description.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    tester.pump();
+  }
 }
 
 final class _FakePseudoTerminal implements PseudoTerminal {

@@ -114,6 +114,42 @@ void main() {
       expect(tree.horizontalOffset, lessThan(1000));
     });
 
+    test('large movement clamps to the last selectable row', () {
+      tree
+        ..height = 20
+        ..select('lib/src/main.dart')
+        ..update(const KeyMsg(Key(KeyType.pageDown)));
+
+      expect(tree.selectedItem?.id, 'README.md');
+
+      tree.update(const KeyMsg(Key(KeyType.pageUp)));
+      expect(tree.selectedItem?.id, 'lib');
+    });
+
+    test('horizontal panning preserves emoji and wide characters', () {
+      final unicodeTree = TreeModel<String>(
+        items: [
+          TreeItem(
+            id: 'unicode',
+            label: '你好.dart',
+            value: 'unicode',
+            icon: '📁',
+          ),
+        ],
+        styles: TreeStyles(cursor: '', leafIndicator: ''),
+      );
+
+      unicodeTree.setHorizontalOffset(1);
+      var rendered = Style.stripAnsi(unicodeTree.view());
+      expect(rendered, startsWith('📁'));
+      expect(rendered, isNot(contains('\uFFFD')));
+
+      unicodeTree.setHorizontalOffset(4);
+      rendered = Style.stripAnsi(unicodeTree.view());
+      expect(rendered, startsWith('你'));
+      expect(rendered, isNot(contains('\uFFFD')));
+    });
+
     test('replacement preserves expansion and selection by stable ID', () {
       tree
         ..collapse('lib/src')

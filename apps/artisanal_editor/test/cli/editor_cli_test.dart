@@ -87,4 +87,31 @@ void main() {
     expect(request, isNotNull);
     expect(request!.enableLsp, isFalse);
   });
+
+  test('reports editor startup validation as a usage error', () async {
+    await expectLater(
+      runArtisanalEditor(
+        const [],
+        workingDirectory: sandbox.path,
+        launcher: (_) async {
+          throw const EditorLaunchException('No supported source files found.');
+        },
+      ),
+      completes,
+    );
+  });
+
+  test('empty workspace fails with an editor launch error', () async {
+    await expectLater(
+      launchEditor(
+        EditorLaunchRequest(
+          workspace: sandbox.path,
+          paths: const [],
+          includeHidden: false,
+          enableLsp: false,
+        ),
+      ),
+      throwsA(isA<EditorLaunchException>()),
+    );
+  });
 }

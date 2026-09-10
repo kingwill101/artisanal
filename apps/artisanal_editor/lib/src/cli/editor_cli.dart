@@ -11,6 +11,16 @@ import '../workspace/editor_workspace.dart';
 
 typedef EditorLauncher = Future<void> Function(EditorLaunchRequest request);
 
+/// A startup problem that should be presented as a command usage error.
+final class EditorLaunchException implements Exception {
+  const EditorLaunchException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Immutable startup request produced by Artisanal's command runner.
 final class EditorLaunchRequest {
   const EditorLaunchRequest({
@@ -121,14 +131,18 @@ final class _EditCommand extends Command<void> {
       }
     }
 
-    await _launcher(
-      EditorLaunchRequest(
-        workspace: p.canonicalize(workspace),
-        paths: [for (final path in positionalPaths) p.canonicalize(path)],
-        includeHidden: option('hidden') as bool,
-        enableLsp: option('lsp') as bool,
-      ),
-    );
+    try {
+      await _launcher(
+        EditorLaunchRequest(
+          workspace: p.canonicalize(workspace),
+          paths: [for (final path in positionalPaths) p.canonicalize(path)],
+          includeHidden: option('hidden') as bool,
+          enableLsp: option('lsp') as bool,
+        ),
+      );
+    } on EditorLaunchException catch (error) {
+      usageException(error.message);
+    }
   }
 
   String _inferWorkspace(List<String> paths) {
@@ -153,7 +167,7 @@ Future<void> launchEditor(EditorLaunchRequest request) async {
   final files = byPath.values.toList()
     ..sort((left, right) => left.relativePath.compareTo(right.relativePath));
   if (files.isEmpty) {
-    throw StateError(
+    throw EditorLaunchException(
       'No supported source files found in ${request.workspace}.',
     );
   }

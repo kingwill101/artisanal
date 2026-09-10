@@ -1118,6 +1118,35 @@ void main() {
       expect(controller.selectionBase, equals((line: 0, column: 0)));
     });
 
+    test('unchromed editor keeps its diagnostic banner by default', () async {
+      final tester = WidgetTester(screenWidth: 72, screenHeight: 16);
+      addTearDown(tester.dispose);
+      final controller = TextAreaController(text: 'TODO');
+      controller.setDiagnosticsFromPositions(const [
+        TextPositionDiagnosticRange(
+          startLine: 0,
+          startColumn: 0,
+          endLine: 0,
+          endColumn: 4,
+          severity: TextDiagnosticSeverity.warning,
+          message: 'Resolve this marker.',
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        TextEditor(
+          controller: controller,
+          height: 4,
+          autofocus: true,
+          showChrome: false,
+          showHelpBar: false,
+        ),
+      );
+      tester.sendSpecialKey(terminal_keys.KeyType.f8);
+
+      expect(tester.view, contains('Resolve this marker.'));
+    });
+
     test(
       'clicking a diagnostic gutter marker selects that diagnostic',
       () async {

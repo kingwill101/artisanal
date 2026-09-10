@@ -327,19 +327,44 @@ final class VirtualTerminal {
   }
 
   void _handleCsi(String body, String command) {
-    if (command == 'u' && body.startsWith('>')) {
-      _keyboardFlagStack.add(keyboardEnhancementFlags);
-      keyboardEnhancementFlags = int.tryParse(body.substring(1)) ?? 0;
-      return;
-    }
-    if (command == 'u' && body.startsWith('<')) {
-      final count = int.tryParse(body.substring(1)) ?? 1;
-      for (var index = 0; index < count; index++) {
-        keyboardEnhancementFlags = _keyboardFlagStack.isEmpty
-            ? 0
-            : _keyboardFlagStack.removeLast();
+    if (command == 'u') {
+      if (body.startsWith('>')) {
+        final params = _keyboardParams(body.substring(1));
+        if (_keyboardFlagStack.length == 64) {
+          _keyboardFlagStack.removeAt(0);
+        }
+        _keyboardFlagStack.add(keyboardEnhancementFlags);
+        _applyKeyboardFlags(
+          params.firstOrNull ?? 0,
+          params.length > 1 ? params[1] : 1,
+        );
+        return;
       }
-      return;
+      if (body.startsWith('=')) {
+        final params = _keyboardParams(body.substring(1));
+        _applyKeyboardFlags(
+          params.firstOrNull ?? 0,
+          params.length > 1 ? params[1] : 1,
+        );
+        return;
+      }
+      if (body.startsWith('<')) {
+        final params = _keyboardParams(body.substring(1));
+        final count = params.firstOrNull ?? 1;
+        for (var index = 0; index < count; index++) {
+          keyboardEnhancementFlags = _keyboardFlagStack.isEmpty
+              ? 0
+              : _keyboardFlagStack.removeLast();
+        }
+        return;
+      }
+      if (body == '?') {
+        _pendingResponses.write(
+          '\x1b[?$keyboardEnhancementFlags'
+          'u',
+        );
+        return;
+      }
     }
 
     final private = body.startsWith('?');
@@ -409,6 +434,19 @@ final class VirtualTerminal {
       case 'c':
         _pendingResponses.write('\x1b[?1;2c');
     }
+  }
+
+  List<int> _keyboardParams(String value) {
+    if (value.isEmpty) return const [];
+    return value.split(';').map((part) => int.tryParse(part) ?? 0).toList();
+  }
+
+  void _applyKeyboardFlags(int flags, int mode) {
+    keyboardEnhancementFlags = switch (mode) {
+      2 => keyboardEnhancementFlags | flags,
+      3 => keyboardEnhancementFlags & ~flags,
+      _ => flags,
+    };
   }
 
   void _setAlternateScreen(bool enabled) {

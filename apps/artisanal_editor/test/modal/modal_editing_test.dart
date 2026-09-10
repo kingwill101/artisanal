@@ -87,5 +87,36 @@ void main() {
       expect(undo.commands.single.commandId, EditorCommandIds.undo);
       expect(modal.mode, ModalEditingMode.insert);
     });
+
+    test('undo clears an operator-pending sequence', () {
+      final modal = ModalEditingController()..handle('d');
+
+      final undo = modal.handle('ctrl+z');
+      final motion = modal.handle('w');
+
+      expect(undo.commands.single.commandId, EditorCommandIds.undo);
+      expect(modal.mode, ModalEditingMode.normal);
+      expect(
+        motion.commands.single.commandId,
+        EditorCommandIds.cursorWordRight,
+      );
+    });
+
+    test('bounds command expansion for arbitrarily large counts', () {
+      final modal = ModalEditingController();
+      for (final digit in '99999999999999999999'.split('')) {
+        modal.handle(digit);
+      }
+
+      final result = modal.handle('j');
+
+      expect(result.commands, hasLength(9999));
+      expect(
+        result.commands.every(
+          (command) => command.commandId == EditorCommandIds.cursorDown,
+        ),
+        isTrue,
+      );
+    });
   });
 }

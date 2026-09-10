@@ -1,6 +1,7 @@
 import 'package:artisanal/bubbles.dart' as bubbles;
 import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/tui.dart' show MouseAction, MouseButton, MouseMsg;
+import 'package:artisanal/tui.dart'
+    show Cmd, Msg, MouseAction, MouseButton, MouseMsg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
@@ -410,6 +411,97 @@ void main() {
       expect(selected, 'two');
     });
 
+    test('model activation preserves model and callback commands', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+      final model = bubbles.TreeModel<String>(
+        items: [bubbles.TreeItem(id: 'one', label: 'one', value: 'one')],
+      );
+      var modelActivations = 0;
+      var callbackActivations = 0;
+
+      await tester.pumpWidget(
+        _TreeActivationHost(
+          onModelActivation: () => modelActivations++,
+          child: TreeView<String>.model(
+            model: model,
+            autofocus: true,
+            onActivated: (_) => Cmd(() async {
+              callbackActivations++;
+              return null;
+            }),
+          ),
+        ),
+      );
+      tester.sendSpecialKey(KeyType.enter);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(modelActivations, 1);
+      expect(callbackActivations, 1);
+    });
+
+    test('replaces an externally owned model on rebuild', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+      final first = bubbles.TreeModel<String>(
+        items: [bubbles.TreeItem(id: 'first', label: 'first', value: 'first')],
+      );
+      final second = bubbles.TreeModel<String>(
+        items: [
+          bubbles.TreeItem(id: 'second', label: 'second', value: 'second'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _ModelReplacementHost(first: first, second: second),
+      );
+      expect(tester.view, contains('first'));
+      tester.sendMsg(const _ReplaceTreeModelMsg());
+
+      expect(tester.view, contains('second'));
+      expect(tester.view, isNot(contains('first')));
+    });
+
+    test('compatibility rebuild preserves collapsed branches', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(_CompatibilityRebuildHost());
+      tester.tapAt(tester.locateText('lib')!.x, tester.locateText('lib')!.y);
+      expect(tester.view, isNot(contains('main.dart')));
+      tester.sendMsg(const _RebuildCompatibilityTreeMsg());
+
+      expect(tester.view, isNot(contains('main.dart')));
+    });
+
+    test('horizontal panning preserves emoji and wide labels', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+      final model = bubbles.TreeModel<String>(
+        items: [
+          bubbles.TreeItem(
+            id: 'unicode',
+            label: '你好.dart',
+            value: 'unicode',
+            icon: '📁',
+          ),
+        ],
+      )..setHorizontalOffset(1);
+
+      await tester.pumpWidget(
+        TreeView<String>.model(model: model, showExpandIndicators: false),
+      );
+      expect(tester.view, contains('📁'));
+      expect(tester.view, isNot(contains('\uFFFD')));
+
+      model.setHorizontalOffset(4);
+      await tester.pumpWidget(
+        TreeView<String>.model(model: model, showExpandIndicators: false),
+      );
+      expect(tester.view, contains('你'));
+      expect(tester.view, isNot(contains('\uFFFD')));
+    });
+
     test('constrained model tree exposes shared scroll state', () async {
       final tester = WidgetTester(screenHeight: 8);
       addTearDown(() => tester.dispose());
@@ -435,4 +527,98 @@ void main() {
       expect(model.offset, greaterThan(0));
     });
   });
+}
+
+final class _TreeActivationHost extends StatefulWidget {
+  _TreeActivationHost({required this.child, required this.onModelActivation});
+
+  final Widget child;
+  final void Function() onModelActivation;
+
+  @override
+  State<_TreeActivationHost> createState() => _TreeActivationHostState();
+}
+
+final class _TreeActivationHostState extends State<_TreeActivationHost> {
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is bubbles.TreeItemActivatedMsg<String>) {
+      widget.onModelActivation();
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+final class _ReplaceTreeModelMsg extends Msg {
+  const _ReplaceTreeModelMsg();
+}
+
+final class _ModelReplacementHost extends StatefulWidget {
+  _ModelReplacementHost({required this.first, required this.second});
+
+  final bubbles.TreeModel<String> first;
+  final bubbles.TreeModel<String> second;
+
+  @override
+  State<_ModelReplacementHost> createState() => _ModelReplacementHostState();
+}
+
+final class _ModelReplacementHostState extends State<_ModelReplacementHost> {
+  late bubbles.TreeModel<String> _model = widget.first;
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is _ReplaceTreeModelMsg) {
+      setState(() => _model = widget.second);
+      return Cmd.none();
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => TreeView<String>.model(model: _model);
+}
+
+final class _RebuildCompatibilityTreeMsg extends Msg {
+  const _RebuildCompatibilityTreeMsg();
+}
+
+final class _CompatibilityRebuildHost extends StatefulWidget {
+  @override
+  State<_CompatibilityRebuildHost> createState() =>
+      _CompatibilityRebuildHostState();
+}
+
+final class _CompatibilityRebuildHostState
+    extends State<_CompatibilityRebuildHost> {
+  int _generation = 0;
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is _RebuildCompatibilityTreeMsg) {
+      setState(() => _generation++);
+      return Cmd.none();
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TreeView<String>(
+      key: const ValueKey('compatibility-tree'),
+      nodes: [
+        TreeViewNode(
+          id: 'lib',
+          label: 'lib',
+          value: 'lib:$_generation',
+          children: [
+            TreeViewNode(id: 'main', label: 'main.dart', value: 'main.dart'),
+          ],
+        ),
+      ],
+    );
+  }
 }

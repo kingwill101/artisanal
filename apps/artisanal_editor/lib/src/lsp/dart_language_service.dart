@@ -244,7 +244,9 @@ final class DartLanguageService implements EditorLanguageService {
   Future<LspClient> _ensureClient() {
     final client = _client;
     if (client != null) return Future.value(client);
-    return _startingClient ??= _startClient();
+    return _startingClient ??= _startClient().whenComplete(() {
+      _startingClient = null;
+    });
   }
 
   Future<LspClient> _startClient() async {

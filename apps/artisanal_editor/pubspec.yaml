@@ -8,9 +8,9 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  artisanal: ^0.6.1
-  artisanal_pty: ^0.1.0
-  artisanal_widgets: ^0.4.1
+  artisanal: ^0.6.2
+  artisanal_pty: ^0.1.1
+  artisanal_widgets: ^0.4.2
   path: ^1.9.1
   pro_lsp: ^0.3.0
   pty2: ^0.5.4

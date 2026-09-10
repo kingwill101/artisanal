@@ -116,7 +116,7 @@ void main() {
 
   test('tracks Kitty keyboard enhancement flags as a stack', () {
     final terminal = VirtualTerminal();
-    terminal.writeText('\x1b[>13u');
+    terminal.writeText('\x1b[>13;1u');
 
     expect(terminal.keyboardEnhancementFlags, 13);
     expect(
@@ -136,6 +136,34 @@ void main() {
 
     terminal.writeText('\x1b[<1u');
     expect(terminal.keyboardEnhancementFlags, 0);
+
+    terminal.writeText('\x1b[=1;1u\x1b[?u');
+    expect(terminal.keyboardEnhancementFlags, 1);
+    expect(terminal.takePendingResponses(), '\x1b[?1u');
+    expect(
+      TerminalInputEncoder.encode(
+        const Key(KeyType.runes, runes: [0x69], ctrl: true),
+        keyboardEnhancementFlags: terminal.keyboardEnhancementFlags,
+      ),
+      '\x1b[105;5u',
+    );
+    expect(
+      TerminalInputEncoder.encode(
+        const Key(KeyType.runes, runes: [0x69]),
+        keyboardEnhancementFlags: terminal.keyboardEnhancementFlags,
+      ),
+      'i',
+    );
+
+    terminal.writeText('\x1b[=2;2u');
+    expect(terminal.keyboardEnhancementFlags, 3);
+    expect(
+      TerminalInputEncoder.encode(
+        const Key(KeyType.up, isRepeat: true),
+        keyboardEnhancementFlags: terminal.keyboardEnhancementFlags,
+      ),
+      '\x1b[1;1:2A',
+    );
   });
 
   test('tracks and encodes SGR mouse reporting', () {

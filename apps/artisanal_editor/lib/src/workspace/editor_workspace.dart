@@ -402,12 +402,12 @@ final class EditorWorkspace {
   /// Persists [buffer] without changing the active buffer.
   Future<void> save(EditorBuffer buffer) async {
     if (!_buffers.containsKey(buffer.file.path)) return;
-    await _repository.write(buffer.file, buffer.controller.text);
-    buffer.markSaved();
-    _languageService?.saveDocument(
-      path: buffer.file.path,
-      text: buffer.controller.text,
-    );
+    final savedText = buffer.controller.text;
+    await _repository.write(buffer.file, savedText);
+    if (buffer.controller.text == savedText) {
+      buffer.markSaved();
+    }
+    _languageService?.saveDocument(path: buffer.file.path, text: savedText);
   }
 
   void close(EditorBuffer buffer) {

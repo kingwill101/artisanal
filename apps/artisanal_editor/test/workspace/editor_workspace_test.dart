@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:artisanal/editor_core.dart'
@@ -69,6 +70,31 @@ void main() {
     expect(buffer.isDirty, isFalse);
   });
 
+  test('keeps edits made during a save dirty', () async {
+    final path = p.join(sandbox.path, 'main.dart');
+    await File(path).writeAsString('initial');
+    final repository = _DelayedWriteRepository();
+    final files = await repository.discover(sandbox.path);
+    final workspace = EditorWorkspace(
+      root: sandbox.path,
+      files: files,
+      repository: repository,
+    );
+    addTearDown(workspace.dispose);
+    final buffer = await workspace.open(files.single);
+    buffer.controller.insertText(' first');
+
+    final saving = workspace.save(buffer);
+    await repository.writeStarted.future;
+    buffer.controller.insertText(' second');
+    repository.allowWrite.complete();
+    await saving;
+
+    expect(await File(path).readAsString(), 'initial first');
+    expect(buffer.controller.text, 'initial first second');
+    expect(buffer.isDirty, isTrue);
+  });
+
   test(
     'publishes app-provided syntax decorations on an independent layer',
     () async {
@@ -113,5 +139,17 @@ final class _FakeSyntaxHighlighter implements EditorSyntaxHighlighter {
         styleKey: 'syntax.keyword',
       ),
     ];
+  }
+}
+
+final class _DelayedWriteRepository extends EditorFileRepository {
+  final Completer<void> writeStarted = Completer();
+  final Completer<void> allowWrite = Completer();
+
+  @override
+  Future<void> write(EditorFileEntry file, String contents) async {
+    writeStarted.complete();
+    await allowWrite.future;
+    await super.write(file, contents);
   }
 }

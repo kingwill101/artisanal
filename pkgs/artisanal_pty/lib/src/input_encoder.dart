@@ -3,6 +3,10 @@ import 'package:artisanal/terminal.dart';
 
 import 'virtual_terminal.dart' show TerminalMouseTracking;
 
+const _kittyDisambiguate = 1;
+const _kittyReportEvents = 2;
+const _kittyReportAll = 8;
+
 /// Encodes Artisanal key events as terminal input.
 abstract final class TerminalInputEncoder {
   /// Encodes [key] using conventional xterm sequences.
@@ -11,9 +15,14 @@ abstract final class TerminalInputEncoder {
     bool applicationCursorKeys = false,
     int keyboardEnhancementFlags = 0,
   }) {
-    if (key.isRelease) return '';
-    if (keyboardEnhancementFlags & 8 != 0) {
-      return _encodeKittyKey(key);
+    final reportEvents = keyboardEnhancementFlags & _kittyReportEvents != 0;
+    if (key.isRelease && !reportEvents) return '';
+    final reportAll = keyboardEnhancementFlags & _kittyReportAll != 0;
+    final disambiguate = keyboardEnhancementFlags & _kittyDisambiguate != 0;
+    if (reportAll ||
+        (disambiguate && _requiresKittyDisambiguation(key)) ||
+        (reportEvents && (key.isRepeat || key.isRelease))) {
+      return _encodeKittyKey(key, reportEvents: reportEvents);
     }
     if (key.type == KeyType.runes) {
       var value = String.fromCharCodes(key.runes);
@@ -57,10 +66,19 @@ abstract final class TerminalInputEncoder {
     };
   }
 
-  static String _encodeKittyKey(Key key) {
-    final modifier = _modifier(key);
+  static bool _requiresKittyDisambiguation(Key key) {
+    if (key.type == KeyType.runes) {
+      return key.ctrl || key.alt || key.meta || key.hyper || key.superKey;
+    }
+    return key.type != KeyType.enter &&
+        key.type != KeyType.tab &&
+        key.type != KeyType.backspace;
+  }
+
+  static String _encodeKittyKey(Key key, {required bool reportEvents}) {
+    final modifier = _modifierField(key, reportEvents: reportEvents);
     if (key.type == KeyType.runes && key.runes.isNotEmpty) {
-      return modifier == 1
+      return modifier == '1'
           ? '\x1b[${key.runes.first}u'
           : '\x1b[${key.runes.first};${modifier}u';
     }
@@ -74,7 +92,7 @@ abstract final class TerminalInputEncoder {
       _ => null,
     };
     if (codePoint != null) {
-      return modifier == 1
+      return modifier == '1'
           ? '\x1b[${codePoint}u'
           : '\x1b[$codePoint;${modifier}u';
     }
@@ -93,7 +111,7 @@ abstract final class TerminalInputEncoder {
       _ => null,
     };
     if (finalByte != null) {
-      return modifier == 1 ? '\x1b[$finalByte' : '\x1b[1;$modifier$finalByte';
+      return modifier == '1' ? '\x1b[$finalByte' : '\x1b[1;$modifier$finalByte';
     }
 
     final number = switch (key.type) {
@@ -112,15 +130,23 @@ abstract final class TerminalInputEncoder {
       _ => null,
     };
     if (number == null) return '';
-    return modifier == 1 ? '\x1b[$number~' : '\x1b[$number;$modifier~';
+    return modifier == '1' ? '\x1b[$number~' : '\x1b[$number;$modifier~';
   }
 
-  static int _modifier(Key key) =>
-      1 +
-      (key.shift ? 1 : 0) +
-      (key.alt ? 2 : 0) +
-      (key.ctrl ? 4 : 0) +
-      (key.superKey ? 8 : 0);
+  static String _modifierField(Key key, {required bool reportEvents}) {
+    final modifier =
+        1 +
+        (key.shift ? 1 : 0) +
+        (key.alt ? 2 : 0) +
+        (key.ctrl ? 4 : 0) +
+        (key.superKey ? 8 : 0) +
+        (key.hyper ? 16 : 0) +
+        (key.meta ? 32 : 0);
+    if (!reportEvents || (!key.isRepeat && !key.isRelease)) {
+      return '$modifier';
+    }
+    return '$modifier:${key.isRelease ? 3 : 2}';
+  }
 
   /// Encodes a pointer event using the mouse protocol requested by the child.
   static String encodeMouse(

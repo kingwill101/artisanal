@@ -429,6 +429,7 @@ final class TreeModel<T> extends ViewComponent {
     final direction = delta.sign;
     var remaining = delta.abs();
     var next = _cursor < 0 ? (direction > 0 ? -1 : projected.length) : _cursor;
+    var lastSelectable = _cursor;
     while (remaining > 0) {
       next += direction;
       while (next >= 0 &&
@@ -437,10 +438,15 @@ final class TreeModel<T> extends ViewComponent {
         next += direction;
       }
       if (next < 0 || next >= projected.length) break;
+      lastSelectable = next;
       remaining--;
     }
-    if (next < 0 || next >= projected.length || next == _cursor) return false;
-    _cursor = next;
+    if (lastSelectable < 0 ||
+        lastSelectable >= projected.length ||
+        lastSelectable == _cursor) {
+      return false;
+    }
+    _cursor = lastSelectable;
     _ensureCursorVisible(projected.length);
     return true;
   }
@@ -539,11 +545,12 @@ final class TreeModel<T> extends ViewComponent {
 
     String renderSegment(String value, [Style? style]) {
       if (value.isEmpty) return '';
-      if (remainingOffset >= value.length) {
-        remainingOffset -= value.length;
+      final width = stringWidth(value);
+      if (remainingOffset >= width) {
+        remainingOffset -= width;
         return '';
       }
-      final visible = value.substring(remainingOffset);
+      final visible = truncateLeftAnsiByCells(value, remainingOffset);
       remainingOffset = 0;
       return style?.render(visible) ?? visible;
     }

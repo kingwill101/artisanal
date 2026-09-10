@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.2
 
 ### Added
 
@@ -18,6 +18,8 @@
 
 - Added `showChrome` to `TextEditor` and `CodeEditor` so workbenches that
   already provide tabs and status bars can use an unboxed editor surface.
+- Added `showDiagnosticBanner` so unchromed editors retain reusable diagnostic
+  feedback by default while application workbenches can provide their own.
 
 ### Fixed
 

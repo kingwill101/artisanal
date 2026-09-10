@@ -1,6 +1,7 @@
 import 'package:artisanal/bubbles.dart' as bubbles;
 import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/style.dart'
+    show Layout, Style, truncateLeftAnsiByCells;
 
 import '_component_foundation.dart';
 import 'scroll_area.dart';
@@ -294,7 +295,7 @@ class _TreeViewState<T> extends State<TreeView<T>> {
     ]);
     final (_, command) = _model.update(message);
     final selectedAfter = _model.selectedItem;
-    final callbackCommands = <runtime.Cmd?>[];
+    final callbackCommands = <runtime.Cmd?>[command];
     if (selectedAfter != null && selectedAfter.id != selectedBefore) {
       callbackCommands.add(widget.onSelected?.call(selectedAfter));
     }
@@ -306,8 +307,6 @@ class _TreeViewState<T> extends State<TreeView<T>> {
     }
     if (isActivation && selectedAfter != null && widget.onActivated != null) {
       callbackCommands.add(widget.onActivated!(selectedAfter));
-    } else {
-      callbackCommands.add(command);
     }
     setState(() {});
     _scrollController.notify();
@@ -402,11 +401,12 @@ class _TreeViewState<T> extends State<TreeView<T>> {
 
     String renderSegment(String value, Style style) {
       if (value.isEmpty) return '';
-      if (remainingOffset >= value.length) {
-        remainingOffset -= value.length;
+      final width = Layout.getWidth(value);
+      if (remainingOffset >= width) {
+        remainingOffset -= width;
         return '';
       }
-      final visible = value.substring(remainingOffset);
+      final visible = truncateLeftAnsiByCells(value, remainingOffset);
       remainingOffset = 0;
       return style.render(visible);
     }
