@@ -271,6 +271,7 @@ final class GithubDashboardActionCoordinator {
             );
             return GithubActionCompletedMsg(
               'Review comment added at ${target.label}.',
+              reviewItem: prompt.item,
             );
           case GithubActionPromptKind.addLabels:
             await client().addLabels(

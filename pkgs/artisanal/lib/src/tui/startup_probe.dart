@@ -121,7 +121,7 @@ final class StartupProbeRunner {
 bool isCriticalStartupProbeMsg(Msg msg) =>
     msg is QuitMsg ||
     msg is SuspendMsg ||
-    msg is ExecProcessMsg ||
+    (msg is ExecProcessMsg && msg.releaseTerminal) ||
     msg is InterruptMsg ||
     (msg is KeyMsg &&
         (msg.key.isCtrlC ||

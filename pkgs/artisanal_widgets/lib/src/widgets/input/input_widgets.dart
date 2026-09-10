@@ -1382,6 +1382,8 @@ class _TextFieldState extends State<TextField> {
   String _lastValue = '';
   FocusController? _focusController;
   FocusController? _localController;
+  // Widget configurations get new IDs on rebuild; focus belongs to this state.
+  late final String _fallbackFocusId = widget.id;
   bool _focused = false;
   bool _mouseSelectionActive = false;
   MouseMsg? _lastHitMouseEvent;
@@ -1492,7 +1494,7 @@ class _TextFieldState extends State<TextField> {
     _syncFocusFromController();
   }
 
-  String get _focusId => widget.focusId ?? widget.id;
+  String get _focusId => widget.focusId ?? _fallbackFocusId;
 
   bool get _isFocused {
     final controller = _focusController;
@@ -1963,6 +1965,8 @@ class _TextAreaState extends State<TextArea> {
   String _lastValue = '';
   FocusController? _focusController;
   FocusController? _localController;
+  // Widget configurations get new IDs on rebuild; focus belongs to this state.
+  late final String _fallbackFocusId = widget.id;
   bool _focused = false;
   bool _mouseSelectionActive = false;
   MouseMsg? _lastHitMouseEvent;
@@ -2050,7 +2054,7 @@ class _TextAreaState extends State<TextArea> {
     _syncFocusFromController();
   }
 
-  String get _focusId => widget.focusId ?? widget.id;
+  String get _focusId => widget.focusId ?? _fallbackFocusId;
 
   bool get _isFocused {
     final controller = _focusController;

@@ -9,10 +9,10 @@ import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:github_cli/src/app/app_io.dart';
+import 'package:github_cli/src/app/messages.dart' as messages;
 import 'package:github_cli/src/app/theme.dart';
 import 'package:github_cli/src/client/fields.dart';
 import 'package:github_cli/src/ui/markdown/body.dart';
-import 'package:github_cli/src/utils/diff_comment_mapper.dart';
 import 'package:image/image.dart' as img;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
@@ -559,7 +559,7 @@ void main() {
     },
   );
 
-  test('ctrl+o switches repositories from a GitHub URL', skip: true, () async {
+  test('ctrl+o switches repositories from a GitHub URL', () async {
     final tester = WidgetTester(screenWidth: 110, screenHeight: 32);
     addTearDown(() => tester.dispose());
     final client = _RecordingGithubClient();
@@ -1141,7 +1141,7 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(tester.view, contains('█'));
   });
 
-  test('v opens review comments with a scrollbar', skip: true, () async {
+  test('v opens review comments with a scrollbar', () async {
     final tester = WidgetTester(screenWidth: 110, screenHeight: 34);
     addTearDown(() => tester.dispose());
     final client = _FakeGithubClient(
@@ -1206,6 +1206,7 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
 
     expect(tester.view, contains('All comments PR #9'));
     expect(tester.view, contains('Add gh tui'));
+    expect(RegExp('checks 1/1').allMatches(tester.view), hasLength(1));
     expect(tester.view, isNot(contains('PULL REQUESTS')));
     expect(client.dashboardLoads, isZero);
     expect(client.pullRequestLoads, 1);
@@ -1246,11 +1247,16 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.path, 'lib/main.dart');
     expect(comment.side, 'RIGHT');
     expect(comment.body, 'Please tighten this line.');
+    await _pumpUntil(
+      tester,
+      () =>
+          tester.view.contains('created-review-1 ·') &&
+          tester.view.contains('Please tighten this line.'),
+    );
   });
 
   test(
-    'inline review comments render between diff lines',
-    skip: true,
+    'single pull request expands inline review comments across layout changes',
     () async {
       final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
       addTearDown(() => tester.dispose());
@@ -1283,128 +1289,43 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
 
       await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
       tester.sendKey('d');
+      await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
+      tester.sendMsg(
+        const messages.GithubDiffReviewCommentsLoadedMsg(
+          [],
+          token: 0,
+          requestId: 0,
+        ),
+      );
+      tester.pump();
+      expect(tester.view, contains('r1 ·'));
+      expect(tester.view, contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'));
       await _pumpUntil(
         tester,
         () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
         timeout: const Duration(seconds: 5),
       );
+      tester.sendKey('s');
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+      );
+      tester.tap(tester.find.textLocation('r1 ·'));
+      tester.pump();
+      expect(tester.view, isNot(contains('INLINE_REVIEW_BODY_SHOULD_APPEAR')));
+      tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.tab)));
+      await _pumpUntil(
+        tester,
+        () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+      );
+      expect(tester.view, contains('Review comments PR #9'));
+      tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.tab, shift: true)));
+      await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
     },
   );
 
-  test('mapReviewCommentsToRenderLines tolerates side/line mismatches', () {
-    final anchors = [
-      const w.DiffCommentAnchor(
-        path: 'lib/main.dart',
-        line: 2,
-        side: w.DiffCommentSide.right,
-        kind: w.DiffCommentKind.addition,
-        renderLine: 5,
-        content: "+  print('new');",
-      ),
-      const w.DiffCommentAnchor(
-        path: 'lib/main.dart',
-        line: 4,
-        side: w.DiffCommentSide.right,
-        kind: w.DiffCommentKind.context,
-        renderLine: 7,
-        content: '  }',
-      ),
-    ];
-
-    // Exact match.
-    final exact = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'a',
-        path: 'lib/main.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(exact[5], hasLength(1));
-
-    // Wrong side but correct line still maps (fallback).
-    final wrongSide = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'b',
-        path: 'lib/main.dart',
-        line: 2,
-        side: 'LEFT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(wrongSide[5], hasLength(1));
-
-    // Off-by-one line maps to nearest anchor.
-    final offByOne = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'c',
-        path: 'lib/main.dart',
-        line: 3,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(offByOne[5], hasLength(1));
-
-    // Unrelated path maps to nothing.
-    final noMatch = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'd',
-        path: 'lib/other.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(noMatch, isEmpty);
-  });
-
-  test('mapReviewCommentsToRenderLines normalizes a/b path prefixes', () {
-    final anchors = const [
-      w.DiffCommentAnchor(
-        path: 'lib/main.dart',
-        line: 2,
-        side: w.DiffCommentSide.right,
-        kind: w.DiffCommentKind.addition,
-        renderLine: 5,
-        content: "+  print('new');",
-      ),
-    ];
-
-    // GitHub reports the diff path with an `a/` / `b/` prefix; previously this
-    // skipped every anchor for the file and fell back to `nearest`, dropping
-    // the comment onto the wrong line (e.g. under a hunk header).
-    final mapped = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'a',
-        path: 'b/lib/main.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(mapped[5], hasLength(1));
-  });
-
   test(
-    'inline review comments render between diff lines',
-    skip: true,
+    'dashboard expands source-anchored comments in both layout modes',
     () async {
       final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
       addTearDown(() => tester.dispose());
@@ -1426,135 +1347,25 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       );
 
       await tester.pumpWidget(
-        GithubPullRequestView(
-          client: client,
-          target: const GithubPullRequestTarget(
-            repository: 'dart-lang/sdk',
-            number: 9,
-          ),
-        ),
+        GithubCliDashboard(client: client, repository: 'dart-lang/sdk'),
       );
 
       await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
       tester.sendKey('d');
+      await _pumpUntil(tester, () => tester.view.contains('r1 ·'));
       await _pumpUntil(
         tester,
         () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
-        timeout: const Duration(seconds: 5),
       );
+      tester.sendKey('s');
+      tester.pump();
+      expect(tester.view, contains('side-by-side'));
+      expect(tester.view, contains('r1 ·'));
+      tester.tap(tester.find.textLocation('r1 ·'));
+      tester.pump();
+      expect(tester.view, isNot(contains('INLINE_REVIEW_BODY_SHOULD_APPEAR')));
     },
   );
-
-  test('mapReviewCommentsToRenderLines tolerates side/line mismatches', () {
-    final anchors = [
-      const w.DiffCommentAnchor(
-        path: 'lib/main.dart',
-        line: 2,
-        side: w.DiffCommentSide.right,
-        kind: w.DiffCommentKind.addition,
-        renderLine: 5,
-        content: "+  print('new');",
-      ),
-      const w.DiffCommentAnchor(
-        path: 'lib/main.dart',
-        line: 4,
-        side: w.DiffCommentSide.right,
-        kind: w.DiffCommentKind.context,
-        renderLine: 7,
-        content: '  }',
-      ),
-    ];
-
-    // Exact match.
-    final exact = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'a',
-        path: 'lib/main.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(exact[5], hasLength(1));
-
-    // Wrong side but correct line still maps (fallback).
-    final wrongSide = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'b',
-        path: 'lib/main.dart',
-        line: 2,
-        side: 'LEFT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(wrongSide[5], hasLength(1));
-
-    // Off-by-one line maps to nearest anchor.
-    final offByOne = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'c',
-        path: 'lib/main.dart',
-        line: 3,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(offByOne[5], hasLength(1));
-
-    // Unrelated path maps to nothing.
-    final noMatch = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'd',
-        path: 'lib/other.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(noMatch, isEmpty);
-  });
-
-  test('mapReviewCommentsToRenderLines normalizes a/b path prefixes', () {
-    final anchors = const [
-      w.DiffCommentAnchor(
-        path: 'lib/main.dart',
-        line: 2,
-        side: w.DiffCommentSide.right,
-        kind: w.DiffCommentKind.addition,
-        renderLine: 5,
-        content: "+  print('new');",
-      ),
-    ];
-
-    // GitHub reports the diff path with an `a/` / `b/` prefix; previously this
-    // skipped every anchor for the file and fell back to `nearest`, dropping
-    // the comment onto the wrong line (e.g. under a hunk header).
-    final mapped = mapReviewCommentsToRenderLines([
-      const GithubPullRequestReviewComment(
-        id: 'a',
-        path: 'b/lib/main.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'x',
-        body: 'b',
-        url: 'u',
-        createdAt: null,
-      ),
-    ], anchors);
-    expect(mapped[5], hasLength(1));
-  });
 
   test(
     'single pull request view adds range review comments from the diff',
@@ -1595,6 +1406,61 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       expect(comment.startSide, 'RIGHT');
     },
   );
+
+  for (final dashboard in [false, true]) {
+    test(
+      '${dashboard ? 'dashboard' : 'single pull request'} scrolls inside a tall inline thread',
+      () async {
+        final tester = WidgetTester(screenWidth: 120, screenHeight: 24);
+        addTearDown(tester.dispose);
+        final client = _FakeGithubClient(
+          _sampleDashboard('dart-lang/sdk'),
+          diff: _longSampleDiff,
+          reviewComments: [
+            GithubPullRequestReviewComment(
+              id: 'tall-thread',
+              path: 'lib/main.dart',
+              line: 1,
+              side: 'RIGHT',
+              author: 'reviewer',
+              body: List.generate(50, (i) => 'TALL_BODY_$i').join('\n\n'),
+              url: '',
+              createdAt: null,
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          dashboard
+              ? GithubCliDashboard(client: client, repository: 'dart-lang/sdk')
+              : GithubPullRequestView(
+                  client: client,
+                  target: const GithubPullRequestTarget(
+                    repository: 'dart-lang/sdk',
+                    number: 9,
+                  ),
+                ),
+        );
+        await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
+        tester.sendKey('d');
+        await _pumpUntil(tester, () => tester.view.contains('tall-thread ·'));
+        await _pumpUntil(tester, () => tester.view.contains('TALL_BODY_0'));
+        final viewport =
+            tester.find.byType<w.DiffReviewViewport>().single.widget
+                as w.DiffReviewViewport;
+        // Start inside the discussion rather than spending the first page on
+        // preceding code; the viewport now uses the actual smaller pane height.
+        viewport.controller.revealThread('tall-thread');
+        tester.pump();
+        tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.pageDown)));
+        tester.pump();
+        expect(tester.view, contains('TALL_BODY_'));
+        expect(tester.view, isNot(contains('TALL_BODY_0')));
+        tester.sendKey('a');
+        tester.pump();
+        expect(tester.view, isNot(contains('Add diff comment')));
+      },
+    );
+  }
 
   test('single pull request diff page keys scroll the full viewport', () async {
     final tester = WidgetTester(screenWidth: 120, screenHeight: 24);
@@ -1680,6 +1546,35 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       expect(client.addedLabels.single.labels, ['bug']);
     },
   );
+
+  test('single PR palette navigation agrees with detail tab order', () async {
+    final tester = WidgetTester(screenWidth: 120, screenHeight: 38);
+    addTearDown(tester.dispose);
+    await tester.pumpWidget(
+      GithubPullRequestView(
+        client: _FakeGithubClient(
+          _sampleDashboard('dart-lang/sdk'),
+          diff: _longSampleDiff,
+        ),
+        target: const GithubPullRequestTarget(
+          repository: 'dart-lang/sdk',
+          number: 9,
+        ),
+      ),
+    );
+    await _pumpUntil(tester, () => tester.view.contains('All comments PR #9'));
+    tester.sendKey('p');
+    tester.typeText('Pull requests tab');
+    tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.enter)));
+    await _pumpUntil(tester, () => tester.view.contains('Files changed PR #9'));
+    tester.sendKey('p');
+    tester.typeText('Actions tab');
+    tester.sendMsg(const tui.KeyMsg(tui.Key(tui.KeyType.enter)));
+    await _pumpUntil(
+      tester,
+      () => tester.view.contains('Review comments PR #9'),
+    );
+  });
 
   test('comment avatars request network images by default', () async {
     expect(githubCliNetworkImagesEnabled, isTrue);
@@ -1922,6 +1817,12 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.path, 'lib/main.dart');
     expect(comment.side, 'RIGHT');
     expect(comment.body, 'Inline note from the terminal.');
+    await _pumpUntil(
+      tester,
+      () =>
+          tester.view.contains('created-review-1 ·') &&
+          tester.view.contains('Inline note from the terminal.'),
+    );
   });
 
   test(
@@ -2041,6 +1942,53 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
       expect(tester.view, contains('enhancement'));
     },
   );
+
+  for (final issues in [false, true]) {
+    test(
+      '${issues ? 'issues' : 'PRs'} wheel scrolling to queue end appends a page without jumping to selection',
+      () async {
+        final tester = WidgetTester(screenWidth: 120, screenHeight: 24);
+        addTearDown(tester.dispose);
+        final client = _LazyPagingGithubClient(pageSize: 10);
+        await tester.pumpWidget(
+          GithubCliDashboard(
+            client: client,
+            repository: 'owner/repo',
+            limit: 10,
+          ),
+        );
+        await _pumpUntil(tester, () => tester.view.contains('#1 Paged PR 1'));
+        final kind = issues ? 'issue' : 'PR';
+        if (issues) {
+          tester.sendKey('2');
+          await _pumpUntil(
+            tester,
+            () => tester.view.contains('#1 Paged issue 1'),
+          );
+        }
+        for (var i = 0; i < 40; i++) {
+          tester.sendMsg(
+            const tui.MouseMsg(
+              action: tui.MouseAction.wheel,
+              button: tui.MouseButton.wheelDown,
+              x: 10,
+              y: 10,
+            ),
+          );
+          tester.pump();
+        }
+        await _pumpUntil(tester, () => tester.view.contains('20/20 loaded'));
+        expect(issues ? client.issuePageCalls : client.pullRequestPageCalls, 2);
+        if (!issues) expect(client.lastPullRequestAfter, 'cursor-1');
+        // The selected item remains in the detail pane, but not the queue.
+        expect(
+          RegExp('#1 Paged $kind 1').allMatches(tester.view),
+          hasLength(1),
+        );
+        expect(tester.view, contains('#10 Paged $kind 10'));
+      },
+    );
+  }
 
   test('initial load is lazy and n pages through large PR lists', () async {
     final tester = WidgetTester(screenWidth: 120, screenHeight: 34);
@@ -2981,7 +2929,21 @@ final class _FakeGithubClient
     required String repository,
     required int number,
   }) async {
-    return reviewComments;
+    return [
+      ...reviewComments,
+      for (final (index, comment) in addedReviewComments.indexed)
+        if (comment.number == number)
+          GithubPullRequestReviewComment(
+            id: 'created-review-${index + 1}',
+            path: comment.path,
+            line: comment.line,
+            side: comment.side,
+            author: 'you',
+            body: comment.body,
+            url: '',
+            createdAt: null,
+          ),
+    ];
   }
 
   @override
@@ -3151,9 +3113,10 @@ final class _FakeGithubClient
 }
 
 final class _LazyPagingGithubClient implements GithubDashboardClient {
-  _LazyPagingGithubClient({this.pullRequestPageGate});
+  _LazyPagingGithubClient({this.pullRequestPageGate, this.pageSize = 1});
 
   final Future<void>? pullRequestPageGate;
+  final int pageSize;
   var dashboardCalls = 0;
   var issuePageCalls = 0;
   var pullRequestPageCalls = 0;
@@ -3192,6 +3155,22 @@ final class _LazyPagingGithubClient implements GithubDashboardClient {
     String? after,
   }) async {
     issuePageCalls++;
+    if (pageSize > 1) {
+      return GithubPage<GithubIssueItem>(
+        items: [
+          for (var i = 1; i <= pageSize; i++)
+            GithubIssueItem.fromJson({
+              'number': (after == null ? 0 : pageSize) + i,
+              'title': 'Paged issue ${(after == null ? 0 : pageSize) + i}',
+              'author': {'login': 'author'},
+              'body': 'Issue body',
+            }),
+        ],
+        totalCount: pageSize * 2,
+        hasNextPage: after == null,
+        endCursor: after == null ? 'cursor-1' : null,
+      );
+    }
     return const GithubPage<GithubIssueItem>(
       items: <GithubIssueItem>[],
       totalCount: 0,
@@ -3210,8 +3189,11 @@ final class _LazyPagingGithubClient implements GithubDashboardClient {
     lastPullRequestAfter = after;
     final firstPage = after == null;
     return GithubPage<GithubPullRequestItem>(
-      items: <GithubPullRequestItem>[_pagedPullRequest(firstPage ? 1 : 2)],
-      totalCount: 2,
+      items: [
+        for (var i = 1; i <= pageSize; i++)
+          _pagedPullRequest((firstPage ? 0 : pageSize) + i),
+      ],
+      totalCount: pageSize * 2,
       hasNextPage: firstPage,
       endCursor: firstPage ? 'cursor-1' : null,
     );

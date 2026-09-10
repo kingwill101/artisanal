@@ -214,8 +214,18 @@ final class GithubHttpClient
       return _loadOwnerDashboard(owner!.trim(), limit: limit);
     }
     final repoJson = ghMap(await _get('/repos/$repository'));
+    final parts = _repositoryParts(ghString(repoJson['full_name']));
+    final counts = ghMap(
+      await _graphql(repositoryCountsQuery, {
+        'owner': parts.owner,
+        'name': parts.name,
+      }),
+    );
     return GithubDashboardData.fromJson(
-      repository: _repoToGhStyle(repoJson),
+      repository: {
+        ..._repoToGhStyle(repoJson),
+        ...ghMap(ghMap(counts['data'])['repository']),
+      },
       issues: const <Object?>[],
       pullRequests: const <Object?>[],
       workflows: const <Object?>[],

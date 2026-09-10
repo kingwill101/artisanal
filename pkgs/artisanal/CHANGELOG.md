@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.1
+
+### Added
+
+- Added `DiffReviewBlocks`, a sparse code/thread display sequence with indexed
+  source-row and thread lookup, and `DiffLayout.anchorsAtRow` for hit testing.
+- Added `DiffReviewModel` and semantic TEA messages for source-key selection,
+  range navigation, side switching, thread expansion, and revision-scoped
+  updates. `DiffReviewDocument` indexes both source sides independently of
+  presentation; thread placement explicitly distinguishes attached, unmapped,
+  and outdated anchors without nearest-line fallback.
+- Added `GitDiffModel.layout`, an immutable `DiffLayout` snapshot with exact
+  source-key lookup. Rendering now emits source anchors in the same pass as
+  terminal rows, and viewport-only updates reuse the snapshot.
+
+### Fixed
+
+- `Cmd.openUrl` now runs the browser launcher without releasing the terminal,
+  keeping the alternate screen, input, and rendering active. `Cmd.exec` also
+  supports `releaseTerminal: false` for non-interactive background helpers.
+- Corrected split-view anchors after context lines that wrap differently in
+  the left and right panels.
+
 ## 0.6.0
 
 ### Added

@@ -55,6 +55,7 @@ export 'fade_modal_barrier.dart';
 export 'debug_overlay.dart';
 export 'debug_console.dart';
 export 'git_diff.dart';
+export 'diff_review_viewport.dart';
 export 'key_hint.dart';
 export 'help_view.dart';
 export 'which_key.dart';

@@ -34,6 +34,8 @@ final class GithubDashboardData {
     this.repositories = const <GithubRepositorySummary>[],
     this.workflows = const <GithubWorkflowItem>[],
     this.workflowRuns = const <GithubWorkflowRunItem>[],
+    this.repositoryIssueCount,
+    this.repositoryPullRequestCount,
   });
 
   final GithubRepositorySummary repository;
@@ -45,9 +47,12 @@ final class GithubDashboardData {
   final List<GithubWorkflowItem> workflows;
   final List<GithubWorkflowRunItem> workflowRuns;
   final DateTime loadedAt;
+  final int? repositoryIssueCount;
+  final int? repositoryPullRequestCount;
 
-  int get openIssueCount => issues.length;
-  int get openPullRequestCount => pullRequests.length;
+  int get openIssueCount => repositoryIssueCount ?? issues.length;
+  int get openPullRequestCount =>
+      repositoryPullRequestCount ?? pullRequests.length;
   int get workflowCount => workflows.length;
   int get workflowRunCount => workflowRuns.length;
   GithubDashboardScope get resolvedScope =>
@@ -74,6 +79,8 @@ final class GithubDashboardData {
       workflows: workflows ?? this.workflows,
       workflowRuns: workflowRuns ?? this.workflowRuns,
       loadedAt: loadedAt ?? this.loadedAt,
+      repositoryIssueCount: repositoryIssueCount,
+      repositoryPullRequestCount: repositoryPullRequestCount,
     );
   }
 
@@ -87,6 +94,14 @@ final class GithubDashboardData {
   }) {
     return GithubDashboardData(
       repository: GithubRepositorySummary.fromJson(ghMap(repository)),
+      repositoryIssueCount:
+          ghMap(ghMap(repository)['issues'])['totalCount'] == null
+          ? null
+          : ghInt(ghMap(ghMap(repository)['issues'])['totalCount']),
+      repositoryPullRequestCount:
+          ghMap(ghMap(repository)['pullRequests'])['totalCount'] == null
+          ? null
+          : ghInt(ghMap(ghMap(repository)['pullRequests'])['totalCount']),
       scope: null,
       overview: const GithubOverviewData(),
       repositories: const <GithubRepositorySummary>[],

@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:io' as io;
-
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -29,9 +26,11 @@ final class GithubDashboardDetailLoader {
   final w.WidgetScrollController detailScrollController;
   final tui.Cmd Function(GithubDashboardLayoutMode mode) setLayoutMode;
   var _diffLoadToken = 0;
+  var _diffReviewRequestId = 0;
 
   bool handlesMessage(tui.Msg msg) {
-    return msg is GithubCommentsLoadedMsg ||
+    return (msg is GithubActionCompletedMsg && msg.reviewItem != null) ||
+        msg is GithubCommentsLoadedMsg ||
         msg is GithubCommentsFailedMsg ||
         msg is GithubCommitsLoadedMsg ||
         msg is GithubCommitsFailedMsg ||
@@ -42,6 +41,7 @@ final class GithubDashboardDetailLoader {
         msg is GithubDiffFinishedMsg ||
         msg is GithubDiffFailedMsg ||
         msg is GithubDiffReviewCommentsLoadedMsg ||
+        msg is GithubDiffReviewCommentsFailedMsg ||
         msg is GithubMergeInfoLoadedMsg ||
         msg is GithubMergeInfoFailedMsg ||
         msg is GithubRepositoryLabelsLoadedMsg ||
@@ -97,8 +97,25 @@ final class GithubDashboardDetailLoader {
       detail.applyDiffError(msg.message);
       return null;
     }
+    if (msg is GithubActionCompletedMsg && msg.reviewItem != null) {
+      final item = detail.diffItem;
+      final submitted = msg.reviewItem!;
+      if (item == null ||
+          item.repository != submitted.repository ||
+          item.number != submitted.number) {
+        return null;
+      }
+      detail.applyActionCompleted(msg.message);
+      return _loadDiffReviewComments();
+    }
     if (msg is GithubDiffReviewCommentsLoadedMsg) {
+      if (!_isCurrentReviewRequest(msg.token, msg.requestId)) return null;
       detail.applyDiffReviewCommentsLoaded(msg.comments);
+      return null;
+    }
+    if (msg is GithubDiffReviewCommentsFailedMsg) {
+      if (!_isCurrentReviewRequest(msg.token, msg.requestId)) return null;
+      detail.applyNotice('Could not refresh inline comments: ${msg.message}');
       return null;
     }
     if (msg is GithubMergeInfoLoadedMsg) {
@@ -149,18 +166,12 @@ final class GithubDashboardDetailLoader {
   }
 
   tui.Cmd _openUrl(String url) {
-    return tui.Cmd(() async {
-      final executable = io.Platform.isMacOS
-          ? 'open'
-          : io.Platform.isWindows
-          ? 'cmd'
-          : 'xdg-open';
-      final args = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
-      unawaited(
-        io.Process.start(executable, args, mode: io.ProcessStartMode.detached),
-      );
-      return const GithubOpenedUrlMsg();
-    });
+    return tui.Cmd.openUrl(
+      url,
+      onComplete: (result) => result.success
+          ? const GithubOpenedUrlMsg()
+          : const GithubActionFailedMsg('Could not open the browser.'),
+    );
   }
 
   tui.Cmd openSelectedDetail() {
@@ -172,23 +183,38 @@ final class GithubDashboardDetailLoader {
     return setLayoutMode(GithubDashboardLayoutMode.focused);
   }
 
+  bool _isCurrentReviewRequest(int token, int requestId) =>
+      token == _diffLoadToken &&
+      requestId == _diffReviewRequestId &&
+      detail.diffItem != null;
+
   tui.Cmd? _loadDiffReviewComments() {
     final item = detail.diffItem;
+    final token = _diffLoadToken;
     final repository = data.repositoryFor(item);
     if (item == null ||
         repository == null ||
         item.target != GithubDisplayTarget.pullRequest) {
       return null;
     }
+    final requestId = ++_diffReviewRequestId;
     return tui.Cmd(() async {
       try {
         final comments = await client().loadPullRequestReviewComments(
           repository: repository,
           number: item.number,
         );
-        return GithubDiffReviewCommentsLoadedMsg(comments);
-      } catch (_) {
-        return null;
+        return GithubDiffReviewCommentsLoadedMsg(
+          comments,
+          token: token,
+          requestId: requestId,
+        );
+      } catch (error) {
+        return GithubDiffReviewCommentsFailedMsg(
+          error.toString(),
+          token: token,
+          requestId: requestId,
+        );
       }
     });
   }

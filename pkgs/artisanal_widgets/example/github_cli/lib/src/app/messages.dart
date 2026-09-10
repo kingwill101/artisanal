@@ -3,6 +3,10 @@ import 'package:artisanal/tui.dart' as tui;
 import '../models/dashboard_data.dart';
 import '../models/display_item.dart';
 
+final class GithubQueueEndReachedMsg extends tui.Msg {
+  const GithubQueueEndReachedMsg();
+}
+
 final class GithubDashboardLoadedMsg extends tui.Msg {
   const GithubDashboardLoadedMsg(this.dashboard);
 
@@ -137,9 +141,27 @@ final class GithubDiffFailedMsg extends tui.Msg {
 }
 
 final class GithubDiffReviewCommentsLoadedMsg extends tui.Msg {
-  const GithubDiffReviewCommentsLoadedMsg(this.comments);
+  const GithubDiffReviewCommentsLoadedMsg(
+    this.comments, {
+    required this.token,
+    required this.requestId,
+  });
 
   final List<GithubPullRequestReviewComment> comments;
+  final int token;
+  final int requestId;
+}
+
+final class GithubDiffReviewCommentsFailedMsg extends tui.Msg {
+  const GithubDiffReviewCommentsFailedMsg(
+    this.message, {
+    required this.token,
+    required this.requestId,
+  });
+
+  final String message;
+  final int token;
+  final int requestId;
 }
 
 final class GithubMergeInfoLoadedMsg extends tui.Msg {
@@ -195,9 +217,10 @@ final class GithubSearchFailedMsg extends tui.Msg {
 }
 
 final class GithubActionCompletedMsg extends tui.Msg {
-  const GithubActionCompletedMsg(this.message);
+  const GithubActionCompletedMsg(this.message, {this.reviewItem});
 
   final String message;
+  final GithubDisplayItem? reviewItem;
 }
 
 final class GithubActionFailedMsg extends tui.Msg {

@@ -1,6 +1,7 @@
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
+import '../../app/diff_review_session.dart';
 import '../../models/display_item.dart';
 
 final class GithubDiffDialog extends w.StatefulWidget {
@@ -24,10 +25,26 @@ final class GithubDiffDialog extends w.StatefulWidget {
 }
 
 final class _GithubDiffDialogState extends w.State<GithubDiffDialog> {
+  final _review = GithubDiffReviewSession();
+  var _viewMode = w.DiffViewMode.unified;
+
   @override
   tui.Cmd? handleIntercept(tui.Msg msg) {
     if (msg is tui.KeyMsg && msg.key.type == tui.KeyType.escape) {
       return widget.onClose();
+    }
+    if (msg is tui.KeyMsg) {
+      if (msg.key.isChar('v') || msg.key.isChar('s')) {
+        setState(() {
+          final modes = w.DiffViewMode.values;
+          _viewMode = modes[(_viewMode.index + 1) % modes.length];
+        });
+        return tui.Cmd.none();
+      }
+      if (msg.key.isChar('j') || msg.key.isChar('k')) {
+        _review.scrollBy(msg.key.isChar('j') ? 1 : -1);
+        return tui.Cmd.none();
+      }
     }
     return null;
   }
@@ -40,6 +57,13 @@ final class _GithubDiffDialogState extends w.State<GithubDiffDialog> {
     final height = size.height.toInt().clamp(20, 60) - 8;
     final hint = theme.bodySmall.copy()..foreground(theme.muted);
     final errorStyle = theme.bodyMedium.copy()..foreground(theme.error);
+    _review.synchronize(
+      item: widget.item,
+      patch: widget.diff,
+      fileIdentity: '',
+      comments: const [],
+      viewMode: _viewMode,
+    );
 
     return w.SizedBox(
       width: width + 4,
@@ -79,11 +103,14 @@ final class _GithubDiffDialogState extends w.State<GithubDiffDialog> {
                 child: w.Text('No diff returned by gh.', style: hint),
               )
             else
-              w.GitDiffViewer(
-                diff: widget.diff,
-                width: width,
-                height: height,
-                wrapLines: true,
+              w.Scrollbar(
+                controller: _review.controller.scrollController,
+                child: w.DiffReviewViewport(
+                  controller: _review.controller,
+                  width: width,
+                  height: height,
+                  threadBuilder: (_, _) => w.SizedBox(),
+                ),
               ),
             w.Text(
               'j/k or pgup/pgdn scroll | v changes diff view | esc close',

@@ -3650,7 +3650,89 @@ void main() {
       final msg = await cmd.execute() as ExecProcessMsg;
       expect(msg.arguments.last, 'https://example.com');
       expect(['open', 'xdg-open', 'cmd'], contains(msg.executable));
+      expect(msg.releaseTerminal, isFalse);
     });
+
+    test(
+      'background process completion does not release the terminal',
+      () async {
+        final model = _CallbackModel(
+          onInit: () => Cmd.exec(
+            io.Platform.resolvedExecutable,
+            ['--version'],
+            releaseTerminal: false,
+            onComplete: (result) {
+              expect(result.success, isTrue);
+              expect(terminal.operations, isNot(contains('disableRawMode')));
+              expect(terminal.operations, isNot(contains('exitAltScreen')));
+              expect(
+                terminal.operations.where((op) => op == 'enableRawMode'),
+                hasLength(1),
+              );
+              return const QuitMsg();
+            },
+          ),
+          onUpdate: (_) => null,
+        );
+        await Program(
+          model,
+          options: const ProgramOptions(altScreen: true, mouse: false),
+          terminal: terminal,
+        ).run();
+      },
+    );
+
+    test(
+      'background helpers keep processing messages and capture output',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'background_helper_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
+        final script = io.File('${tempDir.path}/helper.dart');
+        await script.writeAsString('''
+import 'dart:async';
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 150));
+  print('BACKGROUND_OUTPUT');
+}
+''');
+        var processedWhileRunning = false;
+        final model = _CallbackModel(
+          onInit: () => ParallelCmd([
+            Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              releaseTerminal: false,
+              onComplete: (result) {
+                expect(result.success, isTrue);
+                expect(result.stdout, contains('BACKGROUND_OUTPUT'));
+                expect(
+                  terminal.output.join(),
+                  isNot(contains('BACKGROUND_OUTPUT')),
+                );
+                expect(processedWhileRunning, isTrue);
+                expect(terminal.operations, isNot(contains('exitAltScreen')));
+                return const QuitMsg();
+              },
+            ),
+            Cmd.tick(
+              const Duration(milliseconds: 20),
+              (_) => const CustomMsg('input'),
+            ),
+          ]),
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('input')) processedWhileRunning = true;
+            return null;
+          },
+        );
+        await Program(
+          model,
+          options: const ProgramOptions(altScreen: true, mouse: false),
+          terminal: terminal,
+        ).run();
+      },
+    );
 
     test('ExecProcessMsg releases and restores terminal', () async {
       var execCompleted = false;
@@ -3812,11 +3894,9 @@ Future<void> main() async {
           onUpdate: (msg) {
             if (msg == const CustomMsg('start')) {
               execActive = true;
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) => const CustomMsg('exec-done'),
-              );
+              return Cmd.exec(io.Platform.resolvedExecutable, [
+                script.path,
+              ], onComplete: (_) => const CustomMsg('exec-done'));
             }
 
             if (msg == const CustomMsg('exec-done')) {
@@ -3897,11 +3977,9 @@ Future<void> main() async {
                 const Duration(milliseconds: 60),
                 () => outputCountDuringRelease = terminal.output.length,
               );
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) => const CustomMsg('exec-done'),
-              );
+              return Cmd.exec(io.Platform.resolvedExecutable, [
+                script.path,
+              ], onComplete: (_) => const CustomMsg('exec-done'));
             }
 
             if (msg == const CustomMsg('bump')) {
@@ -3968,11 +4046,9 @@ Future<void> main() async {
                 const Duration(milliseconds: 30),
                 () => program.send(const CustomMsg('title')),
               );
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) => const CustomMsg('exec-done'),
-              );
+              return Cmd.exec(io.Platform.resolvedExecutable, [
+                script.path,
+              ], onComplete: (_) => const CustomMsg('exec-done'));
             }
 
             if (msg == const CustomMsg('title')) {
@@ -4043,11 +4119,9 @@ Future<void> main() async {
                 const Duration(milliseconds: 30),
                 () => program.send(const CustomMsg('modes')),
               );
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) => const CustomMsg('exec-done'),
-              );
+              return Cmd.exec(io.Platform.resolvedExecutable, [
+                script.path,
+              ], onComplete: (_) => const CustomMsg('exec-done'));
             }
 
             if (msg == const CustomMsg('modes')) {
@@ -4312,11 +4386,9 @@ Future<void> main() async {
                 const Duration(milliseconds: 60),
                 () => outputCountDuringRelease = terminal.output.length,
               );
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) => const CustomMsg('exec-done'),
-              );
+              return Cmd.exec(io.Platform.resolvedExecutable, [
+                script.path,
+              ], onComplete: (_) => const CustomMsg('exec-done'));
             }
 
             if (msg == const CustomMsg('exec-done')) {

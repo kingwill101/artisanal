@@ -1,15 +1,15 @@
 import 'package:artisanal/style.dart'
-    show Color, HorizontalAlign, Style, VerticalAlign;
+    show HorizontalAlign, Style, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../../app/compile_time_flags.dart';
+import '../../app/diff_review_session.dart';
 import '../../models/dashboard_data.dart';
 import '../../models/display_item.dart';
 import 'panels.dart';
 import '../label_style.dart';
 import '../../utils/time.dart';
-import '../../utils/diff_comment_mapper.dart';
 import '../markdown/body.dart';
 import '../../utils/text_format.dart';
 
@@ -39,10 +39,7 @@ w.Widget githubDetailPane({
   required String? diffError,
   List<GithubPullRequestReviewComment> diffReviewComments = const [],
   required w.DiffViewMode diffViewMode,
-  w.GitDiffController? diffController,
-  List<w.DiffCommentLineHighlight> diffCommentHighlights =
-      const <w.DiffCommentLineHighlight>[],
-  tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
+  required GithubDiffReviewSession diffReviewSession,
   tui.Cmd? Function(int index)? onDiffFileSelected,
   required GithubDisplayItem? mergeInfoItem,
   required GithubPullRequestMergeInfo? mergeInfo,
@@ -65,6 +62,7 @@ w.Widget githubDetailPane({
   }
   final showingComments = _sameItem(selectedItem, commentsItem);
   final showingCommits = _sameItem(selectedItem, commitsItem);
+  final showingReview = _sameItem(selectedItem, reviewCommentsItem);
   final showingDiff = _sameItem(selectedItem, diffItem);
   final showingMergeInfo = _sameItem(selectedItem, mergeInfoItem);
   final showingRepositoryLabels = _sameItem(selectedItem, repositoryLabelsItem);
@@ -79,6 +77,7 @@ w.Widget githubDetailPane({
         item: selectedItem,
         showingComments: showingComments,
         showingCommits: showingCommits,
+        showingReview: showingReview,
         showingDiff: showingDiff,
         showingRun: showingRun,
         reviewCommentCount: diffReviewComments.length,
@@ -99,11 +98,8 @@ w.Widget githubDetailPane({
           error: diffError,
           diffReviewComments: diffReviewComments,
           viewMode: diffViewMode,
-          diffController: diffController,
-          diffCommentHighlights: diffCommentHighlights,
-          onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+          diffReviewSession: diffReviewSession,
           onDiffFileSelected: onDiffFileSelected,
-          controller: controller,
           height: detailBodyHeight,
           width: width,
         )
@@ -131,6 +127,15 @@ w.Widget githubDetailPane({
           detail: runDetail,
           loading: runDetailLoading,
           error: runDetailError,
+          controller: controller,
+        )
+      else if (showingReview)
+        _inlineReviewComments(
+          theme: theme,
+          item: selectedItem,
+          comments: reviewComments,
+          loading: reviewCommentsLoading,
+          error: reviewCommentsError,
           controller: controller,
         )
       else if (showingCommits)
@@ -167,6 +172,7 @@ w.Widget _detailTabs({
   required GithubDisplayItem item,
   required bool showingComments,
   required bool showingCommits,
+  required bool showingReview,
   required bool showingDiff,
   required bool showingRun,
   required int reviewCommentCount,
@@ -181,6 +187,8 @@ w.Widget _detailTabs({
       w.TabItem(
         'Files changed${_fileCountLabel(item)}${_reviewCountLabel(reviewCommentCount)}',
       ),
+    if (item.target == GithubDisplayTarget.pullRequest)
+      const w.TabItem('Review'),
     if (item.target == GithubDisplayTarget.workflowRun)
       const w.TabItem('Run info'),
   ];
@@ -189,6 +197,7 @@ w.Widget _detailTabs({
   final index = switch (item.target) {
     GithubDisplayTarget.pullRequest when showingCommits => 1,
     GithubDisplayTarget.pullRequest when showingDiff => 2,
+    GithubDisplayTarget.pullRequest when showingReview => 3,
     GithubDisplayTarget.workflowRun => 0,
     _ => 0,
   };
@@ -332,7 +341,6 @@ w.Widget _inlineReviewComments({
   required bool loading,
   required String? error,
   required w.ScrollController controller,
-  int? height,
 }) {
   final content = w.Scrollbar(
     controller: controller,
@@ -345,9 +353,6 @@ w.Widget _inlineReviewComments({
       controller: controller,
     ),
   );
-  if (height != null) {
-    return w.SizedBox(height: height, child: content);
-  }
   return w.Expanded(child: content);
 }
 
@@ -816,11 +821,8 @@ w.Widget _inlineDiff({
   required String? error,
   required List<GithubPullRequestReviewComment> diffReviewComments,
   required w.DiffViewMode viewMode,
-  w.GitDiffController? diffController,
-  required List<w.DiffCommentLineHighlight> diffCommentHighlights,
-  tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
+  required GithubDiffReviewSession diffReviewSession,
   tui.Cmd? Function(int index)? onDiffFileSelected,
-  required w.ScrollController controller,
   required int height,
   required int width,
 }) {
@@ -851,13 +853,6 @@ w.Widget _inlineDiff({
   final rightWidth = diffFiles.isEmpty
       ? targetWidth
       : (targetWidth - _diffFileListWidth(targetWidth) - 2).clamp(40, 180);
-  // Inline comments now render between diff lines, so only show the separate
-  // panel when the selected file is collapsed (inline blocks are suppressed
-  // for collapsed files).
-  final reviewCommentsHeight =
-      diffReviewComments.isNotEmpty && selectedFile?.isCollapsed == true
-      ? (height * 0.35).clamp(8, 30).toInt()
-      : 0;
   return w.Expanded(
     child: w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -879,10 +874,8 @@ w.Widget _inlineDiff({
                   width: rightWidth,
                   height: viewportHeight,
                   viewMode: viewMode,
-                  controller: diffController,
-                  scrollController: controller,
-                  diffCommentHighlights: diffCommentHighlights,
-                  onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+                  reviewSession: diffReviewSession,
+                  item: item,
                   diffReviewComments: diffReviewComments,
                 )
               : w.Row(
@@ -908,29 +901,14 @@ w.Widget _inlineDiff({
                         width: rightWidth,
                         height: viewportHeight,
                         viewMode: viewMode,
-                        controller: diffController,
-                        scrollController: controller,
-                        diffCommentHighlights: diffCommentHighlights,
-                        onDiffCommentAnchorSelected:
-                            onDiffCommentAnchorSelected,
+                        reviewSession: diffReviewSession,
+                        item: item,
                         diffReviewComments: diffReviewComments,
                       ),
                     ),
                   ],
                 ),
         ),
-        if (reviewCommentsHeight > 0) ...[
-          w.Divider(width: width),
-          _inlineReviewComments(
-            theme: theme,
-            item: item,
-            comments: diffReviewComments,
-            loading: false,
-            error: null,
-            controller: controller,
-            height: reviewCommentsHeight,
-          ),
-        ],
       ],
     ),
   );
@@ -1171,134 +1149,52 @@ w.Widget _selectedFileDiff({
   required int width,
   required int height,
   required w.DiffViewMode viewMode,
-  w.GitDiffController? controller,
-  required w.ScrollController scrollController,
-  required List<w.DiffCommentLineHighlight> diffCommentHighlights,
-  tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
+  required GithubDiffReviewSession reviewSession,
+  required GithubDisplayItem item,
   required List<GithubPullRequestReviewComment> diffReviewComments,
 }) {
-  if (diffReviewComments.isEmpty) {
-    return w.GitDiffViewer(
-      diff: diff,
-      width: width,
-      height: height,
-      wrapLines: true,
-      viewMode: selectedFile?.isCollapsed == true
-          ? w.DiffViewMode.unified
-          : viewMode,
-      controller: controller,
-      scrollController: scrollController,
-      handleKeys: false,
-      commentHighlights: selectedFile?.isCollapsed == true
-          ? const <w.DiffCommentLineHighlight>[]
-          : diffCommentHighlights,
-      onCommentAnchorSelected: selectedFile?.isCollapsed == true
-          ? null
-          : onDiffCommentAnchorSelected,
-    );
-  }
-
-  final diffController = controller ?? w.GitDiffController();
-  if (diff.isNotEmpty) {
-    diffController.setDiff(diff);
-  }
-  diffController.setSize(width, height);
-
-  final model = diffController.model;
-  final anchors = model.commentAnchors;
-
-  final commentsByLine = mapReviewCommentsToRenderLines(
-    diffReviewComments,
-    anchors,
-  );
-
-  List<w.DiffCommentLineHighlight> reviewHighlights = [];
-  for (final entry in commentsByLine.entries) {
-    final anchor = anchors.where((a) => a.renderLine == entry.key).firstOrNull;
-    if (anchor != null) {
-      for (final _ in entry.value) {
-        reviewHighlights.add(w.DiffCommentLineHighlight.thread(anchor));
-      }
-    }
-  }
-
-  final combinedHighlights = selectedFile?.isCollapsed == true
-      ? <w.DiffCommentLineHighlight>[]
-      : [...diffCommentHighlights, ...reviewHighlights];
-
-  final commentBlocks = selectedFile?.isCollapsed == true
-      ? const <w.DiffCommentBlock>[]
-      : _buildDiffCommentBlocks(
-          theme: theme,
-          commentsByLine: commentsByLine,
-          width: width,
-        );
-
-  return w.GitDiffViewer(
-    diff: diff,
-    width: width,
-    height: height,
-    wrapLines: true,
+  reviewSession.synchronize(
+    item: item,
+    patch: diff,
+    fileIdentity: selectedFile?.filename ?? '',
+    comments: diffReviewComments,
     viewMode: selectedFile?.isCollapsed == true
         ? w.DiffViewMode.unified
         : viewMode,
-    controller: diffController,
-    scrollController: scrollController,
-    handleKeys: false,
-    commentHighlights: combinedHighlights,
-    commentBlocks: commentBlocks,
-    onCommentAnchorSelected: selectedFile?.isCollapsed == true
-        ? null
-        : onDiffCommentAnchorSelected,
   );
-}
-
-/// Builds rich inline comment blocks (one per diff render-line) from the
-/// review comments mapped to that line. Each block renders the same
-/// [_commentCard] used by the Review tab, so avatar images and markdown are
-/// preserved. [DiffCommentBlock.height] is an estimate of the card's row
-/// height used for scroll metrics and click mapping; the actual height is
-/// measured by the diff viewer's scrollable content.
-List<w.DiffCommentBlock> _buildDiffCommentBlocks({
-  required w.Theme theme,
-  required Map<int, List<GithubPullRequestReviewComment>> commentsByLine,
-  required int width,
-}) {
-  if (commentsByLine.isEmpty) return const [];
-  final blocks = <w.DiffCommentBlock>[];
-  for (final entry in commentsByLine.entries) {
-    final renderLine = entry.key;
-    final comments = entry.value;
-    if (comments.isEmpty) continue;
-
-    final cards = <w.Widget>[];
-    var estRows = 0;
-    for (final comment in comments) {
-      cards.add(_commentCard(theme, _reviewCommentToItem(comment)));
-      estRows += _estimateCommentRows(comment, width, theme);
-    }
-
-    final side = comments.first.side == 'LEFT'
-        ? w.DiffCommentSide.left
-        : w.DiffCommentSide.right;
-    final child = cards.length == 1
-        ? cards.single
-        : w.Column(
-            crossAxisAlignment: w.CrossAxisAlignment.stretch,
-            gap: 1,
-            children: cards,
-          );
-
-    blocks.add(
-      w.DiffCommentBlock(
-        renderLine: renderLine,
-        child: child,
-        height: estRows < 6 ? 6 : estRows,
-        side: side,
+  final unsupported = reviewSession.threads?.unsupportedComments.length ?? 0;
+  return w.Column(
+    crossAxisAlignment: w.CrossAxisAlignment.stretch,
+    children: [
+      if (unsupported > 0)
+        w.Text(
+          '$unsupported comments have no supported anchor; see Review.',
+          style: theme.bodySmall,
+        ),
+      w.Expanded(
+        child: w.Scrollbar(
+          controller: reviewSession.controller.scrollController,
+          child: w.DiffReviewViewport(
+            controller: reviewSession.controller,
+            width: width,
+            height: height - (unsupported > 0 ? 1 : 0),
+            handleKeys: false,
+            threadBuilder: (context, placement) => w.Column(
+              crossAxisAlignment: w.CrossAxisAlignment.stretch,
+              gap: 1,
+              children: [
+                for (final comment
+                    in reviewSession.threads!.bodiesByThreadId[placement
+                        .thread
+                        .id]!)
+                  _commentCard(theme, _reviewCommentToItem(comment)),
+              ],
+            ),
+          ),
+        ),
       ),
-    );
-  }
-  return blocks;
+    ],
+  );
 }
 
 GithubCommentItem _reviewCommentToItem(GithubPullRequestReviewComment c) {
@@ -1309,49 +1205,6 @@ GithubCommentItem _reviewCommentToItem(GithubPullRequestReviewComment c) {
     createdAt: c.createdAt,
     avatarUrl: c.avatarUrl,
   );
-}
-
-int _estimateCommentRows(
-  GithubPullRequestReviewComment comment,
-  int width,
-  w.Theme theme,
-) {
-  final innerW = (width - 4).clamp(1, 240);
-  final markdownRows = _renderMarkdownLines(comment.body, innerW, theme).length;
-  final gallery = githubImageReferences(comment.body).take(3).length;
-  // Card height = frame padding (2) + max(avatar 4, metadata 1 + body + gallery).
-  final body = 1 + markdownRows + gallery;
-  return 2 + (body < 4 ? 4 : body);
-}
-
-/// Renders [body] as markdown and returns the visual rows, mirroring
-/// [GithubMarkdownBody] (segmented, with a 1-row gap between segments).
-List<String> _renderMarkdownLines(String body, int width, w.Theme theme) {
-  final options = githubMarkdownOptions(
-    theme,
-    hasDarkBackground: w.hasDarkBackground,
-  );
-  final segments = githubDisplayMarkdownSegments(body);
-  if (segments.isEmpty) return const [''];
-  final out = <String>[];
-  for (var i = 0; i < segments.length; i++) {
-    final markdown = switch (segments[i]) {
-      GithubMarkdownTextSegment(:final markdown) => markdown,
-      GithubMarkdownDetailsSegment(:final summary) => summary,
-    };
-    final rendered =
-        w.MarkdownText(
-              data: markdown,
-              options: options,
-              softWrap: true,
-              maxWidth: width,
-              textStyle: theme.bodyMedium,
-            ).view()
-            as String;
-    out.addAll(rendered.replaceAll(RegExp(r'\n+$'), '').split('\n'));
-    if (i > 0) out.add('');
-  }
-  return out;
 }
 
 int _diffFileListWidth(int width) {
@@ -1540,10 +1393,11 @@ bool _sameItem(GithubDisplayItem? left, GithubDisplayItem? right) {
 
 w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
   final statusColor = item.hasWarning ? theme.error : theme.success;
-  final statusText = item.target == GithubDisplayTarget.issue
+  final labels = _displayLabels(item);
+  final statusText =
+      item.target == GithubDisplayTarget.issue && labels.isNotEmpty
       ? ''
       : item.status;
-  final labelBadges = _detailLabelBadges(theme, item, statusColor);
   return w.Column(
     crossAxisAlignment: w.CrossAxisAlignment.stretch,
     children: [
@@ -1567,8 +1421,14 @@ w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
         spacing: 1,
         runSpacing: 0,
         children: [
-          ...labelBadges,
-          if (statusText.trim().isNotEmpty && !item.labels.contains(statusText))
+          for (final label in labels.take(4))
+            w.Badge(
+              label.name,
+              background: labelBackgroundColor(label, fallback: theme.warning),
+              foreground: labelForegroundColor(label),
+            ),
+          if (statusText.trim().isNotEmpty &&
+              !labels.take(4).any((label) => label.name == statusText))
             w.Badge(
               statusText,
               background: theme.surface,
@@ -1593,28 +1453,6 @@ w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
       ),
     ],
   );
-}
-
-List<w.Widget> _detailLabelBadges(
-  w.Theme theme,
-  GithubDisplayItem item,
-  Color statusColor,
-) {
-  final labels = _displayLabels(item);
-  if (labels.isNotEmpty) {
-    return <w.Widget>[
-      for (final label in labels.take(4))
-        w.Badge(
-          label.name,
-          background: labelBackgroundColor(label, fallback: theme.warning),
-          foreground: labelForegroundColor(label),
-        ),
-    ];
-  }
-  if (item.status.trim().isEmpty) return const <w.Widget>[];
-  return <w.Widget>[
-    w.Badge(item.status, background: theme.surface, foreground: statusColor),
-  ];
 }
 
 List<GithubRepositoryLabel> _displayLabels(GithubDisplayItem item) {

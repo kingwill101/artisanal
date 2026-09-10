@@ -1641,6 +1641,48 @@ void main() {
   // WidgetScrollController unit tests
   // ---------------------------------------------------------------------------
   group('WidgetScrollController', () {
+    test(
+      'thumb drag defers changing extents and commits the latest on release',
+      () {
+        final ctrl = WidgetScrollController();
+        ctrl.updateMetrics(viewportExtent: 10, contentExtent: 1000);
+        ctrl.jumpTo(500);
+        ctrl.setThumbDragActive(true);
+        for (final extent in [1100, 1200, 100, 80]) {
+          ctrl.updateMetrics(viewportExtent: 10, contentExtent: extent);
+          expect(ctrl.contentExtent, 1000);
+          expect(ctrl.offset, 500);
+        }
+        var notifications = 0;
+        ctrl.addListener(() => notifications++);
+        ctrl.setThumbDragActive(false);
+        expect(ctrl.contentExtent, 80);
+        expect(ctrl.offset, 70);
+        expect(notifications, 1);
+
+        // Ending a drag must not permanently freeze future shrinkage.
+        ctrl.updateMetrics(viewportExtent: 10, contentExtent: 30);
+        expect(ctrl.contentExtent, 30);
+        expect(ctrl.offset, 20);
+      },
+    );
+
+    test(
+      'release notifies extent growth even when the offset is unchanged',
+      () {
+        final ctrl = WidgetScrollController();
+        ctrl.updateMetrics(viewportExtent: 10, contentExtent: 20);
+        ctrl.setThumbDragActive(true);
+        ctrl.updateMetrics(viewportExtent: 10, contentExtent: 40);
+        var notifications = 0;
+        ctrl.addListener(() => notifications++);
+        ctrl.setThumbDragActive(false);
+        expect(ctrl.contentExtent, 40);
+        expect(ctrl.offset, 0);
+        expect(notifications, 1);
+      },
+    );
+
     test('starts at offset 0 with zero extents', () {
       final ctrl = WidgetScrollController();
       expect(ctrl.offset, equals(0));

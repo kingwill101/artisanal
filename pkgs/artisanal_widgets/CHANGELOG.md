@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.1
+
+### Added
+
+- Added `DiffReviewController` and `DiffReviewViewport` over the core TEA review
+  model, with one composed code/comment scroll extent, lazy expanded thread
+  widgets, sparse height indexing, source-anchored selection, and shared
+  split-panel geometry. Measured thread size changes preserve the visible
+  content anchor. The legacy `GitDiffViewer` remains available unchanged.
+- Added `DiffReviewController.firstVisibleSource` for source lookup in composed
+  viewport coordinates without treating comment rows as diff rows.
+
+### Fixed
+
+- Size `DiffReviewViewport` from actual parent layout constraints, keeping
+  wrapping, scroll metrics, and source hit testing aligned in nested panes.
+- Keep implicit `TextField` and `TextArea` focus IDs stable across parent
+  rebuilds, preserving autofocus and keyboard input in newly opened modals.
+- Preserve terminal graphics escape sequences when clipping rich diff-review
+  cards. Avatar payloads no longer become visible text or consume neighboring
+  author text and diff output.
+- Keep scrollbar content geometry stable while dragging, then apply the latest
+  measured extent on release. Growing inline comments no longer trigger a drag
+  assertion, and collapsing comments after release can shrink the scroll extent.
+  Extent-only changes on release now notify listeners even without an offset change.
+
 ## 0.4.0
 
 ### Added
