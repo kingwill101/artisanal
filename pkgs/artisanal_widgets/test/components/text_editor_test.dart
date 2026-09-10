@@ -66,6 +66,25 @@ void main() {
       expect(tester.view, contains('ctrl+z'));
     });
 
+    test('can omit chrome when embedded in an editor workbench', () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 20);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        TextEditor(
+          title: 'Hidden title',
+          controller: TextAreaController(text: 'visible contents'),
+          height: 6,
+          showChrome: false,
+          showHelpBar: false,
+        ),
+      );
+
+      expect(Layout.stripAnsi(tester.view), contains('visible contents'));
+      expect(tester.view, isNot(contains('Hidden title')));
+      expect(tester.view, isNot(contains('chars')));
+    });
+
     test('header stats update as the controller changes', () async {
       final tester = WidgetTester(screenWidth: 96, screenHeight: 24);
       addTearDown(() => tester.dispose());
@@ -1097,6 +1116,35 @@ void main() {
       );
       expect(controller.selectedText, equals('TODO'));
       expect(controller.selectionBase, equals((line: 0, column: 0)));
+    });
+
+    test('unchromed editor keeps its diagnostic banner by default', () async {
+      final tester = WidgetTester(screenWidth: 72, screenHeight: 16);
+      addTearDown(tester.dispose);
+      final controller = TextAreaController(text: 'TODO');
+      controller.setDiagnosticsFromPositions(const [
+        TextPositionDiagnosticRange(
+          startLine: 0,
+          startColumn: 0,
+          endLine: 0,
+          endColumn: 4,
+          severity: TextDiagnosticSeverity.warning,
+          message: 'Resolve this marker.',
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        TextEditor(
+          controller: controller,
+          height: 4,
+          autofocus: true,
+          showChrome: false,
+          showHelpBar: false,
+        ),
+      );
+      tester.sendSpecialKey(terminal_keys.KeyType.f8);
+
+      expect(tester.view, contains('Resolve this marker.'));
     });
 
     test(

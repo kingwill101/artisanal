@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   core_dir: ./pkgs/artisanal
+  editor_dir: ./apps/artisanal_editor
   widgets_dir: ./pkgs/artisanal_widgets
   uv_dir: ./pkgs/ultraviolet
 
@@ -19,6 +20,17 @@ tasks:
   test-core:
     desc: Run tests for artisanal core
     dir: "{{.core_dir}}"
+    cmds:
+      - dart test
+
+  benchmark-core-editor:
+    desc: Measure large-document text-decoration rendering
+    cmds:
+      - dart run pkgs/artisanal/benchmark/textarea_decoration_benchmark.dart {{.CLI_ARGS}}
+
+  test-editor:
+    desc: Run tests for the standalone Artisanal Editor
+    dir: "{{.editor_dir}}"
     cmds:
       - dart test
 
@@ -65,6 +77,11 @@ tasks:
     desc: Run the artisanal_widgets OpenCode example
     cmds:
       - dart run pkgs/artisanal_widgets/example/opencode/main.dart
+
+  run-editor:
+    desc: Open the standalone Artisanal Editor in the current workspace
+    cmds:
+      - dart run artisanal_editor edit --workspace . {{.CLI_ARGS}}
 
   run-uv-layout:
     desc: Run the ultraviolet layout example

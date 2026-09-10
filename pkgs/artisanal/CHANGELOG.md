@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.2
+
+### Added
+
+- Added the reusable interactive `TreeModel`, `TreeItem`, and projected
+  `TreeRow` Bubble primitives with stable-ID expansion/selection state,
+  keyboard and mouse navigation, viewport scrolling, branch connectors, and a
+  standalone string renderer for non-widget TUI applications. Trees also own
+  renderer-independent horizontal panning state with `H`/`L` and shifted-arrow
+  bindings.
+
+### Fixed
+
+- Fixed text decoration foreground styles being overwritten by the editor's
+  base text color during rendering, restoring visible editable syntax
+  highlighting and keeping configured decoration styles immutable.
+- Indexed text-decoration ranges by document offset and line decorations by
+  row, so viewport rendering only examines intersecting decorations instead of
+  scanning every document decoration for every visible line.
+
 ## 0.6.1
 
 ### Added

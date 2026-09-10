@@ -1217,6 +1217,104 @@ void main() {
       });
 
       test(
+        'decoration foreground overrides text without mutating its style',
+        () {
+          final syntaxStyle = Style().foreground(const AnsiColor(13));
+          final textarea = TextAreaModel(
+            prompt: '',
+            showLineNumbers: false,
+            width: 16,
+            height: 2,
+            styles: TextAreaStyles(
+              focused: TextAreaStyleState(
+                text: Style().foreground(const AnsiColor(7)),
+                decorationStyles: <String, Style>{
+                  'syntax.keyword': syntaxStyle,
+                },
+              ),
+              blurred: TextAreaStyleState(
+                text: Style().foreground(const AnsiColor(7)),
+                decorationStyles: <String, Style>{
+                  'syntax.keyword': syntaxStyle,
+                },
+              ),
+              cursor: TextAreaCursorStyle(
+                color: const AnsiColor(7),
+                blink: false,
+              ),
+            ),
+          );
+          textarea.value = 'final value';
+          textarea.setDecorationLayer('syntax', const [
+            TextDecorationRange(
+              startOffset: 0,
+              endOffset: 5,
+              styleKey: 'syntax.keyword',
+            ),
+          ]);
+
+          final firstView = textarea.view() as String;
+          final secondView = textarea.view() as String;
+
+          expect(firstView, contains('\x1b[38;5;13m'));
+          expect(firstView, contains('\x1b[38;5;7m'));
+          expect(secondView, contains('\x1b[38;5;13m'));
+          expect(syntaxStyle.foregroundColor, const AnsiColor(13));
+        },
+      );
+
+      test('indexed decorations preserve multiline ranges and paint order', () {
+        final baseStyle = Style().foreground(const AnsiColor(7));
+        final syntaxStyle = Style().foreground(const AnsiColor(13));
+        final overrideStyle = Style().foreground(const AnsiColor(10));
+        final styleState = TextAreaStyleState(
+          text: baseStyle,
+          decorationStyles: <String, Style>{
+            'syntax': syntaxStyle,
+            'override': overrideStyle,
+          },
+        );
+        final textarea = TextAreaModel(
+          prompt: '',
+          showLineNumbers: false,
+          width: 16,
+          height: 4,
+          styles: TextAreaStyles(
+            focused: styleState,
+            blurred: styleState,
+            cursor: TextAreaCursorStyle(
+              color: const AnsiColor(7),
+              blink: false,
+            ),
+          ),
+        );
+        textarea.value = 'abc\ndef\nghi';
+        textarea
+          ..setDecorationLayer('syntax', const [
+            TextDecorationRange(
+              startOffset: 1,
+              endOffset: 9,
+              styleKey: 'syntax',
+            ),
+          ])
+          ..setDecorationLayer('override', const [
+            TextDecorationRange(
+              startOffset: 5,
+              endOffset: 6,
+              styleKey: 'override',
+            ),
+          ], priority: 1);
+
+        final view = textarea.view() as String;
+
+        expect(view, contains('\x1b[38;5;13mb'));
+        expect(view, contains('\x1b[38;5;13md'));
+        expect(view, contains('\x1b[38;5;10me'));
+        expect(view, contains('\x1b[38;5;13mg'));
+        expect(view, contains('\x1b[38;5;7mh'));
+      });
+
+      test(
         'renders configured whole-line decorations and active-line layer',
         () {
           final decoratedStyles = TextAreaStyles(

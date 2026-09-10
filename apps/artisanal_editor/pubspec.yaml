@@ -1,0 +1,25 @@
+name: artisanal_editor
+description: A modal terminal code editor built entirely with Artisanal.
+version: 0.1.0-dev.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  artisanal: ^0.6.2
+  artisanal_pty: ^0.1.1
+  artisanal_widgets: ^0.4.2
+  path: ^1.9.1
+  pro_lsp: ^0.3.0
+  pty2: ^0.5.4
+  stream_channel: ^2.1.4
+  tree_sitter_language_pack: ^1.16.1
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.28.0
+
+executables:
+  artisanal-editor: artisanal_editor

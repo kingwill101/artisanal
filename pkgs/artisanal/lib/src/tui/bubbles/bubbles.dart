@@ -17,6 +17,7 @@
 /// - [TextAreaModel] - Multi-line text editing
 /// - [TableModel] - Interactive tables
 /// - [ListModel] - Filterable list selection
+/// - [TreeModel] - Expandable hierarchical selection and viewport state
 /// - [TimerModel] - Countdown timer
 /// - [StopwatchModel] - Stopwatch/elapsed time
 /// - [FilePickerModel] - File/directory browser and selection

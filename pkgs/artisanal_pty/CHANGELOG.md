@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.1
+
+- Normalize bare line feeds from raw PTY output so shell output starts at
+  column zero instead of drifting across the terminal.
+- Acknowledge processed PTY chunks to support low-latency, backpressured output
+  streaming when `PseudoTerminal.start(ackProcessed: true)` is used.
+- Consume encoded keys in `TerminalView` so control input is delivered only to
+  the focused terminal.
+- Start the interactive shell example in cooked mode so terminal-generated
+  signals such as `Ctrl+C` and `Ctrl+Z` reach foreground processes.
+- Track DEC application-cursor mode for shell history navigation and answer
+  terminal status/cursor-position reports used by interactive shell tooling.
+- Support alternate-screen buffers, Kitty keyboard enhancement flags, and
+  negotiated SGR/urxvt mouse reporting for embedded interactive TUI programs.
+- Add bounded primary-screen scrollback with wheel navigation and an overlay
+  scrollbar, while forwarding wheel events to alternate-screen applications
+  that negotiate mouse tracking.
+- Add explicit `PseudoTerminalView.width` and `height` overrides for nested
+  layouts whose inherited constraints differ from their visible pane.
+- Preserve terminal focus when switching between local scrollback and
+  child-controlled mouse modes.
+
 ## 0.1.0
 
 ### Added

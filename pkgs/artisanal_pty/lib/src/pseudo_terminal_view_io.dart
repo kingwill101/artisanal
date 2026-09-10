@@ -15,8 +15,11 @@ class PseudoTerminalView extends StatefulWidget {
     this.focusId,
     this.autofocus = true,
     this.quitOnExit = true,
+    this.width,
+    this.height,
     super.key,
-  });
+  }) : assert(width == null || width > 0),
+       assert(height == null || height > 0);
 
   final PseudoTerminal pty;
   final FocusController? focusController;
@@ -25,6 +28,12 @@ class PseudoTerminalView extends StatefulWidget {
 
   /// Whether exiting the child process should quit the widget application.
   final bool quitOnExit;
+
+  /// Explicit PTY width, overriding inherited layout constraints.
+  final int? width;
+
+  /// Explicit PTY height, overriding inherited layout constraints.
+  final int? height;
 
   @override
   State<PseudoTerminalView> createState() => _PseudoTerminalViewState();
@@ -37,6 +46,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   final StreamController<_PtyEvent> _events = StreamController();
   int _width = 0;
   int _height = 0;
+  bool _previousOutputWasCarriageReturn = false;
 
   @override
   void initState() {
@@ -47,6 +57,7 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   void _subscribe() {
     final owner = Object();
     _activeOwner = owner;
+    _previousOutputWasCarriageReturn = false;
     _subscription = widget.pty.out.listen(
       (data) => _addEvent(_PtyOutputEvent(owner, data)),
     );
@@ -72,12 +83,36 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
     ) when identical(event.owner, _activeOwner)) {
       switch (event) {
         case _PtyOutputEvent(:final data):
-          _terminal.writeText(data);
+          try {
+            _terminal.writeText(_normalizeLineFeeds(data));
+            final responses = _terminal.takePendingResponses();
+            if (responses.isNotEmpty) widget.pty.write(responses);
+          } finally {
+            widget.pty.ackProcessed();
+          }
         case _PtyExitEvent():
           if (widget.quitOnExit) return runtime.Cmd.quit();
       }
     }
     return null;
+  }
+
+  String _normalizeLineFeeds(String data) {
+    if (data.isEmpty) return data;
+    if (!data.contains('\n')) {
+      _previousOutputWasCarriageReturn = data.endsWith('\r');
+      return data;
+    }
+
+    final normalized = StringBuffer();
+    for (final codeUnit in data.codeUnits) {
+      if (codeUnit == 0x0a && !_previousOutputWasCarriageReturn) {
+        normalized.writeCharCode(0x0d);
+      }
+      normalized.writeCharCode(codeUnit);
+      _previousOutputWasCarriageReturn = codeUnit == 0x0d;
+    }
+    return normalized.toString();
   }
 
   @override
@@ -109,12 +144,16 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final width = constraints.hasBoundedWidth
-          ? constraints.maxWidth.toInt().clamp(1, 10000).toInt()
-          : 80;
-      final height = constraints.hasBoundedHeight
-          ? constraints.maxHeight.toInt().clamp(1, 10000).toInt()
-          : 24;
+      final width =
+          widget.width ??
+          (constraints.hasBoundedWidth
+              ? constraints.maxWidth.toInt().clamp(1, 10000).toInt()
+              : 80);
+      final height =
+          widget.height ??
+          (constraints.hasBoundedHeight
+              ? constraints.maxHeight.toInt().clamp(1, 10000).toInt()
+              : 24);
       _resize(width, height);
       return TerminalView(
         terminal: _terminal,

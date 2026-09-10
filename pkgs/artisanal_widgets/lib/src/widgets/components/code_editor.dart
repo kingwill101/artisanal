@@ -79,6 +79,8 @@ class CodeEditor extends StatefulWidget {
     this.cursor,
     this.showHelpBar = true,
     this.helpExpanded = false,
+    this.showChrome = true,
+    this.showDiagnosticBanner = true,
     this.headerTrailing,
     this.footer,
     this.onChanged,
@@ -118,6 +120,13 @@ class CodeEditor extends StatefulWidget {
   final CursorModel? cursor;
   final bool showHelpBar;
   final bool helpExpanded;
+
+  /// Whether to render the embedded editor's title band and framed shell.
+  final bool showChrome;
+
+  /// Whether to render the embedded editor's active diagnostic banner.
+  final bool showDiagnosticBanner;
+
   final Widget? headerTrailing;
   final Widget? footer;
   final TextChangedCallback? onChanged;
@@ -606,6 +615,8 @@ class _CodeEditorState extends State<CodeEditor> {
           cursor: widget.cursor,
           showHelpBar: widget.showHelpBar,
           helpExpanded: widget.helpExpanded,
+          showChrome: widget.showChrome,
+          showDiagnosticBanner: widget.showDiagnosticBanner,
           headerTrailing: widget.headerTrailing,
           footer: widget.footer,
           onChanged: widget.onChanged,

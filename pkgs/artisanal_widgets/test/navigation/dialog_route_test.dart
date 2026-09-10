@@ -50,6 +50,34 @@ void main() {
       tester.sendKey('d');
 
       expect(tester.find.text('Hello Dialog'), isTrue);
+      expect(
+        tester.view,
+        contains('Home'),
+        reason: 'the default dialog barrier should remain transparent',
+      );
+    });
+
+    test('NavigatorState.showDialog captures the caller theme', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      final theme = w.Theme.dark();
+
+      await tester.pumpWidget(
+        w.ThemeScope(
+          theme: theme,
+          child: w.Navigator(
+            home: _MemberShowDialogPage(
+              expectedTheme: theme,
+              animationStyle: _zeroAnimation,
+            ),
+          ),
+        ),
+      );
+
+      tester.sendKey('d');
+
+      expect(tester.find.text('captured theme'), isTrue);
+      expect(tester.find.text('missing theme'), isFalse);
     });
 
     test('escape dismisses the dialog', () async {
@@ -197,6 +225,44 @@ void main() {
       expect(dialogResult, isNull);
     });
   });
+}
+
+class _MemberShowDialogPage extends w.StatefulWidget {
+  _MemberShowDialogPage({
+    required this.expectedTheme,
+    required this.animationStyle,
+  });
+
+  final w.Theme expectedTheme;
+  final w.AnimationStyle animationStyle;
+
+  @override
+  w.State<_MemberShowDialogPage> createState() => _MemberShowDialogPageState();
+}
+
+class _MemberShowDialogPageState extends w.State<_MemberShowDialogPage> {
+  @override
+  w.Widget build(w.BuildContext context) => w.Text('Home');
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg &&
+        msg.key.type == KeyType.runes &&
+        String.fromCharCodes(msg.key.runes) == 'd') {
+      w.Navigator.of(context).showDialog<void>(
+        builder: (dialogContext) {
+          final captured = identical(
+            w.ThemeScope.of(dialogContext),
+            widget.expectedTheme,
+          );
+          return w.Text(captured ? 'captured theme' : 'missing theme');
+        },
+        animationStyle: widget.animationStyle,
+      );
+      return tui.Cmd.none();
+    }
+    return null;
+  }
 }
 
 /// A page that shows a dialog when 'd' is pressed.

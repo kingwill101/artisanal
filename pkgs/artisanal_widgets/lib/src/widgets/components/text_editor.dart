@@ -85,6 +85,8 @@ class TextEditor extends StatefulWidget {
     this.cursor,
     this.showHelpBar = true,
     this.helpExpanded = false,
+    this.showChrome = true,
+    this.showDiagnosticBanner = true,
     this.headerTrailing,
     this.footer,
     this.onChanged,
@@ -154,6 +156,18 @@ class TextEditor extends StatefulWidget {
 
   /// Whether to expand the help footer into grouped mode.
   final bool helpExpanded;
+
+  /// Whether to render the title band and framed editor shell.
+  ///
+  /// Disable this when embedding the editor in an application that already
+  /// provides tabs, status information, and pane boundaries.
+  final bool showChrome;
+
+  /// Whether to render the active diagnostic's compact message banner.
+  ///
+  /// Applications that compose their own inline diagnostic presentation can
+  /// disable this independently from [showChrome].
+  final bool showDiagnosticBanner;
 
   /// Optional trailing widget in the header row.
   final Widget? headerTrailing;
@@ -1243,60 +1257,68 @@ class _TextEditorState extends State<TextEditor> {
       ],
     );
 
-    final diagnosticBanner = activeDiagnostic == null
+    final activeDiagnosticSummary = activeDiagnostic == null
         ? null
-        : Text(
-            textDiagnosticSummaryLabel(
-              text: _controller.text,
-              diagnostic: activeDiagnostic,
-            ),
-            style: diagnosticStyle,
-            softWrap: true,
+        : textDiagnosticSummaryLabel(
+            text: _controller.text,
+            diagnostic: activeDiagnostic,
           );
+    final diagnosticBanner = activeDiagnosticSummary == null
+        ? null
+        : Text(activeDiagnosticSummary, style: diagnosticStyle, softWrap: true);
 
+    final textArea = TextArea(
+      controller: bodyController,
+      focusController: _focusController,
+      focusId: _focusId,
+      autofocus: widget.autofocus,
+      enabled: widget.enabled,
+      prompt: widget.prompt,
+      placeholder: widget.placeholder,
+      width: widget.width,
+      height: widget.height,
+      showLineNumbers: widget.showLineNumbers,
+      softWrap: widget.softWrap,
+      useVirtualCursor: widget.useVirtualCursor,
+      keyMap: widget.keyMap,
+      styles: bodyStyles,
+      cursor: widget.cursor,
+      onChanged: widget.onChanged,
+    );
     final editorBody = FocusScope(
       controller: _focusController,
-      child: Frame(
-        background: isEditorActive
-            ? (editorTheme?.bodyBackground ?? theme.background)
-            : (editorTheme?.inactiveBodyBackground ?? theme.background),
-        border: Border.normal,
-        borderColor: isEditorActive
-            ? (editorTheme?.activeBodyBorderColor ?? theme.resolvedOutline)
-            : (editorTheme?.inactiveBodyBorderColor ?? theme.border),
-        padding: const EdgeInsets.symmetric(horizontal: 1),
-        child: TextArea(
-          controller: bodyController,
-          focusController: _focusController,
-          focusId: _focusId,
-          autofocus: widget.autofocus,
-          enabled: widget.enabled,
-          prompt: widget.prompt,
-          placeholder: widget.placeholder,
-          width: widget.width,
-          height: widget.height,
-          showLineNumbers: widget.showLineNumbers,
-          softWrap: widget.softWrap,
-          useVirtualCursor: widget.useVirtualCursor,
-          keyMap: widget.keyMap,
-          styles: bodyStyles,
-          cursor: widget.cursor,
-          onChanged: widget.onChanged,
-        ),
-      ),
+      child: widget.showChrome
+          ? Frame(
+              background: isEditorActive
+                  ? (editorTheme?.bodyBackground ?? theme.background)
+                  : (editorTheme?.inactiveBodyBackground ?? theme.background),
+              border: Border.normal,
+              borderColor: isEditorActive
+                  ? (editorTheme?.activeBodyBorderColor ??
+                        theme.resolvedOutline)
+                  : (editorTheme?.inactiveBodyBorderColor ?? theme.border),
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: textArea,
+            )
+          : textArea,
     );
-    final headerBandChildren = <Widget>[header, ?diagnosticBanner];
+    final headerBandChildren = <Widget>[
+      header,
+      if (widget.showDiagnosticBanner) ?diagnosticBanner,
+    ];
 
     final children = <Widget>[
-      _buildChromeBand(
-        theme,
-        active: isEditorActive,
-        child: Column(
-          gap: 1,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: headerBandChildren,
+      if (widget.showChrome)
+        _buildChromeBand(
+          theme,
+          active: isEditorActive,
+          child: Column(
+            gap: 1,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: headerBandChildren,
+          ),
         ),
-      ),
+      if (!widget.showChrome && widget.showDiagnosticBanner) ?diagnosticBanner,
       editorBody,
     ];
 
@@ -1332,19 +1354,22 @@ class _TextEditorState extends State<TextEditor> {
       );
     }
 
+    final content = Column(
+      gap: widget.showChrome ? 1 : 0,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
     return KeyboardListener(
       onKey: _handleEditorKey,
-      child: Frame(
-        background: shellBackground,
-        border: Border.rounded,
-        borderColor: shellBorderColor,
-        padding: const EdgeInsets.symmetric(horizontal: 1),
-        child: Column(
-          gap: 1,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
-      ),
+      child: widget.showChrome
+          ? Frame(
+              background: shellBackground,
+              border: Border.rounded,
+              borderColor: shellBorderColor,
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: content,
+            )
+          : content,
     );
   }
 }

@@ -232,14 +232,13 @@ class _DialogFrameState<T> extends State<_DialogFrame<T>> with AnimationMixin {
   @override
   Widget build(BuildContext context) {
     final effectiveOpacity = _controller.value.clamp(0.0, 1.0);
-    final theme = ThemeScope.of(context);
 
     // -- Barrier layer --
     Widget barrier = GestureDetector(
       onTap: widget.barrierDismissible ? _dismiss : null,
       child: Opacity(
         opacity: effectiveOpacity,
-        child: Container(color: widget.barrierColor ?? theme.background),
+        child: Container(color: widget.barrierColor),
       ),
     );
 

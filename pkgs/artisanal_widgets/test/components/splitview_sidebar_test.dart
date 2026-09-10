@@ -224,6 +224,107 @@ void main() {
     });
   });
 
+  group('ResizableSplitView', () {
+    test('dragging the separator resizes horizontal panes', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 8);
+      addTearDown(tester.dispose);
+      int? extent;
+
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          height: 8,
+          child: ResizableSplitView(
+            initialFirstExtent: 10,
+            minFirstExtent: 6,
+            minSecondExtent: 10,
+            separator: Text('|'),
+            onChanged: (value) => extent = value,
+            first: Text('Left'),
+            second: Text('Right'),
+          ),
+        ),
+      );
+
+      final before = tester.locateText('Right');
+      final handle = tester.locateText('|');
+      expect(before, isNotNull);
+      expect(handle, isNotNull);
+
+      tester.drag(handle!.x, handle.y, handle.x + 5, handle.y);
+
+      final after = tester.locateText('Right');
+      expect(after, isNotNull);
+      expect(after!.x, greaterThan(before!.x));
+      expect(extent, 15);
+    });
+
+    test('clamps the first pane to preserve the second pane minimum', () async {
+      final tester = WidgetTester(screenWidth: 30, screenHeight: 8);
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        Container(
+          width: 30,
+          height: 8,
+          child: ResizableSplitView(
+            initialFirstExtent: 10,
+            minFirstExtent: 6,
+            minSecondExtent: 12,
+            separator: Text('|'),
+            first: Text('Left'),
+            second: Text('Right'),
+          ),
+        ),
+      );
+
+      final handle = tester.locateText('|')!;
+      tester.drag(handle.x, handle.y, handle.x + 40, handle.y);
+
+      expect(tester.locateText('Right')!.x, 18);
+    });
+
+    test(
+      'supports controlled vertical resizing and a hidden separator',
+      () async {
+        final tester = WidgetTester(screenWidth: 20, screenHeight: 12);
+        addTearDown(tester.dispose);
+        var firstExtent = 7;
+
+        Widget build({required int separatorExtent}) {
+          return Container(
+            width: 20,
+            height: 12,
+            child: ResizableSplitView(
+              axis: Axis.vertical,
+              initialFirstExtent: firstExtent,
+              firstExtent: firstExtent,
+              minFirstExtent: 3,
+              minSecondExtent: 3,
+              separatorExtent: separatorExtent,
+              separator: Text('='),
+              onChanged: (value) => firstExtent = value,
+              first: Text('Top'),
+              second: Text('Bottom'),
+            ),
+          );
+        }
+
+        await tester.pumpWidget(build(separatorExtent: 1));
+        final handle = tester.locateText('=')!;
+        final before = tester.locateText('Bottom')!;
+        tester.drag(handle.x, handle.y, handle.x, handle.y - 2);
+        await tester.pumpWidget(build(separatorExtent: 1));
+
+        expect(firstExtent, 5);
+        expect(tester.locateText('Bottom')!.y, lessThan(before.y));
+
+        await tester.pumpWidget(build(separatorExtent: 0));
+        expect(tester.view, isNot(contains('=')));
+      },
+    );
+  });
+
   // ---------------------------------------------------------------------------
   // SidebarSide enum
   // ---------------------------------------------------------------------------

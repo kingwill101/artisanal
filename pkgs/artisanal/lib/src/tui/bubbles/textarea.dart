@@ -55,6 +55,138 @@ class _DisplayLine {
   final int charOffset;
 }
 
+final class _IndexedTextDecoration {
+  const _IndexedTextDecoration(this.range, this.paintOrder);
+
+  final TextDecorationRange range;
+  final int paintOrder;
+}
+
+/// An immutable interval index for the decorations in paint order.
+///
+/// A viewport normally intersects only a small fraction of a document's
+/// decorations. Indexing by document offsets keeps rendering proportional to
+/// that visible fraction instead of scanning every decoration for every line.
+final class _TextDecorationIntervalIndex {
+  _TextDecorationIntervalIndex._(this._root);
+
+  factory _TextDecorationIntervalIndex.fromDecorations(
+    List<TextDecorationRange> decorations,
+  ) {
+    if (decorations.isEmpty) {
+      return _TextDecorationIntervalIndex._(null);
+    }
+    final entries =
+        <_IndexedTextDecoration>[
+          for (var index = 0; index < decorations.length; index++)
+            _IndexedTextDecoration(decorations[index], index),
+        ]..sort((a, b) {
+          final startComparison = a.range.startOffset.compareTo(
+            b.range.startOffset,
+          );
+          return startComparison != 0
+              ? startComparison
+              : a.paintOrder.compareTo(b.paintOrder);
+        });
+    return _TextDecorationIntervalIndex._(
+      _TextDecorationIntervalNode.build(entries),
+    );
+  }
+
+  final _TextDecorationIntervalNode? _root;
+
+  List<_IndexedTextDecoration> overlapping(int startOffset, int endOffset) {
+    if (_root == null || startOffset >= endOffset) {
+      return const [];
+    }
+    final matches = <_IndexedTextDecoration>[];
+    _root.query(startOffset, endOffset, matches);
+    if (matches.length > 1) {
+      matches.sort((a, b) => a.paintOrder.compareTo(b.paintOrder));
+    }
+    return matches;
+  }
+}
+
+final class _TextDecorationIntervalNode {
+  _TextDecorationIntervalNode({
+    required this.center,
+    required this.overlappingByStart,
+    required this.overlappingByEnd,
+    this.left,
+    this.right,
+  });
+
+  factory _TextDecorationIntervalNode.build(
+    List<_IndexedTextDecoration> entries,
+  ) {
+    final center = entries[entries.length ~/ 2].range.startOffset;
+    final leftEntries = <_IndexedTextDecoration>[];
+    final rightEntries = <_IndexedTextDecoration>[];
+    final overlapping = <_IndexedTextDecoration>[];
+    for (final entry in entries) {
+      if (entry.range.endOffset <= center) {
+        leftEntries.add(entry);
+      } else if (entry.range.startOffset > center) {
+        rightEntries.add(entry);
+      } else {
+        overlapping.add(entry);
+      }
+    }
+    final overlappingByEnd = List<_IndexedTextDecoration>.of(overlapping)
+      ..sort((a, b) {
+        final endComparison = b.range.endOffset.compareTo(a.range.endOffset);
+        return endComparison != 0
+            ? endComparison
+            : a.paintOrder.compareTo(b.paintOrder);
+      });
+    return _TextDecorationIntervalNode(
+      center: center,
+      overlappingByStart: overlapping,
+      overlappingByEnd: overlappingByEnd,
+      left: leftEntries.isEmpty
+          ? null
+          : _TextDecorationIntervalNode.build(leftEntries),
+      right: rightEntries.isEmpty
+          ? null
+          : _TextDecorationIntervalNode.build(rightEntries),
+    );
+  }
+
+  final int center;
+  final List<_IndexedTextDecoration> overlappingByStart;
+  final List<_IndexedTextDecoration> overlappingByEnd;
+  final _TextDecorationIntervalNode? left;
+  final _TextDecorationIntervalNode? right;
+
+  void query(
+    int startOffset,
+    int endOffset,
+    List<_IndexedTextDecoration> matches,
+  ) {
+    if (endOffset <= center) {
+      for (final entry in overlappingByStart) {
+        if (entry.range.startOffset >= endOffset) break;
+        matches.add(entry);
+      }
+      left?.query(startOffset, endOffset, matches);
+      return;
+    }
+    if (startOffset > center) {
+      for (final entry in overlappingByEnd) {
+        if (entry.range.endOffset <= startOffset) break;
+        matches.add(entry);
+      }
+      right?.query(startOffset, endOffset, matches);
+      return;
+    }
+
+    matches.addAll(overlappingByStart);
+    left?.query(startOffset, endOffset, matches);
+    right?.query(startOffset, endOffset, matches);
+  }
+}
+
 typedef PromptInfo = ({int lineIndex, bool isFocused, int row, int col});
 typedef PromptFunc = String Function(PromptInfo info);
 
@@ -149,7 +281,7 @@ class TextAreaStyleState {
     if (style == null) {
       return null;
     }
-    return style.inherit(computedText).inline(true);
+    return computedText.copy().inherit(style).inline(true);
   }
 
   Style? computedLineDecorationStyle(String styleKey) {
@@ -856,7 +988,10 @@ class TextAreaModel extends ViewComponent {
   bool _verticalMotionSoftWrap = false;
   Map<TextSelectionRange, int> _verticalGoalColumns = const {};
   List<TextDecorationRange> _decorations = const [];
+  _TextDecorationIntervalIndex _decorationIndex =
+      _TextDecorationIntervalIndex.fromDecorations(const []);
   List<TextLineDecoration> _lineDecorations = const [];
+  Map<int, List<TextLineDecoration>> _lineDecorationsByRow = const {};
   TextDocumentChange? _lastDocumentChange;
   int _documentVersion = 0;
   String _savedValue = '';
@@ -2180,6 +2315,7 @@ class TextAreaModel extends ViewComponent {
   void _rebuildDecorations() {
     if (_decorationLayers.isEmpty) {
       _decorations = const [];
+      _decorationIndex = _TextDecorationIntervalIndex.fromDecorations(const []);
       return;
     }
 
@@ -2195,11 +2331,15 @@ class TextAreaModel extends ViewComponent {
     _decorations = List<TextDecorationRange>.unmodifiable([
       for (final layer in sortedLayers) ...layer.decorations,
     ]);
+    _decorationIndex = _TextDecorationIntervalIndex.fromDecorations(
+      _decorations,
+    );
   }
 
   void _rebuildLineDecorations() {
     if (_lineDecorationLayers.isEmpty) {
       _lineDecorations = const [];
+      _lineDecorationsByRow = const {};
       return;
     }
 
@@ -2215,6 +2355,14 @@ class TextAreaModel extends ViewComponent {
     _lineDecorations = List<TextLineDecoration>.unmodifiable([
       for (final layer in sortedLayers) ...layer.decorations,
     ]);
+    final byRow = <int, List<TextLineDecoration>>{};
+    for (final decoration in _lineDecorations) {
+      (byRow[decoration.lineIndex] ??= []).add(decoration);
+    }
+    _lineDecorationsByRow = Map<int, List<TextLineDecoration>>.unmodifiable({
+      for (final entry in byRow.entries)
+        entry.key: List<TextLineDecoration>.unmodifiable(entry.value),
+    });
   }
 
   void _syncImplicitLineDecorations() {
@@ -2241,13 +2389,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   List<TextLineDecoration> _lineDecorationsForRow(int rowIndex) {
-    final matches = <TextLineDecoration>[];
-    for (final decoration in _lineDecorations) {
-      if (decoration.lineIndex == rowIndex) {
-        matches.add(decoration);
-      }
-    }
-    return List<TextLineDecoration>.unmodifiable(matches);
+    return _lineDecorationsByRow[rowIndex] ?? const [];
   }
 
   Style? _lineDecorationStyleForDecorations(
@@ -2312,51 +2454,28 @@ class TextAreaModel extends ViewComponent {
   }
 
   List<({int start, int end, String styleKey})> _segmentDecorationRanges(
-    int rowIndex,
-    int segmentStart,
-    int segmentEnd,
+    int segmentStartOffset,
+    int segmentEndOffset,
   ) {
-    if (_decorations.isEmpty || segmentStart >= segmentEnd) {
+    if (segmentStartOffset >= segmentEndOffset) {
       return const [];
     }
 
     final ranges = <({int start, int end, String styleKey})>[];
-    for (final decoration in _decorations) {
-      final range = decoration.clamp(_document.length);
-      if (range.isEmpty) {
-        continue;
-      }
-      final start = _document.positionForOffset(range.startOffset);
-      final end = _document.positionForOffset(range.endOffset);
-      if (rowIndex < start.line || rowIndex > end.line) {
-        continue;
-      }
-
-      int rowStart;
-      int rowEnd;
-      if (start.line == end.line) {
-        rowStart = start.column;
-        rowEnd = end.column;
-      } else if (rowIndex == start.line) {
-        rowStart = start.column;
-        rowEnd = _document.lineLength(rowIndex);
-      } else if (rowIndex == end.line) {
-        rowStart = 0;
-        rowEnd = end.column;
-      } else {
-        rowStart = 0;
-        rowEnd = _document.lineLength(rowIndex);
-      }
-
-      final overlapStart = math.max(rowStart, segmentStart);
-      final overlapEnd = math.min(rowEnd, segmentEnd);
+    for (final indexed in _decorationIndex.overlapping(
+      segmentStartOffset,
+      segmentEndOffset,
+    )) {
+      final range = indexed.range;
+      final overlapStart = math.max(range.startOffset, segmentStartOffset);
+      final overlapEnd = math.min(range.endOffset, segmentEndOffset);
       if (overlapStart >= overlapEnd) {
         continue;
       }
 
       ranges.add((
-        start: overlapStart - segmentStart,
-        end: overlapEnd - segmentStart,
+        start: overlapStart - segmentStartOffset,
+        end: overlapEnd - segmentStartOffset,
         styleKey: range.styleKey,
       ));
     }
@@ -5101,17 +5220,16 @@ class TextAreaModel extends ViewComponent {
         }
 
         final gs = uni.graphemes(displayLine.text).toList(growable: false);
+        final segmentStart =
+            _document.lineStartOffset(displayLine.rowIndex) +
+            displayLine.charOffset;
         final decorationRanges = _segmentDecorationRanges(
-          displayLine.rowIndex,
-          displayLine.charOffset,
-          displayLine.charOffset + gs.length,
+          segmentStart,
+          segmentStart + gs.length,
         );
         final cursorCol = displayLine.hasCursor
             ? (_col - displayLine.charOffset)
             : -1;
-        final segmentStart =
-            _document.lineStartOffset(displayLine.rowIndex) +
-            displayLine.charOffset;
 
         var renderedBody = '';
         for (var j = 0; j < gs.length; j++) {
