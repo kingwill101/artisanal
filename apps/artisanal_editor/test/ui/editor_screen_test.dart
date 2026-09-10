@@ -457,6 +457,7 @@ void main() {
       const runtime.KeyMsg(Key(KeyType.runes, runes: [0x60], ctrl: true)),
     );
     tester.tap(tester.find.byKeyLocation(const ValueKey('new-terminal')));
+    expect(terminals, hasLength(2));
     tester.sendMsg(
       const runtime.KeyMsg(Key(KeyType.runes, runes: [0x60], ctrl: true)),
     );

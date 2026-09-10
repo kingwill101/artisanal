@@ -268,6 +268,7 @@ final class EditorWorkspace {
   final EditorLanguageService? _languageService;
   final EditorSyntaxHighlighter? _syntaxHighlighter;
   final Map<String, EditorBuffer> _buffers = {};
+  final Map<String, Future<void>> _saveQueues = {};
   final StreamController<EditorWorkspaceEvent> _events =
       StreamController.broadcast(sync: true);
   final List<String> _output = [];
@@ -400,7 +401,29 @@ final class EditorWorkspace {
   }
 
   /// Persists [buffer] without changing the active buffer.
-  Future<void> save(EditorBuffer buffer) async {
+  Future<void> save(EditorBuffer buffer) {
+    final path = buffer.file.path;
+    if (!_buffers.containsKey(path)) return Future.value();
+    final previous = _saveQueues[path] ?? Future.value();
+    late final Future<void> queued;
+    queued = _runQueuedSave(buffer, previous).whenComplete(() {
+      if (identical(_saveQueues[path], queued)) {
+        _saveQueues.remove(path);
+      }
+    });
+    _saveQueues[path] = queued;
+    return queued;
+  }
+
+  Future<void> _runQueuedSave(
+    EditorBuffer buffer,
+    Future<void> previous,
+  ) async {
+    try {
+      await previous;
+    } on Object {
+      // A failed save must not permanently block later save attempts.
+    }
     if (!_buffers.containsKey(buffer.file.path)) return;
     final savedText = buffer.controller.text;
     await _repository.write(buffer.file, savedText);

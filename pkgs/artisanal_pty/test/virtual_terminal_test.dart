@@ -118,7 +118,7 @@ void main() {
     final terminal = VirtualTerminal();
     terminal.writeText('\x1b[>13;1u');
 
-    expect(terminal.keyboardEnhancementFlags, 13);
+    expect(terminal.keyboardEnhancementFlags, 9);
     expect(
       TerminalInputEncoder.encode(
         const Key(KeyType.down),
@@ -154,9 +154,30 @@ void main() {
       ),
       'i',
     );
+    expect(
+      TerminalInputEncoder.encode(
+        const Key(KeyType.space),
+        keyboardEnhancementFlags: terminal.keyboardEnhancementFlags,
+      ),
+      ' ',
+    );
+    expect(
+      TerminalInputEncoder.encode(
+        const Key(KeyType.space, ctrl: true),
+        keyboardEnhancementFlags: terminal.keyboardEnhancementFlags,
+      ),
+      '\x1b[32;5u',
+    );
 
     terminal.writeText('\x1b[=2;2u');
     expect(terminal.keyboardEnhancementFlags, 3);
+    expect(
+      TerminalInputEncoder.encode(
+        const Key(KeyType.enter, isRelease: true),
+        keyboardEnhancementFlags: terminal.keyboardEnhancementFlags,
+      ),
+      isEmpty,
+    );
     expect(
       TerminalInputEncoder.encode(
         const Key(KeyType.up, isRepeat: true),
@@ -164,6 +185,10 @@ void main() {
       ),
       '\x1b[1;1:2A',
     );
+
+    terminal.writeText('\x1b[=31;1u\x1b[?u');
+    expect(terminal.keyboardEnhancementFlags, 11);
+    expect(terminal.takePendingResponses(), '\x1b[?11u');
   });
 
   test('tracks and encodes SGR mouse reporting', () {

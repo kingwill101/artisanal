@@ -85,14 +85,46 @@ void main() {
     buffer.controller.insertText(' first');
 
     final saving = workspace.save(buffer);
-    await repository.writeStarted.future;
+    await repository.waitForWriteCount(1);
     buffer.controller.insertText(' second');
-    repository.allowWrite.complete();
+    repository.complete(0);
     await saving;
 
     expect(await File(path).readAsString(), 'initial first');
     expect(buffer.controller.text, 'initial first second');
     expect(buffer.isDirty, isTrue);
+  });
+
+  test('serializes saves so older snapshots cannot win', () async {
+    final path = p.join(sandbox.path, 'main.dart');
+    await File(path).writeAsString('initial');
+    final repository = _DelayedWriteRepository();
+    final files = await repository.discover(sandbox.path);
+    final workspace = EditorWorkspace(
+      root: sandbox.path,
+      files: files,
+      repository: repository,
+    );
+    addTearDown(workspace.dispose);
+    final buffer = await workspace.open(files.single);
+    buffer.controller.insertText(' first');
+
+    final firstSave = workspace.save(buffer);
+    await repository.waitForWriteCount(1);
+    buffer.controller.insertText(' second');
+    final secondSave = workspace.save(buffer);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(repository.writes, hasLength(1));
+
+    repository.complete(0);
+    await firstSave;
+    await repository.waitForWriteCount(2);
+    expect(repository.writes[1].contents, 'initial first second');
+    repository.complete(1);
+    await secondSave;
+
+    expect(await File(path).readAsString(), 'initial first second');
+    expect(buffer.isDirty, isFalse);
   });
 
   test(
@@ -143,13 +175,32 @@ final class _FakeSyntaxHighlighter implements EditorSyntaxHighlighter {
 }
 
 final class _DelayedWriteRepository extends EditorFileRepository {
-  final Completer<void> writeStarted = Completer();
-  final Completer<void> allowWrite = Completer();
+  final List<_PendingWrite> writes = [];
 
   @override
   Future<void> write(EditorFileEntry file, String contents) async {
-    writeStarted.complete();
-    await allowWrite.future;
+    final pending = _PendingWrite(contents);
+    writes.add(pending);
+    await pending.allowed.future;
     await super.write(file, contents);
   }
+
+  Future<void> waitForWriteCount(int count) async {
+    final deadline = DateTime.now().add(const Duration(seconds: 2));
+    while (writes.length < count) {
+      if (DateTime.now().isAfter(deadline)) {
+        fail('Timed out waiting for $count writes.');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+  }
+
+  void complete(int index) => writes[index].allowed.complete();
+}
+
+final class _PendingWrite {
+  _PendingWrite(this.contents);
+
+  final String contents;
+  final Completer<void> allowed = Completer();
 }

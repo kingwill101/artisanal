@@ -16,8 +16,14 @@ abstract final class TerminalInputEncoder {
     int keyboardEnhancementFlags = 0,
   }) {
     final reportEvents = keyboardEnhancementFlags & _kittyReportEvents != 0;
-    if (key.isRelease && !reportEvents) return '';
     final reportAll = keyboardEnhancementFlags & _kittyReportAll != 0;
+    final legacyRelease =
+        key.type == KeyType.enter ||
+        key.type == KeyType.tab ||
+        key.type == KeyType.backspace;
+    if (key.isRelease && (!reportEvents || (!reportAll && legacyRelease))) {
+      return '';
+    }
     final disambiguate = keyboardEnhancementFlags & _kittyDisambiguate != 0;
     if (reportAll ||
         (disambiguate && _requiresKittyDisambiguation(key)) ||
@@ -70,9 +76,13 @@ abstract final class TerminalInputEncoder {
     if (key.type == KeyType.runes) {
       return key.ctrl || key.alt || key.meta || key.hyper || key.superKey;
     }
+    if (key.type == KeyType.space) {
+      return key.ctrl || key.alt || key.meta || key.hyper || key.superKey;
+    }
     return key.type != KeyType.enter &&
         key.type != KeyType.tab &&
-        key.type != KeyType.backspace;
+        key.type != KeyType.backspace &&
+        key.type != KeyType.space;
   }
 
   static String _encodeKittyKey(Key key, {required bool reportEvents}) {

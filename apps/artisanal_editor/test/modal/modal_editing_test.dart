@@ -102,6 +102,18 @@ void main() {
       );
     });
 
+    test('undo clears a visual selection even without history', () {
+      final modal = ModalEditingController()..handle('v');
+
+      final undo = modal.handle('ctrl+z');
+
+      expect(undo.commands.map((command) => command.commandId), [
+        EditorCommandIds.undo,
+        EditorCommandIds.clearSelection,
+      ]);
+      expect(modal.mode, ModalEditingMode.normal);
+    });
+
     test('bounds command expansion for arbitrarily large counts', () {
       final modal = ModalEditingController();
       for (final digit in '99999999999999999999'.split('')) {

@@ -258,7 +258,7 @@ final class DartLanguageService implements EditorLanguageService {
               '--protocol=lsp',
             ], workingDirectory: workspaceRoot));
     _process = process;
-    _stderrSubscription = process.stderr
+    final stderrSubscription = process.stderr
         .transform(utf8.decoder)
         .transform(const LineSplitter())
         .listen((line) {
@@ -266,6 +266,7 @@ final class DartLanguageService implements EditorLanguageService {
             _emit(EditorLanguageStatus('Dart LSP: $line'));
           }
         });
+    _stderrSubscription = stderrSubscription;
 
     final client = LspClient.fromChannel(
       StreamChannel<List<int>>(process.stdout, process.stdin),
@@ -273,14 +274,34 @@ final class DartLanguageService implements EditorLanguageService {
     client.onError = (error, _) =>
         _emit(EditorLanguageStatus('Dart LSP error: $error', ready: false));
     client.textDocument.onPublishDiagnostics(_handleDiagnostics);
-    await client.start(
-      capabilities: const ClientCapabilities(),
-      rootUri: Uri.directory(workspaceRoot).toString(),
-      clientInfo: const ClientInfo(
-        name: 'artisanal-editor',
-        version: '0.1.0-dev.1',
-      ),
-    );
+    try {
+      await client.start(
+        capabilities: const ClientCapabilities(),
+        rootUri: Uri.directory(workspaceRoot).toString(),
+        clientInfo: const ClientInfo(
+          name: 'artisanal-editor',
+          version: '0.1.0-dev.1',
+        ),
+      );
+    } catch (_) {
+      try {
+        await client.close();
+      } on Object {
+        // Continue cleaning up the failed process and subscriptions.
+      }
+      try {
+        await stderrSubscription.cancel();
+      } on Object {
+        // Continue cleaning up the failed process.
+      }
+      process.kill();
+      if (identical(_client, client)) _client = null;
+      if (identical(_process, process)) _process = null;
+      if (identical(_stderrSubscription, stderrSubscription)) {
+        _stderrSubscription = null;
+      }
+      rethrow;
+    }
     if (_disposed) {
       await client.close();
       throw StateError('Language service disposed during startup.');

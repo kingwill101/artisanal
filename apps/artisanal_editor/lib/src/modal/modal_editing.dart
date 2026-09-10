@@ -84,20 +84,10 @@ final class ModalEditingController {
     }
 
     if (chord == 'ctrl+z') {
-      _reset(
-        mode: _mode == ModalEditingMode.insert
-            ? ModalEditingMode.insert
-            : ModalEditingMode.normal,
-      );
-      return _commands(EditorCommandIds.undo);
+      return _historyCommand(EditorCommandIds.undo);
     }
     if (chord == 'ctrl+r') {
-      _reset(
-        mode: _mode == ModalEditingMode.insert
-            ? ModalEditingMode.insert
-            : ModalEditingMode.normal,
-      );
-      return _commands(EditorCommandIds.redo);
+      return _historyCommand(EditorCommandIds.redo);
     }
     if (_mode == ModalEditingMode.insert) return _result(false);
     if (_isModified(chord)) {
@@ -287,6 +277,25 @@ final class ModalEditingController {
       chord.startsWith('alt+') ||
       chord.startsWith('meta+') ||
       chord.startsWith('super+');
+
+  ModalEditingResult _historyCommand(String commandId) {
+    final clearSelection =
+        _mode == ModalEditingMode.visual ||
+        _mode == ModalEditingMode.visualLine;
+    _reset(
+      mode: _mode == ModalEditingMode.insert
+          ? ModalEditingMode.insert
+          : ModalEditingMode.normal,
+    );
+    return _result(
+      true,
+      commands: [
+        ModalCommandInvocation(commandId),
+        if (clearSelection)
+          const ModalCommandInvocation(EditorCommandIds.clearSelection),
+      ],
+    );
+  }
 
   ModalEditingResult _commands(String commandId, {int repeat = 1}) {
     final boundedRepeat = repeat.clamp(1, _maximumCommandCount);

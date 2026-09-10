@@ -34,6 +34,8 @@ final class _SavedScreen {
 /// Mouse event reporting requested by the hosted terminal application.
 enum TerminalMouseTracking { none, button, drag, all }
 
+const _supportedKeyboardEnhancements = 1 | 2 | 8;
+
 /// A small, transport-independent ANSI/VT screen model.
 ///
 /// Feed bytes from a local PTY, SSH connection, or fixture to [write]. The
@@ -442,10 +444,11 @@ final class VirtualTerminal {
   }
 
   void _applyKeyboardFlags(int flags, int mode) {
+    final supported = flags & _supportedKeyboardEnhancements;
     keyboardEnhancementFlags = switch (mode) {
-      2 => keyboardEnhancementFlags | flags,
-      3 => keyboardEnhancementFlags & ~flags,
-      _ => flags,
+      2 => keyboardEnhancementFlags | supported,
+      3 => keyboardEnhancementFlags & ~supported,
+      _ => supported,
     };
   }
 
