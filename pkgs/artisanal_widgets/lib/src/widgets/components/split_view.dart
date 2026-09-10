@@ -86,6 +86,7 @@ class ResizableSplitView extends StatefulWidget {
     required this.second,
     this.axis = Axis.horizontal,
     this.initialFirstExtent = 24,
+    this.firstExtent,
     this.minFirstExtent = 8,
     this.minSecondExtent = 8,
     this.separatorExtent = 1,
@@ -95,7 +96,7 @@ class ResizableSplitView extends StatefulWidget {
   }) : assert(initialFirstExtent >= 0),
        assert(minFirstExtent >= 0),
        assert(minSecondExtent >= 0),
-       assert(separatorExtent > 0);
+       assert(separatorExtent >= 0);
 
   /// Content before the draggable separator.
   final Widget first;
@@ -109,6 +110,12 @@ class ResizableSplitView extends StatefulWidget {
   /// Initial width or height of [first], in terminal cells.
   final int initialFirstExtent;
 
+  /// Controlled width or height of [first].
+  ///
+  /// When non-null, resizing is reported through [onChanged] and the parent
+  /// must provide the updated value.
+  final int? firstExtent;
+
   /// Smallest width or height allowed for [first].
   final int minFirstExtent;
 
@@ -116,6 +123,9 @@ class ResizableSplitView extends StatefulWidget {
   final int minSecondExtent;
 
   /// Width or height of the separator's drag target.
+  ///
+  /// Set to zero to hide and disable the separator while preserving both
+  /// mounted pane subtrees.
   final int separatorExtent;
 
   /// Optional separator content.
@@ -144,12 +154,12 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
   void _resizeBy(int delta, int available) {
     if (delta == 0) return;
     final current = _clampExtent(
-      _firstExtent ?? widget.initialFirstExtent,
+      widget.firstExtent ?? _firstExtent ?? widget.initialFirstExtent,
       available,
     );
     final next = _clampExtent(current + delta, available);
     if (next == current) return;
-    setState(() => _firstExtent = next);
+    if (widget.firstExtent == null) setState(() => _firstExtent = next);
     widget.onChanged?.call(next);
   }
 
@@ -166,29 +176,31 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
                   widget.separatorExtent +
                   widget.minSecondExtent;
         final firstExtent = _clampExtent(
-          _firstExtent ?? widget.initialFirstExtent,
+          widget.firstExtent ?? _firstExtent ?? widget.initialFirstExtent,
           available,
         );
-        final separator = GestureDetector(
-          onDragUpdate: (details) {
-            final delta = widget.axis == Axis.horizontal
-                ? details.delta.dx.round()
-                : details.delta.dy.round();
-            _resizeBy(delta, available);
-            return null;
-          },
-          child: SizedBox(
-            width: widget.axis == Axis.horizontal
-                ? widget.separatorExtent
-                : null,
-            height: widget.axis == Axis.vertical
-                ? widget.separatorExtent
-                : null,
-            child:
-                widget.separator ??
-                Text(widget.axis == Axis.horizontal ? '│' : '─'),
-          ),
-        );
+        final separator = widget.separatorExtent == 0
+            ? SizedBox.shrink()
+            : GestureDetector(
+                onDragUpdate: (details) {
+                  final delta = widget.axis == Axis.horizontal
+                      ? details.delta.dx.round()
+                      : details.delta.dy.round();
+                  _resizeBy(delta, available);
+                  return null;
+                },
+                child: SizedBox(
+                  width: widget.axis == Axis.horizontal
+                      ? widget.separatorExtent
+                      : null,
+                  height: widget.axis == Axis.vertical
+                      ? widget.separatorExtent
+                      : null,
+                  child:
+                      widget.separator ??
+                      Text(widget.axis == Axis.horizontal ? '│' : '─'),
+                ),
+              );
 
         if (widget.axis == Axis.horizontal) {
           return Row(

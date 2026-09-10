@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:artisanal/editor_core.dart'
     show EditorCommandIds, TextDiagnosticRange, TextDiagnosticSeverity;
 import 'package:artisanal/bubbles.dart'
@@ -13,7 +16,9 @@ import 'package:artisanal/terminal.dart' show Key, KeyType;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/editors.dart' as editors;
 import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal_pty/widgets.dart' as pty_widgets;
 import 'package:path/path.dart' as p;
+import 'package:pty2/pty2.dart' show PseudoTerminal;
 
 import '../lsp/editor_language_service.dart';
 import '../modal/modal_editing.dart' show ModalEditingMode;
@@ -37,7 +42,7 @@ runtime.Msg? _editorInputFilter(runtime.Model _, runtime.Msg message) {
   return remapEditorInput(message);
 }
 
-/// Reclaims the runtime suspend message as the editor's `Ctrl+Z` undo key.
+/// Reclaims the runtime suspend message as the editor's `Ctrl+Z` key.
 runtime.Msg remapEditorInput(runtime.Msg message) {
   if (message is runtime.SuspendMsg) {
     return const runtime.KeyMsg(Key(KeyType.runes, runes: [0x7a], ctrl: true));
@@ -109,8 +114,11 @@ enum _PaletteAction {
   hover,
   problemsPanel,
   outputPanel,
+  newTerminal,
+  closeTerminal,
   toggleExplorer,
   togglePanel,
+  toggleTerminal,
   toggleMarkdownPreview,
 }
 
@@ -139,10 +147,31 @@ final class _InlineDiagnostic {
   final int screenRow;
 }
 
+final class _EditorTerminalSession {
+  const _EditorTerminalSession({required this.id, required this.pty});
+
+  final int id;
+  final PseudoTerminal pty;
+
+  String get label => 'Terminal $id';
+  String get focusId => 'terminal:$id';
+}
+
+/// Starts an integrated terminal rooted at [workingDirectory].
+typedef EditorTerminalStarter =
+    PseudoTerminal Function(String workingDirectory);
+
 class EditorScreen extends w.StatefulWidget {
-  EditorScreen({required this.workspace, super.key});
+  EditorScreen({
+    required this.workspace,
+    this.terminalStarter = _startWorkspaceTerminal,
+    super.key,
+  });
 
   final EditorWorkspace workspace;
+
+  /// Creates the shell process when the terminal panel is first opened.
+  final EditorTerminalStarter terminalStarter;
 
   @override
   w.State<EditorScreen> createState() => _EditorScreenState();
@@ -152,7 +181,13 @@ class _EditorScreenState extends w.State<EditorScreen> {
   final w.FocusController _focus = w.FocusController();
   final Map<String, _EditorScrollController> _editorScrollControllers = {};
   final Set<String> _hiddenMarkdownPreviews = {};
+  final List<_EditorTerminalSession> _terminals = [];
+  final Set<PseudoTerminal> _ownedTerminals = {};
   late final TreeModel<EditorFileEntry?> _fileTree;
+  Object? _terminalFailure;
+  int _nextTerminalId = 1;
+  int? _explorerWidth;
+  int _bottomPanelHeight = 10;
   int _panelIndex = 0;
   String _activity = 'Ready';
   EditorLanguageHover? _hover;
@@ -164,6 +199,23 @@ class _EditorScreenState extends w.State<EditorScreen> {
 
   EditorWorkspace get _workspace => widget.workspace;
   EditorBuffer? get _buffer => _workspace.activeBuffer;
+  bool get _terminalPanelSelected => _panelIndex >= 2;
+  bool get _terminalHasFocus =>
+      _focus.focusedId?.startsWith('terminal:') ?? false;
+  _EditorTerminalSession? get _activeTerminal {
+    final index = _panelIndex - 2;
+    return index >= 0 && index < _terminals.length ? _terminals[index] : null;
+  }
+
+  void _trackPty(PseudoTerminal pty) {
+    _ownedTerminals.add(pty);
+    unawaited(
+      pty.exitCode.then<void>(
+        (_) => _ownedTerminals.remove(pty),
+        onError: (Object _, StackTrace _) => _ownedTerminals.remove(pty),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -181,6 +233,11 @@ class _EditorScreenState extends w.State<EditorScreen> {
 
   @override
   void dispose() {
+    for (final pty in List<PseudoTerminal>.of(_ownedTerminals)) {
+      _terminatePty(pty);
+    }
+    _ownedTerminals.clear();
+    _terminals.clear();
     for (final controller in _editorScrollControllers.values) {
       controller.dispose();
     }
@@ -191,17 +248,23 @@ class _EditorScreenState extends w.State<EditorScreen> {
 
   @override
   runtime.Cmd? handleIntercept(runtime.Msg message) {
-    if (message is runtime.InterruptMsg) return runtime.Cmd.quit();
+    if (message is runtime.InterruptMsg) return _shutdownAndQuit();
     if (_closingDirtyBuffer != null) return null;
     if (message is! runtime.KeyMsg) return null;
     if (_paletteOpen) return null;
 
     final key = message.key;
+    if (_terminalHasFocus) {
+      if (_isControlCharacter(key, 'd')) return _closeTerminal();
+      if (_isControlCharacter(key, '`')) return _toggleTerminal();
+      return null;
+    }
+    if (_isControlCharacter(key, 'c')) return _shutdownAndQuit();
     if (_inlineDiagnostic != null) {
       setState(() => _inlineDiagnostic = null);
       if (key.type == KeyType.escape) return runtime.Cmd.none();
     }
-    if (_isControlCharacter(key, 'q')) return runtime.Cmd.quit();
+    if (_isControlCharacter(key, 'q')) return _shutdownAndQuit();
     if (_isControlCharacter(key, 'p')) {
       setState(() {
         _hover = null;
@@ -213,6 +276,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
     if (_isControlCharacter(key, 's')) return _save();
     if (_isControlCharacter(key, 'b')) return _toggleExplorer();
     if (_isControlCharacter(key, 'j')) return _togglePanel();
+    if (_isControlCharacter(key, '`')) return _toggleTerminal();
     if (_isControlShiftCharacter(key, 'v')) {
       return _toggleMarkdownPreview();
     }
@@ -509,6 +573,34 @@ class _EditorScreenState extends w.State<EditorScreen> {
         tags: ['problems', 'output', 'drawer'],
         payload: _PaletteAction.togglePanel,
       ),
+      w.CommandPaletteItem(
+        id: 'view.toggleTerminal',
+        label: _panelVisible && _terminalPanelSelected
+            ? 'Hide Integrated Terminal'
+            : 'Show Integrated Terminal',
+        description: 'Open or hide the persistent workspace shell',
+        shortcut: 'Ctrl+`',
+        group: 'View',
+        tags: const ['shell', 'pty', 'console'],
+        payload: _PaletteAction.toggleTerminal,
+      ),
+      const w.CommandPaletteItem(
+        id: 'terminal.new',
+        label: 'New Terminal',
+        description: 'Start another shell in the current workspace',
+        group: 'Terminal',
+        tags: ['shell', 'pty', 'instance'],
+        payload: _PaletteAction.newTerminal,
+      ),
+      if (_activeTerminal != null)
+        const w.CommandPaletteItem(
+          id: 'terminal.close',
+          label: 'Close Active Terminal',
+          description: 'Terminate and remove the selected shell',
+          group: 'Terminal',
+          tags: ['shell', 'kill', 'instance'],
+          payload: _PaletteAction.closeTerminal,
+        ),
       if (_buffer case final buffer? when _isMarkdown(buffer))
         w.CommandPaletteItem(
           id: 'view.toggleMarkdownPreview',
@@ -596,8 +688,11 @@ class _EditorScreenState extends w.State<EditorScreen> {
       _PaletteAction.hover => _requestActiveHover(),
       _PaletteAction.problemsPanel => _showPanel(0, 'Problems panel'),
       _PaletteAction.outputPanel => _showPanel(1, 'Output panel'),
+      _PaletteAction.newTerminal => _newTerminal(),
+      _PaletteAction.closeTerminal => _closeTerminal(),
       _PaletteAction.toggleExplorer => _toggleExplorer(),
       _PaletteAction.togglePanel => _togglePanel(),
+      _PaletteAction.toggleTerminal => _toggleTerminal(),
       _PaletteAction.toggleMarkdownPreview => _toggleMarkdownPreview(),
       _ => runtime.Cmd.none(),
     };
@@ -679,33 +774,14 @@ class _EditorScreenState extends w.State<EditorScreen> {
       _hover = null;
       _activity = '${buffer.file.name} has unsaved changes';
     });
-    final decision = w.DialogSelect.show<_DirtyCloseAction>(
-      context,
-      title: 'UNSAVED CHANGES',
-      searchHint: 'Choose what to do with ${buffer.file.name}',
-      width: 54,
-      height: 14,
+    final decision = w.showDialog<_DirtyCloseAction>(
+      context: context,
       barrierDismissible: true,
-      keybinds: const [
-        (key: 'enter', description: 'choose'),
-        (key: 'esc', description: 'keep open'),
-      ],
-      items: const [
-        w.DialogSelectItem(
-          label: 'Save and close',
-          value: _DirtyCloseAction.save,
-          description: 'Write the file before closing this buffer',
-        ),
-        w.DialogSelectItem(
-          label: 'Discard changes',
-          value: _DirtyCloseAction.discard,
-          description: 'Close without writing the current edits',
-        ),
-      ],
+      builder: (_) => _DirtyBufferDialog(fileName: buffer.file.name),
     );
     return runtime.Cmd.perform(
       () => decision,
-      onSuccess: (selection) => _DirtyCloseResolved(buffer, selection?.value),
+      onSuccess: (action) => _DirtyCloseResolved(buffer, action),
       onError: (error, _) => _EditorFailure(error),
     );
   }
@@ -750,6 +826,119 @@ class _EditorScreenState extends w.State<EditorScreen> {
     return runtime.Cmd.none();
   }
 
+  runtime.Cmd _showTerminal() {
+    if (_terminals.isEmpty) return _newTerminal();
+
+    final terminal = _activeTerminal ?? _terminals.last;
+    final index = _terminals.indexOf(terminal);
+    setState(() {
+      _panelIndex = index + 2;
+      _panelVisible = true;
+      _activity = terminal.label;
+    });
+    _focus.requestFocus(terminal.focusId);
+    return runtime.Cmd.none();
+  }
+
+  runtime.Cmd _newTerminal() {
+    try {
+      final pty = widget.terminalStarter(_workspace.root);
+      _trackPty(pty);
+      final terminal = _EditorTerminalSession(id: _nextTerminalId++, pty: pty);
+      setState(() {
+        _terminals.add(terminal);
+        _terminalFailure = null;
+        _panelIndex = _terminals.length + 1;
+        _panelVisible = true;
+        _activity = 'Started ${terminal.label}';
+      });
+      _focus.requestFocus(terminal.focusId);
+    } catch (error) {
+      setState(() {
+        _terminalFailure = error;
+        _panelIndex = 2;
+        _panelVisible = true;
+        _activity = 'Unable to start terminal';
+      });
+      _focus.requestFocus('editor');
+    }
+    return runtime.Cmd.none();
+  }
+
+  runtime.Cmd _toggleTerminal() {
+    if (_panelVisible && _terminalPanelSelected) return _hidePanel();
+    return _showTerminal();
+  }
+
+  runtime.Cmd _restartTerminal() {
+    final terminal = _activeTerminal;
+    if (terminal == null) return _newTerminal();
+
+    try {
+      final pty = widget.terminalStarter(_workspace.root);
+      _trackPty(pty);
+      final replacement = _EditorTerminalSession(id: terminal.id, pty: pty);
+      final index = _terminals.indexOf(terminal);
+      _terminatePty(terminal.pty);
+      setState(() {
+        _terminals[index] = replacement;
+        _terminalFailure = null;
+        _activity = 'Restarted ${replacement.label}';
+      });
+      _focus.requestFocus(replacement.focusId);
+    } catch (error) {
+      setState(() {
+        _terminalFailure = error;
+        _activity = 'Unable to restart ${terminal.label}';
+      });
+    }
+    return runtime.Cmd.none();
+  }
+
+  runtime.Cmd _closeTerminal() {
+    final terminal = _activeTerminal;
+    if (terminal == null) return _hidePanel();
+
+    final closedIndex = _terminals.indexOf(terminal);
+    _terminatePty(terminal.pty);
+    setState(() {
+      _terminals.removeAt(closedIndex);
+      _terminalFailure = null;
+      _activity = 'Closed ${terminal.label}';
+      if (_terminals.isEmpty) {
+        _panelIndex = 1;
+        _panelVisible = false;
+      } else {
+        _panelIndex = 2 + closedIndex.clamp(0, _terminals.length - 1);
+      }
+    });
+    final next = _activeTerminal;
+    _focus.requestFocus(next?.focusId ?? 'editor');
+    return runtime.Cmd.none();
+  }
+
+  runtime.Cmd _shutdownAndQuit() {
+    final terminals = List<PseudoTerminal>.of(_ownedTerminals);
+    for (final pty in terminals) {
+      _terminatePty(pty);
+    }
+    setState(() {
+      _terminals.clear();
+      _panelVisible = false;
+      _activity = 'Shutting down terminals…';
+    });
+    if (terminals.isEmpty) return runtime.Cmd.quit();
+
+    return runtime.Cmd.perform(
+      () => Future.wait([
+        for (final pty in terminals)
+          pty.exitCode.timeout(const Duration(seconds: 2), onTimeout: () => -1),
+      ]),
+      onSuccess: (_) => const runtime.QuitMsg(),
+      onError: (_, _) => const runtime.QuitMsg(),
+    );
+  }
+
   runtime.Cmd _toggleExplorer() {
     setState(() {
       _explorerVisible = !_explorerVisible;
@@ -760,9 +949,16 @@ class _EditorScreenState extends w.State<EditorScreen> {
   }
 
   runtime.Cmd _togglePanel() {
+    if (!_panelVisible && _terminalPanelSelected) return _showTerminal();
+    return _panelVisible
+        ? _hidePanel()
+        : _showPanel(_panelIndex, 'Bottom panel');
+  }
+
+  runtime.Cmd _hidePanel() {
     setState(() {
-      _panelVisible = !_panelVisible;
-      _activity = _panelVisible ? 'Bottom panel shown' : 'Bottom panel hidden';
+      _panelVisible = false;
+      _activity = 'Bottom panel hidden';
     });
     _focus.requestFocus('editor');
     return runtime.Cmd.none();
@@ -813,12 +1009,17 @@ class _EditorScreenState extends w.State<EditorScreen> {
               ? constraints.maxHeight.toInt()
               : 32;
           final showSidebar = _explorerVisible && width >= 56;
-          final showPanel = _panelVisible && height >= 14;
-          final editorHeight = (height - 2 - (showPanel ? 7 : 0)).clamp(4, 80);
+          final defaultExplorerWidth = width >= 110 ? 28 : 22;
+          final explorerWidth = showSidebar
+              ? (_explorerWidth ?? defaultExplorerWidth).clamp(16, width - 37)
+              : 0;
+          final editorWidth = showSidebar ? width - explorerWidth - 1 : width;
+          final showPanel = _panelVisible && height >= 12;
 
           final editorArea = _buildEditorArea(
             context,
-            editorHeight: editorHeight,
+            availableWidth: editorWidth,
+            availableHeight: (height - 1).clamp(1, height),
             showPanel: showPanel,
           );
           return w.Column(
@@ -829,12 +1030,21 @@ class _EditorScreenState extends w.State<EditorScreen> {
                 child: showSidebar
                     ? w.ResizableSplitView(
                         key: const w.ValueKey('workbench-split'),
-                        initialFirstExtent: width >= 110 ? 28 : 22,
+                        initialFirstExtent: explorerWidth,
+                        firstExtent: explorerWidth,
                         minFirstExtent: 16,
                         minSecondExtent: 36,
+                        onChanged: (extent) {
+                          setState(() => _explorerWidth = extent);
+                        },
                         separator: w.Container(
-                          color: theme.border,
-                          child: w.Text('│', style: theme.labelSmall),
+                          color: theme.resolvedSurfaceVariant,
+                          child: w.Text(
+                            '│',
+                            style: theme.labelSmall.copy().foreground(
+                              theme.border,
+                            ),
+                          ),
                         ),
                         first: _buildExplorer(context, height: height - 1),
                         second: editorArea,
@@ -920,10 +1130,26 @@ class _EditorScreenState extends w.State<EditorScreen> {
             children: [
               w.Container(
                 padding: const w.EdgeInsets.symmetric(horizontal: 1),
-                color: theme.resolvedSurfaceVariant,
-                child: w.Text(
-                  p.basename(_workspace.root).toUpperCase(),
-                  style: theme.titleSmall,
+                color: theme.surface,
+                child: w.Row(
+                  children: [
+                    w.Text(
+                      '◇',
+                      style: theme.titleSmall.copy().foreground(theme.primary),
+                    ),
+                    w.SizedBox(width: 1),
+                    w.Expanded(
+                      child: w.Text(
+                        p.basename(_workspace.root),
+                        style: theme.titleSmall.copy().foreground(
+                          theme.onSurface,
+                        ),
+                        softWrap: false,
+                        overflow: w.TextOverflow.ellipsis,
+                      ),
+                    ),
+                    w.Text('^B', style: theme.labelSmall),
+                  ],
                 ),
               ),
               w.Expanded(
@@ -963,17 +1189,17 @@ class _EditorScreenState extends w.State<EditorScreen> {
     final isActive = file != null && activePath == file.path;
     final leading = isDirectory
         ? row.isExpanded
-              ? '▾'
-              : '▸'
+              ? '▾ '
+              : '▸ '
         : isActive
-        ? '›'
-        : ' ';
+        ? '● '
+        : '  ';
     final trailing = isDirectory
         ? ' ${item.children.length}'
         : _isOpen(file)
-        ? ' ●'
+        ? '  ●'
         : '';
-    final line = '${row.prefix}${row.connector}$leading ${item.label}$trailing';
+    final line = '${row.prefix}${row.connector}$leading${item.label}$trailing';
     final visible = _panExplorerLine(
       line,
       _fileTree.horizontalOffset,
@@ -985,12 +1211,16 @@ class _EditorScreenState extends w.State<EditorScreen> {
       selected: isActive,
       padding: w.EdgeInsets.zero,
       background: theme.surface,
-      selectedBackground: theme.resolvedSurfaceVariant,
+      selectedBackground: theme.listRowSelectedBackground,
       foreground: isDirectory
-          ? theme.resolvedOnSurfaceVariant
-          : theme.onSurface,
-      selectedForeground: theme.primary,
-      titleStyle: isDirectory ? theme.labelMedium : theme.bodyMedium,
+          ? theme.primary
+          : _isOpen(file)
+          ? theme.onSurface
+          : theme.resolvedOnSurfaceVariant,
+      selectedForeground: theme.listRowSelectedForeground,
+      titleStyle: isDirectory
+          ? theme.labelMedium.copy().bold()
+          : theme.bodyMedium,
       title: w.Text(
         visible,
         softWrap: false,
@@ -1002,18 +1232,99 @@ class _EditorScreenState extends w.State<EditorScreen> {
 
   w.Widget _buildEditorArea(
     w.BuildContext context, {
-    required int editorHeight,
+    required int availableWidth,
+    required int availableHeight,
     required bool showPanel,
+  }) {
+    final theme = w.ThemeScope.of(context);
+    final separatorExtent = showPanel ? 1 : 0;
+    final maximumPanelHeight = (availableHeight - 5 - separatorExtent).clamp(
+      0,
+      availableHeight,
+    );
+    final panelHeight = showPanel
+        ? _bottomPanelHeight.clamp(5, maximumPanelHeight)
+        : 0;
+    final editorHeight = availableHeight - panelHeight - separatorExtent;
+    final terminalHeight =
+        (showPanel ? panelHeight - 1 : _bottomPanelHeight - 1).clamp(
+          1,
+          availableHeight,
+        );
+
+    return w.SizedBox(
+      height: availableHeight,
+      child: w.ResizableSplitView(
+        key: const w.ValueKey('editor-bottom-panel-split'),
+        axis: w.Axis.vertical,
+        initialFirstExtent: editorHeight,
+        firstExtent: editorHeight,
+        minFirstExtent: 4,
+        minSecondExtent: showPanel ? 5 : 0,
+        separatorExtent: separatorExtent,
+        separator: showPanel
+            ? w.Container(
+                key: const w.ValueKey('editor-bottom-divider'),
+                color: theme.border,
+                child: w.Text(
+                  '━',
+                  style: theme.labelSmall.copy().foreground(theme.border),
+                ),
+              )
+            : null,
+        onChanged: showPanel
+            ? (firstExtent) {
+                setState(() {
+                  _bottomPanelHeight =
+                      availableHeight - firstExtent - separatorExtent;
+                });
+              }
+            : null,
+        first: w.LayoutBuilder(
+          builder: (context, editorConstraints) {
+            final height = editorConstraints.maxHeight.isFinite
+                ? editorConstraints.maxHeight.toInt()
+                : editorHeight;
+            return _buildEditorContent(context, editorHeight: height);
+          },
+        ),
+        second: _buildBottomPanel(
+          context,
+          terminalWidth: availableWidth,
+          terminalHeight: terminalHeight,
+        ),
+      ),
+    );
+  }
+
+  w.Widget _buildEditorContent(
+    w.BuildContext context, {
+    required int editorHeight,
   }) {
     final buffer = _buffer;
     if (buffer == null) {
-      return w.Center(child: w.Text('No open buffer'));
+      final theme = w.ThemeScope.of(context);
+      return w.Center(
+        child: w.Column(
+          mainAxisSize: w.MainAxisSize.min,
+          gap: 1,
+          children: [
+            w.Text(
+              'ARTISANAL',
+              style: theme.titleLarge.copy().foreground(theme.primary),
+            ),
+            w.Text('No open buffer', style: theme.bodyMedium),
+            w.Text('Ctrl+P open file', style: theme.labelSmall),
+          ],
+        ),
+      );
     }
+    final contentHeight = (editorHeight - 1).clamp(1, editorHeight);
     final openBuffers = _workspace.openBuffers;
     final editorScroll = _editorScrollControllers.putIfAbsent(
       buffer.file.path,
       () => _EditorScrollController(buffer),
-    )..viewportExtent = (editorHeight - 4).clamp(1, editorHeight);
+    )..viewportExtent = (contentHeight - 3).clamp(1, contentHeight);
 
     return w.Column(
       gap: 0,
@@ -1021,14 +1332,14 @@ class _EditorScreenState extends w.State<EditorScreen> {
       children: [
         _buildBufferTabs(context, openBuffers, buffer),
         w.Container(
-          height: editorHeight,
+          height: contentHeight,
           child: w.LayoutBuilder(
             builder: (context, constraints) {
               final editorPane = _buildEditablePane(
                 context,
                 buffer,
                 editorScroll,
-                editorHeight,
+                contentHeight,
               );
               if (!_showsMarkdownPreview(buffer)) return editorPane;
 
@@ -1049,12 +1360,11 @@ class _EditorScreenState extends w.State<EditorScreen> {
                   ),
                 ),
                 first: editorPane,
-                second: _buildMarkdownPreview(context, buffer, editorHeight),
+                second: _buildMarkdownPreview(context, buffer, contentHeight),
               );
             },
           ),
         ),
-        if (showPanel) _buildBottomPanel(context),
       ],
     );
   }
@@ -1205,45 +1515,78 @@ class _EditorScreenState extends w.State<EditorScreen> {
   ) {
     final theme = w.ThemeScope.of(context);
     return w.Container(
-      color: theme.surface,
+      color: theme.background,
       child: w.Row(
         gap: 0,
         children: [
           for (final open in openBuffers)
-            w.Row(
+            w.Container(
               key: w.ValueKey('buffer-tab:${open.file.path}'),
-              gap: 0,
-              children: [
-                w.Button(
-                  label: '${open.isDirty ? "● " : ""}${open.file.name}',
-                  variant: identical(open, activeBuffer)
-                      ? w.ButtonVariant.secondary
-                      : w.ButtonVariant.ghost,
-                  size: w.ButtonSize.small,
-                  textStyle: identical(open, activeBuffer)
-                      ? theme.titleSmall
-                      : theme.labelMedium,
-                  onPressed: () {
-                    setState(() {
-                      _workspace.activate(open);
-                      _hover = null;
-                      _activity = 'Opened ${open.file.relativePath}';
-                    });
-                    _focus.requestFocus('editor');
-                    return runtime.Cmd.none();
-                  },
-                ),
-                w.Button(
-                  key: w.ValueKey('close-tab:${open.file.path}'),
-                  label: '×',
-                  variant: identical(open, activeBuffer)
-                      ? w.ButtonVariant.secondary
-                      : w.ButtonVariant.ghost,
-                  size: w.ButtonSize.small,
-                  padding: const w.EdgeInsets.symmetric(horizontal: 1),
-                  onPressed: () => _closeBuffer(open),
-                ),
-              ],
+              color: identical(open, activeBuffer)
+                  ? theme.resolvedSurfaceVariant
+                  : theme.surface,
+              child: w.Row(
+                gap: 0,
+                children: [
+                  w.GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _workspace.activate(open);
+                        _hover = null;
+                        _activity = 'Opened ${open.file.relativePath}';
+                      });
+                      _focus.requestFocus('editor');
+                      return runtime.Cmd.none();
+                    },
+                    child: w.Container(
+                      padding: const w.EdgeInsets.only(left: 1),
+                      child: w.Row(
+                        gap: 0,
+                        children: [
+                          w.Text(
+                            identical(open, activeBuffer) ? '▌' : ' ',
+                            style: theme.labelMedium.copy().foreground(
+                              theme.primary,
+                            ),
+                          ),
+                          w.SizedBox(width: 1),
+                          if (open.isDirty)
+                            w.Text(
+                              '● ',
+                              style: theme.labelSmall.copy().foreground(
+                                theme.warning,
+                              ),
+                            ),
+                          w.Text(
+                            open.file.name,
+                            style: identical(open, activeBuffer)
+                                ? theme.titleSmall.copy().foreground(
+                                    theme.onSurface,
+                                  )
+                                : theme.labelMedium,
+                            softWrap: false,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  w.GestureDetector(
+                    key: w.ValueKey('close-tab:${open.file.path}'),
+                    onTap: () => _closeBuffer(open),
+                    child: w.Container(
+                      padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                      child: w.Text(
+                        '×',
+                        style: theme.labelMedium.copy().foreground(
+                          identical(open, activeBuffer)
+                              ? theme.onSurface
+                              : theme.muted,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
         ],
       ),
@@ -1251,69 +1594,189 @@ class _EditorScreenState extends w.State<EditorScreen> {
   }
 
   w.Widget _buildCompletionPopup(w.BuildContext context, EditorBuffer buffer) {
+    final theme = w.ThemeScope.of(context);
     final model = buffer.controller.model;
     final items = model.completionItems.take(8).toList(growable: false);
     return w.Container(
       width: 42,
-      child: w.PanelBox(
-        title: 'COMPLETIONS',
-        border: Border.rounded,
-        padding: const w.EdgeInsets.symmetric(horizontal: 1),
-        child: w.Column(
-          gap: 0,
-          crossAxisAlignment: w.CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < items.length; index++)
-              w.Text(
+      foreground: theme.border,
+      decoration: w.BoxDecoration(color: theme.surface, border: Border.normal),
+      child: w.Column(
+        gap: 0,
+        crossAxisAlignment: w.CrossAxisAlignment.stretch,
+        children: [
+          w.Container(
+            color: theme.resolvedSurfaceVariant,
+            padding: const w.EdgeInsets.symmetric(horizontal: 1),
+            child: w.Row(
+              children: [
+                w.Text('COMPLETIONS', style: theme.titleSmall),
+                w.Spacer(),
+                w.Text('esc close', style: theme.labelSmall),
+              ],
+            ),
+          ),
+          for (var index = 0; index < items.length; index++)
+            w.Container(
+              color: index == model.completionIndex
+                  ? theme.listRowSelectedBackground
+                  : theme.surface,
+              padding: const w.EdgeInsets.symmetric(horizontal: 1),
+              child: w.Text(
                 '${index == model.completionIndex ? "›" : " "} '
                 '${items[index].label}'
                 '${items[index].detail.isEmpty ? "" : "  ${items[index].detail}"}',
+                style: index == model.completionIndex
+                    ? theme.bodyMedium.copy().foreground(
+                        theme.listRowSelectedForeground,
+                      )
+                    : theme.bodyMedium,
                 softWrap: false,
                 overflow: w.TextOverflow.ellipsis,
                 maxWidth: 38,
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 
   w.Widget _buildHoverPopup(EditorLanguageHover hover) {
-    return w.Container(
-      width: 52,
-      child: w.PanelBox(
-        title: 'HOVER',
-        border: Border.rounded,
-        padding: const w.EdgeInsets.symmetric(horizontal: 1),
-        child: w.MarkdownText(
-          data: _boundedHoverContents(hover.contents),
-          maxWidth: 48,
-        ),
-      ),
+    return w.Builder(
+      builder: (context) {
+        final theme = w.ThemeScope.of(context);
+        return w.Container(
+          width: 52,
+          foreground: theme.border,
+          decoration: w.BoxDecoration(
+            color: theme.surface,
+            border: Border.normal,
+          ),
+          child: w.Column(
+            gap: 0,
+            crossAxisAlignment: w.CrossAxisAlignment.stretch,
+            children: [
+              w.Container(
+                color: theme.resolvedSurfaceVariant,
+                padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                child: w.Row(
+                  children: [
+                    w.Text('HOVER', style: theme.titleSmall),
+                    w.Spacer(),
+                    w.Text('esc close', style: theme.labelSmall),
+                  ],
+                ),
+              ),
+              w.Padding(
+                padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                child: w.MarkdownText(
+                  data: _boundedHoverContents(hover.contents),
+                  maxWidth: 48,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  w.Widget _buildBottomPanel(w.BuildContext context) {
-    final tabs = const [w.TabItem('Problems'), w.TabItem('Output')];
+  w.Widget _buildBottomPanel(
+    w.BuildContext context, {
+    required int terminalWidth,
+    required int terminalHeight,
+  }) {
+    final theme = w.ThemeScope.of(context);
+    final tabs = <w.TabItem>[
+      const w.TabItem('Problems'),
+      const w.TabItem('Output'),
+      if (_terminals.isEmpty)
+        const w.TabItem('Terminal')
+      else
+        for (final terminal in _terminals) w.TabItem(terminal.label),
+    ];
     return w.Container(
-      height: 7,
-      color: w.ThemeScope.of(context).surface,
+      key: const w.ValueKey('bottom-panel'),
+      color: theme.surface,
       child: w.Column(
         gap: 0,
         crossAxisAlignment: w.CrossAxisAlignment.stretch,
         children: [
-          w.Tabs(
-            tabs: tabs,
-            index: _panelIndex,
-            onChanged: (index) {
-              setState(() => _panelIndex = index);
-              return null;
-            },
+          w.Row(
+            gap: 0,
+            children: [
+              w.Tabs(
+                tabs: tabs,
+                index: _panelIndex,
+                onChanged: (index) {
+                  if (index >= 2) {
+                    if (_terminals.isEmpty) return _newTerminal();
+                    final terminal = _terminals[index - 2];
+                    setState(() {
+                      _panelIndex = index;
+                      _activity = terminal.label;
+                    });
+                    _focus.requestFocus(terminal.focusId);
+                    return runtime.Cmd.none();
+                  }
+                  setState(() {
+                    _panelIndex = index;
+                    _activity = index == 0 ? 'Problems panel' : 'Output panel';
+                  });
+                  _focus.requestFocus('editor');
+                  return runtime.Cmd.none();
+                },
+              ),
+              w.Spacer(),
+              w.GestureDetector(
+                key: const w.ValueKey('new-terminal'),
+                onTap: _newTerminal,
+                child: w.Container(
+                  padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                  child: w.Text('+', style: theme.labelMedium),
+                ),
+              ),
+              if (_activeTerminal != null) ...[
+                w.GestureDetector(
+                  key: const w.ValueKey('restart-terminal'),
+                  onTap: _restartTerminal,
+                  child: w.Container(
+                    padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                    child: w.Text('↻', style: theme.labelMedium),
+                  ),
+                ),
+                w.GestureDetector(
+                  key: const w.ValueKey('close-terminal'),
+                  onTap: _closeTerminal,
+                  child: w.Container(
+                    padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                    child: w.Text('⊗', style: theme.labelMedium),
+                  ),
+                ),
+              ],
+              w.GestureDetector(
+                key: const w.ValueKey('close-bottom-panel'),
+                onTap: _hidePanel,
+                child: w.Container(
+                  padding: const w.EdgeInsets.symmetric(horizontal: 1),
+                  child: w.Text('×', style: theme.labelMedium),
+                ),
+              ),
+            ],
           ),
           w.Expanded(
-            child: _panelIndex == 0
-                ? _buildProblems(context)
-                : w.Container(
+            child: w.Stack(
+              fit: w.StackFit.expand,
+              children: [
+                _EditorPanelPage(
+                  key: const w.ValueKey('problems-panel-page'),
+                  active: _panelIndex == 0,
+                  child: _buildProblems(context),
+                ),
+                _EditorPanelPage(
+                  key: const w.ValueKey('output-panel-page'),
+                  active: _panelIndex == 1,
+                  child: w.Container(
                     padding: const w.EdgeInsets.symmetric(horizontal: 1),
                     child: w.Column(
                       gap: 0,
@@ -1324,20 +1787,86 @@ class _EditorScreenState extends w.State<EditorScreen> {
                         ))
                           w.Text(
                             line,
+                            style: theme.bodySmall,
                             softWrap: false,
                             overflow: w.TextOverflow.ellipsis,
                           ),
-                        if (_workspace.outputLines.isEmpty) w.Text(_activity),
+                        if (_workspace.outputLines.isEmpty)
+                          w.Text(_activity, style: theme.bodySmall),
                       ],
                     ),
                   ),
+                ),
+                if (_terminals.isEmpty)
+                  _EditorPanelPage(
+                    key: const w.ValueKey('terminal-panel-failure-page'),
+                    active: _terminalPanelSelected,
+                    child: _buildTerminalFailure(context),
+                  )
+                else
+                  for (var index = 0; index < _terminals.length; index++)
+                    _EditorPanelPage(
+                      key: w.ValueKey(
+                        'terminal-panel-page:${_terminals[index].id}',
+                      ),
+                      active: _panelIndex == index + 2,
+                      child: _buildTerminal(
+                        _terminals[index],
+                        width: terminalWidth,
+                        height: terminalHeight,
+                      ),
+                    ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  w.Widget _buildTerminal(
+    _EditorTerminalSession terminal, {
+    required int width,
+    required int height,
+  }) {
+    return pty_widgets.PseudoTerminalView(
+      key: w.ValueKey('integrated-terminal:${terminal.id}'),
+      pty: terminal.pty,
+      width: width,
+      height: height,
+      focusController: _focus,
+      focusId: terminal.focusId,
+      autofocus: false,
+      quitOnExit: false,
+    );
+  }
+
+  w.Widget _buildTerminalFailure(w.BuildContext context) {
+    final theme = w.ThemeScope.of(context);
+    return w.Container(
+      padding: const w.EdgeInsets.symmetric(horizontal: 1),
+      child: w.Column(
+        gap: 0,
+        crossAxisAlignment: w.CrossAxisAlignment.start,
+        children: [
+          w.Text(
+            'Unable to start the workspace shell.',
+            style: theme.bodyMedium.copy().foreground(theme.error),
+          ),
+          if (_terminalFailure case final error)
+            w.Text(
+              '$error',
+              style: theme.bodySmall,
+              softWrap: true,
+              overflow: w.TextOverflow.ellipsis,
+            ),
+        ],
+      ),
+    );
+  }
+
   w.Widget _buildProblems(w.BuildContext context) {
+    final theme = w.ThemeScope.of(context);
     final problems = <({EditorBuffer buffer, TextDiagnosticRange diagnostic})>[
       for (final buffer in _workspace.openBuffers)
         for (final diagnostic in buffer.controller.diagnostics)
@@ -1346,7 +1875,10 @@ class _EditorScreenState extends w.State<EditorScreen> {
     if (problems.isEmpty) {
       return w.Container(
         padding: const w.EdgeInsets.symmetric(horizontal: 1),
-        child: w.Text('No problems detected'),
+        child: w.Text(
+          '✓ No problems detected',
+          style: theme.bodySmall.copy().foreground(theme.success),
+        ),
       );
     }
 
@@ -1368,6 +1900,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
     EditorBuffer buffer,
     TextDiagnosticRange diagnostic,
   ) {
+    final theme = w.ThemeScope.of(context);
     final position = buffer.controller.document.positionForOffset(
       diagnostic.startOffset,
     );
@@ -1377,13 +1910,23 @@ class _EditorScreenState extends w.State<EditorScreen> {
       TextDiagnosticSeverity.info => '●',
       TextDiagnosticSeverity.hint => '·',
     };
+    final color = switch (diagnostic.severity) {
+      TextDiagnosticSeverity.error => theme.error,
+      TextDiagnosticSeverity.warning => theme.warning,
+      TextDiagnosticSeverity.info => theme.resolvedInfo,
+      TextDiagnosticSeverity.hint => theme.muted,
+    };
     return w.ListTile(
       dense: true,
       padding: const w.EdgeInsets.symmetric(horizontal: 1),
-      leading: w.Text(marker),
+      background: theme.surface,
+      foreground: theme.onSurface,
+      leading: w.Text(marker, style: theme.bodyMedium.copy().foreground(color)),
       title: diagnostic.message ?? diagnostic.code ?? 'Problem',
+      titleStyle: theme.bodySmall,
       trailing: w.Text(
         '${buffer.file.name}:${position.line + 1}:${position.column + 1}',
+        style: theme.labelSmall,
       ),
       onTap: () {
         setState(() => _workspace.activate(buffer));
@@ -1395,6 +1938,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
   }
 
   w.Widget _buildStatusLine(w.BuildContext context) {
+    final theme = w.ThemeScope.of(context);
     final buffer = _buffer;
     final diagnostics = buffer?.controller.diagnostics ?? const [];
     final errors = diagnostics
@@ -1403,15 +1947,49 @@ class _EditorScreenState extends w.State<EditorScreen> {
     final warnings = diagnostics
         .where((item) => item.severity == TextDiagnosticSeverity.warning)
         .length;
+    final mode = _terminalHasFocus
+        ? 'TERMINAL'
+        : buffer?.modal.modeLabel ?? 'NORMAL';
+    final modeColor = _terminalHasFocus
+        ? theme.secondary
+        : switch (buffer?.modal.mode) {
+            ModalEditingMode.insert => theme.success,
+            ModalEditingMode.visual ||
+            ModalEditingMode.visualLine => theme.secondary,
+            ModalEditingMode.operatorPending => theme.warning,
+            ModalEditingMode.normal || null => theme.primary,
+          };
     return w.StatusLine(
       left: [
-        w.StatusItem.text(buffer?.modal.modeLabel ?? 'NORMAL'),
+        w.StatusItem.widget(
+          w.Container(
+            color: modeColor,
+            padding: const w.EdgeInsets.symmetric(horizontal: 1),
+            child: w.Text(
+              mode,
+              style: theme.labelMedium.copy().foreground(theme.background),
+            ),
+          ),
+        ),
         w.StatusItem.text(_activity),
         w.StatusItem.text(p.basename(_workspace.root)),
       ],
       center: [if (buffer != null) w.StatusItem.text(buffer.file.relativePath)],
       right: [
-        w.StatusItem.text('✕ $errors  ▲ $warnings'),
+        if (errors > 0)
+          w.StatusItem.widget(
+            w.Text(
+              '✕ $errors',
+              style: theme.labelSmall.copy().foreground(theme.error),
+            ),
+          ),
+        if (warnings > 0)
+          w.StatusItem.widget(
+            w.Text(
+              '▲ $warnings',
+              style: theme.labelSmall.copy().foreground(theme.warning),
+            ),
+          ),
         w.StatusItem.text(_workspace.languageReady ? 'LSP ready' : 'LSP idle'),
         if (buffer != null)
           w.StatusItem.text(
@@ -1421,12 +1999,204 @@ class _EditorScreenState extends w.State<EditorScreen> {
         w.StatusItem.text(buffer?.file.language ?? 'text'),
         const w.StatusItem.text('UTF-8'),
       ],
+      background: theme.surface,
+      foreground: theme.muted,
       separator: ' │ ',
     );
   }
 
   bool _isOpen(EditorFileEntry file) =>
       _workspace.openBuffers.any((buffer) => buffer.file.path == file.path);
+}
+
+final class _EditorPanelPage extends w.StatelessWidget {
+  _EditorPanelPage({required this.active, required this.child, super.key});
+
+  final bool active;
+  final w.Widget child;
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.SizedBox(
+      width: active ? null : 0,
+      height: active ? null : 0,
+      child: child,
+    );
+  }
+}
+
+final class _DirtyBufferDialog extends w.StatefulWidget {
+  _DirtyBufferDialog({required this.fileName});
+
+  final String fileName;
+
+  @override
+  w.State<_DirtyBufferDialog> createState() => _DirtyBufferDialogState();
+}
+
+final class _DirtyBufferDialogState extends w.State<_DirtyBufferDialog> {
+  static const _actions = <_DirtyCloseAction?>[
+    _DirtyCloseAction.save,
+    _DirtyCloseAction.discard,
+    null,
+  ];
+
+  int _selectedIndex = 0;
+
+  @override
+  runtime.Cmd? handleIntercept(runtime.Msg message) {
+    if (message case runtime.KeyMsg(:final key)) {
+      switch (key.type) {
+        case KeyType.escape:
+          _finish(null);
+          return runtime.Cmd.none();
+        case KeyType.enter:
+          _finish(_actions[_selectedIndex]);
+          return runtime.Cmd.none();
+        case KeyType.up || KeyType.left:
+          _move(-1);
+          return runtime.Cmd.none();
+        case KeyType.down || KeyType.right || KeyType.tab:
+          _move(1);
+          return runtime.Cmd.none();
+        default:
+          return null;
+      }
+    }
+    return null;
+  }
+
+  void _move(int delta) {
+    setState(() {
+      _selectedIndex =
+          (_selectedIndex + delta + _actions.length) % _actions.length;
+    });
+  }
+
+  void _finish(_DirtyCloseAction? action) {
+    w.Navigator.of(context).pop(action);
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    final theme = w.ThemeScope.of(context);
+    return w.SizedBox(
+      width: 58,
+      height: 12,
+      child: w.Container(
+        foreground: theme.highlight,
+        decoration: w.BoxDecoration(
+          color: theme.surface,
+          border: Border.normal,
+        ),
+        padding: const w.EdgeInsets.all(1),
+        child: w.Column(
+          gap: 0,
+          crossAxisAlignment: w.CrossAxisAlignment.stretch,
+          children: [
+            w.Row(
+              children: [
+                w.Text(
+                  'UNSAVED CHANGES',
+                  style: theme.titleSmall.copy().foreground(theme.warning),
+                ),
+                w.Spacer(),
+                w.Text('esc keep editing', style: theme.labelSmall),
+              ],
+            ),
+            w.SizedBox(height: 1),
+            w.Text(
+              widget.fileName,
+              style: theme.bodyMedium.copy().bold(),
+              softWrap: false,
+            ),
+            w.Text(
+              'This buffer has changes that have not been saved.',
+              style: theme.bodySmall,
+              softWrap: false,
+            ),
+            w.SizedBox(height: 1),
+            _buildAction(
+              index: 0,
+              label: 'Save and close',
+              description: 'write changes to disk',
+            ),
+            _buildAction(
+              index: 1,
+              label: 'Discard changes',
+              description: 'close without saving',
+              destructive: true,
+            ),
+            _buildAction(
+              index: 2,
+              label: 'Keep editing',
+              description: 'return to the buffer',
+            ),
+            w.Spacer(),
+            w.Text('↑↓ choose   enter confirm', style: theme.labelSmall),
+          ],
+        ),
+      ),
+    );
+  }
+
+  w.Widget _buildAction({
+    required int index,
+    required String label,
+    required String description,
+    bool destructive = false,
+  }) {
+    final theme = w.ThemeScope.of(context);
+    final selected = index == _selectedIndex;
+    final foreground = destructive && !selected
+        ? theme.error
+        : selected
+        ? theme.listRowSelectedForeground
+        : theme.onSurface;
+    return w.GestureDetector(
+      onTap: () {
+        _finish(_actions[index]);
+        return null;
+      },
+      onEnter: (_) {
+        if (_selectedIndex != index) {
+          setState(() => _selectedIndex = index);
+        }
+        return null;
+      },
+      child: w.Container(
+        key: w.ValueKey('dirty-close-action:$index'),
+        color: selected ? theme.listRowSelectedBackground : theme.surface,
+        padding: const w.EdgeInsets.symmetric(horizontal: 1),
+        child: w.Row(
+          children: [
+            w.Text(
+              selected ? '›' : ' ',
+              style: theme.bodyMedium.copy().foreground(
+                selected ? theme.primary : theme.muted,
+              ),
+            ),
+            w.SizedBox(width: 1),
+            w.SizedBox(
+              width: 18,
+              child: w.Text(
+                label,
+                style: theme.bodyMedium.copy().foreground(foreground),
+                softWrap: false,
+              ),
+            ),
+            w.Text(
+              description,
+              style: theme.labelSmall.copy().foreground(
+                selected ? theme.listRowSelectedForeground : theme.muted,
+              ),
+              softWrap: false,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 final class _EditorScrollController implements w.ScrollController {
@@ -1577,6 +2347,44 @@ String _boundedHoverContents(String contents) {
   return lines.length <= maxLines
       ? boundedCharacters
       : '${lines.take(maxLines).join('\n')}\n…';
+}
+
+({String executable, List<String> arguments}) _defaultShell() {
+  if (Platform.isWindows) {
+    return (
+      executable: Platform.environment['COMSPEC'] ?? 'powershell.exe',
+      arguments: const [],
+    );
+  }
+
+  return (
+    executable: Platform.environment['SHELL'] ?? '/bin/sh',
+    arguments: const ['-i'],
+  );
+}
+
+PseudoTerminal _startWorkspaceTerminal(String workingDirectory) {
+  final (:executable, :arguments) = _defaultShell();
+  return PseudoTerminal.start(
+    executable,
+    arguments,
+    environment: {
+      ...Platform.environment,
+      'TERM': 'xterm-256color',
+      'COLORTERM': 'truecolor',
+    },
+    workingDirectory: workingDirectory,
+    ackProcessed: true,
+    raw: false,
+  );
+}
+
+void _terminatePty(PseudoTerminal pty) {
+  if (Platform.isWindows) {
+    pty.kill();
+  } else {
+    pty.kill(ProcessSignal.sigkill);
+  }
 }
 
 bool _isControlCharacter(Key key, String character) {

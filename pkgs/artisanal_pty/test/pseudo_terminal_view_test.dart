@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/terminal.dart' as terminal_keys show Key, KeyType;
 import 'package:artisanal_pty/widgets.dart';
+import 'package:artisanal_widgets/testing.dart';
 import 'package:artisanal_widgets/widgets.dart';
 import 'package:pty2/pty2.dart';
 import 'package:test/test.dart';
@@ -50,6 +52,134 @@ void main() {
     expect(view, contains('w'));
     expect(view, isNot(contains('d')));
   });
+
+  test('normalizes bare line feeds from raw PTY output', () async {
+    final pty = _FakePseudoTerminal();
+    final focus = FocusController();
+    final tester = WidgetTester(screenWidth: 12, screenHeight: 3);
+    addTearDown(tester.dispose);
+    await tester.pumpWidget(
+      PseudoTerminalView(
+        pty: pty,
+        focusController: focus,
+        focusId: 'terminal',
+        quitOnExit: false,
+      ),
+    );
+    expect(focus.focusedId, 'terminal');
+
+    pty.emit('abc\nx');
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    tester.pump();
+
+    final firstLine = tester.locateText('abc');
+    final secondLine = tester.locateText('x');
+    expect(firstLine, isNotNull);
+    expect(secondLine, isNotNull);
+    expect(
+      secondLine!.x,
+      firstLine!.x,
+      reason: 'a raw LF should begin the following line at column zero',
+    );
+    expect(pty.acknowledgedChunks, 1);
+
+    pty.emit('\ny');
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    tester.pump();
+    expect(tester.locateText('y')?.x, firstLine.x);
+    expect(pty.acknowledgedChunks, 2);
+
+    tester.sendMsg(
+      const runtime.KeyMsg(
+        terminal_keys.Key(
+          terminal_keys.KeyType.runes,
+          runes: [0x63],
+          ctrl: true,
+        ),
+      ),
+    );
+    expect(pty.input, ['\x03']);
+
+    pty.emit('\x1b[?1h\x1b[6n');
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    tester.pump();
+    expect(
+      focus.focusedId,
+      'terminal',
+      reason: 'negotiating cursor mode must not dispose terminal focus',
+    );
+    tester.sendMsg(
+      const runtime.KeyMsg(terminal_keys.Key(terminal_keys.KeyType.up)),
+    );
+    expect(pty.input, contains('\x1bOA'));
+    expect(
+      pty.input,
+      contains(matches(RegExp(r'^\x1b\[\d+;\d+R$'))),
+      reason: 'cursor position reports should be answered through the PTY',
+    );
+
+    pty.emit('\nz');
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    tester.pump();
+    pty.emit('\x1b[>13u\x1b[?1000h\x1b[?1006h');
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    tester.pump();
+    expect(
+      focus.focusedId,
+      'terminal',
+      reason: 'negotiating child mouse mode must not dispose terminal focus',
+    );
+    tester.sendMsg(
+      const runtime.KeyMsg(terminal_keys.Key(terminal_keys.KeyType.down)),
+    );
+    tester.mouseDown(4, 2);
+    tester.mouseUp(4, 2);
+    tester.sendMsg(
+      const runtime.MouseMsg(
+        action: runtime.MouseAction.wheel,
+        button: runtime.MouseButton.wheelDown,
+        x: 4,
+        y: 2,
+      ),
+    );
+    expect(pty.input, contains('\x1b[B'));
+    expect(pty.input, contains('\x1b[<0;5;3M'));
+    expect(pty.input, contains('\x1b[<0;5;3m'));
+    expect(pty.input, contains('\x1b[<65;5;3M'));
+  });
+
+  test(
+    'mouse wheel navigates local scrollback outside child mouse mode',
+    () async {
+      final pty = _FakePseudoTerminal();
+      final tester = WidgetTester(screenWidth: 12, screenHeight: 3);
+      addTearDown(tester.dispose);
+      await tester.pumpWidget(PseudoTerminalView(pty: pty, quitOnExit: false));
+
+      pty.emit('one\r\ntwo\r\nthree\r\nfour');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      tester.pump();
+      expect(tester.view, isNot(contains('one')));
+
+      tester.sendMsg(
+        const runtime.MouseMsg(
+          action: runtime.MouseAction.wheel,
+          button: runtime.MouseButton.wheelUp,
+          x: 2,
+          y: 1,
+        ),
+      );
+
+      expect(tester.view, contains('one'));
+      expect(pty.input, isEmpty);
+    },
+  );
 }
 
 void _startStreams(runtime.Cmd? command, void Function(runtime.Msg) send) {
@@ -69,6 +199,8 @@ final class _FakePseudoTerminal implements PseudoTerminal {
 
   final StreamController<String> _output;
   final Completer<int> _exit = Completer();
+  int acknowledgedChunks = 0;
+  final List<String> input = [];
 
   void emit(String data) => _output.add(data);
 
@@ -84,7 +216,7 @@ final class _FakePseudoTerminal implements PseudoTerminal {
   Future<int> get exitCode => _exit.future;
 
   @override
-  void ackProcessed() {}
+  void ackProcessed() => acknowledgedChunks++;
 
   @override
   void init() {}
@@ -96,7 +228,7 @@ final class _FakePseudoTerminal implements PseudoTerminal {
   void resize(int width, int height) {}
 
   @override
-  void write(String input) {}
+  void write(String value) => input.add(value);
 }
 
 final class _ReplacePtyMsg extends runtime.Msg {

@@ -15,6 +15,7 @@ import '../core/key.dart' show Key, UniqueKey;
 import '../core/widget.dart';
 import '../focus/focus.dart' show FocusScope;
 import '../layout/_layout_core.dart';
+import '../theme/theme_scope.dart' show ThemeScope;
 import 'navigator_observer.dart';
 import 'pop_behavior.dart';
 import 'route.dart';
@@ -412,6 +413,7 @@ class NavigatorState extends State<Navigator> {
     RouteSettings? routeSettings,
     AnimationStyle? animationStyle,
   }) {
+    final capturedTheme = ThemeScope.maybeOf(context);
     final route = DialogRoute<T>(
       builder: builder,
       barrierDismissible: barrierDismissible,
@@ -422,6 +424,7 @@ class NavigatorState extends State<Navigator> {
       width: width,
       height: height,
       animationStyle: animationStyle,
+      capturedTheme: capturedTheme,
       settings: routeSettings ?? RouteSettings(name: DialogRoute.routeName),
     );
     return push<T>(route);

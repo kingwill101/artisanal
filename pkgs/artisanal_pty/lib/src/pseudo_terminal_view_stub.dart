@@ -8,6 +8,8 @@ class PseudoTerminalView extends StatelessWidget {
     String? focusId,
     bool autofocus = true,
     bool quitOnExit = true,
+    int? width,
+    int? height,
     super.key,
   });
 

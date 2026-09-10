@@ -10,11 +10,20 @@
   scrollbars. The original `TreeView(nodes: ...)` API remains compatible.
 - Added `ResizableSplitView`, a reusable horizontal or vertical split with a
   pointer-draggable separator and minimum pane extents.
+- Added controlled extents and zero-width/zero-height hidden separators to
+  `ResizableSplitView`, allowing panes such as integrated terminals to retain
+  mounted state while being resized or collapsed.
 
 ### Changed
 
 - Added `showChrome` to `TextEditor` and `CodeEditor` so workbenches that
   already provide tabs and status bars can use an unboxed editor surface.
+
+### Fixed
+
+- Preserve the caller's `ThemeScope` when opening dialogs through
+  `NavigatorState.showDialog`, and keep the default modal barrier transparent
+  as documented instead of painting over the application.
 
 ## 0.4.1
 

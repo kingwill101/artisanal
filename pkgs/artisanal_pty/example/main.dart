@@ -12,7 +12,8 @@ Future<void> main() async {
     arguments,
     environment: {...Platform.environment, 'TERM': 'xterm-256color'},
     workingDirectory: Directory.current.path,
-    raw: true,
+    ackProcessed: true,
+    raw: false,
   );
 
   try {
@@ -21,10 +22,7 @@ Future<void> main() async {
         title: 'Artisanal PTY',
         home: PseudoTerminalView(pty: pty),
       ),
-      options: runtime.ProgramOptions().withFilter(
-        (_, message) =>
-            message is runtime.InterruptMsg ? const runtime.QuitMsg() : message,
-      ),
+      options: runtime.ProgramOptions().withoutInterruptMsg(),
     );
   } finally {
     pty.kill();

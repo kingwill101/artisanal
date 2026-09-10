@@ -40,6 +40,10 @@ dart run artisanal_editor README.md
   completion;
 - Markdown-rendered Dart hover documentation;
 - command-revealed Problems and Output panels, hidden by default;
+- persistent, workspace-rooted `artisanal_pty` terminal instances with full
+  terminal colors, keyboard input, shell history navigation, automatic
+  resizing, primary-screen scrollback, child-TUI mouse forwarding, a
+  pointer-draggable top divider, and new/restart/kill/hide controls;
 - searchable command and file palette;
 - save, safe close, save-and-close, buffer cycling, and diagnostic navigation.
 
@@ -59,6 +63,8 @@ Key bindings:
 | `Up`/`Down`, `Enter`/`Tab`, `Esc` | Select, accept, or dismiss completion |
 | `Ctrl+B` | Toggle the Explorer |
 | `Ctrl+J` | Toggle the Problems/Output panel |
+| ``Ctrl+` `` | Toggle the integrated terminal |
+| `Ctrl+D` | Terminate and close the focused terminal instance |
 | `Ctrl+Shift+V` | Toggle the active Markdown buffer's rendered preview |
 | `Ctrl+S` | Save |
 | `Ctrl+W` | Close, prompting to save or discard when modified |
@@ -120,5 +126,21 @@ selection, expansion, visible-row projection, and scroll offset are owned by
 the reusable Bubble `TreeModel`; `artisanal_widgets` supplies focus, pointer
 handling, custom row rendering, and the scrollbar through `TreeView.model`.
 
+The integrated terminal lazily starts the user's shell in the workspace root
+through `pty2`, while `artisanal_pty` owns terminal emulation, rendering,
+keyboard encoding, and resize propagation. Hiding the panel preserves the
+shell session; the panel header can restart or hide it, and shell exit never
+quits the editor. The PTY uses cooked mode so foreground commands receive
+terminal-generated signals such as `Ctrl+C`, and acknowledged output chunks
+provide bounded, incremental rendering during long-running commands. Each
+terminal tab owns an independent shell; use `+` to create one, `↻` to restart
+the active shell, `⊗` to terminate it, and `×` to hide the panel without
+terminating any sessions. While a terminal is focused it owns the keyboard,
+including editor-like chords such as `Ctrl+W`; use ``Ctrl+` `` to return to
+the editor before invoking editor shortcuts. `Ctrl+D` is reserved by the
+workbench to forcibly close the focused terminal. An application interrupt
+terminates every owned PTY and waits briefly for their worker isolates before
+the editor exits.
+
 Planned next layers are code-action and definition surfaces, recursive split
-trees, workspace text search, and an `artisanal_pty` terminal panel.
+trees, and workspace text search.

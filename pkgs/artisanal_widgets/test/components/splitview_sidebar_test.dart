@@ -283,6 +283,46 @@ void main() {
 
       expect(tester.locateText('Right')!.x, 18);
     });
+
+    test(
+      'supports controlled vertical resizing and a hidden separator',
+      () async {
+        final tester = WidgetTester(screenWidth: 20, screenHeight: 12);
+        addTearDown(tester.dispose);
+        var firstExtent = 7;
+
+        Widget build({required int separatorExtent}) {
+          return Container(
+            width: 20,
+            height: 12,
+            child: ResizableSplitView(
+              axis: Axis.vertical,
+              initialFirstExtent: firstExtent,
+              firstExtent: firstExtent,
+              minFirstExtent: 3,
+              minSecondExtent: 3,
+              separatorExtent: separatorExtent,
+              separator: Text('='),
+              onChanged: (value) => firstExtent = value,
+              first: Text('Top'),
+              second: Text('Bottom'),
+            ),
+          );
+        }
+
+        await tester.pumpWidget(build(separatorExtent: 1));
+        final handle = tester.locateText('=')!;
+        final before = tester.locateText('Bottom')!;
+        tester.drag(handle.x, handle.y, handle.x, handle.y - 2);
+        await tester.pumpWidget(build(separatorExtent: 1));
+
+        expect(firstExtent, 5);
+        expect(tester.locateText('Bottom')!.y, lessThan(before.y));
+
+        await tester.pumpWidget(build(separatorExtent: 0));
+        expect(tester.view, isNot(contains('=')));
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

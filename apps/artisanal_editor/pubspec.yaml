@@ -13,6 +13,7 @@ dependencies:
   artisanal_widgets: ^0.4.1
   path: ^1.9.1
   pro_lsp: ^0.3.0
+  pty2: ^0.5.4
   stream_channel: ^2.1.4
   tree_sitter_language_pack: ^1.16.1
 

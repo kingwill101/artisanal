@@ -10,8 +10,10 @@ import 'package:artisanal_editor/src/workspace/editor_workspace.dart';
 import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/terminal.dart' show Key, KeyType;
 import 'package:artisanal_widgets/testing.dart';
-import 'package:artisanal_widgets/widgets.dart' show Navigator, ValueKey;
+import 'package:artisanal_widgets/widgets.dart'
+    show Navigator, OpenCodeThemes, ThemeScope, ValueKey;
 import 'package:path/path.dart' as p;
+import 'package:pty2/pty2.dart' show PseudoTerminal;
 import 'package:test/test.dart';
 
 void main() {
@@ -23,6 +25,12 @@ void main() {
     expect(key.type, KeyType.runes);
     expect(key.ctrl, isTrue);
     expect(key.char, 'z');
+  });
+
+  test('preserves interrupts for coordinated terminal shutdown', () {
+    const interrupt = runtime.InterruptMsg();
+
+    expect(remapEditorInput(interrupt), same(interrupt));
   });
 
   test(
@@ -44,7 +52,19 @@ void main() {
 
       final tester = WidgetTester(screenWidth: 110, screenHeight: 34);
       addTearDown(tester.dispose);
-      await tester.pumpWidget(EditorScreen(workspace: workspace));
+      final terminals = <_FakePseudoTerminal>[];
+      String? terminalRoot;
+      await tester.pumpWidget(
+        EditorScreen(
+          workspace: workspace,
+          terminalStarter: (root) {
+            terminalRoot = root;
+            final terminal = _FakePseudoTerminal();
+            terminals.add(terminal);
+            return terminal;
+          },
+        ),
+      );
 
       expect(tester.view, contains('main.dart'));
       expect(tester.view, contains('NORMAL'));
@@ -88,9 +108,91 @@ void main() {
       expect(tester.view, isNot(contains('Output')));
 
       tester.sendMsg(
-        const runtime.KeyMsg(Key(KeyType.runes, runes: [0x62], ctrl: true)),
+        const runtime.KeyMsg(Key(KeyType.runes, runes: [0x60], ctrl: true)),
       );
-      expect(tester.view, isNot(contains('main.dart ●')));
+      expect(tester.view, contains('Terminal'));
+      expect(tester.view, contains('TERMINAL'));
+      expect(terminalRoot, p.canonicalize(sandbox.path));
+      final terminal = terminals.single;
+      expect(terminal.lastSize, (width: 81, height: 9));
+      expect(
+        tester.find.byKeyLocation(const ValueKey('integrated-terminal:1')),
+        isNotNull,
+      );
+      terminal.emit('terminal-ready');
+      await Future<void>.delayed(Duration.zero);
+      tester.pump();
+      expect(tester.view, contains('terminal-ready'));
+      final terminalBeforeResize = tester.locateText('terminal-ready')!;
+      final bottomDivider = tester.locateText('━')!;
+      tester.drag(
+        bottomDivider.x,
+        bottomDivider.y,
+        bottomDivider.x,
+        bottomDivider.y - 3,
+      );
+      final terminalAfterResize = tester.locateText('terminal-ready')!;
+      expect(terminalAfterResize.y, lessThan(terminalBeforeResize.y));
+      expect(terminal.lastSize, (width: 81, height: 12));
+      tester.sendMsg(
+        const runtime.KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)),
+      );
+      tester.sendMsg(remapEditorInput(const runtime.SuspendMsg()));
+      tester.sendMsg(
+        const runtime.KeyMsg(Key(KeyType.runes, runes: [0x77], ctrl: true)),
+      );
+      expect(terminal.input, containsAllInOrder(['\x03', '\x1a', '\x17']));
+      expect(workspace.openBuffers, hasLength(1));
+      terminal.emit('\x1b[?1049h\x1b[>13u\x1b[?1000h\x1b[?1006h');
+      await Future<void>.delayed(Duration.zero);
+      tester.pump();
+      expect(tester.view, contains('TERMINAL'));
+      tester.sendSpecialKey(KeyType.down);
+      expect(terminal.input, contains('\x1b[B'));
+      tester.tap(
+        tester.find.byKeyLocation(const ValueKey('close-bottom-panel')),
+      );
+      expect(tester.view, isNot(contains('Terminal')));
+      tester.sendMsg(
+        const runtime.KeyMsg(Key(KeyType.runes, runes: [0x60], ctrl: true)),
+      );
+      terminal.emit('terminal-reopened');
+      await Future<void>.delayed(Duration.zero);
+      tester.pump();
+      expect(tester.view, contains('terminal-reopened'));
+
+      tester.tap(tester.find.byKeyLocation(const ValueKey('new-terminal')));
+      expect(terminals, hasLength(2));
+      expect(
+        tester.find.byKeyLocation(const ValueKey('integrated-terminal:1')),
+        isNotNull,
+      );
+      expect(
+        tester.find.byKeyLocation(const ValueKey('integrated-terminal:2')),
+        isNotNull,
+      );
+      final secondTerminal = terminals.last;
+      secondTerminal.emit('second-terminal-ready');
+      await Future<void>.delayed(Duration.zero);
+      tester.pump();
+      expect(tester.view, contains('second-terminal-ready'));
+      tester.sendMsg(
+        const runtime.KeyMsg(Key(KeyType.runes, runes: [0x64], ctrl: true)),
+      );
+      tester.pump();
+      expect(secondTerminal.killed, isTrue);
+      expect(
+        tester.find.byKeyLocation(const ValueKey('integrated-terminal:1')),
+        isNotNull,
+      );
+
+      tester.tap(tester.find.byKeyLocation(const ValueKey('new-terminal')));
+      final thirdTerminal = terminals.last;
+      expect(thirdTerminal, isNot(same(secondTerminal)));
+      tester.sendMsg(const runtime.InterruptMsg());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(terminal.killed, isTrue);
+      expect(thirdTerminal.killed, isTrue);
     },
   );
 
@@ -228,7 +330,10 @@ void main() {
     final tester = WidgetTester(screenWidth: 100, screenHeight: 24);
     addTearDown(tester.dispose);
     await tester.pumpWidget(
-      Navigator(home: EditorScreen(workspace: workspace)),
+      ThemeScope(
+        theme: OpenCodeThemes.ayu(),
+        child: Navigator(home: EditorScreen(workspace: workspace)),
+      ),
     );
 
     tester.tap(
@@ -245,11 +350,22 @@ void main() {
     expect(tester.view, contains('UNSAVED CHANGES'));
     expect(tester.view, contains('Save and close'));
     expect(tester.view, contains('Discard changes'));
+    expect(tester.view, contains('Keep editing'));
+    expect(
+      tester.locateText('UNSAVED CHANGES')?.y,
+      inInclusiveRange(1, 20),
+      reason: 'the dirty-buffer prompt should be a visible compact dialog',
+    );
+    expect(
+      tester.locateText('void'),
+      isNotNull,
+      reason: 'the default modal barrier should not hide the editor',
+    );
 
     tester.sendSpecialKey(KeyType.escape);
     for (
       var attempt = 0;
-      attempt < 20 && tester.view.contains('UNSAVED CHANGES');
+      attempt < 100 && tester.view.contains('UNSAVED CHANGES');
       attempt++
     ) {
       await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -379,6 +495,44 @@ void main() {
     tester.sendSpecialKey(KeyType.escape);
     expect(tester.view, isNot(contains('Fake')));
   });
+}
+
+final class _FakePseudoTerminal implements PseudoTerminal {
+  final StreamController<String> _output = StreamController();
+  final Completer<int> _exitCode = Completer();
+  final List<String> input = [];
+  bool killed = false;
+  ({int width, int height})? lastSize;
+
+  void emit(String data) => _output.add(data);
+
+  @override
+  Stream<String> get out => _output.stream;
+
+  @override
+  Future<int> get exitCode => _exitCode.future;
+
+  @override
+  void ackProcessed() {}
+
+  @override
+  void init() {}
+
+  @override
+  bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
+    killed = true;
+    if (!_output.isClosed) unawaited(_output.close());
+    if (!_exitCode.isCompleted) _exitCode.complete(0);
+    return true;
+  }
+
+  @override
+  void resize(int width, int height) {
+    lastSize = (width: width, height: height);
+  }
+
+  @override
+  void write(String value) => input.add(value);
 }
 
 final class _CompletionLanguageService implements EditorLanguageService {
