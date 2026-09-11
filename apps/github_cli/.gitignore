@@ -3,3 +3,4 @@ build/
 *.exe
 record.cast
 traces/*.log
+web/*.wasm

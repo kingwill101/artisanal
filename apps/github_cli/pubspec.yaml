@@ -1,5 +1,5 @@
 name: github_cli
-description: GitHub terminal dashboard example for artisanal_widgets.
+description: Standalone GitHub terminal dashboard built with Artisanal.
 publish_to: none
 resolution: workspace
 

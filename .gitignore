@@ -10,7 +10,7 @@ build/
 # Generated example docs (website/scripts/sync-examples.mjs rebuilds them).
 docs/examples/
 pkgs/artisanal/.site/
-pkgs/artisanal_widgets/example/github_cli/site/
+apps/github_cli/site/
 pkgs/ultraviolet/benchmark/profiles/
 orm_bootstrap_test/
 .github/prompts/

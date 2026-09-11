@@ -78,7 +78,7 @@ test/              # mirrors lib structure (components/, input/, focus/, scroll/
                    # theme/, gestures/, animation/, navigation/, selection/,
                    # charting/, app/, layout/, core/, perf/, example/)
 example/           # ~70 standalone demos, incl. opencode/, widget_features/,
-                   # uv_effects/, inline_build_monitor/, github_cli/
+                   # uv_effects/, inline_build_monitor/
 tool/              # ANSI dump helpers for debugging output
 ```
 

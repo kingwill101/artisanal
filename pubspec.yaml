@@ -2,11 +2,11 @@ name: artisanal_workspace
 publish_to: none
 workspace:
   - apps/artisanal_editor
+  - apps/github_cli
   - pkgs/artisanal
   - pkgs/artisanal/example/tree_sitter_language_pack
   - pkgs/artisanal_pty
   - pkgs/artisanal_widgets
-  - pkgs/artisanal_widgets/example/github_cli
   - pkgs/artisanal_widgets/example/flutter_cli_port
   - pkgs/ultraviolet
   - pkgs/flutter_artisanal

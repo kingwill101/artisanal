@@ -21,7 +21,8 @@ SDK: `>=3.10.0 <4.0.0`.
 | `pkgs/artisanal` | `artisanal` 0.6.x | Core toolkit: `Console` I/O, `Style` system, TEA runtime (`Program`/`Model`/`Msg`/`Cmd`), Bubbles widgets, `CommandRunner`, markdown/glamour, charting, and editor core. |
 | `pkgs/artisanal_widgets` | `artisanal_widgets` 0.4.x | Flutter-inspired widget framework (`Widget`/`Element`/`State`, layout, gestures, scroll, navigation, components). Primary package for widget-first apps. |
 | `pkgs/flutter_artisanal` | `flutter_artisanal` 0.2.x | Flutter rendering, input bridge, and app shell for UV terminal buffers (Flutter package, `publish_to: none`). |
-| `pkgs/artisanal_widgets/example/...` | example packages | `github_cli`, `flutter_cli_port` — app-level consumers. |
+| `apps/github_cli` | `github_cli` | Standalone GitHub terminal dashboard; app-level consumer. |
+| `pkgs/artisanal_widgets/example/...` | example packages | `flutter_cli_port` — app-level consumer. |
 
 **Boundary rules** (see `docs/workspace_architecture.md`):
 - Keep renderer concerns (diff, sync output, frame behavior) in `ultraviolet`.

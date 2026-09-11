@@ -39,10 +39,8 @@ String _resolveScenarioPath(String scenarioArg) {
   add(withJson);
   add('scenarios/$trimmed');
   add('scenarios/$withJson');
-  add('example/github_cli/scenarios/$trimmed');
-  add('example/github_cli/scenarios/$withJson');
-  add('pkgs/artisanal_widgets/example/github_cli/scenarios/$trimmed');
-  add('pkgs/artisanal_widgets/example/github_cli/scenarios/$withJson');
+  add('apps/github_cli/scenarios/$trimmed');
+  add('apps/github_cli/scenarios/$withJson');
 
   for (final candidate in candidates) {
     if (io.File(candidate).existsSync()) return candidate;

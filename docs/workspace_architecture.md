@@ -9,6 +9,15 @@ with app-level behavior built on top.
 2. `artisanal_widgets`: composable widget system and higher-level UI widgets.
 3. `ultraviolet`: low-level UV terminal renderer and graphics primitives.
 
+## Applications
+
+Standalone applications live in `apps/` and remain Dart workspace members.
+They consume the toolkit packages without becoming part of the framework.
+
+- `apps/artisanal_editor`: terminal editor application.
+- `apps/github_cli`: GitHub terminal dashboard, moved out of the widget examples.
+  See its [README](../apps/github_cli/README.md) for setup and run commands.
+
 ## Core Principles
 
 1. Keep `artisanal` focused on stable primitives, not app-specific logic.
