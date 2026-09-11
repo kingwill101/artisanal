@@ -8,6 +8,16 @@ import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(
+  WidgetTester tester,
+  w.Widget child, {
+  w.ImageAutoMode? imageAutoMode,
+}) => tester.pumpWidget(
+  LooseLayoutHost(child: child),
+  imageAutoMode: imageAutoMode ?? w.ImageAutoMode.portableFallback,
+);
 
 Uint8List _encodeTestImage() {
   final image = img.Image(width: 4, height: 4);
@@ -268,7 +278,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -293,7 +304,8 @@ void main() {
     addTearDown(() => tester.dispose());
 
     final bytes = _encodeTestImage();
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(bytes),
         width: 2,
@@ -307,7 +319,8 @@ void main() {
     final firstView = tester.view;
     expect(firstView, contains('c=2'));
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(bytes),
         width: 3,
@@ -326,7 +339,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Container(
         width: 8,
         height: 4,
@@ -350,7 +364,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 8);
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Row(
           children: [
             w.Image(
@@ -395,7 +410,8 @@ void main() {
     addTearDown(() => tester.dispose());
 
     final bytes = _encodeTestImage();
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.ScrollArea(
         controller: controller,
         height: 6,
@@ -427,7 +443,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 8);
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Row(
           children: [
             w.Image(
@@ -475,7 +492,8 @@ void main() {
       cellPixelWidth: 2,
       cellPixelHeight: 3,
       callback: () async {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           w.Image(
             image: w.MemoryImage(_encodeTestImage()),
             width: 4,
@@ -496,7 +514,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 8);
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Image(
           image: w.MemoryImage(_encodeTestImage()),
           width: 4,
@@ -514,7 +533,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -531,7 +551,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -548,7 +569,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -565,7 +587,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -586,7 +609,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -606,7 +630,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,
@@ -625,7 +650,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.Image(
         image: w.MemoryImage(_encodeTestImage()),
         width: 2,

@@ -4,6 +4,18 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
+extension on WidgetTester {
+  Future<void> pumpLoose(Widget widget, {int? width, int? height}) {
+    return pumpWidget(
+      LooseLayoutHost(child: widget),
+      width: width,
+      height: height,
+    );
+  }
+}
+
 void main() {
   group('TextArea construction', () {
     test('creates with default properties', () {
@@ -440,7 +452,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextAreaController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 8,
@@ -463,7 +475,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 60, screenHeight: 12);
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -483,7 +495,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextAreaController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -510,7 +522,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextAreaController(text: 'first\nsecond');
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -530,7 +542,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextAreaController(text: 'first');
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -552,7 +564,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextAreaController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -581,7 +593,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextAreaController(text: 'Hello World');
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -612,7 +624,7 @@ void main() {
         onHighlight: const AnsiColor(231),
       );
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         ThemeScope(
           theme: theme,
           child: Container(

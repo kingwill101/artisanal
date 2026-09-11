@@ -41,6 +41,9 @@ void main() async {
 }
 ```
 
+For sizing, flex allocation, and root-widget behavior, see
+[Predictable widget layout](widget_layout.md).
+
 ## Where to import from
 
 Most widget apps use `package:artisanal_widgets/app.dart` for the app shell,

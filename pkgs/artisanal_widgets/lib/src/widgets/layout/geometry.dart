@@ -109,6 +109,20 @@ class BoxConstraints {
     return Size(constrainWidth(size.width), constrainHeight(size.height));
   }
 
+  /// Fits these constraints within [parent]'s allowed intervals.
+  ///
+  /// The parent's minimum and maximum bounds take precedence. When the two
+  /// valid intervals do not overlap, the result is tight at the nearest parent
+  /// bound rather than an invalid interval whose minimum exceeds its maximum.
+  BoxConstraints enforce(BoxConstraints parent) {
+    return BoxConstraints(
+      minWidth: parent.constrainWidth(minWidth),
+      maxWidth: parent.constrainWidth(maxWidth),
+      minHeight: parent.constrainHeight(minHeight),
+      maxHeight: parent.constrainHeight(maxHeight),
+    );
+  }
+
   /// Returns a copy with the minimum constraints removed (set to zero),
   /// keeping the maximum constraints unchanged.
   BoxConstraints loosen() {

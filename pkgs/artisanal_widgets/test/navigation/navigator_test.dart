@@ -3,6 +3,10 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, w.Widget child) =>
+    tester.pumpWidget(LooseLayoutHost(child: child));
 
 // ---------------------------------------------------------------------------
 // Test helpers — simple page widgets and a push-button wrapper
@@ -311,7 +315,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(w.Navigator(home: w.Text('Home Page')));
+      await _pumpSmallRoot(tester, w.Navigator(home: w.Text('Home Page')));
 
       expect(tester.find.text('Home Page'), isTrue);
     });
@@ -320,7 +324,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           routes: {
             '/': (_) => w.Text('Root Page'),
@@ -336,7 +341,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           initialRoute: '/settings',
           routes: {'/settings': (_) => w.Text('Settings')},
@@ -350,7 +356,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Pushed'),
         ),
@@ -369,7 +376,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Pushed'),
         ),
@@ -389,7 +397,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(home: _PushAndAwaitPage(label: 'First')),
       );
 
@@ -418,7 +427,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           routes: {
             '/': (_) => _PushPage(
@@ -442,7 +452,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(w.Navigator(home: w.Text('Only')));
+      await _pumpSmallRoot(tester, w.Navigator(home: w.Text('Only')));
 
       // Escape should not pop the last route.
       tester.sendSpecialKey(KeyType.escape);
@@ -453,7 +463,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Second'),
         ),
@@ -472,7 +483,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Second'),
           popBehavior: w.PopBehavior(escapeEnabled: false),
@@ -491,7 +503,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Second'),
           popBehavior: w.PopBehavior(
@@ -513,7 +526,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Second'),
           popBehavior: w.PopBehavior(escapeEnabled: false, customPopKey: 'q'),
@@ -533,7 +547,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Home', targetLabel: 'Second'),
           observers: [observer],
@@ -553,7 +568,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _PushPage(label: 'Page 1', targetLabel: 'Page 2'),
         ),
@@ -589,7 +605,10 @@ void main() {
         replacementLabel: 'Replaced',
       );
 
-      await tester.pumpWidget(w.Navigator(home: home, observers: [observer]));
+      await _pumpSmallRoot(
+        tester,
+        w.Navigator(home: home, observers: [observer]),
+      );
 
       expect(tester.find.text('Original'), isTrue);
 
@@ -607,7 +626,10 @@ void main() {
       addTearDown(() => tester.dispose());
 
       // A page that pushes multiple pages and then pops until root.
-      await tester.pumpWidget(w.Navigator(home: _MultiPushPage(label: 'Root')));
+      await _pumpSmallRoot(
+        tester,
+        w.Navigator(home: _MultiPushPage(label: 'Root')),
+      );
 
       expect(tester.find.text('Root'), isTrue);
 
@@ -628,7 +650,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _EscapeModalPushPage(
             label: 'Home',
@@ -654,7 +677,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _EscapeModalPushPage(
             label: 'Home',
@@ -680,7 +704,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(home: _WillHandlePopPage(label: 'Home')),
       );
 
@@ -700,7 +725,10 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(w.Navigator(home: _NoPopPage(label: 'Home')));
+      await _pumpSmallRoot(
+        tester,
+        w.Navigator(home: _NoPopPage(label: 'Home')),
+      );
 
       expect(tester.find.text('Home'), isTrue);
 
@@ -718,7 +746,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           home: _BlockedPage(label: 'Home'),
           popBehavior: w.PopBehavior(
@@ -744,7 +773,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(w.Navigator());
+      await _pumpSmallRoot(tester, w.Navigator());
 
       // No home, no routes — should not crash.
       expect(tester.view, isNotNull);
@@ -754,7 +783,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           initialRoute: '/dynamic/42',
           onGenerateRoute: (settings) {
@@ -777,7 +807,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Navigator(
           initialRoute: '/nonexistent',
           onUnknownRoute: (settings) {
@@ -801,7 +832,7 @@ void main() {
       // Start with a single entry so we can verify it renders.
       final entry = w.OverlayEntry(builder: (context) => w.Text('removable'));
 
-      await tester.pumpWidget(w.Overlay(initialEntries: [entry]));
+      await _pumpSmallRoot(tester, w.Overlay(initialEntries: [entry]));
 
       expect(tester.find.text('removable'), isTrue);
 
@@ -825,7 +856,7 @@ void main() {
         },
       );
 
-      await tester.pumpWidget(w.Overlay(initialEntries: [entry]));
+      await _pumpSmallRoot(tester, w.Overlay(initialEntries: [entry]));
 
       expect(tester.find.text('count:0'), isTrue);
 
@@ -840,7 +871,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Overlay(
           initialEntries: [w.OverlayEntry(builder: (_) => w.Text('base'))],
         ),

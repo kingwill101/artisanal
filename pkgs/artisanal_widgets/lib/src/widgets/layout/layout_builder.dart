@@ -3,11 +3,13 @@ import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
 import '../media/media_query.dart' show MediaQuery;
 
-/// A widget that provides its parent's constraints to a builder callback.
+/// A widget that provides viewport constraints to a builder callback.
 ///
-/// Use [LayoutBuilder] to build widget trees that depend on the available
-/// space. The [builder] receives the [BoxConstraints] from the nearest
+/// Use [LayoutBuilder] to build widget trees that depend on the terminal
+/// viewport. The [builder] receives the [BoxConstraints] from the nearest
 /// [MediaQuery] ancestor (falling back to unconstrained if none exists).
+/// These are not the containing render object's constraints: a narrower
+/// parent does not change the values delivered to this builder.
 ///
 /// This is useful for responsive terminal UIs that adapt their layout
 /// based on the terminal size.

@@ -1,7 +1,3 @@
-import 'dart:math' as math;
-
-import 'package:artisanal/style.dart' hide Padding, Align;
-
 import '../rendering/render_object.dart';
 import '_layout_utils.dart';
 import 'geometry.dart';
@@ -16,32 +12,16 @@ class RenderConstrainedBox extends RenderBox {
 
   @override
   void layout(BoxConstraints constraints) {
-    final combined = BoxConstraints(
-      minWidth: math.max(constraints.minWidth, additionalConstraints.minWidth),
-      maxWidth: math.min(constraints.maxWidth, additionalConstraints.maxWidth),
-      minHeight: math.max(
-        constraints.minHeight,
-        additionalConstraints.minHeight,
-      ),
-      maxHeight: math.min(
-        constraints.maxHeight,
-        additionalConstraints.maxHeight,
-      ),
-    );
-    super.layout(combined);
+    super.layout(constraints);
+    final combined = additionalConstraints.enforce(constraints);
     _child?.layout(combined);
+    size = combined.constrain(_child?.size ?? Size.zero);
     final rendered = constrainContent(
       _child?.paint() ?? '',
-      width: combined.hasBoundedWidth ? combined.maxWidth.toInt() : null,
-      height: combined.hasBoundedHeight ? combined.maxHeight.toInt() : null,
+      width: size.width.isFinite ? size.width.toInt() : null,
+      height: size.height.isFinite ? size.height.toInt() : null,
     );
     _lastPaint = rendered;
-    size = combined.constrain(
-      Size(
-        Layout.getWidth(rendered).toDouble(),
-        Layout.getHeight(rendered).toDouble(),
-      ),
-    );
   }
 
   @override

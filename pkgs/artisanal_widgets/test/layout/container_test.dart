@@ -1,6 +1,18 @@
-import 'package:artisanal/style.dart';
+import 'package:artisanal/style.dart' hide Align;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
+
+import '../testing/loose_layout_host.dart';
+
+extension on WidgetTester {
+  Future<void> pumpLoose(Widget widget, {int? width, int? height}) {
+    return pumpWidget(
+      LooseLayoutHost(child: widget),
+      width: width,
+      height: height,
+    );
+  }
+}
 
 void main() {
   group('Container', () {
@@ -8,7 +20,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Container(child: Text('Content')));
+      await tester.pumpLoose(Container(child: Text('Content')));
       expect(tester.find.text('Content'), isTrue);
     });
 
@@ -16,7 +28,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Container());
+      await tester.pumpLoose(Container());
       expect(tester.view.trim(), isEmpty);
     });
 
@@ -24,7 +36,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(padding: EdgeInsets.all(2), child: Text('X')),
       );
 
@@ -36,7 +48,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           padding: EdgeInsets.symmetric(horizontal: 2, vertical: 1),
           child: Text('X'),
@@ -49,7 +61,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           padding: EdgeInsets.only(left: 2, top: 1, right: 2, bottom: 1),
           child: Text('X'),
@@ -62,7 +74,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Container(width: 20, child: Text('Hi')));
+      await tester.pumpLoose(Container(width: 20, child: Text('Hi')));
 
       final lines = tester.viewLines;
       for (final line in lines) {
@@ -76,7 +88,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Container(height: 5, child: Text('Hi')));
+      await tester.pumpLoose(Container(height: 5, child: Text('Hi')));
 
       final lines = tester.viewLines;
       expect(lines.length, lessThanOrEqualTo(5));
@@ -86,7 +98,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(width: 10, height: 3, child: Text('Hi')),
       );
 
@@ -103,7 +115,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(background: Colors.blue, child: Text('BG')),
       );
       expect(tester.find.text('BG'), isTrue);
@@ -113,7 +125,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(foreground: Colors.white, child: Text('FG')),
       );
       expect(tester.find.text('FG'), isTrue);
@@ -123,7 +135,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(color: Colors.green, child: Text('Colored')),
       );
       expect(tester.find.text('Colored'), isTrue);
@@ -133,7 +145,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           decoration: BoxDecoration(
             color: Colors.yellow,
@@ -149,7 +161,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           foregroundDecoration: BoxDecoration(color: Colors.cyan),
           child: Text('Foreground'),
@@ -162,7 +174,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 20,
           alignment: Alignment.center,
@@ -176,7 +188,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 20,
           align: HorizontalAlign.center,
@@ -190,7 +202,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           height: 5,
           verticalAlign: VerticalAlign.center,
@@ -204,7 +216,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(margin: EdgeInsets.all(1), child: Text('Margin')),
       );
       expect(tester.find.text('Margin'), isTrue);
@@ -242,7 +254,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           padding: EdgeInsets.all(1),
           decoration: BoxDecoration(border: Border.normal),
@@ -256,7 +268,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           padding: EdgeInsets.all(2),
           child: Column(children: [Text('Line 1'), Text('Line 2')]),
@@ -271,7 +283,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           padding: EdgeInsets.symmetric(horizontal: 2),
           child: Row(children: [Text('A'), Text('B')]),
@@ -286,7 +298,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 30,
           height: 10,
@@ -379,7 +391,7 @@ void main() {
     test('decoration color is applied as background', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 1,
@@ -397,13 +409,13 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
         // Without border
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(width: 10, height: 3, child: Text('NoBorder')),
         );
         final viewWithout = tester.view;
 
         // With border
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -430,12 +442,12 @@ void main() {
     test('borderRadius without border has no visual effect', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(width: 10, height: 3, child: Text('NoRadius')),
         );
         final viewWithout = tester.view;
 
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -455,12 +467,12 @@ void main() {
     test('gradient produces per-row background colors', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(width: 10, height: 3, child: Text('NoGrad')),
         );
         final viewWithout = tester.view;
 
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -489,7 +501,7 @@ void main() {
     test('Border.normal renders ┌─┐│└─┘ characters', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -515,7 +527,7 @@ void main() {
     test('Border.rounded renders ╭─╮│╰─╯ characters', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -536,7 +548,7 @@ void main() {
     test('Border.thick renders ┏━┓┃┗━┛ characters', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -560,7 +572,7 @@ void main() {
     test('Border.double renders ╔═╗║╚═╝ characters', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -584,7 +596,7 @@ void main() {
     test('Border.ascii renders +--+||+--+ characters', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -607,12 +619,12 @@ void main() {
     test('Border.none produces no visible border', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(width: 10, height: 3, child: Text('Hi')),
         );
         final viewWithout = tester.view;
 
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -634,7 +646,7 @@ void main() {
       () async {
         final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
         try {
-          await tester.pumpWidget(
+          await tester.pumpLoose(
             Container(
               width: 6,
               height: 3,
@@ -658,7 +670,7 @@ void main() {
     test('border with explicit width fills remaining space', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 12,
             height: 3,
@@ -679,7 +691,7 @@ void main() {
     test('border + padding positions content inside border', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 14,
             height: 5,
@@ -710,7 +722,7 @@ void main() {
     test('content is visible between border edges', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             decoration: BoxDecoration(border: Border.normal),
             child: Text('Hello'),
@@ -731,7 +743,7 @@ void main() {
     test('borderRadius replaces normal corners with rounded ones', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -763,7 +775,7 @@ void main() {
     test('borderRadius only affects specified corners', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -788,7 +800,7 @@ void main() {
     test('borderRadius with thick border replaces corners', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -816,7 +828,7 @@ void main() {
     test('borderRadius 0 keeps original corners', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -843,7 +855,7 @@ void main() {
     test('gradient applies ANSI background color codes', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -871,7 +883,7 @@ void main() {
       try {
         // Single color: blend1D returns empty or same color for all rows
         // (blend1D requires >= 2 colors to produce a gradient)
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -891,7 +903,7 @@ void main() {
     test('gradient rows have different colors for tall containers', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 6,
             height: 5,
@@ -923,7 +935,7 @@ void main() {
     test('border wraps around gradient interior', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 12,
             height: 5,
@@ -962,7 +974,7 @@ void main() {
     test('border + gradient + padding', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 12);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 14,
             height: 7,
@@ -994,7 +1006,7 @@ void main() {
     test('borderRadius + gradient + border all combined', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 5,
@@ -1031,7 +1043,7 @@ void main() {
     test('border consumes space within explicit width/height', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -1054,7 +1066,7 @@ void main() {
     test('border auto-sizes: width = content + 2 border chars', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 7,
             height: 3,
@@ -1075,7 +1087,7 @@ void main() {
     test('nested containers with borders', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             decoration: BoxDecoration(border: Border.normal),
             child: Container(
@@ -1097,7 +1109,7 @@ void main() {
     test('border with margin', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 10,
             height: 3,
@@ -1118,7 +1130,7 @@ void main() {
     test('container with border and alignment centers content', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 12,
             height: 5,

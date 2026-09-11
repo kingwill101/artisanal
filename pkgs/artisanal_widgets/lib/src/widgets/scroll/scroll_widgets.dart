@@ -5314,7 +5314,9 @@ int _separatorBreaks(String separator) {
   for (var i = 0; i < separator.length; i++) {
     if (separator.codeUnitAt(i) == 0x0A) count++;
   }
-  return count;
+  // Item extents already count their last row. The first newline joins that
+  // row to the next item's first row; only subsequent newlines add gap rows.
+  return math.max(0, count - 1);
 }
 
 String _sliceLines(String text, int startLine, int maxLines) {

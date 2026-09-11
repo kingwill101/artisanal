@@ -8,6 +8,10 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, w.Widget child) =>
+    tester.pumpWidget(LooseLayoutHost(child: child));
 
 String _patch(int lines) =>
     '''
@@ -82,7 +86,8 @@ void main() {
           threadBuilder: (_, _) => w.Text('BODY'),
         );
         for (final width in [24, 12, 32]) {
-          await tester.pumpWidget(
+          await _pumpSmallRoot(
+            tester,
             w.Align(
               alignment: w.Alignment.topLeft,
               child: w.SizedBox(width: width, height: 6, child: viewport),
@@ -125,7 +130,8 @@ void main() {
         final bytes = Uint8List.fromList(
           img.encodePng(img.Image(width: 4, height: 4)),
         );
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           w.DiffReviewViewport(
             controller: controller,
             width: 80,
@@ -199,7 +205,8 @@ void main() {
       addTearDown(tester.dispose);
       final controller = _controller(width: 58, height: 8);
       late void Function(int) resizeBody;
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.SizedBox(
           width: 60,
           height: 8,
@@ -246,7 +253,8 @@ void main() {
     final tester = WidgetTester();
     addTearDown(tester.dispose);
     final controller = _controller(lines: 20, height: 6);
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.DiffReviewViewport(
         controller: controller,
         width: 60,
@@ -273,7 +281,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(tester.dispose);
       final controller = _controller(lines: 4, height: 6);
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.DiffReviewViewport(
           controller: controller,
           width: 60,
@@ -319,7 +328,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(tester.dispose);
       final controller = _controller();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.DiffReviewViewport(
           controller: controller,
           width: 60,
@@ -352,7 +362,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(tester.dispose);
       final controller = _controller(height: 20);
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.DiffReviewViewport(
           controller: controller,
           width: 60,
@@ -378,7 +389,8 @@ void main() {
       threads: [for (var i = 1; i <= 10000; i += 100) _thread('t$i', i)],
     );
     final builds = <String>[];
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.DiffReviewViewport(
         controller: controller,
         width: 60,
@@ -408,7 +420,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(tester.dispose);
       final controller = _controller();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.DiffReviewViewport(
           controller: controller,
           width: 60,
@@ -431,7 +444,8 @@ void main() {
     addTearDown(tester.dispose);
     final controller = _controller(height: 20);
     late void Function(int) resizeBody;
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.DiffReviewViewport(
         controller: controller,
         width: 60,
@@ -461,7 +475,8 @@ void main() {
       controller.update(
         const d.DiffReviewPresentationMsg(viewMode: d.DiffViewMode.sideBySide),
       );
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.DiffReviewViewport(
           controller: controller,
           threadBuilder: (_, _) => w.Text('RIGHT_BODY'),
@@ -500,7 +515,8 @@ void main() {
         threads: [_thread('missing', 999)],
       ),
     );
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       w.DiffReviewViewport(
         controller: controller,
         width: 60,

@@ -1,8 +1,12 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal/style.dart';
+import 'package:artisanal/style.dart' show AnsiColor, Style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>
+    tester.pumpWidget(Align(alignment: Alignment.topLeft, child: child));
 
 RegExp _highlightedTextPattern({
   required int foreground,
@@ -55,7 +59,9 @@ Widget _buildScrollable({
   if (wrapInScrollbar) {
     child = Scrollbar(controller: controller, child: child);
   }
-  return Container(width: width, height: height, child: child);
+  return LooseLayoutHost(
+    child: Container(width: width, height: height, child: child),
+  );
 }
 
 Widget _buildVirtualScrollable({
@@ -66,14 +72,16 @@ Widget _buildVirtualScrollable({
   DateTime Function()? nowProvider,
 }) {
   final lines = List.generate(lineCount, (i) => Text('Line $i'));
-  return Container(
-    width: width,
-    height: height,
-    child: VirtualListView(
-      controller: controller,
-      enableSelection: true,
-      nowProvider: nowProvider,
-      children: lines,
+  return LooseLayoutHost(
+    child: Container(
+      width: width,
+      height: height,
+      child: VirtualListView(
+        controller: controller,
+        enableSelection: true,
+        nowProvider: nowProvider,
+        children: lines,
+      ),
     ),
   );
 }
@@ -84,7 +92,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -118,7 +127,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -145,7 +155,8 @@ void main() {
       final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(
             controller: ctrl,
             useScrollView: true,
@@ -173,7 +184,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -194,7 +206,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -216,7 +229,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true, height: 6),
         );
 
@@ -238,7 +252,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true, height: 6),
         );
 
@@ -262,7 +277,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -293,7 +309,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -352,7 +369,8 @@ void main() {
       final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(
             controller: ctrl,
             useScrollView: false,
@@ -377,7 +395,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: false),
         );
 
@@ -397,7 +416,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: false),
         );
 
@@ -439,7 +459,8 @@ void main() {
       );
 
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           ThemeScope(
             theme: theme,
             child: _buildScrollable(controller: ctrl, useScrollView: false),
@@ -462,7 +483,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(
             controller: ctrl,
             wrapInScrollbar: true,
@@ -484,7 +506,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: false),
         );
 
@@ -507,7 +530,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, height: 6, useScrollView: false),
         );
 
@@ -590,7 +614,8 @@ void main() {
       final ctrl = WidgetScrollController();
       try {
         final lines = List.generate(5, (i) => Text('ABCDEFGHIJ'));
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 40,
             height: 5,
@@ -625,7 +650,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -650,7 +676,8 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           _buildScrollable(controller: ctrl, useScrollView: true),
         );
 
@@ -672,7 +699,8 @@ void main() {
       final ctrl = WidgetScrollController();
       try {
         // Default: enableSelection = false.
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 40,
             height: 10,
@@ -705,7 +733,8 @@ void main() {
         final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
         final ctrl = WidgetScrollController();
         try {
-          await tester.pumpWidget(
+          await _pumpSmallRoot(
+            tester,
             _buildVirtualScrollable(
               controller: ctrl,
               nowProvider: () => clock.now,
@@ -743,7 +772,8 @@ void main() {
       );
 
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           ThemeScope(
             theme: theme,
             child: _buildVirtualScrollable(controller: ctrl),

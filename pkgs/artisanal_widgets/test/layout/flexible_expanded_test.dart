@@ -263,6 +263,92 @@ void main() {
     });
   });
 
+  group('deterministic tight allocation', () {
+    test(
+      'weighted row consumes every cell after fixed children and gaps',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(
+          Row(
+            width: 40,
+            gap: 2,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Text('fixed-cell'),
+              Expanded(child: Text('one')),
+              Expanded(flex: 2, child: Text('two')),
+            ],
+          ),
+        );
+
+        // Fixed width is 10, so the flex budget is 28. Cumulative boundary
+        // rounding gives 9 and 19, rather than independently flooring shares.
+        final one = tester.locateText('one');
+        final two = tester.locateText('two');
+        expect(one, isNotNull);
+        expect(two, isNotNull);
+        expect(two!.x, greaterThan(one!.x));
+      },
+    );
+
+    test('single-cell and empty budgets remain stable', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Row(
+          width: 1,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Text('a')),
+            Expanded(child: Text('b')),
+          ],
+        ),
+      );
+      expect(tester.locateText('a'), isNotNull);
+      expect(tester.locateText('b'), isNotNull);
+
+      await tester.pumpWidget(
+        Row(
+          width: 2,
+          gap: 2,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Text('fixed'),
+            Expanded(child: Text('rest')),
+          ],
+        ),
+      );
+      expect(tester.locateText('fixed'), isNotNull);
+      expect(tester.locateText('rest'), isNotNull);
+    });
+
+    test('weighted column uses the same full-budget rule', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Column(
+          height: 10,
+          gap: 1,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Text('one')),
+            Expanded(flex: 2, child: Text('two')),
+          ],
+        ),
+      );
+
+      final one = tester.locateText('one');
+      final two = tester.locateText('two');
+      expect(one, isNotNull);
+      expect(two, isNotNull);
+      expect(two!.y, greaterThan(one!.y));
+    });
+  });
+
   group('Flex position and size verification', () {
     test('Expanded child is positioned after fixed child in Row', () async {
       final tester = WidgetTester();

@@ -5,6 +5,18 @@ import 'package:artisanal/tui.dart'
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
+extension on WidgetTester {
+  Future<void> pumpLoose(Widget widget, {int? width, int? height}) {
+    return pumpWidget(
+      LooseLayoutHost(child: widget),
+      width: width,
+      height: height,
+    );
+  }
+}
+
 void main() {
   // ---------------------------------------------------------------------------
   // Construction & properties
@@ -40,7 +52,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -55,7 +67,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -75,7 +87,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(TextField(controller: ctrl, autofocus: true));
+      await tester.pumpLoose(TextField(controller: ctrl, autofocus: true));
       expect(ctrl.model.multiline, isFalse);
     });
   });
@@ -86,7 +98,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 8,
@@ -125,7 +137,7 @@ void main() {
         addTearDown(() => tester.dispose());
 
         final ctrl = TextFieldController();
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 40,
             height: 8,
@@ -184,7 +196,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 6,
@@ -214,11 +226,11 @@ void main() {
     test(
       'nested layout click maps to local cursor position (regression)',
       () async {
-        final tester = WidgetTester();
+        final tester = WidgetTester(screenWidth: 120, screenHeight: 30);
         addTearDown(() => tester.dispose());
 
         final ctrl = TextFieldController();
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 120,
             height: 30,
@@ -272,11 +284,11 @@ void main() {
     );
 
     test('deeply offset layout click maps to local cursor position', () async {
-      final tester = WidgetTester();
+      final tester = WidgetTester(screenWidth: 130, screenHeight: 35);
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 130,
           height: 35,
@@ -328,7 +340,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -344,7 +356,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -376,7 +388,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -405,7 +417,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -431,7 +443,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -463,7 +475,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 30,
           height: 10,
@@ -486,7 +498,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 30,
           height: 10,
@@ -502,7 +514,7 @@ void main() {
       expect(ctrl.model.width, equals(30));
 
       // Resize by pumping with a new width
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 50,
           height: 10,
@@ -528,7 +540,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -572,7 +584,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -622,7 +634,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -662,7 +674,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final values = <String>[];
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -696,7 +708,7 @@ void main() {
 
       final ctrl = TextFieldController();
       final fc = FocusController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -721,7 +733,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final fc = FocusController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 40,
           height: 10,
@@ -749,7 +761,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         TextField(controller: ctrl, prompt: '> ', autofocus: true),
       );
 
@@ -764,7 +776,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = TextFieldController();
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         TextField(controller: ctrl, prompt: '> ', autofocus: true),
       );
 
@@ -788,7 +800,7 @@ void main() {
         addTearDown(() => tester.dispose());
 
         final ctrl = TextFieldController();
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Container(
             width: 40,
             height: 10,
@@ -819,7 +831,7 @@ void main() {
 
       final ctrl = TextFieldController();
       // Use a narrow container so text must wrap
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 10,
           height: 10,
