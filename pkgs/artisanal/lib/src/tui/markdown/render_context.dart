@@ -129,4 +129,5 @@ class ListItemContext {
   final bool taskCheckboxRendered;
   final StringBuffer buffer = StringBuffer();
   bool trimLeadingWhitespace;
+  bool hasFlushedContent = false;
 }

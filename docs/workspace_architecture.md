@@ -8,6 +8,8 @@ with app-level behavior built on top.
 1. `artisanal`: core terminal toolkit (styles, layout, markdown, TUI runtime).
 2. `artisanal_widgets`: composable widget system and higher-level UI widgets.
 3. `ultraviolet`: low-level UV terminal renderer and graphics primitives.
+4. `artisanal_capture`: consumer APIs and CLI for deterministic cell snapshots
+   and native image exports. Pixel rendering remains in `ultraviolet`.
 
 ## Applications
 

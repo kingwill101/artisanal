@@ -411,7 +411,7 @@ void main() {
       expect(lines, contains('│ ╭─ dart '));
       expect(plain, contains('void main() {'));
       expect(plain, contains("print('hello');"));
-      expect(lines, contains('╰───'));
+      expect(lines, contains('│ ╰───'));
     });
 
     test('list item containing inline code', () {
@@ -470,7 +470,7 @@ void main() {
 ''');
       final lines = stripAnsi(result).split('\n');
       expect(lines, contains('│ include bold text, and even'));
-      expect(lines, contains('││ Nested quote.'));
+      expect(lines, contains('│ │ Nested quote.'));
     });
 
     test('nested blockquotes render nested borders', () {
@@ -479,7 +479,7 @@ void main() {
       expect(result, contains('\u2502'));
       final lines = stripAnsi(result).split('\n');
       expect(lines, contains('│ Outer'));
-      expect(lines, contains('││ Inner'));
+      expect(lines, contains('│ │ Inner'));
     });
 
     test('blockquote keeps details summaries inside the border', () {
@@ -494,7 +494,7 @@ void main() {
       final plain = stripAnsi(result);
       expect(plain, contains('│ [!WARNING]'));
       expect(plain, contains('│ ▸ How can I continue?'));
-      expect(plain, contains('│ After more reviews become available.'));
+      expect(plain, isNot(contains('After more reviews become available.')));
     });
   });
 

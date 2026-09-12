@@ -13,6 +13,16 @@
 
 ### Fixed
 
+- Kept raw HTML containers scoped across Markdown block boundaries, including
+  nested blockquotes and open/closed details. Preserved inline HTML whitespace,
+  literal code, and pre-parsed Markdown nodes through HTML normalization.
+- Constrained Markdown tables to the available width with ANSI-aware header
+  and cell wrapping, correct alignment, and quote/list indentation. Extremely
+  narrow tables use stacked labeled fields instead of clipping their contents.
+- Fixed nested blockquotes losing following list-item content when void or
+  custom elements declined child traversal. Quote containers now apply spaced
+  nesting prefixes to every child row and deduct their prefix width before
+  wrapping.
 - Fixed text decoration foreground styles being overwritten by the editor's
   base text color during rendering, restoring visible editable syntax
   highlighting and keeping configured decoration styles immutable.

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added the native-only `raster.dart` software UV renderer. It accepts
+  caller-supplied TrueType `glyf` fonts and produces `package:image` pixels;
+  no system font discovery or browser/Flutter engine is used. Blink is
+  deterministic (visible), unsupported glyphs and font variants are
+  diagnostics and fail in strict mode.
+
 ## 0.5.1
 
 ### Changed

@@ -1,7 +1,6 @@
 import 'package:markdown/markdown.dart' show Element;
 
 import '../../style/style.dart';
-import '../../style/color.dart';
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
 import 'render_context.dart';
 
@@ -10,10 +9,6 @@ import 'render_context.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 void renderStartListItem(MarkdownRenderContext ctx, Element element) {
-  if (ctx.inBlockquote) {
-    renderWriteBlockquotePrefix(ctx);
-  }
-
   final indent = ' ' * ((ctx.listDepth - 1) * ctx.options.listIndent);
   ctx.buffer.write(indent);
 
@@ -85,9 +80,10 @@ bool renderIsTaskListInput(Element element) {
 
 void renderFlushCurrentListItem(MarkdownRenderContext ctx) {
   if (ctx.listItemStack.isEmpty) return;
-  final item = ctx.listItemStack.removeLast();
+  final item = ctx.listItemStack.last;
   final content = item.buffer.toString();
   if (content.isEmpty) return;
+  item.buffer.clear();
   if (ctx.options.width == null) {
     ctx.buffer.write(content);
     return;
@@ -98,9 +94,13 @@ void renderFlushCurrentListItem(MarkdownRenderContext ctx) {
     content,
     width > 0 ? width : ctx.options.width!,
   );
+  if (item.hasFlushedContent) {
+    ctx.buffer.write(' ' * item.continuationIndent);
+  }
   ctx.buffer.write(
     renderIndentContinuationLines(wrapped, item.continuationIndent),
   );
+  item.hasFlushedContent = true;
 }
 
 Element? _firstTaskListInput(Element element) {
@@ -132,44 +132,4 @@ String renderIndentContinuationLines(String text, int indent) {
       .entries
       .map((e) => e.key == 0 ? e.value : '$prefix${e.value}')
       .join('\n');
-}
-
-Style defaultBlockquoteStyle() => Style().italic().dim();
-
-void renderWriteBlockquotePrefix(MarkdownRenderContext ctx) {
-  ctx.buffer.write(_blockquotePrefix(ctx));
-
-  ctx.buffer.write(
-    ctx.styleToAnsi(ctx.options.blockquoteStyle ?? defaultBlockquoteStyle()),
-  );
-}
-
-String renderApplyBlockquotePrefix(MarkdownRenderContext ctx, String text) {
-  if (!ctx.inBlockquote || !text.contains('\n')) return text;
-
-  final lines = text.split('\n');
-  if (lines.length <= 1) return text;
-
-  final prefix = _blockquotePrefix(ctx);
-  return [
-    lines.first,
-    ...lines.skip(1).map((line) => '$prefix$line'),
-  ].join('\n');
-}
-
-String renderApplyBlockquotePrefixAll(MarkdownRenderContext ctx, String text) {
-  if (!ctx.inBlockquote || !text.contains('\n')) return text;
-
-  final prefix = _blockquotePrefix(ctx);
-  return text.split('\n').map((line) => '$prefix$line').join('\n');
-}
-
-Color defaultBlockquoteBorderColor() => Colors.gray;
-
-String _blockquotePrefix(MarkdownRenderContext ctx) {
-  final color =
-      ctx.options.blockquoteBorderColor ?? defaultBlockquoteBorderColor();
-  final seq = color.toAnsi(ColorProfile.trueColor);
-  final border = '│' * ctx.blockquoteDepth;
-  return '$seq$border ${MarkdownRenderContext.ansiReset}';
 }
