@@ -15,10 +15,9 @@ void main() {
       );
 
       expect(tester.find.text('Fixed'), isTrue);
-      final lines = tester.viewLines.where((l) => l.isNotEmpty).toList();
-      if (lines.isNotEmpty) {
-        expect(Layout.visibleLength(lines.first), lessThanOrEqualTo(20));
-      }
+      final lines = tester.viewLines;
+      expect(lines.length, equals(1));
+      expect(Layout.visibleLength(lines.single), equals(20));
     });
 
     test('renders child with explicit height', () async {
@@ -30,7 +29,8 @@ void main() {
       );
 
       final lines = tester.viewLines;
-      expect(lines.length, lessThanOrEqualTo(5));
+      expect(lines.length, equals(5));
+      expect(Layout.visibleLength(lines.first), equals(5));
     });
 
     test('renders child with explicit width and height', () async {
@@ -45,7 +45,8 @@ void main() {
 
       expect(tester.find.text('Fixed'), isTrue);
       final lines = tester.viewLines;
-      expect(lines.length, lessThanOrEqualTo(3));
+      expect(lines.length, equals(3));
+      expect(lines.every((line) => Layout.visibleLength(line) == 15), isTrue);
     });
 
     test('renders empty SizedBox', () async {

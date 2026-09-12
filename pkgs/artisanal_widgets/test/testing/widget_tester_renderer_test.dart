@@ -52,6 +52,41 @@ void main() {
   });
 
   test(
+    'successive output batches cover history once and reset after clear',
+    () async {
+      final tester = WidgetTester(
+        enableRenderer: true,
+        altScreen: true,
+        screenWidth: 24,
+        screenHeight: 4,
+      );
+      addTearDown(tester.dispose);
+      await tester.pumpWidget(Text('Frame α 🚀\nSecond line'));
+      final batches = StringBuffer()..write(tester.lastRendererOutput);
+
+      for (var i = 0; i < 64; i++) {
+        tester.resize(25 + i % 2, 4);
+        batches.write(tester.lastRendererOutput);
+      }
+      expect(tester.rendererOutput, batches.toString());
+      expect(tester.rendererOutput.length, batches.length);
+
+      final beforeNoop = tester.rendererOutput;
+      tester.sendKey('a');
+      expect(tester.lastRendererOutput, isEmpty);
+      expect(tester.rendererOutput, beforeNoop);
+
+      tester.clearRendererOutput();
+      expect(tester.rendererOutput, isEmpty);
+      expect(tester.lastRendererOutput, isEmpty);
+      tester.resize(30, 4);
+      expect(tester.lastRendererOutput, isNotEmpty);
+      expect(tester.rendererOutput, tester.lastRendererOutput);
+      expect(tester.rendererOutput, contains('Frame α 🚀'));
+    },
+  );
+
+  test(
     'remount disposes the previous program and resets renderer capture',
     () async {
       final tester = WidgetTester(enableRenderer: true);

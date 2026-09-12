@@ -2,6 +2,16 @@ import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
+RenderObject _renderObject(Widget widget) {
+  final element = elementOf(widget);
+  expect(element, isNotNull);
+  final renderObject = element!.renderObject;
+  expect(renderObject, isNotNull);
+  return renderObject!;
+}
+
 void main() {
   group('Flexible', () {
     test('renders child with default flex', () async {
@@ -270,82 +280,116 @@ void main() {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
+        final fixed = Text('fixed-cell', key: ValueKey('fixed'));
+        final one = Text('one', key: ValueKey('one'));
+        final two = Text('two', key: ValueKey('two'));
         await tester.pumpWidget(
-          Row(
-            width: 40,
-            gap: 2,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Text('fixed-cell'),
-              Expanded(child: Text('one')),
-              Expanded(flex: 2, child: Text('two')),
-            ],
+          LooseLayoutHost(
+            child: Row(
+              width: 40,
+              gap: 2,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                fixed,
+                Expanded(child: one),
+                Expanded(flex: 2, child: two),
+              ],
+            ),
           ),
         );
 
-        // Fixed width is 10, so the flex budget is 28. Cumulative boundary
-        // rounding gives 9 and 19, rather than independently flooring shares.
-        final one = tester.locateText('one');
-        final two = tester.locateText('two');
-        expect(one, isNotNull);
-        expect(two, isNotNull);
-        expect(two!.x, greaterThan(one!.x));
+        // Fixed width is 10 and the two gaps consume 4 cells, leaving 26:
+        // the weighted slots are exactly 9 and 17.
+        expect(_renderObject(fixed).size, equals(const Size(10, 1)));
+        expect(_renderObject(one).size, equals(const Size(9, 1)));
+        expect(_renderObject(two).size, equals(const Size(17, 1)));
+        expect(_renderObject(fixed).offset, equals(Offset.zero));
+        expect(_renderObject(one).offset, equals(const Offset(12, 0)));
+        expect(_renderObject(two).offset, equals(const Offset(23, 0)));
+        expect(tester.locateText('fixed-cell'), equals((x: 0, y: 0)));
+        expect(tester.locateText('one'), equals((x: 12, y: 0)));
+        expect(tester.locateText('two'), equals((x: 23, y: 0)));
       },
     );
 
-    test('single-cell and empty budgets remain stable', () async {
+    test('single-cell and exhausted budgets are allocated exactly', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
+      final first = Text('a', key: ValueKey('first'));
+      final second = Text('b', key: ValueKey('second'));
       await tester.pumpWidget(
-        Row(
-          width: 1,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Expanded(child: Text('a')),
-            Expanded(child: Text('b')),
-          ],
+        LooseLayoutHost(
+          child: Row(
+            width: 1,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Expanded(child: first),
+              Expanded(child: second),
+            ],
+          ),
         ),
       );
-      expect(tester.locateText('a'), isNotNull);
-      expect(tester.locateText('b'), isNotNull);
+      expect(_renderObject(first).size, equals(const Size(1, 1)));
+      expect(_renderObject(second).size, equals(const Size(0, 1)));
+      expect(_renderObject(first).offset, equals(Offset.zero));
+      expect(_renderObject(second).offset, equals(const Offset(1, 0)));
+      expect(tester.locateText('a'), equals((x: 0, y: 0)));
+      expect(tester.locateText('b'), isNull);
 
+      final fixed = Text('fixed', key: ValueKey('exhausted-fixed'));
+      final rest = Text('rest', key: ValueKey('exhausted-rest'));
       await tester.pumpWidget(
-        Row(
-          width: 2,
-          gap: 2,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Text('fixed'),
-            Expanded(child: Text('rest')),
-          ],
+        LooseLayoutHost(
+          child: Row(
+            width: 2,
+            gap: 2,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              fixed,
+              Expanded(child: rest),
+            ],
+          ),
         ),
       );
-      expect(tester.locateText('fixed'), isNotNull);
-      expect(tester.locateText('rest'), isNotNull);
+      expect(_renderObject(fixed).size, equals(const Size(5, 1)));
+      expect(_renderObject(rest).size, equals(const Size(0, 1)));
+      expect(_renderObject(fixed).offset, equals(Offset.zero));
+      expect(_renderObject(rest).offset, equals(const Offset(7, 0)));
+      expect(tester.locateText('fixed'), equals((x: 0, y: 0)));
+      expect(tester.locateText('rest'), isNull);
     });
 
     test('weighted column uses the same full-budget rule', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
+      final one = Container(key: ValueKey('vertical-one'), child: Text('one'));
+      final two = Container(key: ValueKey('vertical-two'), child: Text('two'));
       await tester.pumpWidget(
-        Column(
-          height: 10,
-          gap: 1,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Expanded(child: Text('one')),
-            Expanded(flex: 2, child: Text('two')),
-          ],
+        LooseLayoutHost(
+          child: Column(
+            width: 4,
+            height: 11,
+            gap: 1,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Expanded(child: one),
+              Expanded(flex: 2, child: two),
+            ],
+          ),
         ),
       );
 
-      final one = tester.locateText('one');
-      final two = tester.locateText('two');
-      expect(one, isNotNull);
-      expect(two, isNotNull);
-      expect(two!.y, greaterThan(one!.y));
+      expect(_renderObject(one).size.width, equals(3));
+      // Eleven rows minus one gap gives a ten-row budget: 3 and 7.
+      expect(_renderObject(one).size.height, equals(3));
+      expect(_renderObject(two).size.width, equals(3));
+      expect(_renderObject(two).size.height, equals(7));
+      expect(_renderObject(one).offset, equals(Offset.zero));
+      expect(_renderObject(two).offset, equals(const Offset(0, 4)));
+      expect(tester.locateText('one'), equals((x: 0, y: 0)));
+      expect(tester.locateText('two'), equals((x: 0, y: 4)));
     });
   });
 

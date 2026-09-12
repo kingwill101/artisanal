@@ -1211,6 +1211,9 @@ void main() {
         addTearDown(() => tester.dispose());
 
         const itemCount = 100_000;
+        const separatorBreaks = 0;
+        // Uniform one-row children match the estimate even outside the measured
+        // prefix, so large offsets have exact, unclamped expected indices.
         final children = List<Widget>.generate(itemCount, (_) => _EmptyLeaf());
         final controller = ListViewController();
         final listView = VirtualListView(
@@ -1228,7 +1231,7 @@ void main() {
         final viewport = _findRenderListViewport(listView);
         final contentHeight = _contentHeightFromHeights(
           List<int>.filled(itemCount, 1),
-          1,
+          separatorBreaks,
         );
         final checks = <int>[
           0,
@@ -1236,18 +1239,20 @@ void main() {
           1_000,
           20_000,
           50_000,
-          150_000,
+          75_000,
+          contentHeight - 2,
           contentHeight - 1,
         ];
 
-        var previousIndex = 0;
+        final resolvedIndices = <int>[];
         for (final offset in checks) {
           final resolved = _resolveOffsetForDebugViewport(viewport, offset);
-          expect(resolved.index, greaterThanOrEqualTo(previousIndex));
-          expect(resolved.index, lessThan(itemCount));
-          expect(resolved.offsetInItem, greaterThanOrEqualTo(0));
-          previousIndex = resolved.index;
+          expect(offset, lessThan(contentHeight));
+          expect(resolved.index, offset, reason: 'lookup at offset $offset');
+          expect(resolved.offsetInItem, 0);
+          resolvedIndices.add(resolved.index);
         }
+        expect(resolvedIndices.toSet().length, checks.length);
       },
     );
 

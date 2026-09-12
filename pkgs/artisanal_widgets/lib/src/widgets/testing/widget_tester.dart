@@ -119,18 +119,16 @@ class _TestTerminal implements Terminal {
   /// All content written via [write]/[writeln].
   String get allOutput => _writes.join();
 
-  /// Number of characters written so far.
-  int get outputLength => allOutput.length;
+  /// Number of terminal writes captured so far.
+  int get writeCount => _writes.length;
 
-  /// Returns output written after [offset].
-  String outputSince(int offset) {
-    final output = allOutput;
-    final safeOffset = offset < 0
-        ? 0
-        : offset > output.length
-        ? output.length
-        : offset;
-    return output.substring(safeOffset);
+  /// Joins only writes at or after [offset], without copying earlier history.
+  String outputSinceWrite(int offset) {
+    final output = StringBuffer();
+    for (var i = offset.clamp(0, _writes.length); i < _writes.length; i++) {
+      output.write(_writes[i]);
+    }
+    return output.toString();
   }
 
   /// Drops captured terminal output.
@@ -427,7 +425,7 @@ class WidgetTester {
   WidgetApp? _app;
   String _lastView = '';
   String _lastRendererOutput = '';
-  int _rendererOutputOffset = 0;
+  int _rendererWriteOffset = 0;
   int _pumpCount = 0;
   bool _recordFrames = false;
   int _frameSequence = 0;
@@ -466,7 +464,7 @@ class WidgetTester {
     _ensureRunning();
     _terminal!.clearOutput();
     _lastRendererOutput = '';
-    _rendererOutputOffset = 0;
+    _rendererWriteOffset = 0;
   }
 
   /// Number of times [pump] has been called (including the implicit pump
@@ -536,7 +534,7 @@ class WidgetTester {
     // a fresh terminal, so carrying either value over would hide the new
     // mount's output (or expose stale output as its latest frame).
     _lastRendererOutput = '';
-    _rendererOutputOffset = 0;
+    _rendererWriteOffset = 0;
     print('tester.pumpWidget.start');
 
     _app = WidgetApp(
@@ -998,9 +996,9 @@ class WidgetTester {
     if (model != null) {
       _lastView = model.view().toString();
       final terminal = _terminal;
-      if (terminal != null) {
-        _lastRendererOutput = terminal.outputSince(_rendererOutputOffset);
-        _rendererOutputOffset = terminal.outputLength;
+      if (enableRenderer && terminal != null) {
+        _lastRendererOutput = terminal.outputSinceWrite(_rendererWriteOffset);
+        _rendererWriteOffset = terminal.writeCount;
       }
       if (_recordFrames) {
         _recordFrame(trigger: trigger);
