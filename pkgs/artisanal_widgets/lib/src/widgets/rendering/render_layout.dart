@@ -180,6 +180,11 @@ class RenderRow extends RenderBox {
           )
         : null;
     super.layout(constraints);
+    constraints = _resolveFlexConstraints(
+      constraints,
+      width: mainAxisExtent,
+      height: crossAxisExtent,
+    );
     var width = 0.0;
     var height = 0.0;
 
@@ -221,11 +226,11 @@ class RenderRow extends RenderBox {
         0.0,
         constraints.maxWidth - nonFlexWidth - gapTotal,
       );
+      final allocations = _allocateFlexSpace(available.toInt(), flexData);
       for (var i = 0; i < children.length; i++) {
         final data = flexData[i];
         if (data.flex <= 0) continue;
-        final alloc = (available * data.flex) / totalFlex;
-        final allocInt = alloc.floorToDouble();
+        final allocInt = allocations[i].toDouble();
         final childConstraints = data.fit == RenderFlexFit.tight
             ? BoxConstraints(
                 minWidth: allocInt,
@@ -312,25 +317,10 @@ class RenderRow extends RenderBox {
   void _computeChildOffsets() {
     if (children.isEmpty) return;
 
-    final flexData = children.map(_flexDataFor).toList();
     final maxMain = size.width.toInt();
-    final childWidths = <double>[];
-
-    // Replicate the flex sizing logic to get actual child widths.
-    final rawWidths = children.map((c) => c.size.width.toInt()).toList();
-    final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
-    final contentMain = rawWidths.fold<int>(0, (sum, w) => sum + w);
-    final totalWithGap = contentMain + gap * (children.length - 1);
-    final flexExtra = math.max(0, maxMain - totalWithGap);
-
-    for (var i = 0; i < children.length; i++) {
-      final data = flexData[i];
-      var w = rawWidths[i].toDouble();
-      if (totalFlex > 0 && data.flex > 0 && data.fit == RenderFlexFit.tight) {
-        w += (flexExtra * data.flex) ~/ totalFlex;
-      }
-      childWidths.add(w);
-    }
+    // Layout is the single source of child extents. Reallocating after a loose
+    // child shrink-wraps can move later children away from their painted cells.
+    final childWidths = children.map((c) => c.size.width).toList();
 
     // Compute main-axis spacing (matches _computeSpacing + _joinHorizontalWithSpacing).
     final totalMain = childWidths.fold<double>(0, (s, w) => s + w);
@@ -398,20 +388,13 @@ class RenderRow extends RenderBox {
     final adjustedWidths = List<int>.of(childWidths, growable: false);
 
     if (totalFlex > 0) {
-      var nonFlexWidth = 0;
-      for (var i = 0; i < adjusted.length; i++) {
-        if (flexData[i].flex <= 0) nonFlexWidth += adjustedWidths[i];
-      }
-      final gapTotal = gap * (adjusted.length - 1);
-      final available = math.max(0, maxMain - nonFlexWidth - gapTotal);
-
       for (var i = 0; i < adjusted.length; i++) {
         final data = flexData[i];
         if (data.flex <= 0 || data.fit == RenderFlexFit.loose) continue;
 
-        final target = (available * data.flex) ~/ totalFlex;
+        final target = childWidths[i];
         var block = adjusted[i];
-        final currentWidth = adjustedWidths[i];
+        final currentWidth = Layout.getWidth(block);
         if (currentWidth > target) {
           block = Layout.truncateLines(block, target, ellipsis: '');
         }
@@ -546,6 +529,11 @@ class RenderColumn extends RenderBox {
           )
         : null;
     super.layout(constraints);
+    constraints = _resolveFlexConstraints(
+      constraints,
+      width: crossAxisExtent,
+      height: mainAxisExtent,
+    );
     var width = 0.0;
     var height = 0.0;
 
@@ -598,11 +586,11 @@ class RenderColumn extends RenderBox {
         0.0,
         constraints.maxHeight - nonFlexHeight - gapTotal,
       );
+      final allocations = _allocateFlexSpace(available.toInt(), flexData);
       for (var i = 0; i < children.length; i++) {
         final data = flexData[i];
         if (data.flex <= 0) continue;
-        final alloc = (available * data.flex) / totalFlex;
-        final allocInt = alloc.floorToDouble();
+        final allocInt = allocations[i].toDouble();
         final childConstraints = data.fit == RenderFlexFit.tight
             ? BoxConstraints(
                 minWidth: 0,
@@ -690,25 +678,8 @@ class RenderColumn extends RenderBox {
     if (children.isEmpty) return;
     if (size.height.isNaN || size.height.isInfinite) return;
 
-    final flexData = children.map(_flexDataFor).toList();
     final maxMain = size.height.toInt();
-    final childHeights = <double>[];
-
-    // Replicate the flex sizing logic to get actual child heights.
-    final rawHeights = children.map((c) => c.size.height.toInt()).toList();
-    final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
-    final contentMain = rawHeights.fold<int>(0, (sum, h) => sum + h);
-    final totalWithGap = contentMain + gap * (children.length - 1);
-    final flexExtra = math.max(0, maxMain - totalWithGap);
-
-    for (var i = 0; i < children.length; i++) {
-      final data = flexData[i];
-      var h = rawHeights[i].toDouble();
-      if (totalFlex > 0 && data.flex > 0 && data.fit == RenderFlexFit.tight) {
-        h += (flexExtra * data.flex) ~/ totalFlex;
-      }
-      childHeights.add(h);
-    }
+    final childHeights = children.map((c) => c.size.height).toList();
 
     // Compute main-axis spacing (matches _computeSpacing + _joinVerticalWithSpacing).
     final totalMain = childHeights.fold<double>(0, (s, h) => s + h);
@@ -788,20 +759,13 @@ class RenderColumn extends RenderBox {
     final adjustedHeights = List<int>.of(childHeights, growable: false);
 
     if (totalFlex > 0) {
-      var nonFlexHeight = 0;
-      for (var i = 0; i < adjusted.length; i++) {
-        if (flexData[i].flex <= 0) nonFlexHeight += adjustedHeights[i];
-      }
-      final gapTotal = gap * (adjusted.length - 1);
-      final available = math.max(0, maxMain - nonFlexHeight - gapTotal);
-
       for (var i = 0; i < adjusted.length; i++) {
         final data = flexData[i];
         if (data.flex <= 0 || data.fit == RenderFlexFit.loose) continue;
 
-        final target = (available * data.flex) ~/ totalFlex;
+        final target = childHeights[i];
         var block = adjusted[i];
-        final currentHeight = adjustedHeights[i];
+        final currentHeight = Layout.getHeight(block);
         if (currentHeight > target) {
           block = Layout.truncateHeight(block, target);
         }
@@ -866,6 +830,66 @@ class RenderColumn extends RenderBox {
     }
     return result;
   }
+}
+
+BoxConstraints _resolveFlexConstraints(
+  BoxConstraints parent, {
+  int? width,
+  int? height,
+}) {
+  return BoxConstraints(
+    minWidth: width?.toDouble() ?? 0,
+    maxWidth: width?.toDouble() ?? double.infinity,
+    minHeight: height?.toDouble() ?? 0,
+    maxHeight: height?.toDouble() ?? double.infinity,
+  ).enforce(parent);
+}
+
+/// Allocates integer cells to tight children using rounded cumulative
+/// boundaries after reserving loose children's existing floored share caps.
+/// All-tight layouts consume the complete budget. Loose children may use less
+/// than their caps; that unused capacity is not redistributed during paint.
+List<int> _allocateFlexSpace(int available, List<FlexParentData> data) {
+  final allocations = List<int>.filled(data.length, 0);
+  if (available <= 0) return allocations;
+
+  final totalFlex = data.fold<int>(
+    0,
+    (sum, item) =>
+        sum +
+        (item.flex > 0 && item.fit == RenderFlexFit.tight ? item.flex : 0),
+  );
+  final allFlex = data.fold<int>(
+    0,
+    (sum, item) => sum + math.max(0, item.flex),
+  );
+  if (allFlex <= 0) return allocations;
+  var looseBudget = 0;
+  for (var i = 0; i < data.length; i++) {
+    final item = data[i];
+    if (item.flex > 0 && item.fit == RenderFlexFit.loose) {
+      allocations[i] = available * item.flex ~/ allFlex;
+      looseBudget += allocations[i];
+    }
+  }
+  if (totalFlex <= 0) return allocations;
+  final tightBudget = available - looseBudget;
+
+  var cumulativeFlex = 0;
+  var assigned = 0;
+  var lastTight = -1;
+  for (var i = 0; i < data.length; i++) {
+    final item = data[i];
+    if (item.flex <= 0 || item.fit != RenderFlexFit.tight) continue;
+    lastTight = i;
+    cumulativeFlex += item.flex;
+    final boundary = (tightBudget * cumulativeFlex / totalFlex).round();
+    allocations[i] = boundary - assigned;
+    assigned = boundary;
+  }
+  // Keep the invariant explicit in case rounding behavior changes.
+  allocations[lastTight] += tightBudget - assigned;
+  return allocations;
 }
 
 /// Parent-data used by flex containers for each child render object.

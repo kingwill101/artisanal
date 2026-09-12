@@ -4,6 +4,10 @@ import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>
+    tester.pumpWidget(LooseLayoutHost(child: child));
 
 void main() {
   // ---------------------------------------------------------------------------
@@ -134,7 +138,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -160,7 +165,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -188,7 +194,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -215,7 +222,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 30,
             height: 5,
@@ -236,7 +244,8 @@ void main() {
         ctrl.setViewportHeight(3);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 3,
@@ -276,7 +285,8 @@ void main() {
         ctrl.setViewportHeight(3);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 24,
             height: 3,
@@ -321,7 +331,8 @@ void main() {
           ctrl.setContentHeight(20);
           const kittyImage = '\x1b_Ga=T,c=4,r=1,C=1,q=2,m=0;AAAA\x1b\\';
 
-          await tester.pumpWidget(
+          await _pumpSmallRoot(
+            tester,
             Container(
               width: 24,
               height: 3,
@@ -360,7 +371,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -385,7 +397,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -418,7 +431,8 @@ void main() {
         ctrl.setViewportHeight(8);
         ctrl.setContentHeight(40);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 8,
@@ -448,7 +462,8 @@ void main() {
         ctrl.setViewportHeight(8);
         ctrl.setContentHeight(80);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 8,
@@ -491,7 +506,8 @@ void main() {
         ctrl.setViewportHeight(10);
         ctrl.setContentHeight(5);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -526,7 +542,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -565,7 +582,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -605,7 +623,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(100);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -644,7 +663,8 @@ void main() {
         ctrl.setViewportHeight(10);
         ctrl.setContentHeight(40);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 10,
@@ -675,7 +695,8 @@ void main() {
         ctrl.setViewportHeight(10);
         ctrl.setContentHeight(40);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 10,
@@ -713,7 +734,8 @@ void main() {
         ctrl.configure(width: 15, height: 5);
         ctrl.setContent(_lines(20));
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -743,7 +765,8 @@ void main() {
         ctrl.configure(width: 15, height: 5);
         ctrl.setContent(_lines(50));
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -787,7 +810,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -812,7 +836,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 25,
             height: 5,
@@ -840,7 +865,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(20);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 30,
             height: 5,
@@ -939,7 +965,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(100);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -974,7 +1001,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(100);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 24,
             height: 5,
@@ -1083,7 +1111,8 @@ void main() {
         ctrl.configure(width: 15, height: 5);
         ctrl.setContent(_lines(50));
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -1125,7 +1154,8 @@ void main() {
         ctrl.setViewportHeight(5);
         ctrl.setContentHeight(100);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -1164,7 +1194,8 @@ void main() {
 
       final tester = WidgetTester(screenWidth: 30, screenHeight: 10);
       try {
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -1193,7 +1224,8 @@ void main() {
         ctrl2.setViewportHeight(5);
         ctrl2.setContentHeight(100);
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -1209,7 +1241,8 @@ void main() {
         final viewWithCtrl1 = tester.view;
 
         // Swap to ctrl2
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 20,
             height: 5,
@@ -1245,37 +1278,41 @@ void main() {
   // Viewport sizing — unbounded height must shrink-wrap, never Infinity
   // ---------------------------------------------------------------------------
   group('Viewport unbounded height', () {
-    test('scroll view in unbounded column renders content (no infinite size)', () async {
-      // Regression test: the scrollbar demo (Scrollbar > ScrollView > Column
-      // with no explicit height) used to panic with
-      // "Unsupported operation: Infinity or NaN toInt" because
-      // RenderSingleChildViewport reported constraints.maxHeight verbatim.
-      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
-      try {
-        final ctrl = WidgetScrollController();
-        await tester.pumpWidget(
-          Column(
-            children: [
-              Text('Header'),
-              Scrollbar(
-                controller: ctrl,
-                child: ScrollView(
+    test(
+      'scroll view in unbounded column renders content (no infinite size)',
+      () async {
+        // Regression test: the scrollbar demo (Scrollbar > ScrollView > Column
+        // with no explicit height) used to panic with
+        // "Unsupported operation: Infinity or NaN toInt" because
+        // RenderSingleChildViewport reported constraints.maxHeight verbatim.
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+        try {
+          final ctrl = WidgetScrollController();
+          await _pumpSmallRoot(
+            tester,
+            Column(
+              children: [
+                Text('Header'),
+                Scrollbar(
                   controller: ctrl,
-                  child: Column(
-                    children: List.generate(5, (i) => Text('Row $i')),
+                  child: ScrollView(
+                    controller: ctrl,
+                    child: Column(
+                      children: List.generate(5, (i) => Text('Row $i')),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
+              ],
+            ),
+          );
 
-        expect(tester.find.text('Header'), isTrue);
-        expect(tester.find.text('Row 0'), isTrue);
-      } finally {
-        await tester.dispose();
-      }
-    });
+          expect(tester.find.text('Header'), isTrue);
+          expect(tester.find.text('Row 0'), isTrue);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
   });
 }
 

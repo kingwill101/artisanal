@@ -15,15 +15,21 @@ class RenderSizedBox extends RenderBox {
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
 
-    final targetWidth = resolveDimension(width)?.toDouble();
-    final targetHeight = resolveDimension(height)?.toDouble();
+    final requestedWidth = resolveDimension(width)?.toDouble();
+    final requestedHeight = resolveDimension(height)?.toDouble();
 
     final childConstraints = BoxConstraints(
-      minWidth: targetWidth ?? constraints.minWidth,
-      maxWidth: targetWidth ?? constraints.maxWidth,
-      minHeight: targetHeight ?? constraints.minHeight,
-      maxHeight: targetHeight ?? constraints.maxHeight,
-    );
+      minWidth: requestedWidth ?? 0,
+      maxWidth: requestedWidth ?? double.infinity,
+      minHeight: requestedHeight ?? 0,
+      maxHeight: requestedHeight ?? double.infinity,
+    ).enforce(constraints);
+    final targetWidth = requestedWidth == null
+        ? null
+        : childConstraints.maxWidth;
+    final targetHeight = requestedHeight == null
+        ? null
+        : childConstraints.maxHeight;
 
     _child?.layout(childConstraints);
 
@@ -41,7 +47,7 @@ class RenderSizedBox extends RenderBox {
       ),
     );
 
-    size = constraints.constrain(Size(measured.width, measured.height));
+    size = measured;
   }
 
   @override

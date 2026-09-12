@@ -4,6 +4,10 @@ import 'package:test/test.dart';
 
 import '../../example/opencode/models/message.dart';
 import '../../example/opencode/widgets/chat_body.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>
+    tester.pumpWidget(LooseLayoutHost(child: child));
 
 void main() {
   test('chat body auto-copies and clears selection on mouse up', () async {
@@ -16,7 +20,8 @@ void main() {
       ChatMessage.assistant(const [TextPart('Assistant selectable text line')]),
     ];
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       Container(
         width: 110,
         height: 20,
@@ -49,7 +54,8 @@ void main() {
         ]),
       ];
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 110,
           height: 20,
@@ -90,7 +96,8 @@ void main() {
       (i) => ChatMessage.assistant([TextPart('Scrollable assistant line $i')]),
     );
 
-    await tester.pumpWidget(
+    await _pumpSmallRoot(
+      tester,
       Container(
         width: 110,
         height: 20,

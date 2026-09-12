@@ -5,13 +5,25 @@ import 'package:artisanal/uv.dart' as uv;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
+extension on WidgetTester {
+  Future<void> pumpLoose(Widget widget, {int? width, int? height}) {
+    return pumpWidget(
+      LooseLayoutHost(child: widget),
+      width: width,
+      height: height,
+    );
+  }
+}
+
 void main() {
   group('Text', () {
     test('renders plain text', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Text('Hello World'));
+      await tester.pumpLoose(Text('Hello World'));
       expect(tester.find.text('Hello World'), isTrue);
     });
 
@@ -19,7 +31,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Text(''));
+      await tester.pumpLoose(Text(''));
       expect(tester.view.trim(), isEmpty);
     });
 
@@ -28,7 +40,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final style = Style().bold();
-      await tester.pumpWidget(Text('Bold Text', style: style));
+      await tester.pumpLoose(Text('Bold Text', style: style));
 
       expect(tester.find.text('Bold Text'), isTrue);
       final view = tester.view;
@@ -39,7 +51,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text(
           'Styled Text',
           textStyle: const TextStyle(
@@ -57,7 +69,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 2);
       addTearDown(tester.dispose);
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text(
           'two words',
           textStyle: const TextStyle(decoration: TextDecoration.underline),
@@ -77,7 +89,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 2);
       addTearDown(tester.dispose);
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text(
           'colored underline',
           textStyle: const TextStyle(
@@ -101,7 +113,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 6);
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 10,
           child: Text(
@@ -126,7 +138,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text(
           'Overlay',
           style: Style().bold().italic().padding(0, 1),
@@ -143,7 +155,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 24, screenHeight: 10);
       addTearDown(tester.dispose);
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 18,
           child: Text(
@@ -173,7 +185,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 24, screenHeight: 10);
       addTearDown(tester.dispose);
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 18,
           child: Text.rich(
@@ -209,7 +221,7 @@ void main() {
       final tester = WidgetTester(screenWidth: 24, screenHeight: 10);
       addTearDown(tester.dispose);
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text(
           'border follows wrapped content across terminal resizes',
           style: Style().padding(0, 1).border(style.Border.rounded),
@@ -235,7 +247,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Text('Left', textAlign: TextAlign.left));
+      await tester.pumpLoose(Text('Left', textAlign: TextAlign.left));
       expect(tester.find.text('Left'), isTrue);
     });
 
@@ -243,7 +255,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 20,
           child: Text('Center', textAlign: TextAlign.center),
@@ -256,7 +268,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(width: 20, child: Text('Right', textAlign: TextAlign.right)),
       );
       expect(tester.find.text('Right'), isTrue);
@@ -266,7 +278,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text('VeryLongTextThatMightNeedWrapping', softWrap: true),
       );
       expect(tester.find.text('VeryLongTextThatMightNeedWrapping'), isTrue);
@@ -276,7 +288,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Text('VeryLongText', softWrap: false));
+      await tester.pumpLoose(Text('VeryLongText', softWrap: false));
       expect(tester.find.text('VeryLongText'), isTrue);
     });
 
@@ -284,7 +296,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           width: 10,
           child: Text(
@@ -301,7 +313,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       // Text with maxWidth: 10 and overflow ellipsis truncates to 10 columns
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text(
           'This is a very long text',
           overflow: TextOverflow.ellipsis,
@@ -319,7 +331,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       // Without maxWidth, ellipsis has no width constraint to truncate against
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text('Short text', overflow: TextOverflow.ellipsis),
       );
       // Text renders fully since there's no maxWidth
@@ -330,7 +342,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text.rich(
           TextSpan(
             text: 'Hello ',
@@ -349,7 +361,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text.rich(
           TextSpan(
             text: 'A',
@@ -371,7 +383,7 @@ void main() {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
-        await tester.pumpWidget(
+        await tester.pumpLoose(
           Text.rich(
             const TextSpan(
               text: 'A',
@@ -399,7 +411,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Text.rich(TextSpan(style: Style().italic(), text: 'Italic')),
       );
       expect(tester.find.text('Italic'), isTrue);
@@ -446,7 +458,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Column(children: [Text('Line 1'), Text('Line 2'), Text('Line 3')]),
       );
 
@@ -459,7 +471,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Row(children: [Text('A'), Text('B'), Text('C')]));
+      await tester.pumpLoose(Row(children: [Text('A'), Text('B'), Text('C')]));
 
       expect(tester.find.text('A'), isTrue);
       expect(tester.find.text('B'), isTrue);
@@ -470,7 +482,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(
           padding: EdgeInsets.all(1),
           child: Text('Content', style: Style().foreground(Colors.red)),
@@ -484,7 +496,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await tester.pumpLoose(
         Container(width: 10, child: Text('Line1\nLine2\nLine3')),
       );
 

@@ -88,6 +88,7 @@ class RenderContainer extends RenderBox {
   Size? _lastChildPaintSize;
   num? _resolvedWidth;
   num? _resolvedHeight;
+  EdgeInsets? _resolvedMargin;
 
   RenderObject? get _child => children.isEmpty ? null : children.first;
 
@@ -100,8 +101,10 @@ class RenderContainer extends RenderBox {
     );
     super.layout(constraints);
 
-    // Compute the decoration overhead (padding + border + margin) so we can
-    // deflate child constraints — matching Flutter's RenderPadding behaviour.
+    // Resolve the outer box before laying out the child.  In particular, an
+    // explicit width can still be clipped by the parent's max width; deriving
+    // child constraints from the requested width would let the child paint
+    // outside the box (and makes wrapping depend on an invisible width).
     final boxDec = decoration is BoxDecoration
         ? decoration as BoxDecoration
         : null;
@@ -125,108 +128,99 @@ class RenderContainer extends RenderBox {
     final mrgH = mrgLeft + mrgRight;
     final mrgV = mrgTop + mrgBottom;
 
-    // Overhead inside the container box that reduces space available to child.
-    // Margin is outside the container and must not constrain the child.
     final innerOverheadH = padH + bdrH;
     final innerOverheadV = padV + bdrV;
 
-    var childConstraints = constraints;
-    if (width != null || height != null) {
-      childConstraints = BoxConstraints(
-        minWidth: math.max(
-          0,
-          (width?.toDouble() ?? constraints.minWidth) - innerOverheadH,
-        ),
-        maxWidth: math.max(
-          0,
-          (width?.toDouble() ?? constraints.maxWidth) - innerOverheadH,
-        ),
-        minHeight: math.max(
-          0,
-          (height?.toDouble() ?? constraints.minHeight) - innerOverheadV,
-        ),
-        maxHeight: math.max(
-          0,
-          (height?.toDouble() ?? constraints.maxHeight) - innerOverheadV,
-        ),
-      );
-    } else if (alignment != null) {
-      // Alignment is set — loosen min constraints so the child can size
-      // naturally and then be positioned within the container.  This
-      // matches Flutter's Container behaviour with alignment.
-      childConstraints = BoxConstraints(
-        minWidth: 0,
-        maxWidth: math.max(0, constraints.maxWidth - innerOverheadH),
-        minHeight: 0,
-        maxHeight: math.max(0, constraints.maxHeight - innerOverheadV),
-      );
-    } else {
-      // No explicit size, no alignment — propagate parent constraints
-      // through (deflated by padding/border/margin overhead) so that
-      // children see the same tightness the parent intended.  This
-      // matches Flutter behaviour where a Container with only `color`
-      // (or padding) is constraint-transparent.
-      childConstraints = BoxConstraints(
-        minWidth: math.max(0, constraints.minWidth - innerOverheadH),
-        maxWidth: math.max(0, constraints.maxWidth - innerOverheadH),
-        minHeight: math.max(0, constraints.minHeight - innerOverheadV),
-        maxHeight: math.max(0, constraints.maxHeight - innerOverheadV),
-      );
+    double availableMin(double min, double max, int overhead) {
+      final availableMax = math.max(0.0, max - overhead);
+      return math.min(availableMax, math.max(0.0, min - overhead));
     }
+
+    double availableMax(double max, int overhead) =>
+        math.max(0.0, max - overhead);
+
+    final requestedWidth = resolveDimension(width);
+    final requestedHeight = resolveDimension(height);
+    final allocatedOuterWidth = requestedWidth == null
+        ? null
+        : constraints.constrainWidth(
+            requestedWidth.toDouble() + mrgH.toDouble(),
+          );
+    final allocatedOuterHeight = requestedHeight == null
+        ? null
+        : constraints.constrainHeight(
+            requestedHeight.toDouble() + mrgV.toDouble(),
+          );
+
+    // Margins consume space in the parent, but never space inside the
+    // container.  Keep each range valid when overhead exceeds a bound.
+    final alignmentLoosensChild = alignment != null;
+    final childConstraints = BoxConstraints(
+      minWidth: alignmentLoosensChild
+          ? 0
+          : requestedWidth == null
+          ? availableMin(
+              constraints.minWidth,
+              constraints.maxWidth,
+              mrgH + innerOverheadH,
+            ).toDouble()
+          : math.max(0, allocatedOuterWidth! - mrgH - innerOverheadH),
+      maxWidth: requestedWidth == null
+          ? availableMax(constraints.maxWidth, mrgH + innerOverheadH)
+          : math.max(0, allocatedOuterWidth! - mrgH - innerOverheadH),
+      minHeight: alignmentLoosensChild
+          ? 0
+          : requestedHeight == null
+          ? availableMin(
+              constraints.minHeight,
+              constraints.maxHeight,
+              mrgV + innerOverheadV,
+            ).toDouble()
+          : math.max(0, allocatedOuterHeight! - mrgV - innerOverheadV),
+      maxHeight: requestedHeight == null
+          ? availableMax(constraints.maxHeight, mrgV + innerOverheadV)
+          : math.max(0, allocatedOuterHeight! - mrgV - innerOverheadV),
+    );
     _child?.layout(childConstraints);
     final contentW = _child?.size.width.toInt() ?? 0;
     final contentH = _child?.size.height.toInt() ?? 0;
 
-    // Compute the natural total size that renderContainerContent would
-    // produce when width/height are null, accounting for padding, border,
-    // and margin — mirroring the same arithmetic in renderContainerContent.
-    final naturalInnerW = (width != null)
-        ? resolveDimension(width)!
-        : (contentW + padH + bdrH);
-    final naturalInnerH = (height != null)
-        ? resolveDimension(height)!
-        : (contentH + padV + bdrV);
-    final naturalTotalW = naturalInnerW + mrgH;
-    final naturalTotalH = naturalInnerH + mrgV;
+    final naturalOuterWidth = contentW + innerOverheadH + mrgH;
+    final naturalOuterHeight = contentH + innerOverheadV + mrgV;
+    final outerWidth =
+        allocatedOuterWidth ??
+        constraints.constrainWidth(naturalOuterWidth.toDouble());
+    final outerHeight =
+        allocatedOuterHeight ??
+        constraints.constrainHeight(naturalOuterHeight.toDouble());
+    final renderWidth = math.max(0, outerWidth - mrgH);
+    final renderHeight = math.max(0, outerHeight - mrgV);
 
-    final constrained = constraints.constrain(
-      Size(naturalTotalW.toDouble(), naturalTotalH.toDouble()),
-    );
-
-    // Ensure the render dimensions match the constrained size so the
-    // Canvas output never exceeds the constraints.  This handles both
-    // when constraints force a *larger* size (expansion) and when they
-    // force a *smaller* size (clamping) than the natural dimensions.
-    num? renderWidth = width;
-    num? renderHeight = height;
-    if (width == null && constrained.width != naturalTotalW) {
-      renderWidth = constrained.width - mrgH;
-    }
-    if (height == null && constrained.height != naturalTotalH) {
-      renderHeight = constrained.height - mrgV;
-    }
-
+    // If margins alone exceed the available box, retain their leading portion
+    // rather than adding the full requested margins back during painting.
+    final effectiveLeft = math.min(mrgLeft, outerWidth.toInt());
+    final effectiveTop = math.min(mrgTop, outerHeight.toInt());
+    _resolvedMargin = mrgH > outerWidth || mrgV > outerHeight
+        ? EdgeInsets.only(
+            left: effectiveLeft,
+            right: math.min(
+              mrgRight,
+              math.max(0, outerWidth.toInt() - effectiveLeft),
+            ),
+            top: effectiveTop,
+            bottom: math.min(
+              mrgBottom,
+              math.max(0, outerHeight.toInt() - effectiveTop),
+            ),
+          )
+        : margin;
     _resolvedWidth = renderWidth;
     _resolvedHeight = renderHeight;
-    size = constraints.constrain(
-      Size(
-        (renderWidth != null
-                ? resolveDimension(renderWidth) ?? 0
-                : naturalInnerW) +
-            mrgH.toDouble(),
-        (renderHeight != null
-                ? resolveDimension(renderHeight) ?? 0
-                : naturalInnerH) +
-            mrgV.toDouble(),
-      ),
-    );
+    size = Size(outerWidth, outerHeight);
 
     // Set child offset to match where renderContainerContent places the
     // content on the canvas: margin + border + padding + alignment.
     if (_child != null) {
-      final resolvedW = resolveDimension(renderWidth);
-      final resolvedH = resolveDimension(renderHeight);
-
       final resolvedAlign = alignment == null
           ? align
           : horizontalFromAlignment(alignment!);
@@ -234,23 +228,19 @@ class RenderContainer extends RenderBox {
           ? verticalAlign
           : verticalFromAlignment(alignment!);
 
-      final availW = resolvedW != null
-          ? math.max(0, resolvedW - padLeft - padRight - bdrH)
-          : 0;
-      final availH = resolvedH != null
-          ? math.max(0, resolvedH - padTop - padBottom - bdrV)
-          : 0;
+      final availW = math
+          .max(0, renderWidth - padLeft - padRight - bdrH)
+          .toInt();
+      final availH = math
+          .max(0, renderHeight - padTop - padBottom - bdrV)
+          .toInt();
 
-      final alignedX = resolvedW != null
-          ? offsetForHorizontal(resolvedAlign, availW, contentW)
-          : 0;
-      final alignedY = resolvedH != null
-          ? offsetForVertical(resolvedVertical, availH, contentH)
-          : 0;
+      final alignedX = offsetForHorizontal(resolvedAlign, availW, contentW);
+      final alignedY = offsetForVertical(resolvedVertical, availH, contentH);
 
       _child!.offset = Offset(
-        (mrgLeft + bdrLeft + padLeft + alignedX).toDouble(),
-        (mrgTop + bdrTop + padTop + alignedY).toDouble(),
+        (effectiveLeft + bdrLeft + padLeft + alignedX).toDouble(),
+        (effectiveTop + bdrTop + padTop + alignedY).toDouble(),
       );
     }
     span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
@@ -279,10 +269,11 @@ class RenderContainer extends RenderBox {
     }
     final widthForPaint = (_resolvedWidth ?? width) ?? size.width.toInt();
     final heightForPaint = (_resolvedHeight ?? height) ?? size.height.toInt();
+    final marginForPaint = _resolvedMargin ?? margin;
     final key = (
       content,
       padding,
-      margin,
+      marginForPaint,
       widthForPaint,
       heightForPaint,
       background,
@@ -301,7 +292,7 @@ class RenderContainer extends RenderBox {
     final rendered = renderContainerContent(
       contentStr: content,
       padding: padding,
-      margin: margin,
+      margin: marginForPaint,
       width: widthForPaint,
       height: heightForPaint,
       background: background,

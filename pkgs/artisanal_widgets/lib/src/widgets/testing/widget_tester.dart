@@ -119,6 +119,24 @@ class _TestTerminal implements Terminal {
   /// All content written via [write]/[writeln].
   String get allOutput => _writes.join();
 
+  /// Number of terminal writes captured so far.
+  int get writeCount => _writes.length;
+
+  /// Joins only writes at or after [offset], without copying earlier history.
+  String outputSinceWrite(int offset) {
+    final output = StringBuffer();
+    for (var i = offset.clamp(0, _writes.length); i < _writes.length; i++) {
+      output.write(_writes[i]);
+    }
+    return output.toString();
+  }
+
+  /// Drops captured terminal output.
+  void clearOutput() {
+    _writes.clear();
+    _lastWrittenView = null;
+  }
+
   // -- State tracking -------------------------------------------------------
   bool _raw = false;
   bool _alt = false;
@@ -372,6 +390,8 @@ class WidgetTester {
   WidgetTester({
     this.screenWidth = 80,
     this.screenHeight = 24,
+    this.enableRenderer = false,
+    this.altScreen = false,
     bool enableZones = false,
   }) {
     // Legacy no-op retained for source compatibility.
@@ -384,11 +404,28 @@ class WidgetTester {
   /// Screen height used for [WindowSizeMsg] and MediaQueryData.
   int screenHeight;
 
+  /// Whether [Program] uses the production UV renderer.
+  ///
+  /// This is opt-in because the default tester intentionally disables terminal
+  /// rendering for fast, deterministic widget assertions. When enabled,
+  /// [rendererOutput] exposes raw ANSI writes. Cell buffers are not currently
+  /// exposed by the production renderer API.
+  final bool enableRenderer;
+
+  /// Whether the production renderer targets the terminal's alternate screen.
+  ///
+  /// This is useful for captures of full-screen applications: inline mode
+  /// intentionally clips output to the rows available below the cursor.
+  /// Defaults to `false` to preserve the lightweight inline tester behavior.
+  final bool altScreen;
+
   _TestTerminal? _terminal;
   Program<WidgetApp>? _program;
   Future<dynamic>? _runFuture;
   WidgetApp? _app;
   String _lastView = '';
+  String _lastRendererOutput = '';
+  int _rendererWriteOffset = 0;
   int _pumpCount = 0;
   bool _recordFrames = false;
   int _frameSequence = 0;
@@ -408,6 +445,26 @@ class WidgetTester {
   String get terminalOutput {
     _ensureRunning();
     return _terminal!.allOutput;
+  }
+
+  /// All raw ANSI output emitted by the production renderer.
+  ///
+  /// This may include renderer setup and cursor-management sequences in
+  /// addition to frame content.
+  String get rendererOutput {
+    _ensureRunning();
+    return enableRenderer ? _terminal!.allOutput : '';
+  }
+
+  /// Raw renderer output emitted since the most recent view synchronization.
+  String get lastRendererOutput => enableRenderer ? _lastRendererOutput : '';
+
+  /// Clears the accumulated raw renderer output.
+  void clearRendererOutput() {
+    _ensureRunning();
+    _terminal!.clearOutput();
+    _lastRendererOutput = '';
+    _rendererWriteOffset = 0;
   }
 
   /// Number of times [pump] has been called (including the implicit pump
@@ -465,8 +522,19 @@ class WidgetTester {
     int? height,
   }) async {
     final start = DateTime.now();
+    // A tester has one active Program at a time. Dispose the previous one
+    // before replacing its terminal and model so that its event loop cannot
+    // continue writing into resources owned by the new mount.
+    if (_program != null) {
+      await dispose();
+    }
     if (width != null) screenWidth = width;
     if (height != null) screenHeight = height;
+    // Renderer output offsets belong to a terminal instance. A remount gets
+    // a fresh terminal, so carrying either value over would hide the new
+    // mount's output (or expose stale output as its latest frame).
+    _lastRendererOutput = '';
+    _rendererWriteOffset = 0;
     print('tester.pumpWidget.start');
 
     _app = WidgetApp(
@@ -484,10 +552,12 @@ class WidgetTester {
     _program = Program<WidgetApp>(
       _app!,
       options: ProgramOptions(
-        altScreen: false,
+        altScreen: altScreen,
         hideCursor: false,
         mouse: true,
-        disableRenderer: true,
+        disableRenderer: !enableRenderer,
+        useUltravioletRenderer: enableRenderer,
+        startupProbes: false,
         signalHandlers: false,
         catchPanics: false,
         diagnostics: ProgramDiagnosticsOptions(
@@ -925,6 +995,11 @@ class WidgetTester {
     final model = _program?.currentModel;
     if (model != null) {
       _lastView = model.view().toString();
+      final terminal = _terminal;
+      if (enableRenderer && terminal != null) {
+        _lastRendererOutput = terminal.outputSinceWrite(_rendererWriteOffset);
+        _rendererWriteOffset = terminal.writeCount;
+      }
       if (_recordFrames) {
         _recordFrame(trigger: trigger);
       }

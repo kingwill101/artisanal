@@ -538,14 +538,14 @@ class NavigatorState extends State<Navigator> {
     // Element.dispatch walks children in reverse order for KeyMsg (one-winner
     // policy), so placing active entries last ensures they receive keyboard
     // input before offstage entries.
-    // Offstage entries render as zero-size (SizedBox 0x0) and their
-    // handleIntercept returns Cmd.none() to suppress message delivery to
-    // their children.
+    // Offstage entries remain mounted but do not paint or participate in
+    // pointer hit testing. A zero-size request alone cannot hide a child
+    // under StackFit.expand's tight viewport constraints.
     //
     // Using a single _RouteEntry type with a stable Key for each entry
     // ensures Widget.canUpdate returns true when an entry transitions
     // between active↔offstage (same runtimeType + same Key). The
-    // _RouteEntry.build() always returns SizedBox(child: widget.child)
+    // _RouteEntry.build() always returns the same visibility wrapper structure,
     // keeping the subtree structure identical and preserving child
     // State objects and pending Futures.
     final children = <Widget>[];
@@ -598,8 +598,8 @@ class NavigatorState extends State<Navigator> {
 /// across push/pop operations.
 ///
 /// When [offstage] is `true`:
-/// - [handleIntercept] returns [Cmd.none()] to suppress all messages.
-/// - The child is wrapped in [SizedBox.shrink] to avoid rendering.
+/// - Painting and pointer hit testing are disabled.
+/// - The child remains mounted with the same wrapper structure.
 class _RouteEntry extends StatefulWidget {
   _RouteEntry({required this.child, this.offstage = false, super.key});
 
@@ -613,16 +613,9 @@ class _RouteEntry extends StatefulWidget {
 class _RouteEntryState extends State<_RouteEntry> {
   @override
   Widget build(BuildContext context) {
-    // Always wrap in SizedBox to keep the subtree structure identical
-    // when transitioning between active and offstage. This ensures
-    // Widget.canUpdate succeeds for the SizedBox (same runtimeType, no key)
-    // and the child element tree is preserved.
-    // When offstage, width/height=0 renders as zero-size.
-    // When active, width/height=null passes through constraints.
-    return SizedBox(
-      width: widget.offstage ? 0 : null,
-      height: widget.offstage ? 0 : null,
-      child: widget.child,
+    return IgnorePointer(
+      ignoring: widget.offstage,
+      child: Opacity(opacity: widget.offstage ? 0 : 1, child: widget.child),
     );
   }
 

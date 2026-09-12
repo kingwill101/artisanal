@@ -3,6 +3,8 @@ library;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
 void main() {
   // ---------------------------------------------------------------------------
   // ConstrainedBox — constructor
@@ -30,9 +32,11 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
         await tester.pumpWidget(
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 5),
-            child: Text('ABCDEFGHIJ'),
+          LooseLayoutHost(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 5),
+              child: Text('ABCDEFGHIJ'),
+            ),
           ),
         );
         // The 10-char text should be truncated by constrainContent
@@ -84,9 +88,11 @@ void main() {
       try {
         final longContent = List.generate(10, (i) => 'Line$i').join('\n');
         await tester.pumpWidget(
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: 3),
-            child: Text(longContent),
+          LooseLayoutHost(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: 3),
+              child: Text(longContent),
+            ),
           ),
         );
         expect(tester.find.text('Line0'), isTrue);
@@ -125,9 +131,11 @@ void main() {
       try {
         final longContent = List.generate(10, (i) => 'ABCDEFGHIJ').join('\n');
         await tester.pumpWidget(
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 5, maxHeight: 3),
-            child: Text(longContent),
+          LooseLayoutHost(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 5, maxHeight: 3),
+              child: Text(longContent),
+            ),
           ),
         );
         final view = tester.view;
@@ -145,9 +153,11 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
         await tester.pumpWidget(
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 0),
-            child: Text('Hidden'),
+          LooseLayoutHost(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 0),
+              child: Text('Hidden'),
+            ),
           ),
         );
         expect(tester.find.text('Hidden'), isFalse);
@@ -160,9 +170,11 @@ void main() {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
         await tester.pumpWidget(
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: 0),
-            child: Text('Hidden'),
+          LooseLayoutHost(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: 0),
+              child: Text('Hidden'),
+            ),
           ),
         );
         expect(tester.find.text('Hidden'), isFalse);

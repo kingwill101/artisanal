@@ -4,6 +4,10 @@ import 'package:artisanal/tui.dart'
     show Cmd, KeyMsg, Msg, MouseMsg, MouseAction, MouseButton;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>
+    tester.pumpWidget(LooseLayoutHost(child: child));
 
 class _PaintCounter {
   int count = 0;
@@ -406,7 +410,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(content: 'Hello World', width: 20, height: 5),
       );
       expect(tester.locateText('Hello World'), isNotNull);
@@ -416,7 +421,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(
           content: _lines(20),
           width: 20,
@@ -434,7 +440,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(content: _lines(30), width: 20, height: 3),
       );
       expect(tester.locateText('Line 1'), isNotNull);
@@ -449,7 +456,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final controller = ViewportController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(
           content: _lines(30),
           width: 20,
@@ -506,7 +514,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 5,
@@ -520,7 +529,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -564,7 +574,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 5,
@@ -578,7 +589,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 2,
@@ -621,7 +633,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 5,
@@ -639,7 +652,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 8,
@@ -660,7 +674,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 8,
@@ -682,7 +697,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 2,
@@ -713,7 +729,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final controller = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 2,
@@ -742,11 +759,11 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      // Default separator is '\n' which adds 1 line between items.
-      // Each item is 1 line, so stride = 2 lines per item.
-      // With height 5, we can see items at lines 0, 2, 4 → 3 items visible.
+      // A single newline joins adjacent item rows rather than adding a blank
+      // row between them.
       // Wrap in Container so the VirtualListView receives loose constraints.
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           child: VirtualListView(
             width: 30,
@@ -759,6 +776,43 @@ void main() {
       expect(tester.locateText('Item 1'), isNotNull);
       expect(tester.locateText('Item 2'), isNotNull);
       // At least the first visible slice is rendered.
+    });
+
+    test('separator row accounting matches rendered rows', () async {
+      Future<({int contentExtent, int secondRowY})> measure(
+        String separator,
+      ) async {
+        final tester = WidgetTester(screenWidth: 30, screenHeight: 4);
+        addTearDown(() => tester.dispose());
+        final controller = ListViewController();
+        await _pumpSmallRoot(
+          tester,
+          VirtualListView(
+            width: 30,
+            height: 4,
+            controller: controller,
+            separator: separator,
+            children: [Text('first'), Text('second'), Text('third')],
+          ),
+        );
+        final location = tester.locateText('second');
+        expect(location, isNotNull);
+        return (
+          contentExtent: controller.contentExtent,
+          secondRowY: location!.y,
+        );
+      }
+
+      final singleNewline = await measure('\n');
+      final doubleNewline = await measure('\n\n');
+      final emptySeparator = await measure('');
+
+      expect(singleNewline.contentExtent, equals(3));
+      expect(doubleNewline.contentExtent, equals(5));
+      expect(emptySeparator.contentExtent, equals(singleNewline.contentExtent));
+      expect(emptySeparator.secondRowY, equals(singleNewline.secondRowY));
+      expect(singleNewline.secondRowY, equals(1));
+      expect(doubleNewline.secondRowY, equals(2));
     });
 
     test('properties are set correctly', () {
@@ -800,25 +854,25 @@ void main() {
         },
       );
 
-      await tester.pumpWidget(Container(height: 5, child: listView));
+      await _pumpSmallRoot(tester, Container(height: 5, child: listView));
 
-      expect(built, equals(<int>[0, 1, 2]));
+      expect(built, equals(<int>[0, 1, 2, 3, 4]));
       final viewport = _findRenderListViewport(listView);
-      expect((viewport as dynamic).debugActiveChildCount, equals(3));
+      expect((viewport as dynamic).debugActiveChildCount, equals(5));
       expect(
         (viewport as dynamic).debugActiveChildIndices,
-        equals(<int>{0, 1, 2}),
+        equals(<int>{0, 1, 2, 3, 4}),
       );
 
       controller.jumpTo(2000);
       tester.pump();
 
-      expect(tester.locateText('Row 1000'), isNotNull);
-      expect(built, equals(<int>[0, 1, 2, 1000, 1001, 1002]));
-      expect((viewport as dynamic).debugActiveChildCount, equals(3));
+      expect(tester.locateText('Row 2000'), isNotNull);
+      expect(built, equals(<int>[0, 1, 2, 3, 4, 2000, 2001, 2002, 2003, 2004]));
+      expect((viewport as dynamic).debugActiveChildCount, equals(5));
       expect(
         (viewport as dynamic).debugActiveChildIndices,
-        equals(<int>{1000, 1001, 1002}),
+        equals(<int>{2000, 2001, 2002, 2003, 2004}),
       );
     });
 
@@ -842,7 +896,7 @@ void main() {
       addTearDown(tree.unmount);
 
       expect(tree.render(), contains('R0 Row 0'));
-      expect(built, equals(<String>['0:0', '0:1', '0:2']));
+      expect(built, equals(<String>['0:0', '0:1', '0:2', '0:3', '0:4']));
 
       built.clear();
       revision = 1;
@@ -851,7 +905,7 @@ void main() {
 
       expect(output, contains('R1 Row 0'));
       expect(output, isNot(contains('R1 Row 99')));
-      expect(built, equals(<String>['1:0', '1:1', '1:2']));
+      expect(built, equals(<String>['1:0', '1:1', '1:2', '1:3', '1:4']));
     });
 
     test('builder preserves multi-line fixed-height children', () {
@@ -951,7 +1005,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           child: VirtualListView(
             width: 30,
@@ -980,7 +1035,8 @@ void main() {
         addTearDown(() => tester.dispose());
 
         final counter = _PaintCounter();
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             child: VirtualListView(
               width: 40,
@@ -1023,7 +1079,8 @@ void main() {
       final controller = ListViewController();
       var tapped = -1;
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           child: VirtualListView(
             width: 40,
@@ -1070,7 +1127,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final controller = ListViewController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         VirtualListView(
           width: 30,
           height: 3,
@@ -1088,7 +1146,7 @@ void main() {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
-        final separatorBreaks = 1;
+        final separatorBreaks = 0;
         final itemHeights = List<int>.generate(10_000, (i) => (i % 4) + 1);
         final children = List<Text>.generate(
           itemHeights.length,
@@ -1104,7 +1162,7 @@ void main() {
           separator: '\n',
           children: children,
         );
-        await tester.pumpWidget(listView);
+        await _pumpSmallRoot(tester, listView);
 
         final viewport = _findRenderListViewport(listView);
         final totalHeight = _contentHeightFromHeights(
@@ -1153,6 +1211,9 @@ void main() {
         addTearDown(() => tester.dispose());
 
         const itemCount = 100_000;
+        const separatorBreaks = 0;
+        // Uniform one-row children match the estimate even outside the measured
+        // prefix, so large offsets have exact, unclamped expected indices.
         final children = List<Widget>.generate(itemCount, (_) => _EmptyLeaf());
         final controller = ListViewController();
         final listView = VirtualListView(
@@ -1164,13 +1225,13 @@ void main() {
           separator: '\n',
           children: children,
         );
-        await tester.pumpWidget(listView);
+        await _pumpSmallRoot(tester, listView);
         tester.pump();
 
         final viewport = _findRenderListViewport(listView);
         final contentHeight = _contentHeightFromHeights(
           List<int>.filled(itemCount, 1),
-          1,
+          separatorBreaks,
         );
         final checks = <int>[
           0,
@@ -1178,18 +1239,20 @@ void main() {
           1_000,
           20_000,
           50_000,
-          150_000,
+          75_000,
+          contentHeight - 2,
           contentHeight - 1,
         ];
 
-        var previousIndex = 0;
+        final resolvedIndices = <int>[];
         for (final offset in checks) {
           final resolved = _resolveOffsetForDebugViewport(viewport, offset);
-          expect(resolved.index, greaterThanOrEqualTo(previousIndex));
-          expect(resolved.index, lessThan(itemCount));
-          expect(resolved.offsetInItem, greaterThanOrEqualTo(0));
-          previousIndex = resolved.index;
+          expect(offset, lessThan(contentHeight));
+          expect(resolved.index, offset, reason: 'lookup at offset $offset');
+          expect(resolved.offsetInItem, 0);
+          resolvedIndices.add(resolved.index);
         }
+        expect(resolvedIndices.toSet().length, checks.length);
       },
     );
 
@@ -1199,7 +1262,7 @@ void main() {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
-        final separatorBreaks = 1;
+        final separatorBreaks = 0;
         final itemHeights = List<int>.generate(120, (i) => (i % 5) + 3);
         final children = List<Text>.generate(
           itemHeights.length,
@@ -1219,7 +1282,7 @@ void main() {
           separator: '\n',
           children: children,
         );
-        await tester.pumpWidget(listView);
+        await _pumpSmallRoot(tester, listView);
 
         final viewport = _findRenderListViewport(listView);
         final contentHeights = <int>[controller.contentHeight];
@@ -1260,7 +1323,8 @@ void main() {
       );
 
       final controller = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 80,
           height: 10,
@@ -1276,12 +1340,12 @@ void main() {
         ),
       );
 
-      final expectedTotal = _contentHeightFromHeights(itemHeights, 1);
+      final expectedTotal = _contentHeightFromHeights(itemHeights, 0);
       final extents = <int>[controller.contentExtent];
 
       // Visit items in chunks to converge measurements across all items.
       for (var i = 0; i < itemCount; i += 5) {
-        final targetOffset = _variableItemHeightOffset(itemHeights, i, 1);
+        final targetOffset = _variableItemHeightOffset(itemHeights, i, 0);
         controller.jumpTo(targetOffset.clamp(0, controller.maxOffset));
         tester.pump();
         extents.add(controller.contentExtent);
@@ -1313,7 +1377,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         ScrollArea(width: 30, height: 5, child: Text('AreaContent')),
       );
       expect(tester.locateText('AreaContent'), isNotNull);
@@ -1345,7 +1410,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 40,
           height: 5,
@@ -1361,7 +1427,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Column(
           children: [
             Text('Header'),
@@ -1386,7 +1453,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final controller = ViewportController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(
           content: _lines(50),
           width: 20,
@@ -1519,7 +1587,8 @@ void main() {
         30,
         (i) => 'Item-${String.fromCharCode(65 + i % 26)}-$i',
       ).join('\n');
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(
           content: content,
           width: 30,
@@ -1550,7 +1619,8 @@ void main() {
         30,
         (i) => 'Entry-${String.fromCharCode(65 + i % 26)}-$i',
       ).join('\n');
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Viewport(
           content: content,
           width: 30,
@@ -1574,7 +1644,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final controller = ListViewController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         VirtualListView(
           width: 30,
           height: 5,
@@ -1587,13 +1658,14 @@ void main() {
       expect(tester.locateText('Row 0'), isNotNull);
 
       // External scrollBy — listener fires markNeedsPaint
-      // Default separator '\n' gives stride=2 per item.
-      // Scrolling by 4 rows should skip 2 items.
+      // Default separator '\n' joins adjacent item rows, so each one-line
+      // item has stride 1.
+      // Scrolling by 4 rows should skip 4 items.
       controller.scrollBy(4);
       tester.pump();
 
-      // Row 2 should now be visible at the top
-      expect(tester.locateText('Row 2'), isNotNull);
+      // Row 4 should now be visible at the top
+      expect(tester.locateText('Row 4'), isNotNull);
       expect(tester.locateText('Row 0'), isNull);
     });
 
@@ -1602,7 +1674,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final controller = ListViewController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         VirtualListView(
           width: 30,
           height: 5,
@@ -1613,11 +1686,11 @@ void main() {
 
       expect(tester.locateText('Row 0'), isNotNull);
 
-      // Jump to offset 10 — with stride 2, that's item 5
+      // Jump to offset 10 — with stride 1, that's item 10
       controller.jumpTo(10);
       tester.pump();
 
-      expect(tester.locateText('Row 5'), isNotNull);
+      expect(tester.locateText('Row 10'), isNotNull);
       expect(tester.locateText('Row 0'), isNull);
     });
 
@@ -1883,7 +1956,8 @@ void main() {
         addTearDown(() => tester.dispose());
 
         final ctrl = WidgetScrollController();
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 40,
             height: 3,
@@ -1925,7 +1999,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 40,
           height: 2,
@@ -1965,7 +2040,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -2001,7 +2077,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -2027,7 +2104,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -2053,7 +2131,8 @@ void main() {
         final tester = WidgetTester();
         addTearDown(() => tester.dispose());
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 30,
             height: 3,
@@ -2076,7 +2155,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 2,
@@ -2098,7 +2178,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -2125,7 +2206,8 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -2158,7 +2240,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 30,
           height: 3,
@@ -2199,7 +2282,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 40,
           height: 5,
@@ -2232,7 +2316,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 24,
           height: 6,
@@ -2264,7 +2349,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 24,
           height: 8,
@@ -2312,7 +2398,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       final ctrl = WidgetScrollController();
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         Container(
           width: 40,
           height: 5,
@@ -2344,7 +2431,8 @@ void main() {
         addTearDown(() => tester.dispose());
 
         final ctrl = WidgetScrollController();
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           Container(
             width: 30,
             height: 5,

@@ -4,6 +4,13 @@
 
 ### Added
 
+- Added `BoxConstraints.enforce` to compose child size requests within
+  authoritative parent bounds without inverted constraint intervals.
+- Added opt-in production UV renderer capture to `WidgetTester` via
+  `enableRenderer: true`, exposing raw ANSI output through `rendererOutput`.
+  Use `altScreen: true` for full-viewport capture instead of inline rendering.
+  The default renderer-disabled test behavior is unchanged; structured cell
+  snapshots are not yet exposed.
 - Added a model-backed interactive `TreeView.model` surface for Artisanal's
   shared `TreeModel`, including focus-aware keyboard navigation, pointer
   expansion and activation, custom row builders, bounded scrolling, and
@@ -16,6 +23,11 @@
 
 ### Changed
 
+- Explicit `Container`, `SizedBox`, and flex extents now respect parent minimum
+  and maximum constraints before laying out children. A small application-root
+  widget should use an `Align`/`Center` host to loosen the viewport's minimums.
+- `ConstrainedBox` maximum bounds now limit a child's natural size rather than
+  forcing it to fill the maximum. Use minimum or tight constraints for expansion.
 - Added `showChrome` to `TextEditor` and `CodeEditor` so workbenches that
   already provide tabs and status bars can use an unboxed editor surface.
 - Added `showDiagnosticBanner` so unchromed editors retain reusable diagnostic
@@ -23,6 +35,17 @@
 
 ### Fixed
 
+- Allocate all available integer cells among tight flex children deterministically,
+  reserving loose children's share caps. Reuse measured child sizes for offsets
+  and paint instead of independently redistributing space in each phase.
+- Resolve container dimensions before deflating padding, borders, and margins;
+  clamp excessive margin painting to the allocated outer box.
+- Keep offstage navigator entries invisible and excluded from pointer hit testing
+  even under tight viewport constraints, while preserving their mounted state.
+- Count list separators by additional rendered rows: a single newline joins
+  items without adding a phantom row to content extents and hit-test offsets.
+- Dispose the previous `WidgetTester` program before remounting and reset
+  terminal capture offsets for the new mount.
 - Preserve the caller's `ThemeScope` when opening dialogs through
   `NavigatorState.showDialog`, and keep the default modal barrier transparent
   as documented instead of painting over the application.

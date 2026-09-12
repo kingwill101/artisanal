@@ -2,29 +2,35 @@ import 'package:artisanal/style.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
 void main() {
   group('SizedBox', () {
     test('renders child with explicit width', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(SizedBox(width: 20, child: Text('Fixed')));
+      await tester.pumpWidget(
+        LooseLayoutHost(child: SizedBox(width: 20, child: Text('Fixed'))),
+      );
 
       expect(tester.find.text('Fixed'), isTrue);
-      final lines = tester.viewLines.where((l) => l.isNotEmpty).toList();
-      if (lines.isNotEmpty) {
-        expect(Layout.visibleLength(lines.first), lessThanOrEqualTo(20));
-      }
+      final lines = tester.viewLines;
+      expect(lines.length, equals(1));
+      expect(Layout.visibleLength(lines.single), equals(20));
     });
 
     test('renders child with explicit height', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(SizedBox(height: 5, child: Text('Fixed')));
+      await tester.pumpWidget(
+        LooseLayoutHost(child: SizedBox(height: 5, child: Text('Fixed'))),
+      );
 
       final lines = tester.viewLines;
-      expect(lines.length, lessThanOrEqualTo(5));
+      expect(lines.length, equals(5));
+      expect(Layout.visibleLength(lines.first), equals(5));
     });
 
     test('renders child with explicit width and height', () async {
@@ -32,12 +38,15 @@ void main() {
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        SizedBox(width: 15, height: 3, child: Text('Fixed')),
+        LooseLayoutHost(
+          child: SizedBox(width: 15, height: 3, child: Text('Fixed')),
+        ),
       );
 
       expect(tester.find.text('Fixed'), isTrue);
       final lines = tester.viewLines;
-      expect(lines.length, lessThanOrEqualTo(3));
+      expect(lines.length, equals(3));
+      expect(lines.every((line) => Layout.visibleLength(line) == 15), isTrue);
     });
 
     test('renders empty SizedBox', () async {

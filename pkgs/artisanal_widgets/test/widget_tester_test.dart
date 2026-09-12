@@ -487,7 +487,10 @@ void main() {
       // Constrain the tappable area so a far-corner tap is definitively
       // outside the widget's render bounds.
       await tester.pumpWidget(
-        w.Container(width: 20, height: 3, child: _ClickableCounter()),
+        w.Align(
+          alignment: w.Alignment.topLeft,
+          child: w.Container(width: 20, height: 3, child: _ClickableCounter()),
+        ),
       );
       expect(tester.find.text('clicks: 0'), isTrue);
 

@@ -1,6 +1,10 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
+import '../testing/loose_layout_host.dart';
+
+Future<void> _pumpSmallRoot(WidgetTester tester, w.Widget child) =>
+    tester.pumpWidget(LooseLayoutHost(child: child));
 
 void main() {
   group('Padding hit testing', () {
@@ -9,7 +13,8 @@ void main() {
       addTearDown(() => tester.dispose());
 
       var tapCount = 0;
-      await tester.pumpWidget(
+      await _pumpSmallRoot(
+        tester,
         w.Container(
           width: 20,
           height: 6,
@@ -57,7 +62,8 @@ void main() {
         final controller = w.WidgetScrollController();
         final rows = List<w.Widget>.generate(80, (i) => w.Text('row $i'));
 
-        await tester.pumpWidget(
+        await _pumpSmallRoot(
+          tester,
           w.Container(
             width: 30,
             height: 12,
