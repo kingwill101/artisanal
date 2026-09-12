@@ -749,9 +749,9 @@
       "title": "OpenCode Chat UI — Widget",
       "tagline": "Demonstrates an OpenCode-style chat interface built with artisanal_widgets: session header, scrollable message body with text/tool/reasoning parts, prompt in...",
       "category": "widgets",
-      "source": "pkgs/artisanal_widgets/example/opencode/main.dart",
+      "source": "apps/opencode/bin/opencode.dart",
       "gif": "pkgs/artisanal_widgets/assets/opencode.gif",
-      "run": "dart run pkgs/artisanal_widgets/example/opencode/main.dart",
+      "run": "dart run apps/opencode/bin/opencode.dart",
       "order": 68
     },
     {

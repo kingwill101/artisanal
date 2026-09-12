@@ -61,6 +61,9 @@ bool _sameWidgetInstances(List<Widget> a, List<Widget> b) {
 
 /// Creates an element for a widget.
 Element createElement(Widget widget) {
+  if (widget is ElementFactory) {
+    return (widget as ElementFactory).createElement();
+  }
   if (widget is StatefulWidget) {
     return StatefulElement(widget);
   }
@@ -77,6 +80,11 @@ Element createElement(Widget widget) {
     return RenderObjectElement(widget);
   }
   return WidgetElement(widget);
+}
+
+/// A widget that supplies its own element implementation.
+abstract interface class ElementFactory {
+  Element createElement();
 }
 
 /// A mounted widget instance in the tree.
@@ -120,6 +128,18 @@ abstract class Element {
   /// Rebuilds this element if it is currently dirty.
   void rebuild() {
     if (!_dirty) return;
+    _rebuildWith(build);
+  }
+
+  /// Reconciles children during layout using the normal build error boundary.
+  void rebuildForLayout(List<Widget> Function() buildChildren) {
+    _rebuildWith(buildChildren);
+  }
+
+  void _rebuildWith(List<Widget> Function() buildChildren) {
+    if (_isRebuilding) {
+      throw StateError('Cannot recursively rebuild ${widget.runtimeType}.');
+    }
     _isRebuilding = true;
     try {
       _dirty = false;
@@ -128,7 +148,7 @@ abstract class Element {
       // increases with each frame.
       _owner?.didRebuild(this);
       try {
-        updateChildren(build());
+        updateChildren(buildChildren());
       } catch (error, stackTrace) {
         final details = stackTrace.toString().split('\n').take(6).join('\n');
         updateChildren([
@@ -533,6 +553,12 @@ class BuildOwner {
   bool _captureMountInitCmds = false;
   final List<Cmd> _pendingMountInitCmds = <Cmd>[];
 
+  /// Notifies the runtime when a frame mounts children with init commands.
+  ///
+  /// The host should enqueue an event and drain commands afterward, not execute
+  /// effects from inside the layout/paint traversal.
+  void Function()? onMountInitDuringFrame;
+
   // --- Frame timing instrumentation ---
   final List<WidgetFrameTimingCallback> _frameTimingCallbacks = [];
   final List<WidgetFrameTiming> _recentTimings = [];
@@ -574,7 +600,9 @@ class BuildOwner {
   /// Queues an init command produced by a newly mounted element.
   void queueMountInitCmd(Cmd? cmd) {
     if (!_captureMountInitCmds || cmd == null) return;
+    final wasEmpty = _pendingMountInitCmds.isEmpty;
     _pendingMountInitCmds.add(cmd);
+    if (wasEmpty && _inFrame) onMountInitDuringFrame?.call();
   }
 
   /// Drains queued mount-init commands.
@@ -1024,6 +1052,12 @@ class RenderObjectElement extends Element {
 
   @override
   RenderObject get renderObject => _renderObject;
+
+  /// Reattaches concrete render children after layout-time reconciliation.
+  void syncRenderChildrenForLayout() {
+    _buildDescendants(degradationLevel: DegradationLevel.full);
+    _syncRenderChildren(degradationLevel: DegradationLevel.full);
+  }
 
   @override
   void update(Widget newWidget) {

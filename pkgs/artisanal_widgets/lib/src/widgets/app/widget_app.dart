@@ -1,6 +1,7 @@
 /// WidgetApp integrates widgets with the TUI program loop.
 library;
 
+import 'dart:async';
 import 'dart:collection';
 import 'dart:developer' as dev;
 
@@ -242,6 +243,26 @@ class WidgetApp
       );
     }
 
+    // Layout-aware and lazy children can mount after update() has returned.
+    // Forward their pending initialization through the normal command loop.
+    final mountSignals = StreamController<void>();
+    void notifyMount() => mountSignals.add(null);
+    mountSignals.onListen = () {
+      _tree.owner.onMountInitDuringFrame = notifyMount;
+    };
+    mountSignals.onCancel = () {
+      if (identical(_tree.owner.onMountInitDuringFrame, notifyMount)) {
+        _tree.owner.onMountInitDuringFrame = null;
+      }
+      unawaited(mountSignals.close());
+    };
+    cmds.add(
+      Cmd.listen<void>(
+        mountSignals.stream,
+        onData: (_) => const _MountInitReadyMsg(),
+      ),
+    );
+
     final initCmd = _tree.collectHandleInit();
     if (initCmd != null) cmds.add(initCmd);
     return ParallelCmd(cmds);
@@ -343,6 +364,9 @@ class WidgetApp
     }
 
     try {
+      if (msg is _MountInitReadyMsg) {
+        return (this, _tree.owner.drainMountInitCmds());
+      }
       if (msg is FrameTickMsg) {
         if (!handleFrameTick) {
           return (this, null);
@@ -977,4 +1001,8 @@ final class _RenderMetricsInjectionMsg extends Msg {
   const _RenderMetricsInjectionMsg(this.injection);
 
   final RenderMetricsInjection injection;
+}
+
+final class _MountInitReadyMsg extends Msg {
+  const _MountInitReadyMsg();
 }

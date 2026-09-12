@@ -100,11 +100,11 @@ class _LayoutBuilderExampleState extends w.State<LayoutBuilderExample> {
                       child: w.Column(
                         children: [
                           w.Text(
-                            'maxWidth:  ${constraints.maxWidth.toInt()}',
+                            'maxWidth:  ${_formatConstraint(constraints.maxWidth)}',
                             style: Style().foreground(theme.success),
                           ),
                           w.Text(
-                            'maxHeight: ${constraints.maxHeight.toInt()}',
+                            'maxHeight: ${_formatConstraint(constraints.maxHeight)}',
                             style: Style().foreground(theme.success),
                           ),
                         ],
@@ -190,3 +190,6 @@ class _LayoutBuilderExampleState extends w.State<LayoutBuilderExample> {
     return null;
   }
 }
+
+String _formatConstraint(double value) =>
+    value.isFinite ? value.toInt().toString() : 'unbounded';

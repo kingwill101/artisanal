@@ -30,5 +30,5 @@ captures against the example app instead of broad perf assertions in CI. The
 trace analyzer is still available under:
 
 ```bash
-python pkgs/artisanal_widgets/example/opencode/analyze_trace.py --help
+python apps/opencode/tool/analyze_trace.py --help
 ```

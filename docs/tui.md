@@ -1914,17 +1914,17 @@ Record a manual run:
 
 ```bash
 ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_CAPTURE=1 \
-ARTISANAL_TUI_TRACE_PATH="pkgs/artisanal_widgets/example/opencode/traces/manual-$(date +%Y-%m-%dT%H-%M-%S).log" \
-dart run pkgs/artisanal_widgets/example/opencode/main.dart
+ARTISANAL_TUI_TRACE_PATH="apps/opencode/traces/manual-$(date +%Y-%m-%dT%H-%M-%S).log" \
+dart run apps/opencode/bin/opencode.dart
 ```
 
 Convert trace to replay scenario:
 
 ```bash
-LATEST_TRACE="$(ls -1t pkgs/artisanal_widgets/example/opencode/traces/*.log | head -n1)"
-dart run pkgs/artisanal_widgets/example/opencode/main.dart \
+LATEST_TRACE="$(ls -1t apps/opencode/traces/*.log | head -n1)"
+dart run apps/opencode/bin/opencode.dart \
   --replay-trace "$LATEST_TRACE" \
-  --replay-trace-out pkgs/artisanal_widgets/example/opencode/scenarios/manual_from_trace.json \
+  --replay-trace-out apps/opencode/scenarios/manual_from_trace.json \
   --replay-trace-name manual_from_trace \
   --replay-convert-only
 ```
@@ -1932,8 +1932,8 @@ dart run pkgs/artisanal_widgets/example/opencode/main.dart \
 Replay deterministically (and block manual input):
 
 ```bash
-dart run pkgs/artisanal_widgets/example/opencode/main.dart \
-  --replay-scenario pkgs/artisanal_widgets/example/opencode/scenarios/manual_from_trace.json \
+dart run apps/opencode/bin/opencode.dart \
+  --replay-scenario apps/opencode/scenarios/manual_from_trace.json \
   --replay-block-input \
   --replay-speed 8
 ```
@@ -1941,7 +1941,7 @@ dart run pkgs/artisanal_widgets/example/opencode/main.dart \
 Inspect top trace hotspots after a run:
 
 ```bash
-python pkgs/artisanal_widgets/example/opencode/analyze_trace.py \
+python apps/opencode/tool/analyze_trace.py \
   "$LATEST_TRACE" --top 12
 ```
 

@@ -114,8 +114,8 @@ terminal scrollback. Press `p` to pause, `r` to rebuild, `e` to simulate a
 failure, or `q` to quit.
 
 ![Charts](images/charting.png)
-The OpenCode example is self-contained under
-`example/opencode` (including local data models and theme assets).
+The OpenCode CLI app is self-contained under
+`apps/opencode` (including local data models and theme assets).
 
 ![OpenCode Clone](images/opencode_clone.png)
 ![OpenCode Clone 2](images/opencode_clone2.png)
@@ -219,7 +219,7 @@ and its full source on the [documentation site](https://artisanal.dev/docs/examp
 
 ![Debug console demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/debug_console.gif)
 
-**OpenCode chat UI** (`example/opencode/main.dart`):
+**OpenCode chat UI** (`apps/opencode/bin/opencode.dart`):
 
 ![OpenCode demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/artisanal_widgets/assets/opencode.gif)
 

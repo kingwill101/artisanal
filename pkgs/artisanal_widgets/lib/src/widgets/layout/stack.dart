@@ -10,6 +10,25 @@ import 'geometry.dart';
 import 'positioned.dart';
 import 'spacing.dart';
 
+void _checkStackClipping(Overflow value) {
+  if (value != Overflow.clip) {
+    throw UnsupportedError(
+      'Stack supports Overflow.clip only. Use an Overlay for content '
+      'outside the stack bounds.',
+    );
+  }
+}
+
+int? _stackInset(num? value) =>
+    value == null || !value.isFinite ? null : value.round();
+
+double? _stackExtent(num? value, double available) {
+  final resolved = resolveDimensionDouble(value);
+  if (resolved == null) return null;
+  if (resolved.isInfinite) return available.isFinite ? available : null;
+  return math.max(0.0, resolved.roundToDouble());
+}
+
 class StackParentData {
   const StackParentData({
     this.left,
@@ -43,14 +62,24 @@ class RenderStack extends RenderBox {
     this.height,
     this.alignment = Alignment.topLeft,
     this.fit = StackFit.loose,
-    this.clipBehavior = Overflow.clip,
-  });
+    Overflow clipBehavior = Overflow.clip,
+  }) : _clipBehavior = clipBehavior {
+    _checkStackClipping(clipBehavior);
+  }
 
   num? width;
   num? height;
   Alignment alignment;
   StackFit fit;
-  Overflow clipBehavior;
+  Overflow _clipBehavior;
+
+  /// Clipping policy. Visible overflow requires an ancestor Overlay instead.
+  Overflow get clipBehavior => _clipBehavior;
+
+  set clipBehavior(Overflow value) {
+    _checkStackClipping(value);
+    _clipBehavior = value;
+  }
 
   Offset _resolveChildOffset(
     RenderObject child,
@@ -62,10 +91,10 @@ class RenderStack extends RenderBox {
     final childHeight = child.size.height.toInt();
 
     if (data != null && data.isPositioned) {
-      final left = resolveDimension(data.left);
-      final right = resolveDimension(data.right);
-      final top = resolveDimension(data.top);
-      final bottom = resolveDimension(data.bottom);
+      final left = _stackInset(data.left);
+      final right = _stackInset(data.right);
+      final top = _stackInset(data.top);
+      final bottom = _stackInset(data.bottom);
 
       final x =
           left ??
@@ -89,15 +118,33 @@ class RenderStack extends RenderBox {
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
+    final requestedWidth = _stackExtent(width, constraints.maxWidth);
+    final requestedHeight = _stackExtent(height, constraints.maxHeight);
+    final boxConstraints = BoxConstraints(
+      minWidth: requestedWidth ?? 0,
+      maxWidth: requestedWidth ?? double.infinity,
+      minHeight: requestedHeight ?? 0,
+      maxHeight: requestedHeight ?? double.infinity,
+    ).enforce(constraints);
     var maxWidth = 0.0;
     var maxHeight = 0.0;
     final isExpand = fit == StackFit.expand;
-    final expandWidth = isExpand && constraints.hasBoundedWidth
-        ? constraints.maxWidth
+    final expandWidth = isExpand && boxConstraints.hasBoundedWidth
+        ? boxConstraints.maxWidth
         : null;
-    final expandHeight = isExpand && constraints.hasBoundedHeight
-        ? constraints.maxHeight
+    final expandHeight = isExpand && boxConstraints.hasBoundedHeight
+        ? boxConstraints.maxHeight
         : null;
+    final nonPositionedConstraints = switch (fit) {
+      StackFit.loose => boxConstraints.loosen(),
+      StackFit.expand => BoxConstraints(
+        minWidth: expandWidth ?? 0,
+        maxWidth: boxConstraints.maxWidth,
+        minHeight: expandHeight ?? 0,
+        maxHeight: boxConstraints.maxHeight,
+      ),
+      StackFit.passthrough => boxConstraints,
+    };
     var hasNonPositionedChild = false;
 
     for (final child in children) {
@@ -105,34 +152,27 @@ class RenderStack extends RenderBox {
       if (data != null && data.isPositioned) {
         continue;
       }
-      child.layout(
-        BoxConstraints(
-          minWidth: expandWidth ?? 0,
-          maxWidth: expandWidth ?? constraints.maxWidth,
-          minHeight: expandHeight ?? 0,
-          maxHeight: expandHeight ?? constraints.maxHeight,
-        ),
-      );
+      child.layout(nonPositionedConstraints);
       hasNonPositionedChild = true;
       maxWidth = math.max(maxWidth, child.size.width);
       maxHeight = math.max(maxHeight, child.size.height);
     }
 
     var resolvedWidth =
-        resolveDimensionDouble(width) ??
+        requestedWidth ??
         (expandWidth ??
             (hasNonPositionedChild
                 ? maxWidth
-                : constraints.hasBoundedWidth
-                ? constraints.maxWidth
+                : boxConstraints.hasBoundedWidth
+                ? boxConstraints.maxWidth
                 : 0.0));
     var resolvedHeight =
-        resolveDimensionDouble(height) ??
+        requestedHeight ??
         (expandHeight ??
             (hasNonPositionedChild
                 ? maxHeight
-                : constraints.hasBoundedHeight
-                ? constraints.maxHeight
+                : boxConstraints.hasBoundedHeight
+                ? boxConstraints.maxHeight
                 : 0.0));
 
     if (resolvedWidth.isInfinite) {
@@ -142,23 +182,29 @@ class RenderStack extends RenderBox {
       resolvedHeight = maxHeight;
     }
 
+    // Positioned stretches and offsets must use the same allocated rectangle
+    // that painting and hit testing use, not an unclamped size request.
+    size = boxConstraints.constrain(Size(resolvedWidth, resolvedHeight));
+    resolvedWidth = size.width;
+    resolvedHeight = size.height;
+
     // Positioned children paint over the stack's resolved size but do not
     // contribute to it in loose mode.
     for (var i = 0; i < children.length; i++) {
       final child = children[i];
       final data = child.parentData as StackParentData?;
       if (data != null && data.isPositioned) {
-        final left = resolveDimensionDouble(data.left);
-        final right = resolveDimensionDouble(data.right);
-        final top = resolveDimensionDouble(data.top);
-        final bottom = resolveDimensionDouble(data.bottom);
+        final left = _stackInset(data.left);
+        final right = _stackInset(data.right);
+        final top = _stackInset(data.top);
+        final bottom = _stackInset(data.bottom);
         final childWidth =
-            resolveDimensionDouble(data.width) ??
+            resolveDimension(data.width)?.toDouble() ??
             (left != null && right != null
                 ? math.max(0, resolvedWidth - left - right)
                 : null);
         final childHeight =
-            resolveDimensionDouble(data.height) ??
+            resolveDimension(data.height)?.toDouble() ??
             (top != null && bottom != null
                 ? math.max(0, resolvedHeight - top - bottom)
                 : null);
@@ -171,8 +217,6 @@ class RenderStack extends RenderBox {
         child.layout(childConstraints);
       }
     }
-
-    size = constraints.constrain(Size(resolvedWidth, resolvedHeight));
 
     final targetWidth = size.width.toInt();
     final targetHeight = size.height.toInt();
@@ -243,12 +287,19 @@ class Stack extends MultiChildRenderObjectWidget {
     this.fit = StackFit.loose,
     this.clipBehavior = Overflow.clip,
     super.key,
-  });
+  }) {
+    _checkStackClipping(clipBehavior);
+  }
 
   final num? width;
   final num? height;
   final Alignment alignment;
   final StackFit fit;
+
+  /// Only [Overflow.clip] is supported by the bounded stack compositor.
+  ///
+  /// Requesting [Overflow.visible] throws [UnsupportedError]. Use an Overlay
+  /// to place popups outside a component's bounds.
   final Overflow clipBehavior;
 
   @override
