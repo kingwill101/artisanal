@@ -117,15 +117,60 @@ A single newline between two item strings joins their rows; it does not add a
 blank row. List content extents, visible ranges, and hit-test offsets use the
 same rule. For an explicit empty row between items, use `separator: '\n\n'`.
 
-## Current limitations
+## Parent-aware builders
 
-- `LayoutBuilder` currently supplies the nearest `MediaQuery` viewport dimensions,
-  not the immediate parent's render-time constraints. Do not use it as a measure
-  of a nested panel. Use flex constraints for parent-relative sizing.
-- Stack overflow and out-of-bounds hit-testing policies need a separate review;
-  do not rely on `Overflow.visible` to make interactive content outside a stack.
-- Fractional dimensions are quantized for terminal painting. Prefer integer-cell
-  dimensions when exact boundary alignment is important.
+`LayoutBuilder` receives the constraints its immediate render parent supplies
+during layout. Padding, borders, explicit dimensions, and flex allocation have
+already affected those constraints. For example, inside a 24-cell container
+with two cells of padding on each side, its maximum width is 20—not the terminal
+width.
+
+The callback runs again when constraints, widget configuration, or an inherited
+dependency changes. Keyed children keep their state across compatible rebuilds.
+Initialization commands for children first mounted during layout run through
+the normal command loop after layout, without waiting for another input event.
+
+An axis can legitimately be unbounded, such as the main axis of a non-flex child
+in a row. Check `hasBoundedWidth` / `hasBoundedHeight` before treating maxima as
+finite dimensions. Builders should describe children, not recursively invoke
+layout themselves.
+
+**Migration:** use `MediaQuery` when a decision intentionally depends on the
+whole terminal viewport. `LayoutBuilder` no longer substitutes viewport
+dimensions for parent constraints.
+
+## Alignment geometry
+
+`Align` resolves its own allocation before laying out its child. An implicit
+dimension fills a bounded parent axis and shrink-wraps an unbounded axis;
+explicit dimensions still respect parent minimum and maximum bounds.
+
+Alignment uses the child's allocated size, including reserved blank space, not
+just the number of visible characters it paints. Sparse paint is fitted to that
+child allocation before positioning, so text and hit regions share one origin.
+Cell-centering uses consistent integer rounding.
+
+A mounted `Align.view()` uses its existing render object. A standalone view has
+no parent constraints and uses the corresponding unconstrained sizing path.
+
+## Stack clipping and positioning
+
+Stack painting and hit testing are bounded by its allocated rectangle.
+Positioned children may extend beyond it, but clipped cells cannot receive
+pointer hits. Negative offsets are supported and rounded as signed cell
+positions, rather than clamped to zero.
+
+Opposite insets, such as `left` and `right`, stretch a child against the
+**allocated** stack size after parent constraints apply. `StackFit.loose`
+loosens child minima, `expand` fills bounded axes, and `passthrough` retains
+the effective constraints.
+
+Only `Overflow.clip` is supported by the current stack compositor.
+`Overflow.visible` now throws `UnsupportedError` rather than silently clipping.
+Use an ancestor `Overlay` for popups that need to extend beyond a component.
+
+Fractional dimensions are quantized for terminal painting. Prefer integer-cell
+dimensions when exact boundary alignment is important.
 
 ## Testing a layout
 

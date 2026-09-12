@@ -2,6 +2,8 @@ import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
+import '../testing/loose_layout_host.dart';
+
 void main() {
   group('Align', () {
     // Note: Align needs its own explicit width/height to position content.
@@ -184,11 +186,11 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(Align(width: 15, child: Text('XXXXXXXXXXXXXXX')));
+      final align = Align(width: 15, child: Text('XXXXXXXXXXXXXXX'));
+      await tester.pumpWidget(LooseLayoutHost(child: align));
 
-      final lines = tester.viewLines;
-      final firstLine = lines.firstWhere((l) => l.contains('X'));
-      expect(Layout.visibleLength(firstLine), lessThanOrEqualTo(15));
+      final renderObject = tester.find.firstByType<Align>()?.renderObject;
+      expect(renderObject?.size.width, equals(15));
     });
 
     test('respects explicit height', () async {

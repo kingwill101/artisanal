@@ -137,22 +137,27 @@ class _SplitViewShowcaseState extends w.State<SplitViewShowcase> {
 
               // -- SplitView: vertical --
               w.Text('SplitView (vertical)', style: theme.titleMedium),
-              w.SplitView(
-                axis: w.Axis.vertical,
-                gap: 1,
-                first: w.Container(
-                  width: 40,
-                  height: 2,
-                  color: theme.surface,
-                  alignment: w.Alignment.center,
-                  child: w.Text('Top', style: onSurface),
-                ),
-                second: w.Container(
-                  width: 40,
-                  height: 2,
-                  color: theme.surface,
-                  alignment: w.Alignment.center,
-                  child: w.Text('Bottom', style: onSurface),
+              // A scroll view leaves its vertical axis unbounded. Give the
+              // split a five-row budget: two rows per pane plus one gap.
+              w.SizedBox(
+                height: 5,
+                child: w.SplitView(
+                  axis: w.Axis.vertical,
+                  gap: 1,
+                  first: w.Container(
+                    width: 40,
+                    height: 2,
+                    color: theme.surface,
+                    alignment: w.Alignment.center,
+                    child: w.Text('Top', style: onSurface),
+                  ),
+                  second: w.Container(
+                    width: 40,
+                    height: 2,
+                    color: theme.surface,
+                    alignment: w.Alignment.center,
+                    child: w.Text('Bottom', style: onSurface),
+                  ),
                 ),
               ),
               w.Divider(width: 60),

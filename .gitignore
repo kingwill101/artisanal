@@ -18,10 +18,10 @@ orm_bootstrap_test/
 .opencode/
 .vscode/
 *~
-pkgs/artisanal_widgets/example/opencode/traces/*.log
-pkgs/artisanal_widgets/example/opencode/traces/run-*.json
-pkgs/artisanal_widgets/example/opencode/traces/profile-*.json
-pkgs/artisanal_widgets/example/opencode/traces/metrics.csv
+apps/opencode/traces/*.log
+apps/opencode/traces/run-*.json
+apps/opencode/traces/profile-*.json
+apps/opencode/traces/metrics.csv
 third_party/
 .prebuilt/
 .kilo/

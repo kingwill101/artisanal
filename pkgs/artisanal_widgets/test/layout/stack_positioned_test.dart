@@ -463,8 +463,8 @@ void main() {
     });
 
     test('stores clipBehavior', () {
-      final stack = Stack(clipBehavior: Overflow.visible, children: []);
-      expect(stack.clipBehavior, equals(Overflow.visible));
+      final stack = Stack(clipBehavior: Overflow.clip, children: []);
+      expect(stack.clipBehavior, equals(Overflow.clip));
     });
 
     test('stores width and height', () {

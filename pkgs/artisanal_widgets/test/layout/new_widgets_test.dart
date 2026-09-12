@@ -350,25 +350,30 @@ void main() {
       expect(capturedConstraints, isNotNull);
     });
 
-    test('constraints reflect MediaQuery when available', () async {
-      final tester = WidgetTester();
-      addTearDown(() => tester.dispose());
+    test(
+      'parent constraints are independent of MediaQuery overrides',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
 
-      late BoxConstraints capturedConstraints;
-      await tester.pumpWidget(
-        MediaQuery(
-          data: MediaQueryData(size: Size(80, 24)),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              capturedConstraints = constraints;
-              return Text('With media');
-            },
+        late BoxConstraints capturedConstraints;
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(size: Size(120, 40)),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                capturedConstraints = constraints;
+                return Text('With media');
+              },
+            ),
           ),
-        ),
-      );
-      expect(capturedConstraints.maxWidth, equals(80));
-      expect(capturedConstraints.maxHeight, equals(24));
-    });
+        );
+        expect(capturedConstraints.maxWidth, equals(80));
+        expect(capturedConstraints.maxHeight, equals(24));
+        expect(capturedConstraints.minWidth, equals(80));
+        expect(capturedConstraints.minHeight, equals(24));
+      },
+    );
 
     test('has unique id', () {
       final l1 = LayoutBuilder(builder: (context, constraints) => Text('a'));
@@ -390,7 +395,7 @@ void main() {
     });
 
     test('can build responsive layout based on constraints', () async {
-      final tester = WidgetTester();
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
@@ -410,7 +415,7 @@ void main() {
     });
 
     test('narrow layout path works', () async {
-      final tester = WidgetTester();
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 20);
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(

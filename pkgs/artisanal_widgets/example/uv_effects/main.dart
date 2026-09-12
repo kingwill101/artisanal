@@ -111,10 +111,20 @@ class _UvEffectsDemoState extends w.State<UvEffectsDemo> {
           ),
           w.LayoutBuilder(
             builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 70;
+              // A non-flex child of a Row can receive unbounded width.
+              final availableWidth = constraints.hasBoundedWidth
+                  ? constraints.maxWidth.floor()
+                  : 42;
+              if (availableWidth < 28) {
+                return w.Text(
+                  'Widen terminal to view effect scenes.',
+                  style: theme.labelSmall,
+                );
+              }
+              final wide = availableWidth >= 70;
               final sceneWidth = wide
-                  ? ((constraints.maxWidth - 4) ~/ 2).clamp(28, 42)
-                  : constraints.maxWidth.toInt().clamp(28, 52);
+                  ? ((availableWidth - 3) ~/ 2).clamp(0, 42)
+                  : availableWidth.clamp(0, 52);
               final original = _LabeledScene(
                 label: 'Original widgets',
                 width: sceneWidth,

@@ -23,6 +23,11 @@
 
 ### Changed
 
+- `LayoutBuilder` now builds from incoming parent layout constraints rather than
+  `MediaQuery` viewport dimensions. Use `MediaQuery` directly for viewport-based
+  decisions; unbounded parent axes remain unbounded.
+- `Stack` now rejects unsupported `Overflow.visible` instead of silently clipping.
+  Use an ancestor `Overlay` for content outside a component's bounds.
 - Explicit `Container`, `SizedBox`, and flex extents now respect parent minimum
   and maximum constraints before laying out children. A small application-root
   widget should use an `Align`/`Center` host to loosen the viewport's minimums.
@@ -35,6 +40,15 @@
 
 ### Fixed
 
+- Prevent layout-example failures on unbounded constraints, provide a narrow-pane
+  hint for effect scenes, and bound the vertical split-view showcase inside its
+  scrollable page. Add startup, keyboard, and resize smoke coverage for examples.
+- Preserve layout-built child state across inherited-data updates and initialize
+  children mounted during a frame through the normal runtime command loop.
+- Align offsets and painting with measured child allocations, resolve explicit
+  bounds before child layout, and retain mounted geometry in legacy `view()`.
+- Resolve Stack sizes before positioned stretches, preserve signed negative
+  insets, and implement `StackFit.passthrough` constraint forwarding.
 - Allocate all available integer cells among tight flex children deterministically,
   reserving loose children's share caps. Reuse measured child sizes for offsets
   and paint instead of independently redistributing space in each phase.
