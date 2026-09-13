@@ -14,5 +14,11 @@ Color uvColorToFlutter(UvColor? color, Color defaultColor) {
 }
 
 /// Converts a Flutter color to the UV color used by the shared paint policy.
-UvRgb uvFlutterToColor(Color color) =>
-    UvRgb(color.red, color.green, color.blue, a: color.alpha);
+UvRgb uvFlutterToColor(Color color) => UvRgb(
+  _channelByte(color.r),
+  _channelByte(color.g),
+  _channelByte(color.b),
+  a: _channelByte(color.a),
+);
+
+int _channelByte(double channel) => (channel * 255).round().clamp(0, 255);
