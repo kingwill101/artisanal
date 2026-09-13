@@ -182,7 +182,7 @@ sidecar:
 7. reconcile deleted elements before sending.
 
 The
-[`prompt-composer`](../../pkgs/artisanal/example/tui/examples/prompt-composer/main.dart)
+[`prompt-composer`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal/example/tui/examples/prompt-composer/main.dart)
 demonstrates this complete workflow. The core tracks ranges; atomic navigation
 and preview policy remain host choices.
 
@@ -257,7 +257,7 @@ The media layer includes:
 - pasted/dropped path extraction helpers.
 
 Protocol detection and actual image drawing remain renderer concerns. The
-[`media-composer`](../../pkgs/artisanal/example/tui/examples/media-composer/main.dart)
+[`media-composer`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal/example/tui/examples/media-composer/main.dart)
 shows the chip → cursor preview → modal viewer workflow.
 
 ## External editor round trips
