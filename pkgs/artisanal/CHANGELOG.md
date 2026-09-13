@@ -13,6 +13,11 @@
 
 ### Fixed
 
+- Preserve preloaded image caches in nested quote renders, handle nonpositive
+  quote widths consistently, and scan opaque HTML closing tags without copying
+  the remaining source for each element.
+- Release transient renderer output and native-frame conversion cells on
+  disposal and error paths.
 - Corrected sequence diagram bounds and width fitting, preserving complete
   participant/message labels through wrapping. Added actor symbols, directional
   and bidirectional arrows, persistent activations, nested fragment regions,

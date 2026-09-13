@@ -30,8 +30,9 @@ CommonMark specification or a test runner.
 | `dart_sdk_64170.md` | Attributed external fixture from Dart SDK issue 64170: three SIMD tracking tables, links, styles, status emoji, and a hidden Supporting CLs HTML comment. |
 | `artisanal_pr49.md` | Attributed public PR 49 body; the Verification list item contains prose followed by a fenced shell command and a following list item. |
 
-All URLs use `example.test` or relative paths. No fixture requires network
-access, remote images, or additional fonts.
+Synthetic fixture URLs use `example.test` or relative paths. Attributed fixtures
+retain their original public URLs. Rendering requires no network access,
+remote images, or additional fonts.
 
 ## Generate and inspect
 

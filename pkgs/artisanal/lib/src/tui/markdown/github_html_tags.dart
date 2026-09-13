@@ -108,20 +108,11 @@ Iterable<Match> githubHtmlTags(
       if (match != null) {
         final name = match.group(1)!.toLowerCase();
         final closing = match.group(0)!.startsWith('</');
-        if (!closing &&
-            const {
-              'pre',
-              'code',
-              'script',
-              'style',
-              'textarea',
-            }.contains(name)) {
-          final close = RegExp(
-            '</$name\\s*>',
-            caseSensitive: false,
-          ).firstMatch(source.substring(match.end));
-          if (close == null) return;
-          index = match.end + close.end;
+        final closingPattern = _opaqueClosingPatterns[name];
+        if (!closing && closingPattern != null) {
+          final matches = closingPattern.allMatches(source, match.end).iterator;
+          if (!matches.moveNext()) return;
+          index = matches.current.end;
           continue;
         }
         yield match;
@@ -132,6 +123,11 @@ Iterable<Match> githubHtmlTags(
     index++;
   }
 }
+
+final _opaqueClosingPatterns = {
+  for (final name in ['pre', 'code', 'script', 'style', 'textarea'])
+    name: RegExp('</$name\\s*>', caseSensitive: false),
+};
 
 final _tag = RegExp(
   r'''</?([a-zA-Z][a-zA-Z0-9:-]*)(?:[^"'<>]|"[^"]*"|'[^']*')*>''',

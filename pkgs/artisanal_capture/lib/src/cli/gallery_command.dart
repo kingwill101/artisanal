@@ -7,6 +7,8 @@ import 'package:ultraviolet/core.dart';
 
 import '../capture.dart';
 import '../export.dart';
+import 'bounded_file.dart';
+import 'end_markers.dart';
 import 'gallery_html.dart';
 import 'raster_options.dart';
 
@@ -115,14 +117,16 @@ final class GalleryCommand extends Command<void> {
       final id = '${index.toString().padLeft(3, '0')}-$slug';
       String? source;
       String? inputError;
-      if (await file.length() > 16 * 1024 * 1024) {
-        inputError = 'Scenario exceeds the 16 MiB input limit.';
-      } else {
-        try {
-          source = await file.readAsString();
-        } on FormatException catch (error) {
-          inputError = 'Cannot decode source: ${error.message}';
-        }
+      EndMarkerMatcher? markerMatcher;
+      try {
+        source = await readBoundedString(
+          file,
+          maxCaptureSourceBytes,
+          'Scenario',
+        );
+        markerMatcher = EndMarkerMatcher.fromSource(source);
+      } on FormatException catch (error) {
+        inputError = 'Cannot prepare source: ${error.message}';
       }
       if (source != null) await destination('$id.md').writeAsString(source);
       for (final width in widths) {
@@ -133,7 +137,7 @@ final class GalleryCommand extends Command<void> {
         CaptureImage? image;
         TerminalCapture? capture;
         String? ansi;
-        if (source != null) {
+        if (source != null && markerMatcher != null) {
           try {
             ansi = MarkdownRenderer(
               options: AnsiRendererOptions(width: width),
@@ -161,17 +165,20 @@ final class GalleryCommand extends Command<void> {
             );
             final buffer = capture.toBuffer();
             final plain = StringBuffer();
-            for (var y = 0; y < capture.rows; y++) {
-              for (var x = 0; x < capture.columns; x++) {
-                plain.write(buffer.cellAt(x, y)?.content ?? '');
+            try {
+              for (var y = 0; y < capture.rows; y++) {
+                for (var x = 0; x < capture.columns; x++) {
+                  plain.write(buffer.cellAt(x, y)?.content ?? '');
+                }
+                plain.writeln();
               }
-              plain.writeln();
+            } finally {
+              buffer.dispose();
             }
-            for (final marker in RegExp(
-              r'^END_[A-Z0-9_]+$',
-              multiLine: true,
-            ).allMatches(source).map((match) => match.group(0)!)) {
-              if (!plain.toString().contains(marker)) {
+            final plainText = plain.toString();
+            final foundMarkers = markerMatcher.findIn(plainText);
+            for (final marker in markerMatcher.markers) {
+              if (!foundMarkers.contains(marker)) {
                 warnings.add('End marker missing from captured cells: $marker');
               }
             }

@@ -31,19 +31,27 @@ final class CaptureRasterizer {
   /// Strict profiles reject unsupported content instead of silently replacing
   /// it. Non-strict profiles return diagnostics alongside their output.
   CaptureImage render(TerminalCapture capture) {
-    final renderer = RasterTerminalRenderer(font: font, options: options)
-      ..resize(capture.columns, capture.rows)
-      ..render(capture.toBuffer())
-      ..flush();
-    final image = renderer.image!;
-    return CaptureImage(
-      png: Uint8List.fromList(img.encodePng(image)),
-      width: image.width,
-      height: image.height,
-      columns: capture.columns,
-      rows: capture.rows,
-      diagnostics: renderer.diagnostics.map((item) => item.toString()).toList(),
-    );
+    final buffer = capture.toBuffer();
+    try {
+      final renderer = RasterTerminalRenderer(font: font, options: options)
+        ..resize(capture.columns, capture.rows);
+      renderer
+        ..render(buffer)
+        ..flush();
+      final image = renderer.image!;
+      return CaptureImage(
+        png: Uint8List.fromList(img.encodePng(image)),
+        width: image.width,
+        height: image.height,
+        columns: capture.columns,
+        rows: capture.rows,
+        diagnostics: renderer.diagnostics
+            .map((item) => item.toString())
+            .toList(),
+      );
+    } finally {
+      buffer.dispose();
+    }
   }
 }
 

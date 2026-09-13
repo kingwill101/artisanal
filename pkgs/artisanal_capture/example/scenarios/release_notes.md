@@ -6,7 +6,7 @@ This release makes terminal Markdown captures easier to inspect.
 
 - Added width-aware scenario rendering.
 - Preserved **inline styles**, links, and `code`.
-- Added a [gallery guide](../README.md) with no network requirements.
+- Added a [gallery guide](README.md) with no network requirements.
 
 > **Migration note:** existing captures remain readable.
 >

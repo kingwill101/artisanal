@@ -179,7 +179,10 @@ final class Line {
   /// wide-cell placeholder cells.
   /// Creates a line from [cells] without applying wide-cell semantics.
   factory Line.fromCells(List<Cell> cells) {
-    return Line._(cells.map((c) => c.clone()).toList(growable: false));
+    // Lines own their cloned cells and must remain resizable/disposable.
+    // A fixed-length list would make dispose() and any enclosing Buffer
+    // resize fail when they clear the row.
+    return Line._(cells.map((c) => c.clone()).toList());
   }
 
   final List<Cell> _cells;
@@ -404,7 +407,7 @@ final class Buffer {
   /// Upstream tests construct expected buffers directly (without triggering
   /// overwrite logic), so this helper lets Dart parity tests do the same.
   factory Buffer.fromCells(List<List<Cell>> cellLines) {
-    final lines = cellLines.map(Line.fromCells).toList(growable: false);
+    final lines = cellLines.map(Line.fromCells).toList();
     return Buffer._(lines, tracksDirty: true);
   }
 

@@ -248,6 +248,25 @@ void main() {
       expect(vt.scrollback.join('\n'), isNot(contains('PIN')));
     });
 
+    test(
+      'dispose drops queued and captured frames before reinitialization',
+      () async {
+        final terminal = StringTerminal(terminalWidth: 24, terminalHeight: 8);
+        final renderer = buildInlineRenderer(terminal, inlineHeight: 3);
+
+        renderer.render('stale frame');
+        terminal.clear();
+        renderer.dispose();
+        renderer.initialize();
+        await renderer.flush();
+
+        expect(terminal.output, isNot(contains('stale frame')));
+
+        renderer.render('fresh frame');
+        expect(terminal.output, contains('fresh frame'));
+      },
+    );
+
     test('resize forces a clean repaint in the new bottom region', () {
       final terminal = _ResizableStringTerminal(width: 40, height: 10);
       final renderer = buildInlineRenderer(terminal, inlineHeight: 4);

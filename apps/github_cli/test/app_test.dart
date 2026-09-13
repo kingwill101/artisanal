@@ -1170,6 +1170,10 @@ Generated tests are ready.
       expect(Style.stripAnsi(tester.view), contains('▸ Finishing Touches'));
       expect(
         Style.stripAnsi(tester.view),
+        isNot(contains('Generate unit tests')),
+      );
+      expect(
+        Style.stripAnsi(tester.view),
         isNot(contains('Generated tests are ready.')),
       );
     },

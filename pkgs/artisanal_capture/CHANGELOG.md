@@ -2,6 +2,12 @@
 
 ## 0.1.0
 
+- Bound CLI reads before decoding and reject nonregular inputs and output aliases
+  of the source, including symlinks and hardlinks.
+- Index gallery end markers once per scenario while preserving substring
+  matching, with bounded index sizes and deduplicated markers.
+- Release temporary cells and buffers throughout capture conversion and export,
+  including partial failures.
 - Add an attributed, checksum-pinned snapshot of Dart SDK issue 64170 as a
   real-world Markdown bench, including exact status-cell preservation and
   hidden-comment checks at 32/64/80/96/120 columns.

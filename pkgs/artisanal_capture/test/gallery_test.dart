@@ -128,6 +128,19 @@ void main() {
     },
   );
 
+  test('matches repeated END markers like String.contains', () async {
+    await File(
+      '${input.path}/a.md',
+    ).writeAsString(List<String>.filled(100, 'END_A').join('\n'));
+    final args = arguments();
+    args[args.indexOf('--widths') + 1] = '32';
+    args.add('--no-strict');
+    await runner.run(args);
+    final entry = ((await manifest())['entries'] as List).first;
+    final warnings = (entry['warnings'] as List).cast<String>();
+    expect(warnings.where((warning) => warning.contains('END_A')), isEmpty);
+  });
+
   test('does not overwrite a populated directory without force', () async {
     await output.create();
     final sentinel = File('${output.path}/keep.txt');

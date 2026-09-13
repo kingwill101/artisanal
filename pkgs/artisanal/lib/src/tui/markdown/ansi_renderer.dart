@@ -835,10 +835,12 @@ class AnsiRenderer implements NodeVisitor {
     final width = options.width;
     final content = renderBlockquote(
       element,
-      options.copyWith(
-        width: width == null ? null : (width - indent).clamp(1, width),
-      ),
-      (nodes, options) => AnsiRenderer(options: options).render(nodes),
+      options.copyWith(width: remainingBlockWidth(width, indent)),
+      (nodes, options) {
+        final childRenderer = AnsiRenderer(options: options);
+        childRenderer.imageCache.addAll(imageCache);
+        return childRenderer.render(nodes);
+      },
     );
     for (final line
         in content.split('\n').take(content.split('\n').length - 1)) {
@@ -1009,12 +1011,12 @@ class AnsiRenderer implements NodeVisitor {
 
     // Fall back to text placeholder
     final style = Style().dim();
-    _buffer.write(_styleToAnsiOpen(style));
-    _buffer.write('[Image: $alt]');
+    _activeBuffer.write(_styleToAnsiOpen(style));
+    _activeBuffer.write('[Image: $alt]');
     if (src.isNotEmpty) {
-      _buffer.write(' ($src)');
+      _activeBuffer.write(' ($src)');
     }
-    _buffer.write(_ansiReset);
+    _activeBuffer.write(_ansiReset);
   }
 
   void _renderTerminalImage(img.Image image) {
@@ -1040,10 +1042,10 @@ class AnsiRenderer implements NodeVisitor {
       rows: rows,
     );
     if (escaped != null) {
-      _buffer.write(escaped);
+      _activeBuffer.write(escaped);
       return;
     }
-    _buffer.write('[Image: ${image.width}x${image.height}px]');
+    _activeBuffer.write('[Image: ${image.width}x${image.height}px]');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

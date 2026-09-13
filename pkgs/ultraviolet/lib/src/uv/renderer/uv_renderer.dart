@@ -903,6 +903,12 @@ final class UvTerminalRenderer extends TerminalRenderer {
     _curbuf?.dispose();
     _curbuf = null;
     _lastRenderedInput = null;
+    _tabs = null;
+    _oldhash = const [];
+    _newhash = const [];
+    _hashtab = const [];
+    _oldnum = const [];
+    _arena.clear();
     _sixelRows = const <bool>[];
     _alwaysUpdateCells.clear();
     _deferredRetainedGraphics.clear();
@@ -2465,6 +2471,19 @@ final class _FrameArena {
     _stringIndex = 0;
     _hashIndex = 0;
     _int32Index = 0;
+  }
+
+  /// Releases all frame backing stores.
+  ///
+  /// Unlike [reset], this drops the lists themselves so a long-lived
+  /// renderer does not retain the largest frame it has ever rendered.
+  /// Clearing an already-cleared arena is safe.
+  void clear() {
+    _boolLists.clear();
+    _stringBuffers.clear();
+    _hashTables.clear();
+    _int32Lists.clear();
+    reset();
   }
 
   List<bool> acquireBoolList(int length) {

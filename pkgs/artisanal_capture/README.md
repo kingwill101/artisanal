@@ -88,6 +88,10 @@ for repeatable pixels; the manifest records paths, not font binaries.
 - Output must be empty unless `--force` is supplied. Other files are not deleted.
 - Overflowing rendered rows are flagged before viewport clipping.
 - Fixtures may include a visible `END_NAME` line to detect lost end markers.
+  Matching uses substring semantics, including markers embedded in a rendered
+  line. Repeated declarations are deduplicated. A scenario may declare at most
+  10,000 distinct markers. Indexes above 65,536 states or 256 KiB of UTF-16
+  pattern text are rejected before they can grow without bound.
 - `--no-strict` keeps images with unsupported glyphs/shaping **and labels
   their diagnostics**. Omit it to require full raster support.
 - A failed case does not stop the remaining cases; it is recorded in the
@@ -238,3 +242,12 @@ dart test pkgs/ultraviolet/test/raster_test.dart
 Cell limits are public constants in the capture API. Image export is bounded to
 16 megapixels and 16000 pixels per axis. Tests use an original synthetic
 TrueType fixture, avoiding system-font or network dependencies.
+
+CLI source reads are limited to 16 MiB and font reads to 32 MiB, enforced on the
+bytes received before text decoding. Inputs must be regular files; symbolic links
+to regular files are supported. Existing output aliases of the input, including
+symbolic links and hardlinks, are rejected even with `--force`.
+
+Buffers returned by `TerminalCapture.toBuffer()` belong to the caller. Dispose
+them when finished to release pooled cell resources promptly. Capture adapters
+and image export dispose their own temporary buffers automatically.

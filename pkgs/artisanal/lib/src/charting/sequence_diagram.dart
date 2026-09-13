@@ -973,6 +973,7 @@ SequenceDiagram? parseSequenceDiagram(String content) {
           SequenceFragment(
             kind: SequenceFragmentKind.elsePart,
             label: _decodeMermaidText(_stripQuotes(m.group(1) ?? '')),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
@@ -990,6 +991,7 @@ SequenceDiagram? parseSequenceDiagram(String content) {
           SequenceFragment(
             kind: SequenceFragmentKind.andPart,
             label: _decodeMermaidText(_stripQuotes(m.group(1) ?? '')),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
@@ -1007,6 +1009,7 @@ SequenceDiagram? parseSequenceDiagram(String content) {
           SequenceFragment(
             kind: SequenceFragmentKind.optionPart,
             label: _decodeMermaidText(_stripQuotes(m.group(1) ?? '')),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );

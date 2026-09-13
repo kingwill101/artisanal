@@ -632,9 +632,7 @@ class MarkdownRenderer implements NodeVisitor {
     final width = _options.width;
     final content = renderBlockquote(
       element,
-      _options.copyWith(
-        width: width == null ? null : (width - indent).clamp(1, width),
-      ),
+      _options.copyWith(width: remainingBlockWidth(width, indent)),
       (nodes, options) => MarkdownRenderer(
         options: options,
       ).render(nodes, imageCache: _ctx.imageCache),

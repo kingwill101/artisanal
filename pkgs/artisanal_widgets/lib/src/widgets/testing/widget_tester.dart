@@ -443,8 +443,8 @@ class WidgetTester {
   ///
   /// This is opt-in because the default tester intentionally disables terminal
   /// rendering for fast, deterministic widget assertions. When enabled,
-  /// [rendererOutput] exposes raw ANSI writes. Cell buffers are not currently
-  /// exposed by the production renderer API.
+  /// [rendererOutput] exposes raw ANSI writes. Enable [enableNativeFrameCapture]
+  /// as well to read final rendered cell metadata through [latestNativeFrame].
   final bool enableRenderer;
 
   /// Whether the production renderer records its final native cell frame.

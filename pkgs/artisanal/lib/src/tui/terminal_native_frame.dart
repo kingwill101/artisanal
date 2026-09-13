@@ -80,15 +80,34 @@ class TerminalNativeFrame {
     if (width < 1 || height < 1 || lines.length != height) {
       throw const FormatException('native frame does not contain every row');
     }
-    final cells = <List<Cell>>[];
-    for (var y = 0; y < height; y++) {
-      final line = lines[y];
-      if (line.index != y || line.cells.length != width) {
-        throw const FormatException('native frame is not rectangular');
+    final buffer = Buffer.create(width, height);
+    try {
+      for (var y = 0; y < height; y++) {
+        final line = lines[y];
+        if (line.index != y || line.cells.length != width) {
+          throw const FormatException('native frame is not rectangular');
+        }
+        final target = buffer.line(y)!;
+        for (var x = 0; x < width; x++) {
+          // Line.replace consumes the freshly rebuilt cell without cloning it.
+          // This also avoids applying wide-cell overwrite semantics to the
+          // explicit zero-width placeholders in a native frame.
+          final rebuilt = line.cells[x].toCell();
+          try {
+            target.replace(x, rebuilt);
+          } catch (_) {
+            rebuilt.dispose();
+            rethrow;
+          }
+        }
       }
-      cells.add([for (final cell in line.cells) cell.toCell()]);
+      return buffer;
+    } catch (_) {
+      // A drawable or malformed row can fail after earlier cells have been
+      // installed. The buffer owns those cells and must release them here.
+      buffer.dispose();
+      rethrow;
     }
-    return Buffer.fromCells(cells);
   }
 
   /// Returns only lines that carried dirty spans in the backing buffer.

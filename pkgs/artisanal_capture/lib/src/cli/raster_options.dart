@@ -6,6 +6,7 @@ import 'package:ultraviolet/core.dart';
 import 'package:ultraviolet/raster.dart';
 
 import '../export.dart';
+import 'bounded_file.dart';
 
 /// Registers the common raster profile for single captures and galleries.
 void addRasterOptions(ArgParser parser) {
@@ -106,9 +107,5 @@ UvRgb _color(ArgResults args, String name) {
 
 Future<Uint8List?> _fontBytes(String? path) async {
   if (path == null) return null;
-  final file = File(path);
-  if (await file.length() > 32 * 1024 * 1024) {
-    throw const FormatException('Font exceeds the 32 MiB limit.');
-  }
-  return file.readAsBytes();
+  return readBoundedBytes(File(path), maxCaptureFontBytes, 'Font');
 }

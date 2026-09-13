@@ -29,7 +29,6 @@ library;
 
 import '../style/chars.dart';
 
-import 'dart:collection';
 import 'dart:math' as math;
 
 import '../terminal/ansi.dart';
@@ -40,6 +39,7 @@ import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:ultraviolet/unicode.dart' show runeWidth;
 import '../tui/trace.dart';
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+import 'bounded_string_int_cache.dart';
 
 const int _layoutTraceThresholdUs = 1000;
 
@@ -225,16 +225,16 @@ class Layout {
   // Dart strings are UTF-16. Keep the key budget conservative so a cache
   // cannot retain a large collection of otherwise short-lived frame strings.
   static const int _maxCacheKeyBytes = 256 * 1024;
-  static final _BoundedStringIntCache _visibleLengthCache =
-      _BoundedStringIntCache(
+  static final BoundedStringIntCache _visibleLengthCache =
+      BoundedStringIntCache(
         maxEntries: _maxCacheEntries,
         maxKeyBytes: _maxCacheKeyBytes,
       );
-  static final _BoundedStringIntCache _getWidthCache = _BoundedStringIntCache(
+  static final BoundedStringIntCache _getWidthCache = BoundedStringIntCache(
     maxEntries: _maxCacheEntries,
     maxKeyBytes: _maxCacheKeyBytes,
   );
-  static final _BoundedStringIntCache _getHeightCache = _BoundedStringIntCache(
+  static final BoundedStringIntCache _getHeightCache = BoundedStringIntCache(
     maxEntries: _maxCacheEntries,
     maxKeyBytes: _maxCacheKeyBytes,
   );
@@ -1141,7 +1141,7 @@ class Layout {
     return result.join('');
   }
 
-  static void _cachePut(_BoundedStringIntCache cache, String key, int value) =>
+  static void _cachePut(BoundedStringIntCache cache, String key, int value) =>
       cache[key] = value;
 
   static int? _asciiVisibleLengthOrNull(String text) {
@@ -1166,43 +1166,5 @@ class Layout {
 
     if (lineWidth > maxWidth) maxWidth = lineWidth;
     return maxWidth;
-  }
-}
-
-/// A small FIFO cache whose retained string keys are bounded by both count and
-/// UTF-16 storage size.
-///
-/// Lookup intentionally does not promote entries: this preserves the
-/// historical eviction order of Layout's caches while putting a hard upper
-/// bound on retained key storage.
-final class _BoundedStringIntCache {
-  _BoundedStringIntCache({required this.maxEntries, required this.maxKeyBytes});
-
-  final int maxEntries;
-  final int maxKeyBytes;
-  final LinkedHashMap<String, int> _entries = LinkedHashMap<String, int>();
-  int _keyBytes = 0;
-
-  int? operator [](String key) => _entries[key];
-
-  void operator []=(String key, int value) {
-    final keyBytes = key.length * 2;
-    if (keyBytes > maxKeyBytes) return;
-
-    // Updating a value does not add another retained key or change its
-    // insertion order.
-    if (_entries.containsKey(key)) {
-      _entries[key] = value;
-      return;
-    }
-
-    while (_entries.isNotEmpty &&
-        (_entries.length >= maxEntries || _keyBytes + keyBytes > maxKeyBytes)) {
-      final oldest = _entries.keys.first;
-      _entries.remove(oldest);
-      _keyBytes -= oldest.length * 2;
-    }
-    _entries[key] = value;
-    _keyBytes += keyBytes;
   }
 }

@@ -6,6 +6,10 @@ import '../../style/color.dart';
 import '../../style/style.dart';
 import 'options.dart';
 
+/// Deducts container prefixes only when a positive wrapping width was supplied.
+int? remainingBlockWidth(int? width, int inset) =>
+    width == null || width <= 0 ? width : math.max(1, width - inset);
+
 /// Renders a quote as a container, after laying out its children.
 ///
 /// Every row, including blank separators and code/table borders, belongs to
@@ -24,7 +28,7 @@ String renderBlockquote(
   final content = renderChildren(
     element.children ?? const [],
     options.copyWith(
-      width: options.width == null ? null : math.max(1, options.width! - 2),
+      width: remainingBlockWidth(options.width, 2),
       textStyle: textStyle,
     ),
   );

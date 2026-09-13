@@ -44,17 +44,19 @@ final class TerminalCapture {
         );
       }
     }
-    final cells = <List<uv.Cell>>[];
-    for (var y = 0; y < source.height(); y++) {
-      final line = source.line(y);
-      cells.add([
-        for (var x = 0; x < source.width(); x++)
-          _copyCell(
-            line!.at(x) ?? (throw const FormatException('missing cell')),
-          ),
-      ]);
+    final copy = uv.Buffer.create(source.width(), source.height());
+    try {
+      for (var y = 0; y < source.height(); y++) {
+        final line = source.line(y)!;
+        for (var x = 0; x < source.width(); x++) {
+          copy.line(y)!.replace(x, _copyCell(line.at(x)!));
+        }
+      }
+      return TerminalCapture._(copy);
+    } catch (_) {
+      copy.dispose();
+      rethrow;
     }
-    return TerminalCapture._(uv.Buffer.fromCells(cells));
   }
 
   /// Captures supported styled text into a fixed-size screen.
@@ -70,11 +72,15 @@ final class TerminalCapture {
     _checkDimensions(columns, rows);
     _validateAnsi(ansi);
     final screen = uv.ScreenBuffer(columns, rows, tracksDirty: false);
-    uv.StyledString(
-      _normalizeAnsi(ansi),
-      wrap: wrap,
-    ).draw(screen, screen.bounds());
-    return TerminalCapture.fromBuffer(screen.buffer);
+    try {
+      uv.StyledString(
+        _normalizeAnsi(ansi),
+        wrap: wrap,
+      ).draw(screen, screen.bounds());
+      return TerminalCapture.fromBuffer(screen.buffer);
+    } finally {
+      screen.dispose();
+    }
   }
 
   /// Decodes and validates a capture JSON object.
@@ -94,18 +100,24 @@ final class TerminalCapture {
     if (rawRows is! List || rawRows.length != rows) {
       throw const FormatException('cells must contain exactly rows rows');
     }
-    final parsed = <List<uv.Cell>>[];
-    for (var y = 0; y < rows; y++) {
-      final rawRow = rawRows[y];
+    for (final rawRow in rawRows) {
       if (rawRow is! List || rawRow.length != columns) {
         throw const FormatException('every cell row must have columns cells');
       }
-      parsed.add([
-        for (var x = 0; x < columns; x++)
-          _cellFromJson(rawRow[x], 'cells[$y][$x]'),
-      ]);
     }
-    return TerminalCapture._(uv.Buffer.fromCells(parsed));
+    final buffer = uv.Buffer.create(columns, rows);
+    try {
+      for (var y = 0; y < rows; y++) {
+        final rawRow = rawRows[y] as List;
+        for (var x = 0; x < columns; x++) {
+          buffer.line(y)!.replace(x, _cellFromJson(rawRow[x], 'cells[$y][$x]'));
+        }
+      }
+      return TerminalCapture._(buffer);
+    } catch (_) {
+      buffer.dispose();
+      rethrow;
+    }
   }
 
   final uv.Buffer _buffer;
@@ -117,7 +129,7 @@ final class TerminalCapture {
   final int rows;
 
   /// Returns a detached copy of this capture's buffer.
-  uv.Buffer toBuffer() => TerminalCapture.fromBuffer(_buffer)._buffer;
+  uv.Buffer toBuffer() => _copyBuffer(_buffer);
 
   /// Encodes this lossless capture as a JSON-compatible object.
   Map<String, Object?> toJson() => <String, Object?>{
@@ -129,6 +141,23 @@ final class TerminalCapture {
         [for (var x = 0; x < columns; x++) _cellToJson(_buffer.cellAt(x, y)!)],
     ],
   };
+}
+
+uv.Buffer _copyBuffer(uv.Buffer source) {
+  final copy = uv.Buffer.create(source.width(), source.height());
+  try {
+    for (var y = 0; y < source.height(); y++) {
+      final sourceLine = source.line(y)!;
+      final targetLine = copy.line(y)!;
+      for (var x = 0; x < source.width(); x++) {
+        targetLine.replace(x, _copyCell(sourceLine.at(x)!));
+      }
+    }
+    return copy;
+  } catch (_) {
+    copy.dispose();
+    rethrow;
+  }
 }
 
 int _integer(Object? value, String name) {

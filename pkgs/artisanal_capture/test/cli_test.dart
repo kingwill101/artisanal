@@ -99,6 +99,73 @@ void main() {
     expect(await source.readAsString(), 'Hello **world**');
   });
 
+  test('rejects a symlink output alias even with force', () async {
+    final alias = File('${temporary.path}/input-alias.md');
+    try {
+      await Link(alias.path).create(source.path);
+    } on FileSystemException {
+      return; // Symlink creation may be unavailable in restricted runners.
+    }
+    await runner.run([
+      'render',
+      source.path,
+      '--format',
+      'capture',
+      '--output',
+      alias.path,
+      '--force',
+    ]);
+    expect(code, 64);
+    expect(await source.readAsString(), 'Hello **world**');
+  }, onPlatform: {'windows': const Skip('symlink privileges vary on Windows')});
+
+  test('rejects an oversized source before decoding or writing', () async {
+    await source.writeAsBytes(List<int>.filled(16 * 1024 * 1024 + 1, 65));
+    await runner.run(captureArgs());
+    expect(code, 64);
+    expect(await destination.exists(), isFalse);
+    expect(messages.join('\n'), contains('16 MiB'));
+  });
+
+  test('rejects a hardlink output alias even with force', () async {
+    final alias = File('${temporary.path}/hardlink.md');
+    final result = await Process.run('ln', [source.path, alias.path]);
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    await runner.run([
+      'render',
+      source.path,
+      '--format',
+      'capture',
+      '--output',
+      alias.path,
+      '--force',
+    ]);
+    expect(code, 64);
+    expect(await source.readAsString(), 'Hello **world**');
+  }, onPlatform: {'windows': const Skip('requires POSIX hardlink creation')});
+
+  test('rejects a FIFO before opening it', () async {
+    final fifo = File('${temporary.path}/input.fifo');
+    final result = await Process.run('mkfifo', [fifo.path]);
+    if (result.exitCode != 0) return;
+    try {
+      await runner
+          .run([
+            'render',
+            fifo.path,
+            '--format',
+            'capture',
+            '--output',
+            destination.path,
+          ])
+          .timeout(const Duration(seconds: 2));
+      expect(code, 64);
+      expect(await destination.exists(), isFalse);
+    } finally {
+      await fifo.delete();
+    }
+  }, onPlatform: {'windows': const Skip('mkfifo is not available on Windows')});
+
   test('reports a missing font before writing PNG output', () async {
     await runner.run(['render', source.path, '--output', destination.path]);
     expect(code, 64);

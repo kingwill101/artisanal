@@ -15,5 +15,12 @@ TerminalCapture captureProgramFrame(ProgramRenderSnapshot snapshot) {
       'program snapshot has no nativeFrame; enable native frame recording',
     );
   }
-  return TerminalCapture.fromBuffer(nativeFrame.toBuffer());
+  final buffer = nativeFrame.toBuffer();
+  try {
+    return TerminalCapture.fromBuffer(buffer);
+  } finally {
+    // TerminalCapture.fromBuffer copies the cells; release the owned source
+    // buffer regardless of validation or drawable rejection.
+    buffer.dispose();
+  }
 }

@@ -739,6 +739,10 @@ class BufferedTuiRenderer implements TuiRenderer {
 
   @override
   void dispose() {
+    // Buffered output is transient; retaining it would allow a later flush
+    // after reinitialization to emit a frame from the previous lifecycle.
+    _pendingView = null;
+    _dirty = false;
     inner.dispose();
   }
 }
@@ -1696,6 +1700,15 @@ class UltravioletTuiRenderer
 
   @override
   void dispose() {
+    // The renderer can be retained and initialized again. Do not keep a
+    // pending frame or captured output alive across that lifecycle boundary.
+    _pendingView = '';
+    _dirty = false;
+    _inlineCapture.clear();
+    _fullscreenCapture.clear();
+    _inlineSink = null;
+    _inlineNeedsFullClear = false;
+    _inlineNeedsLogReplay = false;
     if (!_initialized) return;
 
     final isInline = _options.isInline;

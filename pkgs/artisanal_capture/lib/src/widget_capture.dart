@@ -58,7 +58,14 @@ Future<TerminalCapture> captureWidget(
       if (frame == null) {
         throw StateError('rendered widget capture produced no native frame');
       }
-      return TerminalCapture.fromBuffer(frame.toBuffer());
+      final buffer = frame.toBuffer();
+      try {
+        return TerminalCapture.fromBuffer(buffer);
+      } finally {
+        // TerminalCapture.fromBuffer copies the cells, so it does not consume
+        // this owned intermediate buffer.
+        buffer.dispose();
+      }
     }
     return TerminalCapture.fromAnsi(tester.view, columns: columns, rows: rows);
   } finally {

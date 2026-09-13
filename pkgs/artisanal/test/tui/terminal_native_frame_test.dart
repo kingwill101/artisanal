@@ -1,6 +1,7 @@
 import 'package:artisanal/tui.dart';
 import 'package:ultraviolet/core.dart' as uv_buffer;
 import 'package:ultraviolet/core.dart';
+import 'package:ultraviolet/src/uv/uv.dart' as uv_debug;
 import 'package:test/test.dart';
 
 void main() {
@@ -63,6 +64,29 @@ void main() {
       },
     );
 
+    test('returns an owned buffer without retaining temporary cell copies', () {
+      final source = uv_buffer.Buffer.create(1, 1);
+      source.setCellOwned(
+        0,
+        0,
+        Cell(
+          content: 'A',
+          link: const Link(url: 'https://example.com/owned'),
+        ),
+      );
+      final linkId = source.cellAt(0, 0)!.linkId!;
+      final frame = TerminalNativeFrame.fromBuffer(source);
+
+      final restored = frame.toBuffer();
+      expect(uv_debug.debugLinkRefCount(linkId), 2);
+      expect(restored.cellAt(0, 0)!.content, 'A');
+
+      source.dispose();
+      expect(uv_debug.debugLinkRefCount(linkId), 1);
+      restored.dispose();
+      expect(uv_debug.debugLinkRefCount(linkId), 0);
+    });
+
     test('rejects drawable cells instead of dropping their payload', () {
       final source = uv_buffer.Buffer.create(1, 1);
       source.setCell(0, 0, Cell(content: 'x')..drawable = Object());
@@ -70,6 +94,25 @@ void main() {
         () => TerminalNativeFrame.fromBuffer(source).toBuffer(),
         throwsA(isA<UnsupportedError>()),
       );
+    });
+
+    test('releases cells already installed when a later cell is rejected', () {
+      final source = uv_buffer.Buffer.create(2, 1);
+      source.setCellOwned(
+        0,
+        0,
+        Cell(
+          content: 'A',
+          link: const Link(url: 'https://example.com/partial'),
+        ),
+      );
+      source.setCellOwned(1, 0, Cell(content: 'x')..drawable = Object());
+      final linkId = source.cellAt(0, 0)!.linkId!;
+      final frame = TerminalNativeFrame.fromBuffer(source);
+
+      expect(() => frame.toBuffer(), throwsA(isA<UnsupportedError>()));
+      source.dispose();
+      expect(uv_debug.debugLinkRefCount(linkId), 0);
     });
 
     test('reuses native color snapshots for repeated UV colors', () {

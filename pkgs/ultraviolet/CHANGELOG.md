@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1
 
 - Added `clipAnsiByCells` for exact-column overlay composition. Partial wide
   glyphs and graphics payloads become styled spaces without snapping or moving
@@ -23,8 +23,6 @@
   frame state. Resizing and compositing now release discarded cells promptly.
   `setCellOwned` consumes its input on every path, including rejected or
   unchanged writes; callers must not read a cell after transferring ownership.
-
-## 0.5.1
 
 ### Changed
 

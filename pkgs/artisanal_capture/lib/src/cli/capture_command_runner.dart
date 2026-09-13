@@ -7,6 +7,7 @@ import 'package:artisanal/markdown.dart';
 import '../capture.dart';
 import 'gallery_command.dart';
 import 'raster_options.dart';
+import 'bounded_file.dart';
 
 /// Command runner for portable cell snapshots and native PNG/HTML exports.
 ///
@@ -95,6 +96,12 @@ final class _RenderCommand extends Command<void> {
         output.absolute.uri.normalizePath()) {
       usageException('Input and output must be different files.');
     }
+    if (await output.exists() &&
+        (await FileSystemEntity.identical(input.path, output.path) ||
+            await input.resolveSymbolicLinks() ==
+                await output.resolveSymbolicLinks())) {
+      usageException('Input and output must be different files.');
+    }
     if (await output.exists() && !(args['force'] as bool)) {
       usageException('Output already exists; pass --force to replace it.');
     }
@@ -104,10 +111,11 @@ final class _RenderCommand extends Command<void> {
 
     try {
       // Bound untrusted file input before decoding a cell grid or Markdown AST.
-      if (await input.length() > 16 * 1024 * 1024) {
-        usageException('Input exceeds the 16 MiB capture limit.');
-      }
-      final source = await input.readAsString();
+      final source = await readBoundedString(
+        input,
+        maxCaptureSourceBytes,
+        'Input',
+      );
       final capture = _readCapture(source);
       if (format == 'capture') {
         await output.writeAsString(
