@@ -21,10 +21,13 @@ import 'code_block.dart'
 import 'hr.dart' show renderHorizontalRule;
 import 'tables.dart' show renderTable, parseTableAlign;
 import 'images.dart' show renderImage;
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
 import 'image_bytes_loader_stub.dart'
     if (dart.library.io) 'image_bytes_loader_io.dart'
     as image_loader;
+import 'github_images.dart';
 
 /// Renders markdown to ANSI-styled terminal output using standalone functions.
 ///
@@ -352,6 +355,10 @@ class MarkdownRenderer implements NodeVisitor {
         return true;
 
       case 'a':
+        if (_containsHiddenImage(element)) {
+          _forgetElement();
+          return false;
+        }
         _ctx.pendingLinkUrl = element.attributes['href'];
         _startInlineStyle(_getLinkStyle());
         if (_ctx.options.hyperlinks && _ctx.pendingLinkUrl != null) {
@@ -402,6 +409,27 @@ class MarkdownRenderer implements NodeVisitor {
       default:
         return true;
     }
+  }
+
+  bool _containsHiddenImage(Element link) {
+    final images = (link.children ?? const <Node>[]).whereType<Element>().where(
+      (child) => child.tag == 'img',
+    );
+    if (!images.isNotEmpty) return false;
+    final href = link.attributes['href'];
+    if (href != null &&
+        !githubImageVariantVisible(
+          href,
+          hasDarkBackground: _options.hasDarkBackground,
+        )) {
+      return true;
+    }
+    return images.any(
+      (image) => !githubImageVariantVisible(
+        image.attributes['src'] ?? '',
+        hasDarkBackground: _options.hasDarkBackground,
+      ),
+    );
   }
 
   @override
@@ -633,9 +661,9 @@ class MarkdownRenderer implements NodeVisitor {
     final content = renderBlockquote(
       element,
       _options.copyWith(width: remainingBlockWidth(width, indent)),
-      (nodes, options) => MarkdownRenderer(
-        options: options,
-      ).render(nodes, imageCache: _ctx.imageCache),
+      (nodes, options) =>
+          MarkdownRenderer(options: options)
+              .render(nodes, imageCache: _ctx.imageCache),
     );
     for (final line
         in content.split('\n').take(content.split('\n').length - 1)) {

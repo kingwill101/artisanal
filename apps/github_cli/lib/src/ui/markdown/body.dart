@@ -3,6 +3,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/artisanal.dart'
     show AnsiRendererOptions, renderSequenceDiagram;
 import 'package:artisanal_widgets/widgets.dart' as w;
+
 import 'dart:math' as math;
 
 import '../../utils/text_format.dart';
@@ -86,6 +87,70 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
           hasDarkBackground,
           maxWidth: maxWidth,
         );
+      case GithubMarkdownQuoteSegment(:final children):
+        return w.DecoratedBox(
+          decoration: w.BoxDecoration(
+            border: Border.normal.copyWith(
+              top: '',
+              bottom: '',
+              right: '',
+              topLeft: '',
+              topRight: '',
+              bottomLeft: '',
+              bottomRight: '',
+            ),
+          ),
+          child: w.Padding(
+            padding: const w.EdgeInsets.only(left: 1),
+            child: w.Column(
+              crossAxisAlignment: w.CrossAxisAlignment.stretch,
+              gap: 0,
+              children: [
+                for (var i = 0; i < children.length; i++)
+                  _segmentWidget(
+                    theme,
+                    hasDarkBackground,
+                    children[i],
+                    <int>[...path, i],
+                    maxWidth: maxWidth == null
+                        ? null
+                        : math.max(1, maxWidth - 1),
+                  ),
+              ],
+            ),
+          ),
+        );
+      case GithubMarkdownAlertSegment(
+        :final kind,
+        :final markdown,
+        :final children,
+      ):
+        final title = '**$kind**';
+        final alertBody = children.isEmpty
+            ? _markdownText(
+                theme,
+                '$title\n\n${markdown.trim()}',
+                hasDarkBackground,
+                maxWidth: maxWidth,
+              )
+            : w.Column(
+                crossAxisAlignment: w.CrossAxisAlignment.stretch,
+                gap: 0,
+                children: [
+                  _markdownText(
+                    theme,
+                    title,
+                    hasDarkBackground,
+                    maxWidth: maxWidth,
+                  ),
+                  for (var i = 0; i < children.length; i++)
+                    _segmentWidget(theme, hasDarkBackground, children[i], <int>[
+                      ...path,
+                      i,
+                    ], maxWidth: maxWidth),
+                ],
+              );
+        return alertBody;
       case GithubMarkdownDetailsSegment(
         :final summary,
         :final markdown,

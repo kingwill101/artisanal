@@ -75,9 +75,8 @@ After
         r'\<details>Literal\</details>',
       ]) {
         expect(
-          githubDisplayMarkdownSegments(
-            source,
-          ).whereType<GithubMarkdownDetailsSegment>(),
+          githubDisplayMarkdownSegments(source)
+              .whereType<GithubMarkdownDetailsSegment>(),
           isEmpty,
         );
       }
@@ -91,9 +90,8 @@ After
         '>     <details>\n>     <summary>Code</summary>\n>     </details>',
       ]) {
         expect(
-          githubDisplayMarkdownSegments(
-            literal,
-          ).whereType<GithubMarkdownDetailsSegment>(),
+          githubDisplayMarkdownSegments(literal)
+              .whereType<GithubMarkdownDetailsSegment>(),
           isEmpty,
         );
       }
@@ -230,10 +228,13 @@ After
     test(
       'preserves quoted details and unterminated input without duplication',
       () {
-        final quoted = githubDisplayMarkdownSegments(
+        final quote = githubDisplayMarkdownSegments(
           '> <details open>\n> <summary>Quote</summary>\n> Body\n> </details>',
-        ).whereType<GithubMarkdownDetailsSegment>().single;
-        expect(quoted.quoted, isTrue);
+        ).whereType<GithubMarkdownQuoteSegment>().single;
+        final quoted = quote.children
+            .whereType<GithubMarkdownDetailsSegment>()
+            .single;
+        expect(quoted.quoted, isFalse);
         expect(quoted.markdown, 'Body');
         final unterminated = githubDisplayMarkdownSegments(
           'Before\n<details>\nUnfinished',
@@ -248,5 +249,54 @@ After
         );
       },
     );
+
+    test('recognizes only standard alert openers inside quotes', () {
+      final alert =
+          githubDisplayMarkdownSegments('> [!NOTE]\n> This is a note.').single
+              as GithubMarkdownQuoteSegment;
+      expect(alert.children.single, isA<GithubMarkdownAlertSegment>());
+      expect(
+        githubDisplayMarkdownSegments('[!NOTE]\nplain').single,
+        isA<GithubMarkdownTextSegment>(),
+      );
+      final fenced =
+          githubDisplayMarkdownSegments('> ```text\n> [!NOTE]\n> ```').single
+              as GithubMarkdownQuoteSegment;
+      expect(fenced.children.single, isA<GithubMarkdownTextSegment>());
+    });
+
+    test('keeps opaque code and markdown blocks out of quote scanning', () {
+      final mismatched = githubDisplayMarkdownSegments(
+        '```\n~~~\n```\n> real quote',
+      );
+      expect(mismatched.whereType<GithubMarkdownQuoteSegment>(), hasLength(1));
+      final indented = githubDisplayMarkdownSegments(
+        '    ```\n    > literal\n    ```\n> real quote',
+      );
+      expect(indented.whereType<GithubMarkdownQuoteSegment>(), hasLength(1));
+      final pre = githubDisplayMarkdownSegments(
+        '<pre>\n> literal\n</pre>\n> real quote',
+      );
+      expect(pre.whereType<GithubMarkdownQuoteSegment>(), hasLength(1));
+      final blocks = githubDisplayMarkdownSegments(
+        '> quote\n# heading\n---\n- list\noutside',
+      );
+      expect(blocks.whereType<GithubMarkdownQuoteSegment>(), hasLength(1));
+      expect(
+        blocks.whereType<GithubMarkdownTextSegment>().any(
+          (part) => part.markdown.contains('outside'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not promote a second alert in an alert body', () {
+      final quote =
+          githubDisplayMarkdownSegments('> [!NOTE]\n> [!TIP]\n> body').single
+              as GithubMarkdownQuoteSegment;
+      final alert = quote.children.single as GithubMarkdownAlertSegment;
+      expect(alert.kind, 'NOTE');
+      expect(alert.children.whereType<GithubMarkdownAlertSegment>(), isEmpty);
+    });
   });
 }

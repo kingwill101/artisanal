@@ -193,8 +193,9 @@ final class _HtmlConversion {
           'a',
           _htmlChildrenToMarkdownNodes(node),
         );
-        final href = node.attributes['href'];
-        if (href != null) element.attributes['href'] = href;
+        for (final entry in node.attributes.entries) {
+          element.attributes[entry.key.toString()] = entry.value.toString();
+        }
         return [element];
 
       case 'br':
@@ -205,10 +206,9 @@ final class _HtmlConversion {
 
       case 'img':
         final element = md.Element.empty('img');
-        final src = node.attributes['src'];
-        final alt = node.attributes['alt'];
-        if (src != null) element.attributes['src'] = src;
-        if (alt != null) element.attributes['alt'] = alt;
+        for (final entry in node.attributes.entries) {
+          element.attributes[entry.key.toString()] = entry.value.toString();
+        }
         return [element];
 
       case 'input':
@@ -330,9 +330,10 @@ final class _HtmlConversion {
       return node.nodes.map(textOf).join();
     }
 
-    final text = textOf(
-      code ?? element,
-    ).replaceAll('\r\n', '\n').replaceAll('\r', '\n').trimRight();
+    final text = textOf(code ?? element)
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .trimRight();
     final codeElement = md.Element('code', [md.Text(text)]);
     final className = code?.attributes['class'];
     if (className != null) codeElement.attributes['class'] = className;

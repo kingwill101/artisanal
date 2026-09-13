@@ -30,7 +30,9 @@ import '../../style/border.dart' as style_border;
 import '../../style/style.dart';
 import '../../style/color.dart';
 import '../../tui/bubbles/components/table.dart' as table_component;
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
 import 'renderer.dart' show MarkdownRenderer;
 import 'syntax_highlighter.dart';
 import 'options.dart';
@@ -45,6 +47,7 @@ import 'image_renderer.dart'
         detectImageProtocol,
         imageCellDimensions,
         renderImageToAnsi;
+import 'github_images.dart';
 export 'options.dart';
 export 'styles.dart' show MarkdownElementStyle;
 
@@ -479,6 +482,10 @@ class AnsiRenderer implements NodeVisitor {
         return true;
 
       case 'a':
+        if (_containsHiddenImage(element)) {
+          _forgetElement();
+          return false;
+        }
         _pendingLinkUrl = element.attributes['href'];
         _startLink();
         return true;
@@ -999,9 +1006,19 @@ class AnsiRenderer implements NodeVisitor {
   void _renderImage(Element element) {
     final alt = element.attributes['alt'] ?? 'image';
     final src = element.attributes['src'] ?? '';
+    final linked =
+        _elementStack.length > 1 &&
+        _elementStack[_elementStack.length - 2].tag == 'a';
+    if (!githubImageVariantVisible(
+      src,
+      hasDarkBackground: options.hasDarkBackground,
+    )) {
+      return;
+    }
 
-    if (options.renderImages && src.isNotEmpty && imageCache.containsKey(src)) {
-      final bytes = imageCache[src]!;
+    final key = githubImageCacheKey(src);
+    final bytes = imageCache[src] ?? imageCache[key];
+    if (options.renderImages && src.isNotEmpty && bytes != null) {
       final image = img.decodeImage(bytes);
       if (image != null) {
         _renderTerminalImage(image);
@@ -1013,10 +1030,33 @@ class AnsiRenderer implements NodeVisitor {
     final style = Style().dim();
     _activeBuffer.write(_styleToAnsiOpen(style));
     _activeBuffer.write('[Image: $alt]');
-    if (src.isNotEmpty) {
-      _activeBuffer.write(' ($src)');
+    // The enclosing link's OSC 8 sequence already carries the destination.
+    final displaySrc = githubImageCacheKey(src);
+    if (displaySrc.isNotEmpty && !linked) {
+      _activeBuffer.write(' ($displaySrc)');
     }
     _activeBuffer.write(_ansiReset);
+  }
+
+  bool _containsHiddenImage(Element link) {
+    if (link.tag != 'a') return false;
+    final children = link.children ?? const <Node>[];
+    final images = children.whereType<Element>().where((e) => e.tag == 'img');
+    if (!images.isNotEmpty) return false;
+    final href = link.attributes['href'];
+    if (href != null &&
+        !githubImageVariantVisible(
+          href,
+          hasDarkBackground: options.hasDarkBackground,
+        )) {
+      return true;
+    }
+    return images.any(
+      (image) => !githubImageVariantVisible(
+        image.attributes['src'] ?? '',
+        hasDarkBackground: options.hasDarkBackground,
+      ),
+    );
   }
 
   void _renderTerminalImage(img.Image image) {

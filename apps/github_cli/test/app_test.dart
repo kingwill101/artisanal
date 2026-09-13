@@ -876,17 +876,15 @@ Outro paragraph.
     expect(plain, isNot(contains('redirect.github.com')));
   });
 
-  test(
-    'GitHub markdown body keeps CodeRabbit summary bullets attached to their headings',
-    () async {
-      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
-      addTearDown(() => tester.dispose());
+  test('GitHub markdown body keeps CodeRabbit summary bullets attached to their headings', () async {
+    final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+    addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
-        w.ThemeScope(
-          theme: w.Theme.dark(),
-          child: GithubMarkdownBody(
-            data: '''
+    await tester.pumpWidget(
+      w.ThemeScope(
+        theme: w.Theme.dark(),
+        child: GithubMarkdownBody(
+          data: '''
 <!-- This is an auto-generated comment: release notes by coderabbit.ai -->
 ## Summary by CodeRabbit
 
@@ -898,21 +896,20 @@ Outro paragraph.
   * Fixed raw-mode lifecycle to preserve and restore Windows console settings correctly, including safe behavior for nested enable/restore scenarios and non-Windows platforms.
 <!-- end of auto-generated comment: release notes by coderabbit.ai -->
 ''',
-            maxWidth: 80,
-          ),
+          maxWidth: 80,
         ),
-        width: 80,
-        height: 24,
-      );
+      ),
+      width: 80,
+      height: 24,
+    );
 
-      final plain = Style.stripAnsi(tester.view);
+    final plain = Style.stripAnsi(tester.view);
 
-      expect(plain, contains('• New Features'));
-      expect(plain, contains('• Bug Fixes'));
-      expect(plain, isNot(contains('•\nNew Features')));
-      expect(plain, isNot(contains('•\nBug Fixes')));
-    },
-  );
+    expect(plain, contains('• New Features'));
+    expect(plain, contains('• Bug Fixes'));
+    expect(plain, isNot(contains('•\nNew Features')));
+    expect(plain, isNot(contains('•\nBug Fixes')));
+  });
 
   test(
     'GitHub markdown body keeps walkthrough details outside the quote',
@@ -944,7 +941,8 @@ This is a long walkthrough line that should wrap cleanly outside the quote borde
       final plain = Style.stripAnsi(tester.view);
       final lines = plain.split('\n');
 
-      expect(plain, contains('│ [!WARNING]'));
+      expect(plain, isNot(contains('[!WARNING]')));
+      expect(plain, contains('│ WARNING'));
       expect(plain, contains('│ Review limit reached'));
       expect(plain, contains('▾ Walkthrough'));
       expect(
@@ -991,7 +989,8 @@ This is a long walkthrough line that should wrap cleanly outside the quote borde
       final plain = Style.stripAnsi(tester.view);
       final lines = plain.split('\n');
 
-      expect(plain, contains('│ [!WARNING]'));
+      expect(plain, isNot(contains('[!WARNING]')));
+      expect(plain, contains('│ WARNING'));
       expect(plain, contains('│ Review limit reached'));
       expect(plain, contains('│ ▾ Walkthrough'));
       expect(
@@ -2390,8 +2389,7 @@ GithubDashboardData _dashboardWithHtmlBody() {
       GithubPullRequestItem(
         number: 9,
         title: 'HTML body',
-        body:
-            '<p>Upcoming change: use <code>true</code>.</p><ul><li>First item</li></ul>',
+        body: '<p>Upcoming change: use <code>true</code>.</p><ul><li>First item</li></ul>',
         url: 'https://example.test/pull/9',
         author: 'octo',
         labels: const [],
