@@ -83,6 +83,7 @@ class MarkdownRenderer implements NodeVisitor {
     _ctx.inTableHeader = false;
     _ctx.inTableCell = false;
     _ctx.inCodeBlock = false;
+    _ctx.codeBlockIndent = 0;
     _ctx.codeBlockLanguage = null;
     _ctx.syntaxHighlighter = null;
     _ctx.inParagraph = false;
@@ -181,7 +182,7 @@ class MarkdownRenderer implements NodeVisitor {
       if (_ctx.options.codeBlockBorder && content.contains('\n')) {
         content = applyCodeBlockPrefix(_ctx, content);
       }
-      _outputBuffer.write(content);
+      _ctx.writeCode(content);
       return;
     }
 
@@ -236,6 +237,15 @@ class MarkdownRenderer implements NodeVisitor {
 
       // ─── Code blocks ───────────────────────────────────────────
       case 'pre':
+        // Flush prose before switching to the unwrapped code stream. Code
+        // then writes directly after the list marker, preserving source order.
+        if (_ctx.listItemStack.isNotEmpty) {
+          renderFlushCurrentListItem(_ctx);
+          if (_ctx.buffer.isNotEmpty &&
+              !_ctx.buffer.toString().endsWith('\n')) {
+            _ctx.buffer.write('\n');
+          }
+        }
         startCodeBlock(_ctx, element);
         return true;
 
@@ -577,18 +587,7 @@ class MarkdownRenderer implements NodeVisitor {
     return _ansiReset;
   }
 
-  StringBuffer get _outputBuffer {
-    if (_ctx.inTableCell) return _ctx.currentCellBuffer;
-    if (_ctx.inParagraph && _ctx.options.width != null && !_ctx.inCodeBlock) {
-      return _ctx.paragraphBuffer;
-    }
-    if (_ctx.listItemStack.isNotEmpty &&
-        _ctx.options.width != null &&
-        !_ctx.inCodeBlock) {
-      return _ctx.listItemStack.last.buffer;
-    }
-    return _ctx.buffer;
-  }
+  StringBuffer get _outputBuffer => _ctx.outputBuffer;
 
   bool _isInsidePreBlock() =>
       _ctx.elementStack.any((element) => element.tag == 'pre');

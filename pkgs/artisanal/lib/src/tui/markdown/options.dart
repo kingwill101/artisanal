@@ -1,3 +1,4 @@
+import 'package:html_unescape/html_unescape.dart';
 import 'package:markdown/markdown.dart' show Element, Node, Text;
 
 import '../../style/border.dart' as style_border;
@@ -26,6 +27,10 @@ final class MarkdownBlockContext {
 
   Map<String, String> get attributes => element.attributes;
 
+  /// Plain text with the Markdown parser's HTML escaping removed once.
+  ///
+  /// Custom code handlers receive the original operators and literal entity
+  /// spellings, just as the built-in text renderer does.
   String get text => _flattenText(element);
 
   String? get language => _codeLanguageFor(element);
@@ -33,8 +38,10 @@ final class MarkdownBlockContext {
   bool get hasOpenAttribute => element.attributes.containsKey('open');
 }
 
+final _blockTextUnescape = HtmlUnescape();
+
 String _flattenText(Node node) {
-  if (node is Text) return node.text;
+  if (node is Text) return _blockTextUnescape.convert(node.text);
   if (node is! Element) return '';
   final buffer = StringBuffer();
   for (final child in node.children ?? const <Node>[]) {

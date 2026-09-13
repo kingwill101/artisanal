@@ -1,4 +1,4 @@
-import 'package:markdown/markdown.dart' show Element;
+import 'package:markdown/markdown.dart' show Element, Text;
 
 import '../../style/style.dart';
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
@@ -16,7 +16,7 @@ void renderStartListItem(MarkdownRenderContext ctx, Element element) {
   final ordered = parentList != null && parentList.tag == 'ol';
   final startAttr = parentList?.attributes['start'];
   final start = startAttr != null ? int.tryParse(startAttr) ?? 1 : 1;
-  final taskInput = _firstTaskListInput(element);
+  final taskInput = firstTaskListInput(element);
   final taskCheckbox = taskInput == null
       ? null
       : (taskInput.attributes['checked'] != null
@@ -84,16 +84,16 @@ void renderFlushCurrentListItem(MarkdownRenderContext ctx) {
   final content = item.buffer.toString();
   if (content.isEmpty) return;
   item.buffer.clear();
-  if (ctx.options.width == null) {
-    ctx.buffer.write(content);
-    return;
-  }
-
-  final width = ctx.options.width! - item.continuationIndent;
-  final wrapped = uv_wrap.wrapAnsiPreserving(
-    content,
-    width > 0 ? width : ctx.options.width!,
-  );
+  final availableWidth = ctx.options.width;
+  final width = availableWidth == null
+      ? null
+      : availableWidth - item.continuationIndent;
+  final wrapped = width == null
+      ? content
+      : uv_wrap.wrapAnsiPreserving(
+          content,
+          width > 0 ? width : availableWidth!,
+        );
   if (item.hasFlushedContent) {
     ctx.buffer.write(' ' * item.continuationIndent);
   }
@@ -103,20 +103,22 @@ void renderFlushCurrentListItem(MarkdownRenderContext ctx) {
   item.hasFlushedContent = true;
 }
 
-Element? _firstTaskListInput(Element element) {
+/// Finds a leading task checkbox, including the paragraph of a loose list item.
+Element? firstTaskListInput(Element element) {
   final children = element.children;
   if (children == null) return null;
 
   for (final child in children) {
+    if (child is Text && child.text.trim().isEmpty) continue;
     if (child is Element &&
         child.tag == 'input' &&
         child.attributes['type'] == 'checkbox') {
       return child;
     }
     if (child is Element && child.tag == 'p') {
-      final nested = _firstTaskListInput(child);
-      if (nested != null) return nested;
+      return firstTaskListInput(child);
     }
+    return null;
   }
 
   return null;
@@ -130,6 +132,11 @@ String renderIndentContinuationLines(String text, int indent) {
   return lines
       .asMap()
       .entries
-      .map((e) => e.key == 0 ? e.value : '$prefix${e.value}')
+      .map((e) {
+        if (e.key == 0 || (e.key == lines.length - 1 && e.value.isEmpty)) {
+          return e.value;
+        }
+        return '$prefix${e.value}';
+      })
       .join('\n');
 }

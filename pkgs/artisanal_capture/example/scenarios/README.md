@@ -28,6 +28,7 @@ CommonMark specification or a test runner.
 | `release_notes.md` | A realistic composite of headings, lists, quotes, code, tables, links, and notes. |
 | `diagnostic_unicode.md` | **Intentional diagnostic:** combining marks, CJK, and emoji stress unsupported glyph rasterization and shaping. Do not silently assume these render correctly. |
 | `dart_sdk_64170.md` | Attributed external fixture from Dart SDK issue 64170: three SIMD tracking tables, links, styles, status emoji, and a hidden Supporting CLs HTML comment. |
+| `artisanal_pr49.md` | Attributed public PR 49 body; the Verification list item contains prose followed by a fenced shell command and a following list item. |
 
 All URLs use `example.test` or relative paths. No fixture requires network
 access, remote images, or additional fonts.
@@ -35,7 +36,7 @@ access, remote images, or additional fonts.
 ## Generate and inspect
 
 Use the [`gallery` command](../../README.md#markdown-scenario-gallery) to render
-all 20 fixtures at the three review widths. The resulting `index.html` links
+all 21 fixtures at the three review widths. The resulting `index.html` links
 native PNGs, full HTML previews, input Markdown, ANSI output, and cell snapshots.
 Generation is not a correctness verdict; even an unflagged frame needs review.
 
@@ -51,7 +52,7 @@ Generation is not a correctness verdict; even an unflagged frame needs review.
 
 The original 19-case matrix generated 57 images. Its five flagged renders
 consisted of two narrow code cases and three intentional Unicode diagnostic
-variants. The attributed SDK issue adds a real-world case with status emoji;
+variants. The attributed SDK issue and PR 49 add real-world external cases;
 raster diagnostics depend on the selected font's glyph coverage.
 
 ## Dart SDK issue 64170
@@ -73,6 +74,14 @@ multiple scroll offsets.
 Native PNGs use explicit font files. A missing emoji glyph is a raster
 diagnostic, not permission to remove or replace that status in the cell
 snapshot. Use the accompanying JSON/ANSI when inspecting unsupported glyphs.
+
+## Artisanal PR 49
+
+`artisanal_pr49.md` is the complete body returned by
+https://api.github.com/repos/kingwill101/artisanal/pulls/49. Its adjacent
+`.source.json` records the public PR attribution and SHA-256 checksum. Keep the
+body unchanged: unlike synthetic fixtures it intentionally has no `END_*`
+marker.
 
 ## Remaining policy and coverage cases
 

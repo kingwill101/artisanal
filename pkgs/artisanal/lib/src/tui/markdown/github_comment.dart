@@ -2,6 +2,13 @@ import 'package:html/parser.dart' as html;
 
 import 'github_html_tags.dart';
 
+/// Maximum number of nested GitHub disclosures that are made interactive.
+///
+/// Disclosures below this depth remain available through their parent's
+/// [GithubMarkdownDetailsSegment.markdown] and are represented in
+/// [GithubMarkdownDetailsSegment.children] by a literal source fallback.
+const githubMaxInteractiveDetailsDepth = 32;
+
 final class GithubImageReference {
   const GithubImageReference({required this.url, required this.alt});
 
@@ -25,12 +32,20 @@ final class GithubMarkdownDetailsSegment extends GithubMarkdownSegment {
     required this.markdown,
     required this.initiallyExpanded,
     required this.quoted,
+    this.children = const <GithubMarkdownSegment>[],
   });
 
   final String summary;
   final String markdown;
   final bool initiallyExpanded;
   final bool quoted;
+
+  /// The disclosure body split into text and nested disclosures.
+  ///
+  /// [markdown] remains available as the original body for callers that do
+  /// not render interactive disclosures. Consumers that support disclosures
+  /// should render these segments recursively.
+  final List<GithubMarkdownSegment> children;
 }
 
 String githubDisplayMarkdown(String input) {
@@ -66,6 +81,13 @@ String githubStripBlockquoteMarkers(String input) {
 }
 
 List<GithubMarkdownSegment> githubDisplayMarkdownSegments(String input) {
+  return _githubDisplayMarkdownSegments(input, depth: 0);
+}
+
+List<GithubMarkdownSegment> _githubDisplayMarkdownSegments(
+  String input, {
+  required int depth,
+}) {
   final source = githubDisplayMarkdown(input);
   if (source.isEmpty) return const <GithubMarkdownSegment>[];
 
@@ -81,11 +103,11 @@ List<GithubMarkdownSegment> githubDisplayMarkdownSegments(String input) {
     final openEnd = openMatch.end;
     _addTextSegment(segments, source.substring(cursor, openStart));
 
-    var depth = 1;
+    var nestingDepth = 1;
     var closeIndex = index + 1;
     for (; closeIndex < tags.length; closeIndex++) {
-      depth += tags[closeIndex].group(0)!.startsWith('</') ? -1 : 1;
-      if (depth == 0) break;
+      nestingDepth += tags[closeIndex].group(0)!.startsWith('</') ? -1 : 1;
+      if (nestingDepth == 0) break;
     }
     if (closeIndex == tags.length) {
       cursor = openStart;
@@ -99,6 +121,7 @@ List<GithubMarkdownSegment> githubDisplayMarkdownSegments(String input) {
         openTag,
         detailsBody,
         quoted: _isQuotedDetailsTag(source, openStart),
+        depth: depth,
       ),
     );
     cursor = closeMatch.end;
@@ -147,6 +170,7 @@ GithubMarkdownDetailsSegment _detailsSegment(
   String openTag,
   String body, {
   required bool quoted,
+  required int depth,
 }) {
   Match? summaryStart;
   Match? summaryEnd;
@@ -181,12 +205,29 @@ GithubMarkdownDetailsSegment _detailsSegment(
   final markdown = quoted
       ? githubStripBlockquoteMarkers(githubDisplayMarkdown(content))
       : githubDisplayMarkdown(content);
+  final children = depth + 1 < githubMaxInteractiveDetailsDepth
+      ? _githubDisplayMarkdownSegments(markdown, depth: depth + 1)
+      : <GithubMarkdownSegment>[_literalDetailsFallback(markdown)];
 
   return GithubMarkdownDetailsSegment(
     summary: title,
     markdown: markdown,
     initiallyExpanded: _hasOpenAttribute(openTag),
     quoted: quoted,
+    children: children,
+  );
+}
+
+GithubMarkdownTextSegment _literalDetailsFallback(String source) {
+  final maxBackticks = RegExp(r'`+')
+      .allMatches(source)
+      .map((match) => match.group(0)!.length)
+      .fold<int>(0, (longest, length) => length > longest ? length : longest);
+  final fence = '`' * (maxBackticks < 3 ? 3 : maxBackticks + 1);
+  return GithubMarkdownTextSegment(
+    'Nested GitHub disclosure depth limit reached; '
+    'remaining source is shown literally:\n\n'
+    '$fence\n$source\n$fence',
   );
 }
 

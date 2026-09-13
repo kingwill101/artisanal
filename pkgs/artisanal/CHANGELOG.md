@@ -13,6 +13,21 @@
 
 ### Fixed
 
+- Corrected sequence diagram bounds and width fitting, preserving complete
+  participant/message labels through wrapping. Added actor symbols, directional
+  and bidirectional arrows, persistent activations, nested fragment regions,
+  validated branch contexts, and colored group/rect backgrounds.
+- Preserve Unicode grapheme widths in chart labels and report unsupported or
+  malformed Mermaid syntax instead of silently omitting diagram content.
+- Decode Markdown block-handler text once, so embedded-language handlers receive
+  real operators such as Mermaid arrows rather than HTML-escaped tokens.
+- Keep list continuation indentation independent of wrapping width and recognize
+  task checkboxes consistently in tight and loose list paragraphs.
+- Bounded nested GitHub disclosure segmentation and retained disclosures past
+  the interactive depth limit as literal source.
+- Preserved source order when fenced Markdown code appears inside list items,
+  keeping the preceding prose before the code and the following item after its
+  closing border while retaining code line widths and list indentation.
 - Isolated Markdown code-block backgrounds and attributes at physical
   newlines, so code styling does not bleed into following rows or surrounding
   content.

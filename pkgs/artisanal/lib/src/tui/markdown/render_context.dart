@@ -78,6 +78,7 @@ class MarkdownRenderContext {
 
   bool inCodeBlock = false;
   String? codeBlockLanguage;
+  int codeBlockIndent = 0;
   SyntaxHighlighter? syntaxHighlighter;
 
   // ─── Paragraph state ──────────────────────────────────────────────
@@ -106,13 +107,37 @@ class MarkdownRenderContext {
   /// Returns the currently active output buffer.
   StringBuffer get outputBuffer {
     if (inTableCell) return currentCellBuffer;
-    if (inParagraph && options.width != null && !inCodeBlock) {
+    if (inParagraph && !inCodeBlock) {
       return paragraphBuffer;
     }
-    if (listItemStack.isNotEmpty && options.width != null && !inCodeBlock) {
+    if (listItemStack.isNotEmpty && !inCodeBlock) {
       return listItemStack.last.buffer;
     }
     return buffer;
+  }
+
+  /// Writes code while keeping it an atomic, unwrapped child of a list item.
+  ///
+  /// List prose is buffered so it can be wrapped, but code must retain its
+  /// physical lines and still follow the list marker.
+  void writeCode(String text) {
+    if (codeBlockIndent <= 0) {
+      buffer.write(text);
+      return;
+    }
+    final lines = text.split('\n');
+    var atLineStart = buffer.isEmpty || buffer.toString().endsWith('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        buffer.write('\n');
+        atLineStart = true;
+      }
+      if (atLineStart && lines[i].isNotEmpty) {
+        buffer.write(' ' * codeBlockIndent);
+      }
+      buffer.write(lines[i]);
+      atLineStart = lines[i].isEmpty;
+    }
   }
 
   static const ansiReset = '\x1b[0m';

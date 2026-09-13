@@ -36,6 +36,7 @@ import 'syntax_highlighter.dart';
 import 'options.dart';
 import 'blockquote.dart';
 import 'code_block.dart' show balanceAnsiNewlines;
+import 'lists.dart' show firstTaskListInput;
 import 'tables.dart' show renderTableContent, parseTableAlign;
 import 'html_context.dart';
 import 'image_renderer.dart'
@@ -174,6 +175,9 @@ class AnsiRenderer implements NodeVisitor {
   /// Whether we're inside a code block with borders.
   bool _inCodeBlock = false;
 
+  /// Continuation indentation for a code block nested in a list item.
+  int _codeBlockIndent = 0;
+
   /// Current code block language for syntax highlighting.
   String? _codeBlockLanguage;
 
@@ -239,6 +243,7 @@ class AnsiRenderer implements NodeVisitor {
     _inTableHeader = false;
     _inTableCell = false;
     _inCodeBlock = false;
+    _codeBlockIndent = 0;
     _codeBlockLanguage = null;
     _inParagraph = false;
     _paragraphBuffer.clear();
@@ -307,6 +312,8 @@ class AnsiRenderer implements NodeVisitor {
       if (options.codeBlockBorder && content.contains('\n')) {
         content = _applyCodeBlockPrefix(content);
       }
+      _writeCode(content);
+      return;
     }
 
     // If inside a table cell, write to cell buffer instead
@@ -358,6 +365,9 @@ class AnsiRenderer implements NodeVisitor {
 
       case 'pre':
         _ensureNewline();
+        if (_listItemStack.isNotEmpty) {
+          _flushCurrentListItem();
+        }
         _startCodeBlock(element);
         return true;
 
@@ -707,7 +717,7 @@ class AnsiRenderer implements NodeVisitor {
 
     // Determine if this is an ordered or unordered list item
     final parent = _findParentList();
-    final taskInput = _firstTaskListInput(element);
+    final taskInput = firstTaskListInput(element);
     final taskCheckbox = taskInput == null
         ? null
         : (taskInput.attributes['checked'] != null
@@ -758,24 +768,6 @@ class AnsiRenderer implements NodeVisitor {
     return false;
   }
 
-  /// Returns the first task-list checkbox input when it starts [element].
-  Element? _firstTaskListInput(Element element) {
-    final children = element.children;
-    if (children == null) return null;
-
-    for (final child in children) {
-      if (child is Text && child.text.trim().isEmpty) {
-        continue;
-      }
-      if (child is Element && _isTaskListInput(child)) {
-        return child;
-      }
-      return null;
-    }
-
-    return null;
-  }
-
   bool _isTaskListInput(Element element) =>
       element.tag == 'input' && element.attributes['type'] == 'checkbox';
 
@@ -788,13 +780,13 @@ class AnsiRenderer implements NodeVisitor {
     if (content.isEmpty) return;
 
     context.buffer.clear();
-    if (options.width == null) {
-      _buffer.write(content);
-      return;
-    }
-
-    final width = options.width! - context.continuationIndent;
-    final wrapped = _wrapText(content, width > 0 ? width : options.width!);
+    final availableWidth = options.width;
+    final width = availableWidth == null
+        ? null
+        : availableWidth - context.continuationIndent;
+    final wrapped = width == null
+        ? content
+        : _wrapText(content, width > 0 ? width : availableWidth!);
     if (context.hasFlushedContent) {
       _buffer.write(' ' * context.continuationIndent);
     }
@@ -862,6 +854,9 @@ class AnsiRenderer implements NodeVisitor {
 
   void _startCodeBlock(Element element) {
     _inCodeBlock = true;
+    _codeBlockIndent = _listItemStack.isEmpty
+        ? 0
+        : _listItemStack.last.continuationIndent;
     _codeBlockLanguage = null;
 
     // Get the language hint if available
@@ -887,44 +882,45 @@ class AnsiRenderer implements NodeVisitor {
       final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
 
       if (_codeBlockLanguage != null) {
-        _buffer.write(
+        _writeCode(
           '$borderSeq${border.topLeft}${border.top} $_codeBlockLanguage $_ansiReset\n',
         );
       } else {
-        _buffer.write(
+        _writeCode(
           '$borderSeq${border.topLeft}${border.top}${border.top}${border.top}$_ansiReset\n',
         );
       }
-      _buffer.write('$borderSeq${border.left}$_ansiReset ');
+      _writeCode('$borderSeq${border.left}$_ansiReset ');
     }
 
     // Only apply default code style if syntax highlighting is disabled
     // or if no language is specified
     if (!options.syntaxHighlighting || _codeBlockLanguage == null) {
       final style = options.codeBlockStyle ?? _defaultCodeBlockStyle();
-      _buffer.write(_styleToAnsiOpen(style));
+      _writeCode(_styleToAnsiOpen(style));
     }
   }
 
   void _endCodeBlock() {
     // Highlighted tokens can span the final physical line too.
-    _buffer.write(_ansiReset);
-    _inCodeBlock = false;
-    _codeBlockLanguage = null;
-
     if (options.codeBlockBorder) {
       final border =
           options.codeBlockBorderStyle ?? style_border.Border.rounded;
       final borderColor = Colors.gray;
       final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
       // Close the last line and draw bottom border
-      _buffer.write('\n');
-      _buffer.write(
+      _writeCode(_ansiReset);
+      _writeCode('\n');
+      _writeCode(
         '$borderSeq${border.bottomLeft}${border.bottom}${border.bottom}${border.bottom}$_ansiReset\n',
       );
     } else {
-      _buffer.write('\n');
+      _writeCode(_ansiReset);
+      _writeCode('\n');
     }
+    _inCodeBlock = false;
+    _codeBlockLanguage = null;
+    _codeBlockIndent = 0;
   }
 
   /// Applies the code block border prefix to each line of content.
@@ -1817,33 +1813,42 @@ class AnsiRenderer implements NodeVisitor {
     if (_inParagraph && options.width != null && !_inCodeBlock) {
       return _paragraphBuffer;
     }
-    if (_listItemStack.isNotEmpty && options.width != null && !_inCodeBlock) {
+    if (_listItemStack.isNotEmpty && !_inCodeBlock) {
       return _listItemStack.last.buffer;
     }
     return _buffer;
   }
 
+  void _writeCode(String text) {
+    if (_codeBlockIndent <= 0) {
+      _buffer.write(text);
+      return;
+    }
+    final lines = text.split('\n');
+    var atLineStart = _buffer.isEmpty || _buffer.toString().endsWith('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        _buffer.write('\n');
+        atLineStart = true;
+      }
+      if (atLineStart && lines[i].isNotEmpty) {
+        _buffer.write(' ' * _codeBlockIndent);
+      }
+      _buffer.write(lines[i]);
+      atLineStart = lines[i].isEmpty;
+    }
+  }
+
   void _ensureNewline() {
     final buffer = _activeBuffer;
-    if (buffer.isNotEmpty && !buffer.toString().endsWith('\n')) {
+    final hasVisibleContent =
+        buffer.isNotEmpty &&
+        Style.stripAnsi(buffer.toString()).trim().isNotEmpty;
+    if (hasVisibleContent && !buffer.toString().endsWith('\n')) {
       buffer.write('\n');
     }
     if (_lastWasBlock) {
-      final inListItemBuffer =
-          _listItemStack.isNotEmpty &&
-          identical(buffer, _listItemStack.last.buffer);
-      if (!(inListItemBuffer && buffer.isEmpty)) {
-        buffer.write('\n');
-      }
-      _lastWasBlock = false;
-    } else if (_lastWasBlock) {
-      // Inside a blockquote: blank lines between paragraph→list are
-      // syntactic separators, not content.  But nested blockquotes
-      // (like those produced by normalizer-merged `> >`) represent
-      // genuine section breaks and need a visible blank line.
-      final enteringNestedBlockquote =
-          _elementStack.isNotEmpty && _elementStack.last.tag == 'blockquote';
-      if (enteringNestedBlockquote) {
+      if (hasVisibleContent) {
         buffer.write('\n');
       }
       _lastWasBlock = false;

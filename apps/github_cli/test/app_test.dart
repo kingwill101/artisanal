@@ -1115,6 +1115,66 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(plainExpanded, contains('Hidden release body'));
   });
 
+  test(
+    'nested GitHub details have independent interactive hit regions',
+    () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.ThemeScope(
+          theme: w.Theme.dark(),
+          child: GithubMarkdownBody(
+            data: '''
+<details open>
+<summary>Pre-merge checks</summary>
+<details>
+<summary>Passed checks</summary>
+All checks passed.
+</details>
+</details>
+<details>
+<summary>Finishing Touches</summary>
+<details>
+<summary>Generate unit tests</summary>
+Generated tests are ready.
+</details>
+</details>
+''',
+            maxWidth: 80,
+          ),
+        ),
+        width: 80,
+        height: 24,
+      );
+
+      expect(Style.stripAnsi(tester.view), contains('▸ Passed checks'));
+      expect(
+        Style.stripAnsi(tester.view),
+        isNot(contains('All checks passed.')),
+      );
+
+      tester.tap(tester.find.textLocation('Passed checks'));
+      expect(Style.stripAnsi(tester.view), contains('All checks passed.'));
+
+      tester.tap(tester.find.textLocation('Pre-merge checks'));
+      expect(
+        Style.stripAnsi(tester.view),
+        isNot(contains('All checks passed.')),
+      );
+      tester.tap(tester.find.textLocation('Pre-merge checks'));
+      expect(Style.stripAnsi(tester.view), contains('All checks passed.'));
+
+      // The second outer disclosure remains closed and its nested summary/body
+      // must not leak into the visible layout.
+      expect(Style.stripAnsi(tester.view), contains('▸ Finishing Touches'));
+      expect(
+        Style.stripAnsi(tester.view),
+        isNot(contains('Generated tests are ready.')),
+      );
+    },
+  );
+
   test('comment parsers keep GitHub avatar URLs', () {
     final comment = GithubCommentItem.fromJson(const <String, Object?>{
       'body': 'Thanks for the update.',

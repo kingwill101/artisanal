@@ -10,6 +10,9 @@ Style defaultCodeBlockStyle() => Style().foreground(Colors.brightYellow);
 
 void startCodeBlock(MarkdownRenderContext ctx, Element element) {
   ctx.inCodeBlock = true;
+  ctx.codeBlockIndent = ctx.listItemStack.isEmpty
+      ? 0
+      : ctx.listItemStack.last.continuationIndent;
   ctx.codeBlockLanguage = null;
 
   final codeElement = element.children?.firstWhere(
@@ -33,50 +36,50 @@ void startCodeBlock(MarkdownRenderContext ctx, Element element) {
     final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
 
     if (ctx.inBlockquote) {
-      ctx.outputBuffer.write('\n${renderBlockquotePrefixOnly(ctx)}');
+      ctx.writeCode('\n${renderBlockquotePrefixOnly(ctx)}');
     }
 
     if (ctx.codeBlockLanguage != null) {
-      ctx.outputBuffer.write(
+      ctx.writeCode(
         '$borderSeq${border.topLeft}${border.top} ${ctx.codeBlockLanguage} '
         '${MarkdownRenderContext.ansiReset}\n',
       );
     } else {
-      ctx.outputBuffer.write(
+      ctx.writeCode(
         '$borderSeq${border.topLeft}${border.top}${border.top}${border.top}'
         '${MarkdownRenderContext.ansiReset}\n',
       );
     }
-    ctx.outputBuffer.write(
+    ctx.writeCode(
       '$borderSeq${border.left}${MarkdownRenderContext.ansiReset} ',
     );
   }
 
   if (!ctx.options.syntaxHighlighting || ctx.codeBlockLanguage == null) {
     final style = ctx.options.codeBlockStyle ?? defaultCodeBlockStyle();
-    ctx.outputBuffer.write(ctx.styleToAnsi(style));
+    ctx.writeCode(ctx.styleToAnsi(style));
   }
 }
 
 void endCodeBlock(MarkdownRenderContext ctx) {
   // Highlighted tokens can span the final physical line too.
-  ctx.outputBuffer.write(MarkdownRenderContext.ansiReset);
-
-  ctx.inCodeBlock = false;
-  ctx.codeBlockLanguage = null;
-
   if (ctx.options.codeBlockBorder) {
     final border =
         ctx.options.codeBlockBorderStyle ?? style_border.Border.rounded;
     final borderColor = Colors.gray;
     final borderSeq = borderColor.toAnsi(ColorProfile.trueColor);
-    ctx.outputBuffer.write(
+    ctx.writeCode(MarkdownRenderContext.ansiReset);
+    ctx.writeCode(
       '\n$borderSeq${border.bottomLeft}${border.bottom}${border.bottom}${border.bottom}'
       '${MarkdownRenderContext.ansiReset}\n',
     );
   } else {
-    ctx.outputBuffer.write('\n');
+    ctx.writeCode(MarkdownRenderContext.ansiReset);
+    ctx.writeCode('\n');
   }
+  ctx.inCodeBlock = false;
+  ctx.codeBlockLanguage = null;
+  ctx.codeBlockIndent = 0;
 }
 
 String applyCodeBlockPrefix(MarkdownRenderContext ctx, String text) {

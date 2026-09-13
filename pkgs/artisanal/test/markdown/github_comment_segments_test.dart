@@ -176,7 +176,56 @@ After
       expect(details.markdown, contains('<summary>Inner</summary>'));
       expect(details.markdown, contains('Outer tail'));
       expect(segments, hasLength(2));
+      expect(details.children, hasLength(2));
+      final inner = details.children[0] as GithubMarkdownDetailsSegment;
+      expect(inner.summary, 'Inner');
+      expect(inner.initiallyExpanded, isTrue);
+      expect(
+        (details.children[1] as GithubMarkdownTextSegment).markdown,
+        'Outer tail',
+      );
     });
+
+    test(
+      'bounds deeply nested disclosures and retains the remaining source',
+      () {
+        final source = StringBuffer();
+        for (
+          var depth = 0;
+          depth < githubMaxInteractiveDetailsDepth + 8;
+          depth++
+        ) {
+          source
+            ..writeln('<details>')
+            ..writeln('<summary>Depth $depth</summary>');
+        }
+        source.writeln('<!-- hidden nested source -->');
+        for (
+          var depth = 0;
+          depth < githubMaxInteractiveDetailsDepth + 8;
+          depth++
+        ) {
+          source.writeln('</details>');
+        }
+
+        final segments = githubDisplayMarkdownSegments(source.toString());
+        var current = segments.whereType<GithubMarkdownDetailsSegment>().single;
+        var interactiveDepth = 1;
+        while (current.children.isNotEmpty &&
+            current.children.first is GithubMarkdownDetailsSegment) {
+          current = current.children.first as GithubMarkdownDetailsSegment;
+          interactiveDepth++;
+        }
+        final fallback = current.children
+            .whereType<GithubMarkdownTextSegment>()
+            .single;
+
+        expect(interactiveDepth, githubMaxInteractiveDetailsDepth);
+        expect(fallback.markdown, contains('<!-- hidden nested source -->'));
+        expect(fallback.markdown, contains('depth limit reached'));
+        expect(fallback.markdown, contains('```'));
+      },
+    );
 
     test(
       'preserves quoted details and unterminated input without duplication',
