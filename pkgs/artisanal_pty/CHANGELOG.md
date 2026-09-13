@@ -2,6 +2,7 @@
 
 ## 0.1.1
 
+- Require Dart SDK 3.13.0 or newer.
 - Normalize bare line feeds from raw PTY output so shell output starts at
   column zero instead of drifting across the terminal.
 - Acknowledge processed PTY chunks to support low-latency, backpressured output

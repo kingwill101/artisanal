@@ -380,10 +380,7 @@ class OutputLog {
   ///
   /// [maxEntries] controls how many entries are retained. Defaults
   /// to 500.
-  const OutputLog({
-    this.maxEntries = 500,
-    List<OutputLogEntry> entries = const [],
-  }) : _entries = entries;
+  const OutputLog({this.maxEntries = 500, this._entries = const []});
 
   /// The maximum number of entries retained in this log.
   final int maxEntries;

@@ -235,10 +235,7 @@ class _KeymapHubScopeState extends State<KeymapHubScope> {
           child: Opacity(
             // Dim slightly when help is open without remounting.
             opacity: _helpOpen ? 0.45 : 1.0,
-            child: IgnorePointer(
-              ignoring: _helpOpen,
-              child: widget.child,
-            ),
+            child: IgnorePointer(ignoring: _helpOpen, child: widget.child),
           ),
         ),
         if (_helpOpen) ...[

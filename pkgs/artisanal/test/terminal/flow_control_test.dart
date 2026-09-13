@@ -5,10 +5,7 @@ void main() {
   // All cases target a missing tty device, so they are deterministic
   // with or without a controlling terminal and never touch real state.
   test('disable is a no-op for a missing tty device', () {
-    expect(
-      disableTerminalFlowControl(ttyPath: '/nonexistent-tty'),
-      isNull,
-    );
+    expect(disableTerminalFlowControl(ttyPath: '/nonexistent-tty'), isNull);
   });
 
   test('restore is safe for null, empty, and bogus modes', () {
@@ -18,10 +15,8 @@ void main() {
       returnsNormally,
     );
     expect(
-      () => restoreTerminalFlowControl(
-        'bogus-mode',
-        ttyPath: '/nonexistent-tty',
-      ),
+      () =>
+          restoreTerminalFlowControl('bogus-mode', ttyPath: '/nonexistent-tty'),
       returnsNormally,
     );
   });

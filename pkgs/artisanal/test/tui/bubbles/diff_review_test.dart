@@ -158,28 +158,21 @@ void main() {
   });
 
   group('DiffReviewModel selection', () {
-    test(
-      'mode changes reset split horizontal offset but preserve source selection',
-      () {
-        final diff = GitDiffModel(
-          width: 40,
-          viewMode: DiffViewMode.sideBySide,
-          wrapLines: false,
-        ).setDiff(_patch).copyWith(horizontalOffset: 4).rerender();
-        var model = DiffReviewModel(
-          documentId: 'pr',
-          revision: '1',
-          diff: diff,
-        );
-        model = _send(model, DiffReviewSelectMsg(_key(21)));
-        model = _send(
-          model,
-          const DiffReviewPresentationMsg(viewMode: DiffViewMode.pretty),
-        );
-        expect(model.diff.horizontalOffset, 0);
-        expect(model.selected, _key(21));
-      },
-    );
+    test('mode changes reset split horizontal offset but preserve source selection', () {
+      final diff = GitDiffModel(
+        width: 40,
+        viewMode: DiffViewMode.sideBySide,
+        wrapLines: false,
+      ).setDiff(_patch).copyWith(horizontalOffset: 4).rerender();
+      var model = DiffReviewModel(documentId: 'pr', revision: '1', diff: diff);
+      model = _send(model, DiffReviewSelectMsg(_key(21)));
+      model = _send(
+        model,
+        const DiffReviewPresentationMsg(viewMode: DiffViewMode.pretty),
+      );
+      expect(model.diff.horizontalOffset, 0);
+      expect(model.selected, _key(21));
+    });
 
     test('is a TEA model with a base patch view and unknown-message no-op', () {
       final model = _review();
@@ -332,35 +325,30 @@ void main() {
   });
 
   group('DiffReviewModel threads and revision lifecycle', () {
-    test(
-      'short-side threads follow the taller split panel without interrupting code',
-      () {
-        final diff = GitDiffModel(
-          width: 40,
-          viewMode: DiffViewMode.sideBySide,
-        ).setDiff(_patch.replaceFirst('+after', '+${'x' * 60}'));
-        final left = diff.layout.anchorFor(
-          _key(11, side: DiffCommentSide.left),
-        )!;
-        final right = diff.layout.anchorFor(_key(21))!;
-        expect(right.renderLineEnd, greaterThan(left.renderLineEnd));
-        final model = DiffReviewModel(
-          documentId: 'pr',
-          revision: '1',
-          diff: diff,
-          threads: [
-            _thread('left', 11, side: DiffCommentSide.left),
-            _thread('right', 21),
-          ],
-        );
-        expect(model.threadPlacements.map((p) => p.afterRow), [
-          right.renderLineEnd - 1,
-          right.renderLineEnd - 1,
-        ]);
-        expect(diff.layout.rowGroupEndAt(left.renderLine), right.renderLineEnd);
-        expect(diff.layout.rowGroupEndAt(0), isNull);
-      },
-    );
+    test('short-side threads follow the taller split panel without interrupting code', () {
+      final diff = GitDiffModel(
+        width: 40,
+        viewMode: DiffViewMode.sideBySide,
+      ).setDiff(_patch.replaceFirst('+after', '+${'x' * 60}'));
+      final left = diff.layout.anchorFor(_key(11, side: DiffCommentSide.left))!;
+      final right = diff.layout.anchorFor(_key(21))!;
+      expect(right.renderLineEnd, greaterThan(left.renderLineEnd));
+      final model = DiffReviewModel(
+        documentId: 'pr',
+        revision: '1',
+        diff: diff,
+        threads: [
+          _thread('left', 11, side: DiffCommentSide.left),
+          _thread('right', 21),
+        ],
+      );
+      expect(model.threadPlacements.map((p) => p.afterRow), [
+        right.renderLineEnd - 1,
+        right.renderLineEnd - 1,
+      ]);
+      expect(diff.layout.rowGroupEndAt(left.renderLine), right.renderLineEnd);
+      expect(diff.layout.rowGroupEndAt(0), isNull);
+    });
 
     test(
       'left context threads remain attached in unified and narrow split views',

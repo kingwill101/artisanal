@@ -6,6 +6,7 @@ export 'canvas.dart';
 export 'capabilities.dart';
 export 'cell.dart';
 export 'color_utils.dart';
+export 'cell_paint.dart';
 export 'cursor.dart';
 export 'decoder.dart';
 export 'drawable.dart';

@@ -239,42 +239,48 @@ class RenderStack extends RenderBox {
     if (targetWidth == 0 || targetHeight == 0) return '';
 
     final canvas = Canvas(targetWidth, targetHeight);
-    final bgStyle = const UvStyle();
+    try {
+      final bgStyle = const UvStyle();
 
-    var isFirstChild = true;
-    for (final child in children) {
-      final content = child.paint();
-      final childWidth = child.size.width.toInt();
-      final childHeight = child.size.height.toInt();
-      final x = child.offset.dx.toInt();
-      final y = child.offset.dy.toInt();
+      var isFirstChild = true;
+      for (final child in children) {
+        final content = child.paint();
+        final childWidth = child.size.width.toInt();
+        final childHeight = child.size.height.toInt();
+        final x = child.offset.dx.toInt();
+        final y = child.offset.dy.toInt();
 
-      if (isFirstChild &&
-          x == 0 &&
-          y == 0 &&
-          childWidth == targetWidth &&
-          childHeight == targetHeight) {
-        // First child fills the entire canvas — draw StyledString directly
-        // onto the main canvas, skipping the temp canvas + cell-by-cell copy.
-        StyledString(content).draw(canvas, canvas.bounds());
-      } else {
-        drawStyledContent(
-          canvas,
-          content,
-          x,
-          y,
-          bgStyle,
-          transparent: !isFirstChild,
-          contentWidth: childWidth,
-          contentHeight: childHeight,
-        );
+        if (isFirstChild &&
+            x == 0 &&
+            y == 0 &&
+            childWidth == targetWidth &&
+            childHeight == targetHeight) {
+          // First child fills the entire canvas — draw StyledString directly
+          // onto the main canvas, skipping the temp canvas + cell-by-cell copy.
+          StyledString(content).draw(canvas, canvas.bounds());
+        } else {
+          drawStyledContent(
+            canvas,
+            content,
+            x,
+            y,
+            bgStyle,
+            transparent: !isFirstChild,
+            contentWidth: childWidth,
+            contentHeight: childHeight,
+          );
+        }
+        isFirstChild = false;
       }
-      isFirstChild = false;
-    }
 
-    var result = canvas.render();
-    result = padToStackSize(result, targetWidth, targetHeight);
-    return result;
+      var result = canvas.render();
+      result = padToStackSize(result, targetWidth, targetHeight);
+      return result;
+    } finally {
+      // The canvas owns its backing ScreenBuffer. The rendered string is
+      // extracted above, so releasing the cells cannot affect the result.
+      canvas.dispose();
+    }
   }
 }
 

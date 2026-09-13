@@ -23,10 +23,12 @@ import 'package:artisanal/text_editing.dart'
         textSyntaxChangeWindow,
         textSyntaxDecorationLayerKey,
         textSyntaxDecorationLayerPriority;
+
 import '_component_foundation.dart';
 import 'frame.dart';
 import 'scroll_area.dart';
 import 'text_editor.dart';
+
 import 'package:artisanal/markdown.dart'
     show
         AdaptiveChromaTheme,

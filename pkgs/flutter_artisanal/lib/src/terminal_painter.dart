@@ -23,8 +23,14 @@ class TerminalPainter extends CustomPainter {
     this.customBlockGlyphs = true,
     this.customBrailleGlyphs = true,
     this.brailleDotScale = 0.78,
+    uv.UvPaintPolicy? paintPolicy,
     super.repaint,
-  });
+  }) : _paintPolicy =
+           paintPolicy ??
+           uv.UvPaintPolicy(
+             foreground: uvFlutterToColor(defaultFg),
+             background: uvFlutterToColor(defaultBg),
+           );
 
   final uv.Buffer screen;
   final double cellWidth;
@@ -47,6 +53,7 @@ class TerminalPainter extends CustomPainter {
 
   /// Relative dot size for custom Braille rendering.
   final double brailleDotScale;
+  final uv.UvPaintPolicy _paintPolicy;
 
   double _snap(double value) {
     final dpr = devicePixelRatio <= 0 ? 1.0 : devicePixelRatio;
@@ -69,7 +76,7 @@ class TerminalPainter extends CustomPainter {
     // Always establish an opaque base. This prevents the parent/background
     // from showing through at fractional device-pixel boundaries.
     final basePaint = Paint()
-      ..color = defaultBg
+      ..color = _asFlutter(_paintPolicy.background)
       ..style = PaintingStyle.fill
       ..isAntiAlias = false;
     canvas.drawRect(Offset.zero & size, basePaint);
@@ -87,19 +94,19 @@ class TerminalPainter extends CustomPainter {
         if (cell == null || cell.isZero) continue;
 
         final style = cell.style;
-        final isReverse = (style.attrs & uv.Attr.reverse) != 0;
-
-        var fg = uvColorToFlutter(style.fg, defaultFg);
-        var bg = uvColorToFlutter(style.bg, defaultBg);
-        if (isReverse) {
-          final tmp = fg;
-          fg = bg;
-          bg = tmp;
-        }
-
-        if ((style.attrs & uv.Attr.faint) != 0) {
-          fg = fg.withAlpha(128);
-        }
+        final paint = _paintPolicy.resolve(style);
+        final fg = Color.fromARGB(
+          paint.foreground.a,
+          paint.foreground.r,
+          paint.foreground.g,
+          paint.foreground.b,
+        );
+        final bg = Color.fromARGB(
+          paint.background.a,
+          paint.background.r,
+          paint.background.g,
+          paint.background.b,
+        );
 
         final content = cell.content;
         final hasContent = content.isNotEmpty && content != ' ';
@@ -113,6 +120,7 @@ class TerminalPainter extends CustomPainter {
               cell: cell,
               fg: fg,
               bg: bg,
+              underlineColor: _asFlutter(paint.underlineColor),
               content: content,
               style: style,
             ),
@@ -151,22 +159,16 @@ class TerminalPainter extends CustomPainter {
       var x = 0;
       while (x < cols) {
         final cell = screen.cellAt(x, y);
-        if (cell == null || cell.isZero) {
-          x++;
-          continue;
-        }
-
         final runColor = _resolvedBackground(cell);
         var runEnd = x + 1;
 
         while (runEnd < cols) {
           final next = screen.cellAt(runEnd, y);
-          if (next == null || next.isZero) break;
           if (_resolvedBackground(next) != runColor) break;
           runEnd++;
         }
 
-        if (runColor != defaultBg) {
+        if (runColor != _asFlutter(_paintPolicy.background)) {
           final rect = _snapCellRect(x, y, width: (runEnd - x).toDouble());
           bgPaint.color = runColor;
           canvas.drawRect(rect, bgPaint);
@@ -177,14 +179,12 @@ class TerminalPainter extends CustomPainter {
     }
   }
 
-  Color _resolvedBackground(uv.Cell cell) {
-    final style = cell.style;
-    final isReverse = (style.attrs & uv.Attr.reverse) != 0;
-    if (isReverse) {
-      return uvColorToFlutter(style.fg, defaultFg);
-    }
-    return uvColorToFlutter(style.bg, defaultBg);
-  }
+  Color _resolvedBackground(uv.Cell? cell) => _asFlutter(
+    _paintPolicy.resolve(cell?.style ?? const uv.UvStyle()).background,
+  );
+
+  Color _asFlutter(uv.UvRgb color) =>
+      Color.fromARGB(color.a, color.r, color.g, color.b);
 
   void _paintCellGlyph(Canvas canvas, _CellPaintInfo info) {
     final paintedAsPrimitive = _paintTerminalPrimitive(canvas, info);
@@ -416,7 +416,7 @@ class TerminalPainter extends CustomPainter {
     );
 
     if (style.underline != uv.UnderlineStyle.none) {
-      final ulColor = uvColorToFlutter(style.underlineColor, info.fg);
+      final ulColor = info.underlineColor;
       final ulPaint = Paint()
         ..color = ulColor
         ..strokeWidth = math.max(1.0 / devicePixelRatio, 1.0)
@@ -448,6 +448,7 @@ class _CellPaintInfo {
     required this.cell,
     required this.fg,
     required this.bg,
+    required this.underlineColor,
     required this.content,
     required this.style,
   });
@@ -457,6 +458,7 @@ class _CellPaintInfo {
   final uv.Cell cell;
   final Color fg;
   final Color bg;
+  final Color underlineColor;
   final String content;
   final uv.UvStyle style;
 }

@@ -11,15 +11,23 @@ import 'render_context.dart';
 import 'syntax_highlighter.dart';
 import 'headings.dart';
 import 'lists.dart';
+import 'blockquote.dart';
 import 'code_block.dart'
-    show startCodeBlock, endCodeBlock, applyCodeBlockPrefix;
+    show
+        startCodeBlock,
+        endCodeBlock,
+        applyCodeBlockPrefix,
+        balanceCodeBlockNewlines;
 import 'hr.dart' show renderHorizontalRule;
-import 'tables.dart' show renderTable;
+import 'tables.dart' show renderTable, parseTableAlign;
 import 'images.dart' show renderImage;
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
 import 'image_bytes_loader_stub.dart'
     if (dart.library.io) 'image_bytes_loader_io.dart'
     as image_loader;
+import 'github_images.dart';
 
 /// Renders markdown to ANSI-styled terminal output using standalone functions.
 ///
@@ -45,7 +53,6 @@ class MarkdownRenderer implements NodeVisitor {
     styleToAnsi: _styleToAnsiOpen,
     headingStyleOf: (tag) => headingStyle(_ctx, tag),
   );
-  final List<bool> _handledBlockStack = [];
 
   // ─── Public API ────────────────────────────────────────────────────
 
@@ -67,8 +74,6 @@ class MarkdownRenderer implements NodeVisitor {
     _ctx.listDepth = 0;
     _ctx.listCounters.clear();
     _ctx.listItemStack.clear();
-    _ctx.inBlockquote = false;
-    _ctx.blockquoteDepth = 0;
     _ctx.lastWasBlock = false;
     _ctx.pendingLinkUrl = null;
     _ctx.imageAltText = null;
@@ -81,13 +86,13 @@ class MarkdownRenderer implements NodeVisitor {
     _ctx.inTableHeader = false;
     _ctx.inTableCell = false;
     _ctx.inCodeBlock = false;
+    _ctx.codeBlockIndent = 0;
     _ctx.codeBlockLanguage = null;
     _ctx.syntaxHighlighter = null;
     _ctx.inParagraph = false;
     _ctx.paragraphBuffer.clear();
     _ctx.textStyleActive = false;
     _inlineStyleDepth = 0;
-    _handledBlockStack.clear();
     if (imageCache != null) {
       _ctx.imageCache.addAll(imageCache);
     }
@@ -161,21 +166,26 @@ class MarkdownRenderer implements NodeVisitor {
       }
     }
 
-    if (_ctx.inBlockquote && !_ctx.inParagraph && content.contains('\n')) {
-      content = renderApplyBlockquotePrefixAll(_ctx, content);
-    }
-
     if (_ctx.inCodeBlock) {
-      if (_shouldSyntaxHighlight(content, _ctx.codeBlockLanguage)) {
+      final highlighted = _shouldSyntaxHighlight(
+        content,
+        _ctx.codeBlockLanguage,
+      );
+      if (highlighted) {
         content = _highlighter.highlightCode(
           content,
           language: _ctx.codeBlockLanguage,
         );
       }
+      content = balanceCodeBlockNewlines(
+        _ctx,
+        content,
+        highlighted: highlighted,
+      );
       if (_ctx.options.codeBlockBorder && content.contains('\n')) {
         content = applyCodeBlockPrefix(_ctx, content);
       }
-      _outputBuffer.write(content);
+      _ctx.writeCode(content);
       return;
     }
 
@@ -189,12 +199,16 @@ class MarkdownRenderer implements NodeVisitor {
   @override
   bool visitElementBefore(Element element) {
     _ctx.elementStack.add(element);
-    _handledBlockStack.add(false);
+
+    if (_insideCollapsedDetailsBody && element.tag != 'summary') {
+      _forgetElement();
+      return false;
+    }
 
     final handlerOutput = _renderCustomBlock(element);
     if (handlerOutput != null) {
-      _handledBlockStack[_handledBlockStack.length - 1] = true;
       _outputBuffer.write(handlerOutput);
+      _forgetElement();
       return false;
     }
 
@@ -213,9 +227,6 @@ class MarkdownRenderer implements NodeVisitor {
       // ─── Paragraphs ────────────────────────────────────────────
       case 'p':
         _ensureNewline();
-        if (_ctx.inBlockquote) {
-          renderWriteBlockquotePrefix(_ctx);
-        }
         _ctx.inParagraph = true;
         _ctx.paragraphBuffer.clear();
         _startBodyTextStyle();
@@ -223,13 +234,21 @@ class MarkdownRenderer implements NodeVisitor {
 
       // ─── Blockquotes ───────────────────────────────────────────
       case 'blockquote':
-        _ensureNewline();
-        _ctx.inBlockquote = true;
-        _ctx.blockquoteDepth++;
-        return true;
+        _writeBlockquote(element);
+        _forgetElement();
+        return false;
 
       // ─── Code blocks ───────────────────────────────────────────
       case 'pre':
+        // Flush prose before switching to the unwrapped code stream. Code
+        // then writes directly after the list marker, preserving source order.
+        if (_ctx.listItemStack.isNotEmpty) {
+          renderFlushCurrentListItem(_ctx);
+          if (_ctx.buffer.isNotEmpty &&
+              !_ctx.buffer.toString().endsWith('\n')) {
+            _ctx.buffer.write('\n');
+          }
+        }
         startCodeBlock(_ctx, element);
         return true;
 
@@ -264,14 +283,12 @@ class MarkdownRenderer implements NodeVisitor {
       // ─── Horizontal rules ──────────────────────────────────────
       case 'hr':
         renderHorizontalRule(_ctx);
+        _forgetElement();
         return false;
 
       // ─── Details / Summary ─────────────────────────────────────
       case 'details':
         _ensureNewline();
-        if (_ctx.inBlockquote) {
-          renderWriteBlockquotePrefix(_ctx);
-        }
         final isOpen = element.attributes['open'] != null;
         _ctx.detailsStack.add(DetailsContext(expanded: isOpen));
         return true;
@@ -286,7 +303,12 @@ class MarkdownRenderer implements NodeVisitor {
 
       // ─── Tables ────────────────────────────────────────────────
       case 'table':
-        _ensureNewline();
+        if (_ctx.listItemStack.isNotEmpty) {
+          renderFlushCurrentListItem(_ctx);
+          if (!_ctx.buffer.toString().endsWith('\n')) _ctx.buffer.writeln();
+        } else {
+          _ensureNewline();
+        }
         _ctx.tableHeaders.clear();
         _ctx.tableRows.clear();
         _ctx.tableAlignments.clear();
@@ -310,6 +332,11 @@ class MarkdownRenderer implements NodeVisitor {
         _ctx.inTableCell = true;
         _ctx.currentCellBuffer.clear();
         _ctx.activeBuffer = _ctx.currentCellBuffer;
+        if (element.tag == 'th') {
+          _ctx.tableAlignments.add(
+            parseTableAlign(element.attributes['align']),
+          );
+        }
         return true;
 
       // ─── Inline elements ───────────────────────────────────────
@@ -328,6 +355,10 @@ class MarkdownRenderer implements NodeVisitor {
         return true;
 
       case 'a':
+        if (_containsHiddenImage(element)) {
+          _forgetElement();
+          return false;
+        }
         _ctx.pendingLinkUrl = element.attributes['href'];
         _startInlineStyle(_getLinkStyle());
         if (_ctx.options.hyperlinks && _ctx.pendingLinkUrl != null) {
@@ -350,18 +381,18 @@ class MarkdownRenderer implements NodeVisitor {
         } else {
           _outputBuffer.write('\n');
         }
-        if (_ctx.inBlockquote && !_ctx.inParagraph) {
-          renderWriteBlockquotePrefix(_ctx);
-        }
+        _forgetElement();
         return false;
 
       case 'img':
         renderImage(_ctx, element);
+        _forgetElement();
         return false;
 
       case 'input':
         if (_ctx.listItemStack.isNotEmpty &&
             _ctx.listItemStack.last.taskCheckboxRendered) {
+          _forgetElement();
           return false;
         }
         final checked =
@@ -372,6 +403,7 @@ class MarkdownRenderer implements NodeVisitor {
               ? _ctx.options.checkboxChecked
               : _ctx.options.checkboxUnchecked,
         );
+        _forgetElement();
         return false;
 
       default:
@@ -379,11 +411,30 @@ class MarkdownRenderer implements NodeVisitor {
     }
   }
 
+  bool _containsHiddenImage(Element link) {
+    final images = (link.children ?? const <Node>[]).whereType<Element>().where(
+      (child) => child.tag == 'img',
+    );
+    if (!images.isNotEmpty) return false;
+    final href = link.attributes['href'];
+    if (href != null &&
+        !githubImageVariantVisible(
+          href,
+          hasDarkBackground: _options.hasDarkBackground,
+        )) {
+      return true;
+    }
+    return images.any(
+      (image) => !githubImageVariantVisible(
+        image.attributes['src'] ?? '',
+        hasDarkBackground: _options.hasDarkBackground,
+      ),
+    );
+  }
+
   @override
   void visitElementAfter(Element element) {
     _ctx.elementStack.removeLast();
-    final handled = _handledBlockStack.removeLast();
-    if (handled) return;
 
     switch (element.tag) {
       case 'h1':
@@ -406,28 +457,14 @@ class MarkdownRenderer implements NodeVisitor {
           if (content.isNotEmpty) {
             if (_ctx.options.width != null) {
               var effectiveWidth = _ctx.options.width!;
-              if (_ctx.inBlockquote) {
-                effectiveWidth -= _ctx.blockquoteDepth * 2;
-              }
               if (effectiveWidth > 0) {
                 content = _wrapText(content, effectiveWidth);
               }
-            }
-            if (_ctx.inBlockquote) {
-              content = renderApplyBlockquotePrefix(_ctx, content);
             }
             _outputBuffer.write(content);
           }
         }
         _outputBuffer.write('\n');
-        _ctx.lastWasBlock = true;
-        break;
-
-      case 'blockquote':
-        _ctx.blockquoteDepth--;
-        if (_ctx.blockquoteDepth <= 0) {
-          _ctx.inBlockquote = false;
-        }
         _ctx.lastWasBlock = true;
         break;
 
@@ -528,6 +565,12 @@ class MarkdownRenderer implements NodeVisitor {
     }
   }
 
+  /// `markdown` does not call [visitElementAfter] when a visitor declines to
+  /// visit an element's children. Keep tracking aligned with actual callbacks.
+  void _forgetElement() {
+    _ctx.elementStack.removeLast();
+  }
+
   // ─── Style helpers ────────────────────────────────────────────────
 
   Style _getEmphasisStyle() =>
@@ -572,18 +615,7 @@ class MarkdownRenderer implements NodeVisitor {
     return _ansiReset;
   }
 
-  StringBuffer get _outputBuffer {
-    if (_ctx.inTableCell) return _ctx.currentCellBuffer;
-    if (_ctx.inParagraph && _ctx.options.width != null && !_ctx.inCodeBlock) {
-      return _ctx.paragraphBuffer;
-    }
-    if (_ctx.listItemStack.isNotEmpty &&
-        _ctx.options.width != null &&
-        !_ctx.inCodeBlock) {
-      return _ctx.listItemStack.last.buffer;
-    }
-    return _ctx.buffer;
-  }
+  StringBuffer get _outputBuffer => _ctx.outputBuffer;
 
   bool _isInsidePreBlock() =>
       _ctx.elementStack.any((element) => element.tag == 'pre');
@@ -616,13 +648,38 @@ class MarkdownRenderer implements NodeVisitor {
 
   // ─── Internal helpers ─────────────────────────────────────────────
 
+  void _writeBlockquote(Element element) {
+    final item = _ctx.listItemStack.isEmpty ? null : _ctx.listItemStack.last;
+    if (item != null) {
+      renderFlushCurrentListItem(_ctx);
+      if (!_ctx.buffer.toString().endsWith('\n')) _ctx.buffer.write('\n');
+    } else {
+      _ensureNewline();
+    }
+    final indent = item?.continuationIndent ?? 0;
+    final width = _options.width;
+    final content = renderBlockquote(
+      element,
+      _options.copyWith(width: remainingBlockWidth(width, indent)),
+      (nodes, options) =>
+          MarkdownRenderer(options: options)
+              .render(nodes, imageCache: _ctx.imageCache),
+    );
+    for (final line
+        in content.split('\n').take(content.split('\n').length - 1)) {
+      _ctx.buffer.writeln('${' ' * indent}$line');
+    }
+    if (item != null) item.hasFlushedContent = true;
+    _ctx.lastWasBlock = true;
+  }
+
   void _ensureNewline() {
     final buffer = _outputBuffer;
     final hasVisibleContent = _bufferHasVisibleContent(buffer);
     if (hasVisibleContent && !buffer.toString().endsWith('\n')) {
       buffer.write('\n');
     }
-    if (_ctx.lastWasBlock && !_ctx.inBlockquote) {
+    if (_ctx.lastWasBlock) {
       if (hasVisibleContent) {
         buffer.write('\n');
       }

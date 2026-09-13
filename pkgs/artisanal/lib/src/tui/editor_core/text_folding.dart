@@ -55,7 +55,7 @@ List<FoldRange> computeIndentFolds(List<String> lineTexts, {int tabWidth = 4}) {
 
 /// Collapse state over a fold list.
 final class FoldState {
-  FoldState({List<FoldRange> ranges = const []}) : _ranges = ranges;
+  FoldState({this._ranges = const []});
 
   final List<FoldRange> _ranges;
   final Set<int> _collapsed = <int>{};

@@ -6,10 +6,16 @@ import 'package:artisanal/uv.dart'
     show
         Canvas,
         Cell,
+        ClearAreaScreen,
+        OwnedCellScreen,
+        Rectangle,
+        Screen,
         StyledString,
         UvStyle,
         UvColor,
         UnderlineStyle,
+        WidthMethod,
+        runeWidth,
         mayContainTerminalGraphics;
 
 import '../core/element.dart' show elementOf;
@@ -310,64 +316,244 @@ void drawStyledContent(
     }(),
   };
   final tempCanvas = Canvas(styledWidth, styledHeight);
-  styled.draw(tempCanvas, tempCanvas.bounds());
+  try {
+    styled.draw(tempCanvas, tempCanvas.bounds());
 
-  for (var y = 0; y < styledHeight; y++) {
-    for (var x = 0; x < styledWidth; x++) {
-      final destX = startX + x;
-      final destY = startY + y;
+    for (var y = 0; y < styledHeight; y++) {
+      for (var x = 0; x < styledWidth; x++) {
+        final destX = startX + x;
+        final destY = startY + y;
 
-      if (destX < 0 || destY < 0) continue;
-      if (destX >= canvas.width() || destY >= canvas.height()) continue;
+        if (destX < 0 || destY < 0) continue;
+        if (destX >= canvas.width() || destY >= canvas.height()) continue;
 
-      final srcCell = tempCanvas.cellAt(x, y);
-      if (srcCell == null || srcCell.isZero) continue;
-      final normalizedStyle = srcCell.style;
-      final isSingleWidthSpace = srcCell.content == ' ' && srcCell.width == 1;
+        final srcCell = tempCanvas.cellAt(x, y);
+        if (srcCell == null || srcCell.isZero) continue;
+        final normalizedStyle = srcCell.style;
+        final isSingleWidthSpace = srcCell.content == ' ' && srcCell.width == 1;
 
-      // Skip layout/padding spaces that have no visible styling of their own so
-      // the destination background remains visible. This covers both plain empty
-      // cells and spaces that only carried a foreground/default-background style
-      // after ANSI round-tripping.
-      //
-      // We unconditionally skip empty cells and transparent spaces — regardless
-      // of whether the current container has a background color — so that
-      // Layout.place/pad trailing-space padding never overwrites background fill
-      // cells laid down by an inner widget. Without this, a no-bg intermediate
-      // container (e.g. Container(width: 58) with no color) would pass empty
-      // Layout.place spaces through to the parent canvas, overwriting the inner
-      // widget's bg=highlight fill cells.
-      final hasVisibleSpaceAttrs =
-          (normalizedStyle.attrs & 32) != 0; // 32 == Attr.reverse
-      final isTransparentSpace =
-          isSingleWidthSpace &&
-          normalizedStyle.fg == null &&
-          normalizedStyle.bg == null &&
-          normalizedStyle.underlineColor == null &&
-          normalizedStyle.underline == UnderlineStyle.none &&
-          !hasVisibleSpaceAttrs &&
-          srcCell.link.isZero;
-      if (srcCell.isEmpty || isTransparentSpace) {
-        continue;
+        // Skip layout/padding spaces that have no visible styling of their own so
+        // the destination background remains visible. This covers both plain empty
+        // cells and spaces that only carried a foreground/default-background style
+        // after ANSI round-tripping.
+        //
+        // We unconditionally skip empty cells and transparent spaces — regardless
+        // of whether the current container has a background color — so that
+        // Layout.place/pad trailing-space padding never overwrites background fill
+        // cells laid down by an inner widget. Without this, a no-bg intermediate
+        // container (e.g. Container(width: 58) with no color) would pass empty
+        // Layout.place spaces through to the parent canvas, overwriting the inner
+        // widget's bg=highlight fill cells.
+        final hasVisibleSpaceAttrs =
+            (normalizedStyle.attrs & 32) != 0; // 32 == Attr.reverse
+        final isTransparentSpace =
+            isSingleWidthSpace &&
+            normalizedStyle.fg == null &&
+            normalizedStyle.bg == null &&
+            normalizedStyle.underlineColor == null &&
+            normalizedStyle.underline == UnderlineStyle.none &&
+            !hasVisibleSpaceAttrs &&
+            srcCell.link.isZero;
+        if (srcCell.isEmpty || isTransparentSpace) {
+          continue;
+        }
+
+        final mergedStyle = normalizedStyle.bg == null && bgStyle.bg != null
+            ? normalizedStyle.copyWith(bg: bgStyle.bg)
+            : normalizedStyle;
+
+        canvas.setCellOwned(
+          destX,
+          destY,
+          Cell(
+            content: srcCell.content,
+            width: srcCell.width,
+            style: mergedStyle,
+            link: srcCell.link,
+          ),
+        );
       }
-
-      final mergedStyle = normalizedStyle.bg == null && bgStyle.bg != null
-          ? normalizedStyle.copyWith(bg: bgStyle.bg)
-          : normalizedStyle;
-
-      canvas.setCell(
-        destX,
-        destY,
-        Cell(
-          content: srcCell.content,
-          width: srcCell.width,
-          style: mergedStyle,
-          link: srcCell.link,
-        ),
-      );
     }
+  } finally {
+    tempCanvas.dispose();
   }
   span.end(extra: 'bounds=${styledWidth}x$styledHeight');
+}
+
+/// Draws the common full-size container case without making a second grid.
+///
+/// [StyledString.draw] normally clears its area and writes into a temporary
+/// canvas so that transparent cells can be skipped during composition.  This
+/// adapter applies that filtering while the parser writes directly to the
+/// already-filled destination canvas.
+void _drawFullSizeStyledContent(
+  Canvas canvas,
+  String content,
+  UvStyle bgStyle,
+) {
+  final screen = _ContainerContentScreen(canvas, bgStyle);
+  StyledString(content).draw(screen, canvas.bounds());
+}
+
+final class _ContainerContentScreen
+    implements Screen, OwnedCellScreen, ClearAreaScreen {
+  _ContainerContentScreen(this._target, this._bgStyle);
+
+  final Canvas _target;
+  final UvStyle _bgStyle;
+
+  @override
+  Rectangle bounds() => _target.bounds();
+
+  @override
+  Cell? cellAt(int x, int y) => _target.cellAt(x, y);
+
+  @override
+  WidthMethod widthMethod() => _target.widthMethod();
+
+  // The target was freshly filled by renderContainerContent. Clearing here
+  // would erase that background before the parser starts writing.
+  @override
+  void clearArea(Rectangle area) {}
+
+  @override
+  void setCell(int x, int y, Cell? cell) {
+    if (cell == null) return;
+    _write(x, y, cell.clone());
+  }
+
+  @override
+  void setCellOwned(int x, int y, Cell? cell) {
+    if (cell == null) return;
+    _write(x, y, cell);
+  }
+
+  void _write(int x, int y, Cell cell) {
+    final style = cell.style;
+    final isTransparentSpace =
+        cell.content == ' ' &&
+        cell.width == 1 &&
+        style.fg == null &&
+        style.bg == null &&
+        style.underlineColor == null &&
+        style.underline == UnderlineStyle.none &&
+        (style.attrs & 32) == 0 &&
+        cell.link.isZero;
+    if (cell.isEmpty || isTransparentSpace) {
+      cell.dispose();
+      return;
+    }
+
+    if (style.bg == null && _bgStyle.bg != null) {
+      cell.style = style.copyWith(bg: _bgStyle.bg);
+    }
+    _target.setCellOwned(x, y, cell);
+  }
+}
+
+bool _supportsFullSizeStyledFastPath(String content) {
+  if (mayContainTerminalGraphics(content)) return false;
+  for (var i = 0; i < content.length;) {
+    final code = content.codeUnitAt(i);
+    if (code == 0x0a || code == 0x09) {
+      i++;
+      continue;
+    }
+    if (code == 0x1b) {
+      if (i + 1 >= content.length) return false;
+      final next = content.codeUnitAt(i + 1);
+      if (next == 0x5b) {
+        final end = _findSequenceFinal(content, i + 2);
+        if (end < 0 ||
+            content.codeUnitAt(end) != 0x6d ||
+            !_isSafeSgrParams(content, i + 2, end)) {
+          return false;
+        }
+        i = end + 1;
+        continue;
+      }
+      if (next == 0x5d) {
+        final end = _findOscEnd(content, i + 2);
+        if (end < 0) return false;
+        final commandEnd = content.indexOf(';', i + 2);
+        final terminatorLength = end >= 2 && content.codeUnitAt(end - 2) == 0x1b
+            ? 2
+            : 1;
+        if (commandEnd < 0 ||
+            commandEnd >= end ||
+            content.substring(i + 2, commandEnd) != '8' ||
+            !_isSafeOsc8(content, commandEnd + 1, end - terminatorLength)) {
+          return false;
+        }
+        i = end;
+        continue;
+      }
+      return false;
+    }
+    if (code == 0x0d ||
+        code < 0x20 ||
+        code == 0x7f ||
+        (code >= 0x80 && code <= 0x9f)) {
+      return false;
+    }
+    // Combining marks and format controls are not append-only cells.  Keep
+    // these on the established temporary-canvas path.
+    var codePoint = code;
+    if (code >= 0xd800 && code <= 0xdbff) {
+      if (i + 1 >= content.length) return false;
+      final low = content.codeUnitAt(i + 1);
+      if (low < 0xdc00 || low > 0xdfff) return false;
+      codePoint = 0x10000 + ((code - 0xd800) << 10) + low - 0xdc00;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return false;
+    }
+    if (runeWidth(codePoint) == 0) return false;
+    i += codePoint > 0xffff ? 2 : 1;
+  }
+  return true;
+}
+
+bool _isSafeSgrParams(String text, int start, int end) {
+  for (var i = start; i < end; i++) {
+    final code = text.codeUnitAt(i);
+    if (!((code >= 0x30 && code <= 0x39) ||
+        code == 0x3b ||
+        code == 0x3a ||
+        code == 0x3f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _isSafeOsc8(String text, int start, int end) {
+  for (var i = start; i < end; i++) {
+    final code = text.codeUnitAt(i);
+    if (code < 0x20 || code == 0x7f || (code >= 0x80 && code <= 0x9f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int _findSequenceFinal(String text, int start) {
+  for (var i = start; i < text.length; i++) {
+    final code = text.codeUnitAt(i);
+    if (code >= 0x40 && code <= 0x7e) return i;
+  }
+  return -1;
+}
+
+int _findOscEnd(String text, int start) {
+  for (var i = start; i < text.length; i++) {
+    if (text.codeUnitAt(i) == 0x07) return i + 1;
+    if (text.codeUnitAt(i) == 0x1b &&
+        i + 1 < text.length &&
+        text.codeUnitAt(i + 1) == 0x5c) {
+      return i + 2;
+    }
+  }
+  return -1;
 }
 
 String renderContainerContent({
@@ -509,169 +695,194 @@ String renderContainerContent({
   }
 
   final canvas = Canvas(targetWidth, targetHeight);
-
-  // Fill inner area (inside margin, including border) with background cells.
-  if (!bgStyle.isZero) {
-    final bgCell = Cell(content: ' ', width: 1, style: bgStyle);
-    for (var y = marginTop; y < marginTop + innerHeight; y++) {
-      for (var x = marginLeft; x < marginLeft + innerWidth; x++) {
-        canvas.setCell(x, y, bgCell.clone());
+  try {
+    // Fill inner area (inside margin, including border) with background cells.
+    if (!bgStyle.isZero) {
+      final bgCell = Cell(content: ' ', width: 1, style: bgStyle);
+      try {
+        for (var y = marginTop; y < marginTop + innerHeight; y++) {
+          for (var x = marginLeft; x < marginLeft + innerWidth; x++) {
+            // This is a reusable template, not a transferred cell. The
+            // borrowed setter copies into the destination's existing cell.
+            canvas.setCell(x, y, bgCell);
+          }
+        }
+      } finally {
+        bgCell.dispose();
       }
     }
-  }
 
-  // Apply gradient to background cells (inside border, row-by-row).
-  if (hasGradient) {
-    final gradientAreaTop = marginTop + borderTop;
-    final gradientAreaHeight = math.max(0, innerHeight - borderV);
-    if (gradientAreaHeight > 0) {
-      final gradientColors = blend1D(
-        gradientAreaHeight,
-        gradient.colors,
-        hasDarkBackground: hasDarkBackground,
-      );
-      for (var row = 0; row < gradientAreaHeight; row++) {
-        final rowColor = colorToUvColor(gradientColors[row]);
-        final rowStyle = UvStyle(bg: rowColor, fg: fgColor);
-        final rowCell = Cell(content: ' ', width: 1, style: rowStyle);
-        final y = gradientAreaTop + row;
-        for (
-          var x = marginLeft + borderLeft;
-          x < marginLeft + innerWidth - borderRight;
-          x++
-        ) {
-          canvas.setCell(x, y, rowCell.clone());
+    // Apply gradient to background cells (inside border, row-by-row).
+    if (hasGradient) {
+      final gradientAreaTop = marginTop + borderTop;
+      final gradientAreaHeight = math.max(0, innerHeight - borderV);
+      if (gradientAreaHeight > 0) {
+        final gradientColors = blend1D(
+          gradientAreaHeight,
+          gradient.colors,
+          hasDarkBackground: hasDarkBackground,
+        );
+        for (var row = 0; row < gradientAreaHeight; row++) {
+          final rowColor = colorToUvColor(gradientColors[row]);
+          final rowStyle = UvStyle(bg: rowColor, fg: fgColor);
+          final rowCell = Cell(content: ' ', width: 1, style: rowStyle);
+          try {
+            final y = gradientAreaTop + row;
+            for (
+              var x = marginLeft + borderLeft;
+              x < marginLeft + innerWidth - borderRight;
+              x++
+            ) {
+              canvas.setCell(x, y, rowCell);
+            }
+          } finally {
+            rowCell.dispose();
+          }
         }
       }
     }
-  }
 
-  // Draw content.
-  if (contentStr.isNotEmpty) {
-    // Use the gradient-aware bg style for the content area: if gradient is
-    // active, the row-specific bg is already on the canvas cells and
-    // _drawStyledContent merges bg from bgStyle only when the source cell
-    // has no bg. We pass the base bgStyle here; for gradient containers the
-    // canvas already has per-row bg so the merge is harmless.
-    drawStyledContent(
-      canvas,
-      contentStr,
-      offsetX,
-      offsetY,
-      bgStyle,
-      contentWidth: contentWidth,
-      contentHeight: contentHeight,
-    );
-  }
-
-  // Draw border characters onto the canvas.
-  if (hasBorder) {
-    final bx = marginLeft; // border area origin x
-    final by = marginTop; // border area origin y
-    final bw = innerWidth; // border area width
-    final bh = innerHeight; // border area height
-
-    // Resolve corner characters (apply borderRadius).
-    var cornerTL = border.topLeft;
-    var cornerTR = border.topRight;
-    var cornerBL = border.bottomLeft;
-    var cornerBR = border.bottomRight;
-    if (borderRadius != null) {
-      if (borderRadius.topLeft > 0) cornerTL = '╭';
-      if (borderRadius.topRight > 0) cornerTR = '╮';
-      if (borderRadius.bottomLeft > 0) cornerBL = '╰';
-      if (borderRadius.bottomRight > 0) cornerBR = '╯';
-    }
-
-    final borderStyle = UvStyle(bg: bgColor, fg: fgColor);
-
-    // Top-left corner.
-    if (cornerTL.isNotEmpty) {
-      canvas.setCell(
-        bx,
-        by,
-        Cell(content: cornerTL, width: 1, style: borderStyle),
-      );
-    }
-    // Top-right corner.
-    if (cornerTR.isNotEmpty) {
-      canvas.setCell(
-        bx + bw - 1,
-        by,
-        Cell(content: cornerTR, width: 1, style: borderStyle),
-      );
-    }
-    // Bottom-left corner.
-    if (cornerBL.isNotEmpty) {
-      canvas.setCell(
-        bx,
-        by + bh - 1,
-        Cell(content: cornerBL, width: 1, style: borderStyle),
-      );
-    }
-    // Bottom-right corner.
-    if (cornerBR.isNotEmpty) {
-      canvas.setCell(
-        bx + bw - 1,
-        by + bh - 1,
-        Cell(content: cornerBR, width: 1, style: borderStyle),
-      );
-    }
-
-    // Top edge.
-    if (border.top.isNotEmpty) {
-      for (var x = bx + borderLeft; x < bx + bw - borderRight; x++) {
-        canvas.setCell(
-          x,
-          by,
-          Cell(content: border.top, width: 1, style: borderStyle),
+    // Draw content.
+    if (contentStr.isNotEmpty) {
+      final canDrawDirectly =
+          !hasBorder &&
+          !hasGradient &&
+          offsetX == 0 &&
+          offsetY == 0 &&
+          contentWidth == targetWidth &&
+          contentHeight == targetHeight &&
+          _supportsFullSizeStyledFastPath(contentStr);
+      if (canDrawDirectly) {
+        _drawFullSizeStyledContent(canvas, contentStr, bgStyle);
+      } else {
+        // Use the gradient-aware bg style for the content area: if gradient is
+        // active, the row-specific bg is already on the canvas cells and
+        // _drawStyledContent merges bg from bgStyle only when the source cell
+        // has no bg. We pass the base bgStyle here; for gradient containers
+        // the canvas already has per-row bg so the merge is harmless.
+        drawStyledContent(
+          canvas,
+          contentStr,
+          offsetX,
+          offsetY,
+          bgStyle,
+          contentWidth: contentWidth,
+          contentHeight: contentHeight,
         );
       }
     }
 
-    // Bottom edge.
-    if (border.bottom.isNotEmpty) {
-      for (var x = bx + borderLeft; x < bx + bw - borderRight; x++) {
-        canvas.setCell(
-          x,
-          by + bh - 1,
-          Cell(content: border.bottom, width: 1, style: borderStyle),
-        );
-      }
-    }
+    // Draw border characters onto the canvas.
+    if (hasBorder) {
+      final bx = marginLeft; // border area origin x
+      final by = marginTop; // border area origin y
+      final bw = innerWidth; // border area width
+      final bh = innerHeight; // border area height
 
-    // Left edge.
-    if (border.left.isNotEmpty) {
-      for (var y = by + borderTop; y < by + bh - borderBottom; y++) {
-        canvas.setCell(
+      // Resolve corner characters (apply borderRadius).
+      var cornerTL = border.topLeft;
+      var cornerTR = border.topRight;
+      var cornerBL = border.bottomLeft;
+      var cornerBR = border.bottomRight;
+      if (borderRadius != null) {
+        if (borderRadius.topLeft > 0) cornerTL = '╭';
+        if (borderRadius.topRight > 0) cornerTR = '╮';
+        if (borderRadius.bottomLeft > 0) cornerBL = '╰';
+        if (borderRadius.bottomRight > 0) cornerBR = '╯';
+      }
+
+      final borderStyle = UvStyle(bg: bgColor, fg: fgColor);
+
+      // Top-left corner.
+      if (cornerTL.isNotEmpty) {
+        canvas.setCellOwned(
           bx,
-          y,
-          Cell(content: border.left, width: 1, style: borderStyle),
+          by,
+          Cell(content: cornerTL, width: 1, style: borderStyle),
         );
       }
-    }
-
-    // Right edge.
-    if (border.right.isNotEmpty) {
-      for (var y = by + borderTop; y < by + bh - borderBottom; y++) {
-        canvas.setCell(
+      // Top-right corner.
+      if (cornerTR.isNotEmpty) {
+        canvas.setCellOwned(
           bx + bw - 1,
-          y,
-          Cell(content: border.right, width: 1, style: borderStyle),
+          by,
+          Cell(content: cornerTR, width: 1, style: borderStyle),
         );
       }
-    }
-  }
+      // Bottom-left corner.
+      if (cornerBL.isNotEmpty) {
+        canvas.setCellOwned(
+          bx,
+          by + bh - 1,
+          Cell(content: cornerBL, width: 1, style: borderStyle),
+        );
+      }
+      // Bottom-right corner.
+      if (cornerBR.isNotEmpty) {
+        canvas.setCellOwned(
+          bx + bw - 1,
+          by + bh - 1,
+          Cell(content: cornerBR, width: 1, style: borderStyle),
+        );
+      }
 
-  var result = canvas.render();
-  if (resolvedWidth != null ||
-      resolvedHeight != null ||
-      marginLeft > 0 ||
-      marginRight > 0 ||
-      marginTop > 0 ||
-      marginBottom > 0) {
-    result = padToWidth(result, targetWidth, targetHeight);
+      // Top edge.
+      if (border.top.isNotEmpty) {
+        for (var x = bx + borderLeft; x < bx + bw - borderRight; x++) {
+          canvas.setCellOwned(
+            x,
+            by,
+            Cell(content: border.top, width: 1, style: borderStyle),
+          );
+        }
+      }
+
+      // Bottom edge.
+      if (border.bottom.isNotEmpty) {
+        for (var x = bx + borderLeft; x < bx + bw - borderRight; x++) {
+          canvas.setCellOwned(
+            x,
+            by + bh - 1,
+            Cell(content: border.bottom, width: 1, style: borderStyle),
+          );
+        }
+      }
+
+      // Left edge.
+      if (border.left.isNotEmpty) {
+        for (var y = by + borderTop; y < by + bh - borderBottom; y++) {
+          canvas.setCellOwned(
+            bx,
+            y,
+            Cell(content: border.left, width: 1, style: borderStyle),
+          );
+        }
+      }
+
+      // Right edge.
+      if (border.right.isNotEmpty) {
+        for (var y = by + borderTop; y < by + bh - borderBottom; y++) {
+          canvas.setCellOwned(
+            bx + bw - 1,
+            y,
+            Cell(content: border.right, width: 1, style: borderStyle),
+          );
+        }
+      }
+    }
+
+    var result = canvas.render();
+    if (resolvedWidth != null ||
+        resolvedHeight != null ||
+        marginLeft > 0 ||
+        marginRight > 0 ||
+        marginTop > 0 ||
+        marginBottom > 0) {
+      result = padToWidth(result, targetWidth, targetHeight);
+    }
+    span.end(extra: 'size=${targetWidth}x$targetHeight');
+    return result;
+  } finally {
+    canvas.dispose();
   }
-  span.end(extra: 'size=${targetWidth}x$targetHeight');
-  return result;
 }

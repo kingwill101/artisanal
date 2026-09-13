@@ -116,7 +116,7 @@ Future<void> main() => runProgram(
 
 In a real full-screen app, reserve rows for headers and footers before calling
 `setHeight`. See the
-[`advanced-editor`](../../pkgs/artisanal/example/tui/examples/advanced-editor/main.dart)
+[`advanced-editor`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal/example/tui/examples/advanced-editor/main.dart)
 example for a complete alternate-screen host.
 
 ## Architectural rule
@@ -178,11 +178,11 @@ same kernel unchanged.
 
 ## Examples
 
-- [`advanced-editor`](../../pkgs/artisanal/example/tui/examples/advanced-editor/main.dart):
+- [`advanced-editor`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal/example/tui/examples/advanced-editor/main.dart):
   full-screen editing, command palette, search/replace, syntax, diagnostics,
   completion, code actions, snippets, folds, persistence, and recovery.
-- [`prompt-composer`](../../pkgs/artisanal/example/tui/examples/prompt-composer/main.dart):
+- [`prompt-composer`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal/example/tui/examples/prompt-composer/main.dart):
   tracked paste blocks, prompt normalization, external-editor round trips, and
   IDE selection context.
-- [`media-composer`](../../pkgs/artisanal/example/tui/examples/media-composer/main.dart):
+- [`media-composer`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal/example/tui/examples/media-composer/main.dart):
   typed inline elements, attachments, preview overlays, and image viewers.

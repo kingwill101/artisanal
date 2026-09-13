@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:artisanal/runtime.dart' show Cmd;
+
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
 
@@ -43,8 +45,10 @@ final class AsyncSnapshot<T> {
   }
 }
 
-typedef AsyncWidgetBuilder<T> =
-    Widget Function(BuildContext context, AsyncSnapshot<T> snapshot);
+typedef AsyncWidgetBuilder<T> = Widget Function(
+  BuildContext context,
+  AsyncSnapshot<T> snapshot,
+);
 
 class FutureBuilder<T> extends StatefulWidget {
   FutureBuilder({

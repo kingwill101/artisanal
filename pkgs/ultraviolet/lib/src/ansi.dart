@@ -1,6 +1,7 @@
 library;
 
 import 'package:characters/characters.dart';
+
 import 'unicode/width.dart';
 
 /// Unified ANSI escape sequence constants and utilities.

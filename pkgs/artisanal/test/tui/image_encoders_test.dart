@@ -255,9 +255,8 @@ void main() {
 
         // Extract the base64 payload from the single-chunk sequence.
         // Format: \x1b_G...;BASE64_DATA\x1b\\
-        final payloadMatch = RegExp(
-          r';([A-Za-z0-9+/=]+)\x1b\\',
-        ).firstMatch(result);
+        final payloadMatch = RegExp(r';([A-Za-z0-9+/=]+)\x1b\\')
+            .firstMatch(result);
         expect(
           payloadMatch,
           isNotNull,

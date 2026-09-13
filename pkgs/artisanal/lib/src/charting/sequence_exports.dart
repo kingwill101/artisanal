@@ -17,6 +17,7 @@ export 'sequence_diagram.dart'
         SequenceMessageStyle,
         SequenceArrowHead,
         SequenceNote,
+        SequenceNotePosition,
         SequenceActivation,
         SequenceFragment,
         SequenceFragmentKind,

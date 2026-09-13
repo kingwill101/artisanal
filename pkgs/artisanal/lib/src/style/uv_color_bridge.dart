@@ -6,6 +6,7 @@
 library;
 
 import 'package:ultraviolet/colorprofile.dart' as cp;
+
 import 'color.dart';
 
 /// Extension that adds [toRgb] to every [Color] subtype.

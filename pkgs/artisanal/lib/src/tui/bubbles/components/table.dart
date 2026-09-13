@@ -43,7 +43,9 @@ import '../../../style/border.dart' as style_border;
 import '../../../style/blending.dart' as blending;
 import '../../../style/color.dart';
 import '../../../style/style.dart';
+
 import 'package:ultraviolet/colorprofile.dart' as cp;
+
 import 'base.dart';
 
 import 'dart:math' as math;
@@ -675,8 +677,7 @@ class HorizontalTableComponent extends DisplayComponent {
 /// ```
 class Table extends DisplayComponent {
   /// Creates a new empty table builder.
-  Table({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  Table({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

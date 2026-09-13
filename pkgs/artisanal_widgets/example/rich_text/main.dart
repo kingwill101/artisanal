@@ -176,8 +176,7 @@ class _RichTextDemoState extends w.State<RichTextDemo> {
                     overflow: _overflows[_overflowIndex],
                     maxWidth: 30,
                     text: w.TextSpan(
-                      text:
-                          'This is a very long line of text that should overflow',
+                      text: 'This is a very long line of text that should overflow',
                       style: Style()..foreground(theme.onSurface),
                     ),
                   ),

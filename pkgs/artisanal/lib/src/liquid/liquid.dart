@@ -16,6 +16,7 @@ import '../charting/charting.dart' as chart;
 import '../tui/bubbles/components/base.dart' show RenderConfig;
 import '../tui/bubbles/components/table.dart' as table_component;
 import '../tui/bubbles/components/panel.dart';
+
 import 'package:ultraviolet/core.dart' show Buffer, ScreenBuffer;
 import 'package:ultraviolet/core.dart' show StyledString;
 
@@ -254,9 +255,10 @@ final class _PanelTag extends liq_parser.AbstractTag
     }
 
     final renderWidth = width ?? 80;
-    final panel = Panel(
-      renderConfig: RenderConfig(terminalWidth: renderWidth),
-    ).title(title).border(border).lines(lines);
+    final panel = Panel(renderConfig: RenderConfig(terminalWidth: renderWidth))
+        .title(title)
+        .border(border)
+        .lines(lines);
     final titleStyle = _styleFromHex(_stringArg(args, 'titleColor'));
     if (titleStyle != null) panel.titleStyle(titleStyle);
     final borderStyle = _styleFromHex(_stringArg(args, 'borderColor'));

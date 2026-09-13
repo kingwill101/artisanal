@@ -187,55 +187,52 @@ void main() {
     expect(tester.view, contains('ui.sidebar.toggle 1'));
   });
 
-  test(
-    'ReplayEventHistoryPanel type chips become grouped-row-aware in grouped mode',
-    () async {
-      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
-      addTearDown(() => tester.dispose());
+  test('ReplayEventHistoryPanel type chips become grouped-row-aware in grouped mode', () async {
+    final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+    addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
-        ThemeScope(
-          theme: Theme.dark(),
-          child: ReplayEventHistoryPanel(
-            mode: ReplayEventHistoryMode.grouped,
-            showTypeChips: true,
-            events: const [
-              ReplayEventPresentation(
-                summary: 'render capture g2 100x32 cells 4 spans 2',
-                statusHint: '/replay g2 100x32 c4 s2',
-                fields: <String, Object?>{'type': 'runtime.render_capture'},
-              ),
-              ReplayEventPresentation(
-                summary: 'render capture g2 100x32 cells 4 spans 2',
-                statusHint: '/replay g2 100x32 c4 s2',
-                fields: <String, Object?>{'type': 'runtime.render_capture'},
-              ),
-              ReplayEventPresentation(
-                summary: 'render capture g3 120x40 cells 2 spans 1',
-                statusHint: '/replay g3 120x40 c2 s1',
-                fields: <String, Object?>{'type': 'runtime.render_capture'},
-              ),
-              ReplayEventPresentation(
-                summary: 'replay event -> ui.sidebar.toggle',
-                statusHint: '/replay ui.sidebar.toggle',
-                fields: <String, Object?>{'type': 'ui.sidebar.toggle'},
-              ),
-              ReplayEventPresentation(
-                summary: 'replay event -> ui.sidebar.toggle',
-                statusHint: '/replay ui.sidebar.toggle',
-                fields: <String, Object?>{'type': 'ui.sidebar.toggle'},
-              ),
-            ],
-          ),
+    await tester.pumpWidget(
+      ThemeScope(
+        theme: Theme.dark(),
+        child: ReplayEventHistoryPanel(
+          mode: ReplayEventHistoryMode.grouped,
+          showTypeChips: true,
+          events: const [
+            ReplayEventPresentation(
+              summary: 'render capture g2 100x32 cells 4 spans 2',
+              statusHint: '/replay g2 100x32 c4 s2',
+              fields: <String, Object?>{'type': 'runtime.render_capture'},
+            ),
+            ReplayEventPresentation(
+              summary: 'render capture g2 100x32 cells 4 spans 2',
+              statusHint: '/replay g2 100x32 c4 s2',
+              fields: <String, Object?>{'type': 'runtime.render_capture'},
+            ),
+            ReplayEventPresentation(
+              summary: 'render capture g3 120x40 cells 2 spans 1',
+              statusHint: '/replay g3 120x40 c2 s1',
+              fields: <String, Object?>{'type': 'runtime.render_capture'},
+            ),
+            ReplayEventPresentation(
+              summary: 'replay event -> ui.sidebar.toggle',
+              statusHint: '/replay ui.sidebar.toggle',
+              fields: <String, Object?>{'type': 'ui.sidebar.toggle'},
+            ),
+            ReplayEventPresentation(
+              summary: 'replay event -> ui.sidebar.toggle',
+              statusHint: '/replay ui.sidebar.toggle',
+              fields: <String, Object?>{'type': 'ui.sidebar.toggle'},
+            ),
+          ],
         ),
-      );
+      ),
+    );
 
-      expect(tester.view, contains('render 2'));
-      expect(tester.view, contains('ui.sidebar.toggle 1'));
-      expect(tester.view, isNot(contains('render 3')));
-      expect(tester.view, isNot(contains('ui.sidebar.toggle 2')));
-    },
-  );
+    expect(tester.view, contains('render 2'));
+    expect(tester.view, contains('ui.sidebar.toggle 1'));
+    expect(tester.view, isNot(contains('render 3')));
+    expect(tester.view, isNot(contains('ui.sidebar.toggle 2')));
+  });
 
   test('ReplayEventHistoryPanel can expose interactive filter chips', () async {
     final tester = WidgetTester(screenWidth: 90, screenHeight: 20);

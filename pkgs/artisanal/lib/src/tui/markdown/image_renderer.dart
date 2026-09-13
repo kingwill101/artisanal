@@ -2,8 +2,10 @@ import 'package:image/image.dart' as img;
 
 import '../../style/color.dart';
 import '../../style/style.dart';
+
 import 'package:ultraviolet/rendering.dart'
     show ITerm2Image, KittyImage, SixelImage;
+
 import 'image_renderer_platform_stub.dart'
     if (dart.library.io) 'image_renderer_platform_io.dart'
     as platform;
@@ -37,7 +39,9 @@ enum ImageProtocol {
 ImageProtocol detectImageProtocol() {
   final termProgram = platform.environmentValue('TERM_PROGRAM').toLowerCase();
   final term = platform.environmentValue('TERM').toLowerCase();
-  final termEmulator = platform.environmentValue('TERMINAL_EMULATOR').toLowerCase();
+  final termEmulator = platform
+      .environmentValue('TERMINAL_EMULATOR')
+      .toLowerCase();
   final kittyWindowId = platform.environmentValue('KITTY_WINDOW_ID');
 
   if (kittyWindowId.isNotEmpty || termProgram == 'kitty') {

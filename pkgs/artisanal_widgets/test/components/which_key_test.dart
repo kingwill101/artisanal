@@ -59,7 +59,11 @@ void main() {
           child: WhichKeyPanel(
             prefixLabel: 'ctrl+x',
             entries: const [
-              WhichKeyEntry(keyLabel: 'b', description: 'sidebar', group: 'nav'),
+              WhichKeyEntry(
+                keyLabel: 'b',
+                description: 'sidebar',
+                group: 'nav',
+              ),
               WhichKeyEntry(keyLabel: 'm', description: 'models', group: 'nav'),
             ],
           ),

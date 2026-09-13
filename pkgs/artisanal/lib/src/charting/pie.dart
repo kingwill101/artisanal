@@ -4,7 +4,9 @@ library;
 import 'dart:math' as math;
 
 import 'package:ultraviolet/core.dart';
+
 import 'core.dart';
+
 import 'package:artisanal/style.dart';
 
 /// Returns the slice index for a point at distance [dist] from the center

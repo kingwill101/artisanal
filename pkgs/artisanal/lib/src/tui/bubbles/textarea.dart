@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/src/tui/view.dart';
 import 'package:ultraviolet/terminal.dart';
+
 import '../component.dart';
 import '../msg.dart';
 import '../cmd.dart';
@@ -15,6 +16,7 @@ import '../key.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
 import 'cursor.dart';
+
 import 'package:ultraviolet/unicode.dart' as uni;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1882,9 +1884,8 @@ class TextAreaModel extends ViewComponent {
       }
 
       final best = _diagnostics[bestIndex];
-      final severityComparison = _diagnosticSeverityRank(
-        diagnostic.severity,
-      ).compareTo(_diagnosticSeverityRank(best.severity));
+      final severityComparison = _diagnosticSeverityRank(diagnostic.severity)
+          .compareTo(_diagnosticSeverityRank(best.severity));
       if (severityComparison > 0 ||
           (severityComparison == 0 &&
               (diagnostic.startOffset < best.startOffset ||

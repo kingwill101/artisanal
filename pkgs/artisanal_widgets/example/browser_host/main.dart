@@ -18,24 +18,22 @@ Future<void> main(List<String> args) async {
         mode: config.watchMode,
       );
     }
-    final host =
-        await app.serveWidgetApp(
-              transport: app.Transport.browser,
-              port: config.port,
-              browserTitle: 'Artisanal Widgets Browser Host',
-              appBuilder: () => app.ArtisanalApp(
-                title: 'Browser Host Demo',
-                child: app.ReloadHost(
-                  controller: controller,
-                  builder: (context, revision) => _BrowserHostScreen(
-                    revision: revision,
-                    watchRoots: config.watchRoots,
-                    watchMode: config.watchMode,
-                  ),
-                ),
-              ),
-            )
-            as BrowserTerminalHostServer;
+    final host = await app.serveWidgetApp(
+      transport: app.Transport.browser,
+      port: config.port,
+      browserTitle: 'Artisanal Widgets Browser Host',
+      appBuilder: () => app.ArtisanalApp(
+        title: 'Browser Host Demo',
+        child: app.ReloadHost(
+          controller: controller,
+          builder: (context, revision) => _BrowserHostScreen(
+            revision: revision,
+            watchRoots: config.watchRoots,
+            watchMode: config.watchMode,
+          ),
+        ),
+      ),
+    ) as BrowserTerminalHostServer;
 
     stdout.writeln('Browser host listening on ${host.pageUri}');
     stdout.writeln('WebSocket endpoint: ${host.webSocketUri}');

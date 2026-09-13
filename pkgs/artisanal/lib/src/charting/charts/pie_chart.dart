@@ -10,11 +10,7 @@ import '../types.dart';
 import '../util.dart';
 
 /// Renders a pie chart onto [screen] within [area].
-void renderPieChart(
-  Screen screen,
-  Rectangle area,
-  PieChartProps props,
-) {
+void renderPieChart(Screen screen, Rectangle area, PieChartProps props) {
   final width = area.width;
   final height = area.height;
   if (width <= 0 || height <= 0 || props.slices.isEmpty) return;
@@ -49,14 +45,13 @@ void renderPieChart(
 
   final centerX = margins.left + pieW ~/ 2;
   final centerY = margins.top + titleOffset + pieH ~/ 2;
-  final radius =
-      math.min((pieW - 2) / 2, (pieH - 2) / 2).clamp(1.0, 1000.0).toDouble();
+  final radius = math
+      .min((pieW - 2) / 2, (pieH - 2) / 2)
+      .clamp(1.0, 1000.0)
+      .toDouble();
   final innerR = donut ? radius * 0.45 : 0.0;
 
-  final total = props.slices.fold<double>(
-    0.0,
-    (acc, s) => acc + s.value,
-  );
+  final total = props.slices.fold<double>(0.0, (acc, s) => acc + s.value);
   if (total <= 0) return;
 
   var startAngle = -math.pi / 2;
@@ -84,13 +79,7 @@ void renderPieChart(
               ? Block.shadeLight
               : (dist > radius * 1.7 ? Block.shadeMedium : Block.full);
           if (char == Block.full) {
-            putSolidChartCell(
-              screen,
-              px,
-              py,
-              sliceColor,
-              Block.full,
-            );
+            putSolidChartCell(screen, px, py, sliceColor, Block.full);
           } else {
             putCell(screen, px, py, char, mergeStyle(shade, bg));
           }

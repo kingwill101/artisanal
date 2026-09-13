@@ -4,6 +4,7 @@ import 'dart:io' as dartio;
 import 'package:args/command_runner.dart' as args_pkg;
 export 'package:args/command_runner.dart' show UsageException;
 export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
+
 export 'shell_completion.dart' show ShellCompleter;
 
 import 'package:completion/completion.dart' as completion;
@@ -130,7 +131,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     Write? err,
     WriteRaw? outRaw,
     WriteRaw? errRaw,
-    ReadLine? readLine,
+    this._readLine,
     ExitCodeSetter? setExitCode,
     super.usageLineLength,
     HelpColorScheme? helpColorScheme,
@@ -139,7 +140,6 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
        _err = err ?? ((line) => dartio.stderr.writeln(line)),
        _outRaw = outRaw ?? ((text) => dartio.stdout.write(text)),
        _errRaw = errRaw ?? ((text) => dartio.stderr.write(text)),
-       _readLine = readLine,
        _setExitCode = setExitCode ?? ((code) => dartio.exitCode = code),
        _ansiOverride = ansi,
        _renderer =
@@ -361,8 +361,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       'verbose',
       abbr: 'v',
       negatable: false,
-      help:
-          'Increase verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug.',
+      help: 'Increase verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug.',
     );
     argParser.addFlag(
       'completion-script',
@@ -448,9 +447,8 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   bool _handleMissingCommandAsNamespace(args_pkg.UsageException e) {
     final message = e.message.trim();
     // Match "Could not find a command named "X"."
-    final match = RegExp(
-      r'^Could not find a command named "(.+)"',
-    ).firstMatch(message);
+    final match = RegExp(r'^Could not find a command named "(.+)"')
+        .firstMatch(message);
     if (match == null) return false;
 
     final name = match.group(1)!;

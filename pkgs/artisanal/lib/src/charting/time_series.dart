@@ -22,9 +22,10 @@ final class _TimestampedValue {
 
 /// Sliding-window buffer of timestamped numeric samples.
 final class TimeSeriesBuffer {
-  TimeSeriesBuffer([TimeSeriesBufferOptions opts = const TimeSeriesBufferOptions()])
-    : _windowMs = opts.windowMs ?? 60000,
-      _maxPoints = opts.maxPoints ?? -1;
+  TimeSeriesBuffer([
+    TimeSeriesBufferOptions opts = const TimeSeriesBufferOptions(),
+  ]) : _windowMs = opts.windowMs ?? 60000,
+       _maxPoints = opts.maxPoints ?? -1;
 
   final List<_TimestampedValue> _entries = [];
   int _windowMs;
@@ -45,7 +46,12 @@ final class TimeSeriesBuffer {
   int get length => _entries.length;
 
   void push(double value, [int? timestamp]) {
-    _entries.add(_TimestampedValue(timestamp ?? DateTime.now().millisecondsSinceEpoch, value));
+    _entries.add(
+      _TimestampedValue(
+        timestamp ?? DateTime.now().millisecondsSinceEpoch,
+        value,
+      ),
+    );
     _trim();
   }
 
@@ -64,9 +70,7 @@ final class TimeSeriesBuffer {
 
   List<({int time, double value})> getEntries() {
     _trim();
-    return _entries
-        .map((e) => (time: e.t, value: e.v))
-        .toList(growable: false);
+    return _entries.map((e) => (time: e.t, value: e.v)).toList(growable: false);
   }
 
   double? last() => _entries.isEmpty ? null : _entries.last.v;
@@ -108,9 +112,10 @@ final class TimeSeriesBuffer {
 
 /// Manages multiple named [TimeSeriesBuffer]s with a shared window.
 final class MultiSeriesBuffer {
-  MultiSeriesBuffer([TimeSeriesBufferOptions opts = const TimeSeriesBufferOptions()])
-    : _windowMs = opts.windowMs ?? 60000,
-      _maxPoints = opts.maxPoints ?? -1;
+  MultiSeriesBuffer([
+    TimeSeriesBufferOptions opts = const TimeSeriesBufferOptions(),
+  ]) : _windowMs = opts.windowMs ?? 60000,
+       _maxPoints = opts.maxPoints ?? -1;
 
   final Map<String, TimeSeriesBuffer> _buffers = {};
   int _windowMs;
@@ -120,7 +125,10 @@ final class MultiSeriesBuffer {
     return _buffers.putIfAbsent(
       name,
       () => TimeSeriesBuffer(
-        TimeSeriesBufferOptions(windowMs: _windowMs, maxPoints: _maxPoints < 0 ? null : _maxPoints),
+        TimeSeriesBufferOptions(
+          windowMs: _windowMs,
+          maxPoints: _maxPoints < 0 ? null : _maxPoints,
+        ),
       ),
     );
   }

@@ -38,9 +38,8 @@ void main() {
     () async {
       final sandbox = await Directory.systemTemp.createTemp('editor-screen-');
       addTearDown(() async => sandbox.delete(recursive: true));
-      await File(
-        p.join(sandbox.path, 'main.dart'),
-      ).writeAsString('// TODO: implement\nvoid main() {}\n');
+      await File(p.join(sandbox.path, 'main.dart'))
+          .writeAsString('// TODO: implement\nvoid main() {}\n');
       const repository = EditorFileRepository();
       final files = await repository.discover(sandbox.path);
       final workspace = EditorWorkspace(
@@ -521,9 +520,8 @@ void main() {
   test('K shows language hover and Escape dismisses it', () async {
     final sandbox = await Directory.systemTemp.createTemp('editor-hover-');
     addTearDown(() async => sandbox.delete(recursive: true));
-    await File(
-      p.join(sandbox.path, 'main.dart'),
-    ).writeAsString('void main() {}');
+    await File(p.join(sandbox.path, 'main.dart'))
+        .writeAsString('void main() {}');
     const repository = EditorFileRepository();
     final files = await repository.discover(sandbox.path);
     final workspace = EditorWorkspace(

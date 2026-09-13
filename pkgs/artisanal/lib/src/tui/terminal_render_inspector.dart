@@ -1,5 +1,6 @@
 import 'view.dart';
 import '../terminal/ansi.dart';
+
 import 'package:ultraviolet/rendering.dart' show UvAnsi;
 import 'package:ultraviolet/core.dart' show Link, UvStyle;
 import 'package:ultraviolet/rendering.dart' as uv_style;

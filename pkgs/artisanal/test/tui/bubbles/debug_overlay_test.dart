@@ -2,6 +2,8 @@ import 'package:artisanal/src/tui/bubbles/debug_overlay.dart';
 import 'package:artisanal/src/tui/devtools.dart' show DevToolsMessageEntry;
 import 'package:artisanal/src/tui/model.dart' show OutputLogEntry;
 import 'package:artisanal/src/tui/msg.dart' show OutputSource;
+import 'package:artisanal/style.dart' show Style;
+import 'package:ultraviolet/core.dart' as uv;
 
 import 'package:test/test.dart';
 
@@ -390,6 +392,46 @@ void main() {
         expect(overlay.compose(base), base);
       });
 
+      test('composes OSC 8 links and wide cells at the clip edge', () {
+        final m = overlay.copyWith(
+          enabled: true,
+          terminalWidth: 24,
+          terminalHeight: 4,
+          panelWidth: 12,
+          panelX: 8,
+          panelY: 0,
+        );
+        // Exercise both OSC 8 terminators. The link is deliberately styled
+        // and contains a wide grapheme so every boundary is cell-based.
+        const stLink =
+            '\x1b]8;;https://example.test\x1b\\\x1b[31mAAAAAAA界BCdefghijklmnop'
+            '\x1b[0m\x1b]8;;\x1b\\';
+        const belLink =
+            '\x1b]8;;https://example.test\x07\x1b[32mabcdefghijklmnopqrstuvwx'
+            '\x1b[0m\x1b]8;;\x07';
+        final composed = m.compose('$stLink\n$belLink');
+
+        // Every OSC introducer must remain an escape sequence after the
+        // overlay's prefix/suffix cuts; none of its payload may become text.
+        final withoutLinks = composed.replaceAll(
+          RegExp(r'\x1b\]8;;[^\x07\x1b]*(?:\x07|\x1b\\)'),
+          '',
+        );
+        expect(withoutLinks, isNot(contains(']8;;')));
+        // The clipped panel must not extend beyond the requested screen.
+        for (final line in composed.split('\n')) {
+          expect(Style.visibleLength(line), lessThanOrEqualTo(24));
+        }
+        final screen = uv.ScreenBuffer(24, 4);
+        uv.StyledString(composed).draw(screen, screen.bounds());
+        expect(
+          screen.cellAt(7, 0)!.content,
+          ' ',
+          reason:
+              'A wide glyph cut by the panel edge must not straddle layers.',
+        );
+      });
+
       test('overlays panel when enabled', () {
         final m = overlay.copyWith(enabled: true);
         const base = 'line1\nline2';
@@ -398,6 +440,48 @@ void main() {
         expect(composed, contains('╭'));
         expect(composed, contains('╰'));
       });
+
+      test(
+        'keeps panel pen isolated and restores styled or default suffix cells',
+        () {
+          final m = overlay.copyWith(
+            enabled: true,
+            terminalWidth: 60,
+            terminalHeight: 20,
+            panelWidth: 24,
+            panelX: 8,
+            panelY: 0,
+          );
+          for (final terminator in <String?>[null, '\x07', '\x1b\\']) {
+            final text = 'a' * 60;
+            final line = terminator == null
+                ? text
+                : '\x1b]8;;https://base.test$terminator\x1b[31m$text'
+                      '\x1b[0m\x1b]8;;$terminator';
+            final base = List.filled(20, line).join('\n');
+            final expected = uv.ScreenBuffer(60, 20);
+            uv.StyledString(base).draw(expected, expected.bounds());
+            final actual = uv.ScreenBuffer(60, 20);
+            uv.StyledString(m.compose(base)).draw(actual, actual.bounds());
+            for (var row = 0; row < m.panel().split('\n').length; row++) {
+              expect(actual.cellAt(59, row)!.content, 'a');
+              expect(
+                actual.cellAt(59, row)!.style,
+                expected.cellAt(59, row)!.style,
+              );
+              expect(
+                actual.cellAt(59, row)!.link,
+                expected.cellAt(59, row)!.link,
+              );
+              expect(
+                actual.cellAt(10, row)!.link.isZero,
+                isTrue,
+                reason: 'Underlying links must not leak into the opaque panel.',
+              );
+            }
+          }
+        },
+      );
     });
 
     // -----------------------------------------------------------------------

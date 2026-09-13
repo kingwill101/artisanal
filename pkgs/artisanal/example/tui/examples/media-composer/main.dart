@@ -37,13 +37,85 @@ import 'package:path/path.dart' as p;
 /// pipeline. Production code decodes real files here; the lifecycle is
 /// identical.
 const _demoPngBytes = <int>[
-  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
-  0x08, 0x02, 0x00, 0x00, 0x00, 0xFD, 0xD4, 0x9A, 0x73, 0x00, 0x00, 0x00,
-  0x16, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF9, 0xCF, 0xC0, 0xC0,
-  0xF8, 0x9F, 0x81, 0x85, 0x91, 0xE1, 0xFF, 0x7F, 0x06, 0x06, 0x00, 0x1D,
-  0x55, 0x04, 0x07, 0x27, 0xCB, 0xE4, 0xCA, 0x00, 0x00, 0x00, 0x00, 0x49,
-  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x02,
+  0x00,
+  0x00,
+  0x00,
+  0x02,
+  0x08,
+  0x02,
+  0x00,
+  0x00,
+  0x00,
+  0xFD,
+  0xD4,
+  0x9A,
+  0x73,
+  0x00,
+  0x00,
+  0x00,
+  0x16,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0xF9,
+  0xCF,
+  0xC0,
+  0xC0,
+  0xF8,
+  0x9F,
+  0x81,
+  0x85,
+  0x91,
+  0xE1,
+  0xFF,
+  0x7F,
+  0x06,
+  0x06,
+  0x00,
+  0x1D,
+  0x55,
+  0x04,
+  0x07,
+  0x27,
+  0xCB,
+  0xE4,
+  0xCA,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
 ];
 
 /// Fires when deferred preview preparation finishes for [elementId].
@@ -69,7 +141,8 @@ final class MediaComposerModel implements tui.Model {
 
   b.TextAreaModel composer;
   final core.InlineElementStore elements = core.InlineElementStore();
-  final Map<int, core.MediaAttachment> attachments = <int, core.MediaAttachment>{};
+  final Map<int, core.MediaAttachment> attachments =
+      <int, core.MediaAttachment>{};
   final core.DisplayNumberAssigner numbers = core.DisplayNumberAssigner();
   final List<String> submitted = <String>[];
   core.MediaViewerState? viewer;
@@ -202,8 +275,7 @@ final class MediaComposerModel implements tui.Model {
           elements.delete(element.id);
           final dropped = attachments.remove(element.id);
           if (dropped != null) {
-            status =
-                'Image #${dropped.displayNumber} removed (chip edited).';
+            status = 'Image #${dropped.displayNumber} removed (chip edited).';
           }
         }
       }
@@ -220,10 +292,7 @@ final class MediaComposerModel implements tui.Model {
   ({int start, int end}) _insertTracked(String text) {
     final before = composer.value;
     composer.insertString(text);
-    final diff = _diffRegion(
-      _graphemes(before),
-      _graphemes(composer.value),
-    );
+    final diff = _diffRegion(_graphemes(before), _graphemes(composer.value));
     _trackEdit(before, composer.value);
     return (start: diff.start, end: diff.newEnd);
   }
@@ -233,10 +302,7 @@ final class MediaComposerModel implements tui.Model {
   /// for real; mime derived via package:mime); without one the chip uses
   /// demo bytes. Refuses when capped or when the cursor sits strictly
   /// inside another chip — chips are atomic and cannot nest.
-  tui.Cmd? _attachImage({
-    String? filePath,
-    List<int>? bytes,
-  }) {
+  tui.Cmd? _attachImage({String? filePath, List<int>? bytes}) {
     if (attachments.length >= maxImages) {
       status = 'Image limit reached (max $maxImages).';
       return null;
@@ -265,7 +331,9 @@ final class MediaComposerModel implements tui.Model {
     ({int width, int height})? dims;
     try {
       final decoded = img.decodeImage(Uint8List.fromList(payload));
-      if (decoded != null) dims = (width: decoded.width, height: decoded.height);
+      if (decoded != null) {
+        dims = (width: decoded.width, height: decoded.height);
+      }
     } catch (_) {}
     final number = numbers.assign();
     final chip = core.imageChipText(number);
@@ -379,6 +447,7 @@ final class MediaComposerModel implements tui.Model {
     final next = order.indexOf(current) + 1;
     return next >= order.length ? null : order[next];
   }
+
   /// Painting uses the detected protocol with halfblock fallback; forced
   /// text mode shows metadata instead of pixels. Returns whether a viewer
   /// opened (consuming Enter either way when on a chip).

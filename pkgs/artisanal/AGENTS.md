@@ -24,7 +24,7 @@ the separate `artisanal_widgets` package, which depends on this core package.
 Core must not depend on or re-export `artisanal_widgets`. Keep renderer
 internals in `ultraviolet` and widget internals in `artisanal_widgets`.
 
-Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.10.0 <4.0.0`.
+Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.13.0 <4.0.0`.
 Version 0.6.0.
 
 ## Commands

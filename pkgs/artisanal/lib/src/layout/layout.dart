@@ -29,17 +29,21 @@ library;
 
 import '../style/chars.dart';
 
-import 'dart:collection';
 import 'dart:math' as math;
 
 import '../terminal/ansi.dart';
 import '../style/properties.dart';
 import '../style/color.dart';
 import '../style/style.dart';
+
 import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:ultraviolet/unicode.dart' show runeWidth;
+
 import '../tui/trace.dart';
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
+import 'bounded_string_int_cache.dart';
 
 const int _layoutTraceThresholdUs = 1000;
 
@@ -222,12 +226,22 @@ class Layout {
   Layout._();
 
   static const int _maxCacheEntries = 4096;
-  static final LinkedHashMap<String, int> _visibleLengthCache =
-      LinkedHashMap<String, int>();
-  static final LinkedHashMap<String, int> _getWidthCache =
-      LinkedHashMap<String, int>();
-  static final LinkedHashMap<String, int> _getHeightCache =
-      LinkedHashMap<String, int>();
+  // Dart strings are UTF-16. Keep the key budget conservative so a cache
+  // cannot retain a large collection of otherwise short-lived frame strings.
+  static const int _maxCacheKeyBytes = 256 * 1024;
+  static final BoundedStringIntCache _visibleLengthCache =
+      BoundedStringIntCache(
+        maxEntries: _maxCacheEntries,
+        maxKeyBytes: _maxCacheKeyBytes,
+      );
+  static final BoundedStringIntCache _getWidthCache = BoundedStringIntCache(
+    maxEntries: _maxCacheEntries,
+    maxKeyBytes: _maxCacheKeyBytes,
+  );
+  static final BoundedStringIntCache _getHeightCache = BoundedStringIntCache(
+    maxEntries: _maxCacheEntries,
+    maxKeyBytes: _maxCacheKeyBytes,
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Per-frame counters for high-frequency operations
@@ -1131,16 +1145,8 @@ class Layout {
     return result.join('');
   }
 
-  static void _cachePut(
-    LinkedHashMap<String, int> cache,
-    String key,
-    int value,
-  ) {
-    if (cache.length >= _maxCacheEntries) {
-      cache.remove(cache.keys.first);
-    }
-    cache[key] = value;
-  }
+  static void _cachePut(BoundedStringIntCache cache, String key, int value) =>
+      cache[key] = value;
 
   static int? _asciiVisibleLengthOrNull(String text) {
     var lineWidth = 0;

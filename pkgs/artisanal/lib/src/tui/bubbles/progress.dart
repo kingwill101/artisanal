@@ -136,21 +136,16 @@ class ProgressModel extends ViewComponent {
     this.pulseWidth = 0.2,
     this.startTime,
     DateTime Function()? nowProvider,
-    double percentShown = 0,
-    double targetPercent = 0,
-    double velocity = 0,
-    double pulseOffset = 0,
+    this._percentShown = 0,
+    this._targetPercent = 0,
+    this._velocity = 0,
+    this._pulseOffset = 0,
     int? id,
-    int tag = 0,
+    this._tag = 0,
   }) : percentageStyle = percentageStyle ?? Style(),
        _nowProvider = nowProvider ?? _defaultProgressNowProvider,
        _spring = _Spring(frequency: frequency, damping: damping),
-       _percentShown = percentShown,
-       _targetPercent = targetPercent,
-       _velocity = velocity,
-       _pulseOffset = pulseOffset,
-       _id = id ?? _nextProgressId(),
-       _tag = tag;
+       _id = id ?? _nextProgressId();
 
   /// Total width of the progress bar, including percentage.
   final int width;

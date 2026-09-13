@@ -8,6 +8,7 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
+
 import '../testing/loose_layout_host.dart';
 
 Future<void> _pumpSmallRoot(WidgetTester tester, w.Widget child) =>
@@ -275,52 +276,47 @@ void main() {
     expect(controller.firstVisibleSource()!.line, lessThanOrEqualTo(12));
   });
 
-  test(
-    'rich comments and code share one scroll extent; every tall-card row is reachable',
-    () async {
-      final tester = WidgetTester();
-      addTearDown(tester.dispose);
-      final controller = _controller(lines: 4, height: 6);
-      await _pumpSmallRoot(
-        tester,
-        w.DiffReviewViewport(
-          controller: controller,
-          width: 60,
-          height: 6,
-          threadBuilder: (_, _) =>
-              w.Text(List.generate(20, (i) => 'CARD_$i!').join('\n')),
-        ),
-      );
-      final layout = controller.model.diff.layout;
-      controller.revealThread('thread');
+  test('rich comments and code share one scroll extent; every tall-card row is reachable', () async {
+    final tester = WidgetTester();
+    addTearDown(tester.dispose);
+    final controller = _controller(lines: 4, height: 6);
+    await _pumpSmallRoot(
+      tester,
+      w.DiffReviewViewport(
+        controller: controller,
+        width: 60,
+        height: 6,
+        threadBuilder: (_, _) =>
+            w.Text(List.generate(20, (i) => 'CARD_$i!').join('\n')),
+      ),
+    );
+    final layout = controller.model.diff.layout;
+    controller.revealThread('thread');
+    tester.pump();
+    expect(controller.scrollController.contentExtent, layout.lines.length + 21);
+    final seen = <int>{};
+    for (
+      var offset = 0;
+      offset <= controller.scrollController.maxOffset;
+      offset++
+    ) {
+      controller.scrollController.jumpTo(offset);
       tester.pump();
       expect(
-        controller.scrollController.contentExtent,
-        layout.lines.length + 21,
+        Style.stripAnsi(tester.view)
+            .split('\n')
+            .skip(6)
+            .every((line) => line.trim().isEmpty),
+        isTrue,
       );
-      final seen = <int>{};
-      for (
-        var offset = 0;
-        offset <= controller.scrollController.maxOffset;
-        offset++
-      ) {
-        controller.scrollController.jumpTo(offset);
-        tester.pump();
-        expect(
-          Style.stripAnsi(
-            tester.view,
-          ).split('\n').skip(6).every((line) => line.trim().isEmpty),
-          isTrue,
-        );
-        for (final match in RegExp(r'CARD_(\d+)!').allMatches(tester.view)) {
-          seen.add(int.parse(match[1]!));
-        }
+      for (final match in RegExp(r'CARD_(\d+)!').allMatches(tester.view)) {
+        seen.add(int.parse(match[1]!));
       }
-      expect(seen, Set.from(List.generate(20, (i) => i)));
-      expect(tester.view, contains('CODE00004'));
-      expect(controller.model.diff.layout, same(layout));
-    },
-  );
+    }
+    expect(seen, Set.from(List.generate(20, (i) => i)));
+    expect(tester.view, contains('CODE00004'));
+    expect(controller.model.diff.layout, same(layout));
+  });
 
   test(
     'wheel and page keys use composed rows, not source-line offsets',
@@ -356,30 +352,27 @@ void main() {
     },
   );
 
-  test(
-    'tapping code below a comment selects its source key; tapping header expands',
-    () async {
-      final tester = WidgetTester();
-      addTearDown(tester.dispose);
-      final controller = _controller(height: 20);
-      await _pumpSmallRoot(
-        tester,
-        w.DiffReviewViewport(
-          controller: controller,
-          width: 60,
-          height: 20,
-          threadBuilder: (_, _) => w.Text('COMMENT_BODY'),
-        ),
-      );
-      tester.tap(tester.find.textLocation('CODE00002'));
-      expect(controller.model.selected, _key(2));
-      final expandedHeight = controller.scrollController.contentExtent;
-      tester.tap(tester.find.textLocation('thread'));
-      expect(controller.model.expandedThreadIds, isEmpty);
-      expect(tester.view, isNot(contains('COMMENT_BODY')));
-      expect(controller.scrollController.contentExtent, expandedHeight - 1);
-    },
-  );
+  test('tapping code below a comment selects its source key; tapping header expands', () async {
+    final tester = WidgetTester();
+    addTearDown(tester.dispose);
+    final controller = _controller(height: 20);
+    await _pumpSmallRoot(
+      tester,
+      w.DiffReviewViewport(
+        controller: controller,
+        width: 60,
+        height: 20,
+        threadBuilder: (_, _) => w.Text('COMMENT_BODY'),
+      ),
+    );
+    tester.tap(tester.find.textLocation('CODE00002'));
+    expect(controller.model.selected, _key(2));
+    final expandedHeight = controller.scrollController.contentExtent;
+    tester.tap(tester.find.textLocation('thread'));
+    expect(controller.model.expandedThreadIds, isEmpty);
+    expect(tester.view, isNot(contains('COMMENT_BODY')));
+    expect(controller.scrollController.contentExtent, expandedHeight - 1);
+  });
 
   test('large jumps do not build preceding offscreen thread widgets', () async {
     final tester = WidgetTester();
@@ -484,9 +477,9 @@ void main() {
       );
       controller.update(d.DiffReviewSelectMsg(_key(1)));
       tester.pump();
-      final bodyRow = Style.stripAnsi(
-        tester.view,
-      ).split('\n').firstWhere((line) => line.contains('RIGHT_BODY'));
+      final bodyRow = Style.stripAnsi(tester.view)
+          .split('\n')
+          .firstWhere((line) => line.contains('RIGHT_BODY'));
       expect(
         bodyRow.indexOf('RIGHT_BODY'),
         controller.model.diff.splitColumns!.leftWidth + 1,

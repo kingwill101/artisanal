@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:artisanal/style.dart';
+
 import '../theme/theme.dart' show Theme, currentTheme;
 
 typedef SelectionPoint = ({int x, int y});

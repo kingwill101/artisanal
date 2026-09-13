@@ -1,5 +1,7 @@
 import 'package:artisanal/runtime.dart';
+
 import '_component_foundation.dart';
+
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/runtime.dart' show Cmd, KeyMsg;
 

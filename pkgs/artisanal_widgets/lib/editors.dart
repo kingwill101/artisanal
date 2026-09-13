@@ -37,6 +37,7 @@ export 'src/widgets/input/text_decoration_binding.dart'
         TextDecorationLayerBuilder,
         TextLineDecorationLayerBinding,
         TextLineDecorationLayerBuilder;
+
 export 'package:artisanal/text_editing.dart'
     show
         TextInputKeyMap,
@@ -48,6 +49,7 @@ export 'package:artisanal/text_editing.dart'
         TextPositionDiagnosticRange,
         TextPatternDiagnosticRule,
         textPatternDiagnostics;
+
 export 'src/widgets/components/text_editor.dart' show TextEditor;
 export 'src/widgets/components/code_editor.dart' show CodeEditor;
 export 'src/widgets/components/markdown_editor.dart' show MarkdownEditor;

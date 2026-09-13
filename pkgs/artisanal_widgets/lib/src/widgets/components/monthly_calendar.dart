@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart' show Color, Style;
+
 import '_component_foundation.dart';
 
 /// A compact month calendar with independently styled dates and markers.

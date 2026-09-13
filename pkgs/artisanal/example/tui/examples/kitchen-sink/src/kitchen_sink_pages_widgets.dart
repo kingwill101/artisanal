@@ -113,8 +113,7 @@ final class _WidgetsPage extends _KitchenSinkPage {
         height: 12,
       ),
       super(
-        help:
-            'Widgets: click a panel to focus; Esc unfocus; when unfocused you can scroll/drag the scrollbar',
+        help: 'Widgets: click a panel to focus; Esc unfocus; when unfocused you can scroll/drag the scrollbar',
       );
 
   final tui.ViewportScrollPane _pane;
@@ -152,9 +151,9 @@ final class _WidgetsPage extends _KitchenSinkPage {
   String view(_KitchenSinkModel m) {
     final title = m._style(Style()).bold().render('Widgets showcase');
 
-    final paginator = tui.PaginatorModel(
-      type: tui.PaginationType.dots,
-    ).setTotalPages(12).copyWith(page: 3);
+    final paginator = tui.PaginatorModel(type: tui.PaginationType.dots)
+        .setTotalPages(12)
+        .copyWith(page: 3);
 
     final helpShort = tui.HelpModel(width: 72).view(tui.ViewportKeyMap());
     final helpFull = tui.HelpModel(
@@ -1178,9 +1177,11 @@ final class _CompositorPage extends _KitchenSinkPage {
     // Build a composition.
     final comp = uv.Compositor([
       uv.Layer(uv.StyledString(bgBox)).setId('bg').setZ(0),
-      uv.Layer(
-        uv.StyledString(foregroundBox),
-      ).setId('fg').setX(5).setY(2).setZ(10),
+      uv.Layer(uv.StyledString(foregroundBox))
+          .setId('fg')
+          .setX(5)
+          .setY(2)
+          .setZ(10),
       uv.Layer(textLayer).setId('text').setX(15).setY(4).setZ(20),
     ]);
 
@@ -1205,8 +1206,7 @@ final class _CompositorPage extends _KitchenSinkPage {
 final class _SelectionPage extends _KitchenSinkPage {
   const _SelectionPage()
     : super(
-        help:
-            'Selection: Click and drag to select text in any component below. Press Ctrl+C to copy.',
+        help: 'Selection: Click and drag to select text in any component below. Press Ctrl+C to copy.',
       );
 
   @override

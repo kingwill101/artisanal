@@ -25,9 +25,9 @@ typedef LanguageServerProcessStarter = Future<Process> Function();
 final class DartLanguageService implements EditorLanguageService {
   DartLanguageService({
     required this.workspaceRoot,
-    LanguageServerProcessStarter? startProcess,
+    this._startProcess,
     this.changeDebounce = const Duration(milliseconds: 180),
-  }) : _startProcess = startProcess;
+  });
 
   final String workspaceRoot;
   final LanguageServerProcessStarter? _startProcess;

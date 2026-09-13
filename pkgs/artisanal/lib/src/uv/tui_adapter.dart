@@ -11,6 +11,7 @@ library;
 
 import '../terminal/keys.dart' as term;
 import '../tui/msg.dart';
+
 import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:ultraviolet/input.dart' show EventDecoder, LegacyKeyEncoding;
 import 'package:ultraviolet/input.dart' as uvev;

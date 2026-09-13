@@ -260,6 +260,13 @@ await runProgram(
 );
 ```
 
+The runtime can record a final native cell frame for diagnostics and capture
+consumers. `TerminalNativeFrame.toBuffer()` rebuilds a detached UV `Buffer`;
+use a native frame rather than `ProgramRenderSnapshot.toJson()` when cell
+styles, links, and attributes must survive. Snapshot JSON is diagnostic text
+and is not a lossless capture format. Native frame reconstruction rejects
+drawable payloads, which are not represented by the frame metadata.
+
 #### UV features
 
 - 2D cell buffer with styled cells

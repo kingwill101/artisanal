@@ -114,10 +114,8 @@ void main() {
           ),
         ),
       );
-      await Future.wait([
-        finite.future,
-        managed.future,
-      ]).timeout(const Duration(seconds: 2));
+      await Future.wait([finite.future, managed.future])
+          .timeout(const Duration(seconds: 2));
     },
   );
 
@@ -249,9 +247,9 @@ void main() {
     builder = LayoutBuilder(
       builder: (context, constraints) {
         expect(
-          () => elementOf(
-            builder,
-          )!.renderObject!.layout(BoxConstraints.tight(const Size(1, 1))),
+          () =>
+              elementOf(builder)!.renderObject!
+                  .layout(BoxConstraints.tight(const Size(1, 1))),
           throwsStateError,
         );
         expect(elementOf(builder)!.renderObject!.constraints, constraints);

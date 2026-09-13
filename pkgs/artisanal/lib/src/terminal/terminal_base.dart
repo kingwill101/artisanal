@@ -286,10 +286,8 @@ abstract class Terminal {
 /// available for interactive input, while keeping output on the configured
 /// output stream.
 final class SplitTerminal implements Terminal {
-  /// Creates a split terminal with separate [control] and [output] streams.
-  SplitTerminal({required Terminal control, required Terminal output})
-    : _control = control,
-      _output = output;
+  /// Creates a split terminal with separate [_control] and [_output] streams.
+  SplitTerminal({required this._control, required this._output});
 
   final Terminal _control;
   final Terminal _output;
@@ -540,8 +538,8 @@ class RawModeGuard {
   RawModeGuard({
     required this.wasEchoMode,
     required this.wasLineMode,
-    required void Function() restore,
-  }) : _restore = restore;
+    required this._restore,
+  });
 
   /// The original echo mode setting.
   final bool wasEchoMode;

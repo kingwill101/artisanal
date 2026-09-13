@@ -166,9 +166,10 @@ void main() {
         ),
       );
 
-      final lines = Style.stripAnsi(
-        tester.view,
-      ).split('\n').where((line) => line.contains(RegExp(r'[╭╮╰╯│]'))).toList();
+      final lines = Style.stripAnsi(tester.view)
+          .split('\n')
+          .where((line) => line.contains(RegExp(r'[╭╮╰╯│]')))
+          .toList();
       expect(lines, hasLength(5));
       expect(lines.first, startsWith('╭'));
       expect(lines.first, endsWith('╮'));
@@ -201,9 +202,10 @@ void main() {
         ),
       );
 
-      final lines = Style.stripAnsi(
-        tester.view,
-      ).split('\n').where((line) => line.contains(RegExp(r'[╭╮╰╯│]'))).toList();
+      final lines = Style.stripAnsi(tester.view)
+          .split('\n')
+          .where((line) => line.contains(RegExp(r'[╭╮╰╯│]')))
+          .toList();
       expect(lines, hasLength(5));
       expect(lines.first, startsWith('╭'));
       expect(lines.first, endsWith('╮'));
@@ -228,9 +230,11 @@ void main() {
         ),
       );
 
-      List<String> borderLines() => Style.stripAnsi(
-        tester.view,
-      ).split('\n').where((line) => line.contains(RegExp(r'[╭╮╰╯│]'))).toList();
+      List<String> borderLines() =>
+          Style.stripAnsi(tester.view)
+              .split('\n')
+              .where((line) => line.contains(RegExp(r'[╭╮╰╯│]')))
+              .toList();
 
       final wide = borderLines();
       expect(wide.map(Layout.getWidth), everyElement(24));

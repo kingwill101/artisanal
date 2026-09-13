@@ -57,15 +57,15 @@ void main() {
 
       await tester.pumpWidget(
         MarkdownText(
-          data:
-              '- [ ] After the fix: parser throws `WebSocketException("Frame payload length 209715200 exceeds maximum 16777216. ...")` immediately.',
+          data: '- [ ] After the fix: parser throws `WebSocketException("Frame payload length 209715200 exceeds maximum 16777216. ...")` immediately.',
           maxWidth: 80,
         ),
       );
 
-      final lines = Style.stripAnsi(
-        tester.view,
-      ).split('\n').where((line) => line.trim().isNotEmpty).toList();
+      final lines = Style.stripAnsi(tester.view)
+          .split('\n')
+          .where((line) => line.trim().isNotEmpty)
+          .toList();
       expect(lines.first, startsWith('[ ] After the fix'));
       for (final line in lines.skip(1)) {
         expect(line, startsWith('    '));

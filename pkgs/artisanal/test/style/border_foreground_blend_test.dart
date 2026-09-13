@@ -14,9 +14,10 @@ void main() {
           .render('X');
 
       final top = out.split('\n').first;
-      final matches = RegExp(
-        r'\x1b\[38;2;[0-9]+;[0-9]+;[0-9]+m',
-      ).allMatches(top).map((m) => m.group(0)!).toSet();
+      final matches = RegExp(r'\x1b\[38;2;[0-9]+;[0-9]+;[0-9]+m')
+          .allMatches(top)
+          .map((m) => m.group(0)!)
+          .toSet();
 
       expect(matches.length, greaterThan(1), reason: top);
     });

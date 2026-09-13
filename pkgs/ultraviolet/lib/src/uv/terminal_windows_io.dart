@@ -53,18 +53,19 @@ void enableWindowsVtInput() {
   int? snapshot;
   try {
     final k32 = DynamicLibrary.open('kernel32.dll');
-    final getStdHandle =
-        k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>('GetStdHandle');
+    final getStdHandle = k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>(
+      'GetStdHandle',
+    );
     final getConsoleMode = k32
         .lookupFunction<_GetConsoleModeC, _GetConsoleModeD>('GetConsoleMode');
     final setConsoleMode = k32
         .lookupFunction<_SetConsoleModeC, _SetConsoleModeD>('SetConsoleMode');
     // Scratch DWORD from the Win32 heap so this file needs no allocator
     // dependency (package:ffi).
-    final localAlloc =
-        k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
-    final localFree =
-        k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
+    final localAlloc = k32.lookupFunction<_LocalAllocC, _LocalAllocD>(
+      'LocalAlloc',
+    );
+    final localFree = k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
 
     final handle = getStdHandle(_stdInputHandle);
     final mem = localAlloc(_lmemZeroInit, 4);
@@ -73,7 +74,8 @@ void enableWindowsVtInput() {
     try {
       if (getConsoleMode(handle, modePtr) == 0) return; // not a console
       snapshot = modePtr.value;
-      final next = (modePtr.value |
+      final next =
+          (modePtr.value |
               _enableVirtualTerminalInput |
               _enableExtendedFlags |
               _enableMouseInput) &
@@ -102,8 +104,9 @@ void restoreWindowsVtInput() {
   if (saved == null) return; // the paired enable never captured a mode
   try {
     final k32 = DynamicLibrary.open('kernel32.dll');
-    final getStdHandle =
-        k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>('GetStdHandle');
+    final getStdHandle = k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>(
+      'GetStdHandle',
+    );
     final setConsoleMode = k32
         .lookupFunction<_SetConsoleModeC, _SetConsoleModeD>('SetConsoleMode');
     setConsoleMode(getStdHandle(_stdInputHandle), saved);

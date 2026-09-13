@@ -81,13 +81,11 @@ class CursorModel extends ViewComponent {
   /// Creates a new cursor model.
   CursorModel({
     this.blinkSpeed = const Duration(milliseconds: 530),
-    CursorMode mode = CursorMode.blink,
-    String char = ' ',
+    this._mode = CursorMode.blink,
+    this._char = ' ',
     Style? style,
     Style? textStyle,
-  }) : _mode = mode,
-       _char = char,
-       _id = _nextCursorId(),
+  }) : _id = _nextCursorId(),
        _blink = true,
        _focus = false,
        _blinkTag = 0,
@@ -155,20 +153,15 @@ class CursorModel extends ViewComponent {
 
   CursorModel._internal({
     required this.blinkSpeed,
-    required CursorMode mode,
-    required String char,
-    required int id,
-    required bool blink,
-    required bool focus,
-    required int blinkTag,
+    required this._mode,
+    required this._char,
+    required this._id,
+    required this._blink,
+    required this._focus,
+    required this._blinkTag,
     required this.style,
     required this.textStyle,
-  }) : _mode = mode,
-       _char = char,
-       _id = id,
-       _blink = blink,
-       _focus = focus,
-       _blinkTag = blinkTag;
+  });
 
   @override
   Cmd? init() => null;

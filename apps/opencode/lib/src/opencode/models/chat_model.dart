@@ -24,10 +24,7 @@ enum AppChord {
 ///
 /// - [auto]: show when terminal is wide (`width > [wideBreakpoint]`)
 /// - [hide]: stay hidden unless force-opened via [ChatModel.sidebarOpen]
-enum SidebarVisibilityMode {
-  auto,
-  hide,
-}
+enum SidebarVisibilityMode { auto, hide }
 
 /// Collapsible section expansion state.
 class SidebarState {
@@ -309,10 +306,7 @@ class ChatModel {
         sidebarOpen: false,
       );
     }
-    return copyWith(
-      sidebarMode: SidebarVisibilityMode.auto,
-      sidebarOpen: true,
-    );
+    return copyWith(sidebarMode: SidebarVisibilityMode.auto, sidebarOpen: true);
   }
 
   ChatModel copyWith({
@@ -367,8 +361,4 @@ class ChatModel {
 enum AppRoute { home, session, agentOverview, review }
 
 /// Which agent chrome dock is staged above the session prompt.
-enum SessionAgentDock {
-  none,
-  permission,
-  question,
-}
+enum SessionAgentDock { none, permission, question }

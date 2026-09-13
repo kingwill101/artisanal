@@ -4,7 +4,9 @@ library;
 import 'dart:math' as math;
 
 import 'package:ultraviolet/core.dart';
+
 import 'core.dart';
+
 import 'package:artisanal/style.dart';
 
 /// Fractional top glyphs used by FTUI-style grouped vertical bars.

@@ -24,10 +24,7 @@ void main() {
       ]);
 
       expect(map.shortHelp, isNotEmpty);
-      expect(
-        map.shortHelp.any((b) => b.help.key.contains('ctrl+x')),
-        isTrue,
-      );
+      expect(map.shortHelp.any((b) => b.help.key.contains('ctrl+x')), isTrue);
       expect(map.fullHelp.length, greaterThanOrEqualTo(2));
     });
   });
@@ -47,9 +44,7 @@ void main() {
         tui.ShortcutSurface(
           id: 'overlay',
           exclusive: false,
-          bindings: [
-            tui.ShortcutBinding.single(id: 'close', key: 'esc'),
-          ],
+          bindings: [tui.ShortcutBinding.single(id: 'close', key: 'esc')],
         ),
       );
 
@@ -74,16 +69,13 @@ void main() {
         tui.ShortcutSurface(
           id: 'dialog',
           exclusive: true,
-          bindings: [
-            tui.ShortcutBinding.single(id: 'confirm', key: 'y'),
-          ],
+          bindings: [tui.ShortcutBinding.single(id: 'confirm', key: 'y')],
         ),
       );
 
-      expect(
-        hub.activeShortcuts(includeReachable: true).map((b) => b.id),
-        ['confirm'],
-      );
+      expect(hub.activeShortcuts(includeReachable: true).map((b) => b.id), [
+        'confirm',
+      ]);
     });
   });
 
@@ -127,9 +119,11 @@ void main() {
 
       expect(tester.find.text('Shortcuts'), isTrue, reason: tester.view);
       expect(tester.find.text('toggle sidebar'), isTrue, reason: tester.view);
-      expect(tester.view.contains('ctrl+x b') || tester.view.contains('ctrl+x'),
-          isTrue,
-          reason: tester.view);
+      expect(
+        tester.view.contains('ctrl+x b') || tester.view.contains('ctrl+x'),
+        isTrue,
+        reason: tester.view,
+      );
 
       // Esc closes.
       tester.sendMsg(tui.KeyMsg(tui.Keys.escape));
@@ -142,10 +136,7 @@ void main() {
       addTearDown(tester.dispose);
 
       await tester.pumpWidget(
-        ThemeScope(
-          theme: Theme.dark(),
-          child: ShortcutsSheet.forHub(hub),
-        ),
+        ThemeScope(theme: Theme.dark(), child: ShortcutsSheet.forHub(hub)),
         width: 60,
         height: 16,
       );

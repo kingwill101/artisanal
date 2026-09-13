@@ -54,10 +54,7 @@ void main() {
   test('re-registering lower surface does not steal top', () {
     final hub = tui.KeymapHub();
     hub.push(
-      tui.ShortcutSurface(
-        id: 'home',
-        bindings: [tui.ShortcutBinding.help()],
-      ),
+      tui.ShortcutSurface(id: 'home', bindings: [tui.ShortcutBinding.help()]),
     );
     hub.push(
       tui.ShortcutSurface(

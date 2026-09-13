@@ -20,14 +20,12 @@ void main() {
   test(
     'discovers supported source files and ignores generated directories',
     () async {
-      await File(
-        p.join(sandbox.path, 'lib', 'main.dart'),
-      ).create(recursive: true);
+      await File(p.join(sandbox.path, 'lib', 'main.dart'))
+          .create(recursive: true);
       await File(p.join(sandbox.path, 'README.md')).writeAsString('# Project');
       await File(p.join(sandbox.path, 'notes.bin')).writeAsBytes([1, 2, 3]);
-      await File(
-        p.join(sandbox.path, 'build', 'generated.dart'),
-      ).create(recursive: true);
+      await File(p.join(sandbox.path, 'build', 'generated.dart'))
+          .create(recursive: true);
       await File(p.join(sandbox.path, '.secret.dart')).writeAsString('secret');
 
       const repository = EditorFileRepository();

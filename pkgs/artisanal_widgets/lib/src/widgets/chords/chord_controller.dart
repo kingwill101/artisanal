@@ -98,8 +98,7 @@ class ChordController extends ChangeNotifier {
       _active && _prefixLabel.isNotEmpty ? '$_prefixLabel …' : '';
 
   /// Space-separated continuation key labels (`b l m t …`).
-  String get continuationKeysLabel =>
-      entries.map((e) => e.keyLabel).join(' ');
+  String get continuationKeysLabel => entries.map((e) => e.keyLabel).join(' ');
 
   /// Banner-friendly line for which-key chrome.
   String whichKeyBanner({String title = 'which-key'}) {
@@ -117,7 +116,10 @@ class ChordController extends ChangeNotifier {
   /// Nearest [ChordController]; asserts if missing.
   static ChordController of(BuildContext context) {
     final c = maybeOf(context);
-    assert(c != null, 'ChordController.of() called with no ChordScope ancestor');
+    assert(
+      c != null,
+      'ChordController.of() called with no ChordScope ancestor',
+    );
     return c!;
   }
 

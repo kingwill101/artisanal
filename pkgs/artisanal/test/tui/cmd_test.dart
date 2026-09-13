@@ -560,12 +560,10 @@ void main() {
       final expected = DateTime.fromMillisecondsSinceEpoch(4096, isUtc: true);
       DateTime? receivedTime;
 
-      final cmd =
-          every(const Duration(milliseconds: 40), (time) {
-                receivedTime = time;
-                return const TestMsg('tick');
-              }, nowProvider: () => expected)
-              as EveryCmd;
+      final cmd = every(const Duration(milliseconds: 40), (time) {
+        receivedTime = time;
+        return const TestMsg('tick');
+      }, nowProvider: () => expected) as EveryCmd;
 
       cmd.start((_) {});
       await Future<void>.delayed(const Duration(milliseconds: 60));

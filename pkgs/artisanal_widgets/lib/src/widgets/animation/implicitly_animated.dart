@@ -156,12 +156,11 @@ abstract class AnimatedWidgetBaseState<T extends ImplicitlyAnimatedWidget>
 }
 
 /// Callback type for visiting tweens in [AnimatedWidgetBaseState.forEachTween].
-typedef TweenVisitor =
-    Tween<dynamic>? Function(
-      Tween<dynamic>? tween,
-      dynamic targetValue,
-      TweenConstructor constructor,
-    );
+typedef TweenVisitor = Tween<dynamic>? Function(
+  Tween<dynamic>? tween,
+  dynamic targetValue,
+  TweenConstructor constructor,
+);
 
 /// Callback type for constructing a new [Tween] from a target value.
 typedef TweenConstructor = Tween<dynamic> Function(dynamic value);

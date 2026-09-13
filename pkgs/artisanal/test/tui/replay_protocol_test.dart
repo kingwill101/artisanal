@@ -81,25 +81,28 @@ void main() {
       );
     });
 
-    test('preserves custom structured events as replay event actions', () async {
-      final tracePath = await _writeTrace(<String>[
-        '# trace start: 2026-02-13T00:00:00.000000',
-        '[+10us] [input] @event {"v":1,"type":"window.size","width":120,"height":40}',
-        '[+20us] [input] @event {"v":1,"type":"input.batch","parser":"uv","flush":false,"messages":[{"kind":"key","keyType":"runes","runes":[97]}]}',
-        '[+45000us] [cmd] @event {"v":1,"type":"ui.sidebar.toggle","open":true,"source":"shortcut"}',
-      ]);
-      addTearDown(() async {
-        await File(tracePath).delete();
-      });
+    test(
+      'preserves custom structured events as replay event actions',
+      () async {
+        final tracePath = await _writeTrace(<String>[
+          '# trace start: 2026-02-13T00:00:00.000000',
+          '[+10us] [input] @event {"v":1,"type":"window.size","width":120,"height":40}',
+          '[+20us] [input] @event {"v":1,"type":"input.batch","parser":"uv","flush":false,"messages":[{"kind":"key","keyType":"runes","runes":[97]}]}',
+          '[+45000us] [cmd] @event {"v":1,"type":"ui.sidebar.toggle","open":true,"source":"shortcut"}',
+        ]);
+        addTearDown(() async {
+          await File(tracePath).delete();
+        });
 
-      final conversion = await ReplayTraceConverter.convertFile(tracePath);
-      final eventAction = conversion.scenario.actions.firstWhere(
-        (action) => action.type == 'event',
-      );
-      expect(eventAction.eventType, 'ui.sidebar.toggle');
-      expect(eventAction.eventFields['open'], isTrue);
-      expect(eventAction.eventFields['source'], 'shortcut');
-    });
+        final conversion = await ReplayTraceConverter.convertFile(tracePath);
+        final eventAction = conversion.scenario.actions.firstWhere(
+          (action) => action.type == 'event',
+        );
+        expect(eventAction.eventType, 'ui.sidebar.toggle');
+        expect(eventAction.eventFields['open'], isTrue);
+        expect(eventAction.eventFields['source'], 'shortcut');
+      },
+    );
 
     test(
       'converts evidence render-frame records into replay event actions',

@@ -8,8 +8,10 @@ import 'text_selection_set.dart';
 ///
 /// Hosts use this for motions, search, mouse drags, and fold-aware movement.
 /// Editing styles (insert-only, modal, multi-cursor) share the same type.
-typedef EditorRangeResolver =
-    TextSelectionSet Function(TextDocument document, TextSelectionSet current);
+typedef EditorRangeResolver = TextSelectionSet Function(
+  TextDocument document,
+  TextSelectionSet current,
+);
 
 /// Reports whether a logical document line is hidden from vertical movement.
 typedef TextLineHiddenPredicate = bool Function(int line);

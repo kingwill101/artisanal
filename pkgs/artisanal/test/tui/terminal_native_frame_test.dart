@@ -1,6 +1,7 @@
 import 'package:artisanal/tui.dart';
 import 'package:ultraviolet/core.dart' as uv_buffer;
 import 'package:ultraviolet/core.dart';
+import 'package:ultraviolet/src/uv/uv.dart' as uv_debug;
 import 'package:test/test.dart';
 
 void main() {
@@ -37,6 +38,81 @@ void main() {
       expect(cell.link.url, 'https://example.com');
       expect(cell.isZero, isFalse);
       expect(cell.packed, hasLength(4));
+    });
+
+    test(
+      'detaches cells back to UV while preserving metadata and diff policy',
+      () {
+        final source = uv_buffer.Buffer.create(2, 1);
+        source.setCell(
+          0,
+          0,
+          Cell(
+            content: 'A',
+            style: const UvStyle(fg: UvColor.rgb(10, 20, 30)),
+            link: const Link(url: 'https://example.com', params: 'id=1'),
+            diffOption: CellDiffOption.alwaysUpdate,
+          ),
+        );
+        final restored = TerminalNativeFrame.fromBuffer(source).toBuffer();
+        final cell = restored.cellAt(0, 0)!;
+        expect(cell.content, 'A');
+        expect(cell.style.fg, const UvColor.rgb(10, 20, 30));
+        expect(cell.link.url, 'https://example.com');
+        expect(cell.link.params, 'id=1');
+        expect(cell.diffOption, CellDiffOption.alwaysUpdate);
+      },
+    );
+
+    test('returns an owned buffer without retaining temporary cell copies', () {
+      final source = uv_buffer.Buffer.create(1, 1);
+      source.setCellOwned(
+        0,
+        0,
+        Cell(
+          content: 'A',
+          link: const Link(url: 'https://example.com/owned'),
+        ),
+      );
+      final linkId = source.cellAt(0, 0)!.linkId!;
+      final frame = TerminalNativeFrame.fromBuffer(source);
+
+      final restored = frame.toBuffer();
+      expect(uv_debug.debugLinkRefCount(linkId), 2);
+      expect(restored.cellAt(0, 0)!.content, 'A');
+
+      source.dispose();
+      expect(uv_debug.debugLinkRefCount(linkId), 1);
+      restored.dispose();
+      expect(uv_debug.debugLinkRefCount(linkId), 0);
+    });
+
+    test('rejects drawable cells instead of dropping their payload', () {
+      final source = uv_buffer.Buffer.create(1, 1);
+      source.setCell(0, 0, Cell(content: 'x')..drawable = Object());
+      expect(
+        () => TerminalNativeFrame.fromBuffer(source).toBuffer(),
+        throwsA(isA<UnsupportedError>()),
+      );
+    });
+
+    test('releases cells already installed when a later cell is rejected', () {
+      final source = uv_buffer.Buffer.create(2, 1);
+      source.setCellOwned(
+        0,
+        0,
+        Cell(
+          content: 'A',
+          link: const Link(url: 'https://example.com/partial'),
+        ),
+      );
+      source.setCellOwned(1, 0, Cell(content: 'x')..drawable = Object());
+      final linkId = source.cellAt(0, 0)!.linkId!;
+      final frame = TerminalNativeFrame.fromBuffer(source);
+
+      expect(() => frame.toBuffer(), throwsA(isA<UnsupportedError>()));
+      source.dispose();
+      expect(uv_debug.debugLinkRefCount(linkId), 0);
     });
 
     test('reuses native color snapshots for repeated UV colors', () {

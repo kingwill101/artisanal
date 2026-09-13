@@ -57,10 +57,7 @@ final class KeymapLayerDrop extends KeymapLayerResult {
 // ---------------------------------------------------------------------------
 
 final class _SequenceTimeoutMsg extends Msg {
-  const _SequenceTimeoutMsg({
-    required this.surfaceId,
-    required this.sessionId,
-  });
+  const _SequenceTimeoutMsg({required this.surfaceId, required this.sessionId});
 
   final String surfaceId;
   final int sessionId;
@@ -201,9 +198,7 @@ final class ShortcutSurface {
         final cancel = KeymapSequenceCancelledMsg(surfaceId: id, key: key);
         _clearPending();
         // Forward original key after cancel (batch).
-        return KeymapLayerClaim(
-          BatchMsg([cancel, KeyMsg(key)]),
-        );
+        return KeymapLayerClaim(BatchMsg([cancel, KeyMsg(key)]));
       }
 
       // Exact complete match (prefer shortest complete at this depth).
@@ -288,9 +283,7 @@ final class ShortcutSurface {
     final send = _send;
     if (t == null || session == null || send == null) return;
     _timer = Timer(t, () {
-      send(
-        _SequenceTimeoutMsg(surfaceId: id, sessionId: session),
-      );
+      send(_SequenceTimeoutMsg(surfaceId: id, sessionId: session));
     });
   }
 

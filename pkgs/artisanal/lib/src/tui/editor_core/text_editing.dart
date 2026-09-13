@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:characters/characters.dart';
 
 import 'package:ultraviolet/unicode.dart' as uni;
+
 import 'editor_core_config.dart';
 import 'editor_state.dart';
 import 'state_bridge.dart';

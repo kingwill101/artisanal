@@ -58,9 +58,7 @@ void main() {
                 AgentQuestion(
                   id: 'a',
                   prompt: 'Question A?',
-                  options: [
-                    QuestionOption(id: '1', label: 'Alpha'),
-                  ],
+                  options: [QuestionOption(id: '1', label: 'Alpha')],
                 ),
                 AgentQuestion(
                   id: 'b',
@@ -91,9 +89,7 @@ void main() {
                 AgentQuestion(
                   id: 'a',
                   prompt: 'Question A?',
-                  options: [
-                    QuestionOption(id: '1', label: 'Alpha'),
-                  ],
+                  options: [QuestionOption(id: '1', label: 'Alpha')],
                 ),
                 AgentQuestion(
                   id: 'b',

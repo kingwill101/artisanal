@@ -117,78 +117,69 @@ void main() {
       },
     );
 
-    test(
-      'replaceTextRange uses piece-backed storage for source-backed single-line edits',
-      () {
-        final document = TextDocument(text: 'alpha beta gamma');
+    test('replaceTextRange uses piece-backed storage for source-backed single-line edits', () {
+      final document = TextDocument(text: 'alpha beta gamma');
 
-        expect(document.debugPieceBackedLeafCount, 0);
-        expect(document.debugHasTextCache, isFalse);
+      expect(document.debugPieceBackedLeafCount, 0);
+      expect(document.debugHasTextCache, isFalse);
 
-        document.replaceTextRange(
-          startOffset: 6,
-          endOffset: 10,
-          replacement: 'delta',
-        );
+      document.replaceTextRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'delta',
+      );
 
-        expect(document.debugPieceBackedLeafCount, greaterThan(0));
-        expect(document.debugHasTextCache, isFalse);
-        expect(
-          document.textInRange(startOffset: 0, endOffset: document.length),
-          'alpha delta gamma',
-        );
-        expect(document.debugHasTextCache, isFalse);
-      },
-    );
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.debugHasTextCache, isFalse);
+      expect(
+        document.textInRange(startOffset: 0, endOffset: document.length),
+        'alpha delta gamma',
+      );
+      expect(document.debugHasTextCache, isFalse);
+    });
 
-    test(
-      'replaceOffsetRange supports multiline replacement without reparsing text',
-      () {
-        final document = TextDocument(text: 'ab\ncdef\ngh');
+    test('replaceOffsetRange supports multiline replacement without reparsing text', () {
+      final document = TextDocument(text: 'ab\ncdef\ngh');
 
-        final change = document.replaceOffsetRange(
-          startOffset: 1,
-          endOffset: 7,
-          replacement: const ['X', '\n', 'Y', 'Z'],
-        );
+      final change = document.replaceOffsetRange(
+        startOffset: 1,
+        endOffset: 7,
+        replacement: const ['X', '\n', 'Y', 'Z'],
+      );
 
-        expect(document.text, 'aX\nYZ\ngh');
-        expect(document.debugPieceBackedLeafCount, greaterThan(0));
-        expect(document.lines, const [
-          ['a', 'X'],
-          ['Y', 'Z'],
-          ['g', 'h'],
-        ]);
-        expect(change.startOffset, 1);
-        expect(change.oldEndOffset, 7);
-        expect(change.newEndOffset, 5);
-        expect(change.startPosition, const TextPosition(line: 0, column: 1));
-        expect(change.oldEndPosition, const TextPosition(line: 1, column: 4));
-        expect(change.newEndPosition, const TextPosition(line: 1, column: 2));
-      },
-    );
+      expect(document.text, 'aX\nYZ\ngh');
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.lines, const [
+        ['a', 'X'],
+        ['Y', 'Z'],
+        ['g', 'h'],
+      ]);
+      expect(change.startOffset, 1);
+      expect(change.oldEndOffset, 7);
+      expect(change.newEndOffset, 5);
+      expect(change.startPosition, const TextPosition(line: 0, column: 1));
+      expect(change.oldEndPosition, const TextPosition(line: 1, column: 4));
+      expect(change.newEndPosition, const TextPosition(line: 1, column: 2));
+    });
 
-    test(
-      'replaceOffsetRange uses piece-backed storage for source-backed single-line edits',
-      () {
-        final document = TextDocument(text: 'alpha beta gamma');
+    test('replaceOffsetRange uses piece-backed storage for source-backed single-line edits', () {
+      final document = TextDocument(text: 'alpha beta gamma');
 
-        expect(document.debugPieceBackedLeafCount, 0);
+      expect(document.debugPieceBackedLeafCount, 0);
 
-        document.replaceOffsetRange(
-          startOffset: 6,
-          endOffset: 10,
-          replacement: 'delta'.characters.toList(growable: false),
-        );
+      document.replaceOffsetRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'delta'.characters.toList(growable: false),
+      );
 
-        expect(document.debugPieceBackedLeafCount, greaterThan(0));
-        expect(
-          document.textInRange(startOffset: 0, endOffset: document.length),
-          'alpha delta gamma',
-        );
-        expect(document.debugHasTextCache, isFalse);
-      },
-    );
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(
+        document.textInRange(startOffset: 0, endOffset: document.length),
+        'alpha delta gamma',
+      );
+      expect(document.debugHasTextCache, isFalse);
+    });
 
     test('repeated piece-backed edits flatten nested source pieces', () {
       final document = TextDocument(text: 'alpha beta gamma');
@@ -305,116 +296,103 @@ void main() {
       },
     );
 
-    test(
-      'replaceText leaves revision and storage identity stable on no-op whole-document edits',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta');
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
+    test('replaceText leaves revision and storage identity stable on no-op whole-document edits', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        document.replaceText('alpha\nbeta');
+      document.replaceText('alpha\nbeta');
 
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.text, 'alpha\nbeta');
-      },
-    );
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta');
+    });
 
-    test(
-      'replaceTextRange builds large multiline replacements through source-backed storage',
-      () {
-        final lineTexts = List<String>.generate(
-          600,
-          (index) => 'line-$index-abcdefghij',
-          growable: false,
-        );
-        final document = TextDocument(text: 'seed');
+    test('replaceTextRange builds large multiline replacements through source-backed storage', () {
+      final lineTexts = List<String>.generate(
+        600,
+        (index) => 'line-$index-abcdefghij',
+        growable: false,
+      );
+      final document = TextDocument(text: 'seed');
 
-        document.replaceTextRange(
-          startOffset: 0,
-          endOffset: document.length,
-          replacement: lineTexts.join('\n'),
-        );
+      document.replaceTextRange(
+        startOffset: 0,
+        endOffset: document.length,
+        replacement: lineTexts.join('\n'),
+      );
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugPieceBackedLeafCount, greaterThan(1));
-        expect(document.lineCount, lineTexts.length);
-        expect(document.lineAt(0), lineTexts.first);
-        expect(document.lineAt(599), lineTexts.last);
-      },
-    );
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceBackedLeafCount, greaterThan(1));
+      expect(document.lineCount, lineTexts.length);
+      expect(document.lineAt(0), lineTexts.first);
+      expect(document.lineAt(599), lineTexts.last);
+    });
 
-    test(
-      'replaceOffsetRange keeps grapheme-heavy multiline replacement lengths correct',
-      () {
-        const family = '👩‍👩‍👧‍👦';
-        final replacement = <String>[];
-        for (var index = 0; index < 600; index++) {
-          replacement.addAll(family.characters);
-          if (index < 599) {
-            replacement.add('\n');
-          }
+    test('replaceOffsetRange keeps grapheme-heavy multiline replacement lengths correct', () {
+      const family = '👩‍👩‍👧‍👦';
+      final replacement = <String>[];
+      for (var index = 0; index < 600; index++) {
+        replacement.addAll(family.characters);
+        if (index < 599) {
+          replacement.add('\n');
         }
-        final document = TextDocument(text: 'seed');
+      }
+      final document = TextDocument(text: 'seed');
 
-        document.replaceOffsetRange(
-          startOffset: 0,
-          endOffset: document.length,
-          replacement: replacement,
-        );
+      document.replaceOffsetRange(
+        startOffset: 0,
+        endOffset: document.length,
+        replacement: replacement,
+      );
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(1));
-        expect(document.debugPieceBackedLeafCount, greaterThan(1));
-        expect(document.debugJoinedSourceTextCount, 0);
-        expect(document.debugMaterializedSourceLineTextCount, 0);
-        expect(document.debugLineGraphemeCacheCount, 0);
-        expect(document.lineCount, 600);
-        expect(document.lineLength(0), 1);
-        expect(document.lineLength(255), 1);
-        expect(document.lineLength(256), 1);
-        expect(document.lineLength(599), 1);
-        expect(document.lineGraphemesAt(0), family.characters.toList());
-        expect(document.debugMaterializedSourceLineTextCount, 0);
-        expect(document.debugLineGraphemeCacheCount, 1);
-        expect(document.lineAt(0), family);
-        expect(document.debugMaterializedSourceLineTextCount, 1);
-        expect(document.debugLineGraphemeCacheCount, 1);
-        expect(document.lineAt(599), family);
-        expect(document.debugMaterializedSourceLineTextCount, 2);
-        expect(document.debugLineGraphemeCacheCount, 1);
-      },
-    );
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(1));
+      expect(document.debugPieceBackedLeafCount, greaterThan(1));
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.lineCount, 600);
+      expect(document.lineLength(0), 1);
+      expect(document.lineLength(255), 1);
+      expect(document.lineLength(256), 1);
+      expect(document.lineLength(599), 1);
+      expect(document.lineGraphemesAt(0), family.characters.toList());
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(document.debugLineGraphemeCacheCount, 1);
+      expect(document.lineAt(0), family);
+      expect(document.debugMaterializedSourceLineTextCount, 1);
+      expect(document.debugLineGraphemeCacheCount, 1);
+      expect(document.lineAt(599), family);
+      expect(document.debugMaterializedSourceLineTextCount, 2);
+      expect(document.debugLineGraphemeCacheCount, 1);
+    });
 
-    test(
-      'replaceLines builds large parsed documents through shared source-backed storage',
-      () {
-        final parsedLines = List<List<String>>.generate(
-          600,
-          (index) =>
-              'line-$index-abcdefghij'.characters.toList(growable: false),
-          growable: false,
-        );
-        final document = TextDocument(text: 'seed');
+    test('replaceLines builds large parsed documents through shared source-backed storage', () {
+      final parsedLines = List<List<String>>.generate(
+        600,
+        (index) => 'line-$index-abcdefghij'.characters.toList(growable: false),
+        growable: false,
+      );
+      final document = TextDocument(text: 'seed');
 
-        document.replaceLines(parsedLines);
+      document.replaceLines(parsedLines);
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(1));
-        expect(document.debugDistinctSourceCount, 1);
-        expect(document.debugJoinedSourceTextCount, 0);
-        expect(document.debugMaterializedSourceLineTextCount, 0);
-        expect(document.debugLineGraphemeCacheCount, parsedLines.length);
-        expect(document.lineCount, parsedLines.length);
-        expect(document.lineGraphemesAt(0), parsedLines.first);
-        expect(document.debugMaterializedSourceLineTextCount, 0);
-        expect(document.lineAt(0), 'line-0-abcdefghij');
-        expect(document.debugMaterializedSourceLineTextCount, 1);
-        expect(document.lineAt(599), 'line-599-abcdefghij');
-        expect(document.debugMaterializedSourceLineTextCount, 2);
-      },
-    );
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(1));
+      expect(document.debugDistinctSourceCount, 1);
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(document.debugLineGraphemeCacheCount, parsedLines.length);
+      expect(document.lineCount, parsedLines.length);
+      expect(document.lineGraphemesAt(0), parsedLines.first);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(document.lineAt(0), 'line-0-abcdefghij');
+      expect(document.debugMaterializedSourceLineTextCount, 1);
+      expect(document.lineAt(599), 'line-599-abcdefghij');
+      expect(document.debugMaterializedSourceLineTextCount, 2);
+    });
 
     test(
       'replaceLines keeps small parsed documents lazy until line text is read',
@@ -442,28 +420,21 @@ void main() {
       },
     );
 
-    test(
-      'piece-backed parsed-line edits stay lazy while building replacement storage',
-      () {
-        final document = TextDocument.fromParsedLines(const [
-          ['a', 'l', 'p', 'h', 'a'],
-          ['b', 'e', 't', 'a'],
-          ['g', 'a', 'm', 'm', 'a'],
-        ]);
+    test('piece-backed parsed-line edits stay lazy while building replacement storage', () {
+      final document = TextDocument.fromParsedLines(const [
+        ['a', 'l', 'p', 'h', 'a'],
+        ['b', 'e', 't', 'a'],
+        ['g', 'a', 'm', 'm', 'a'],
+      ]);
 
-        expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
 
-        document.replaceTextRange(
-          startOffset: 1,
-          endOffset: 4,
-          replacement: 'X',
-        );
+      document.replaceTextRange(startOffset: 1, endOffset: 4, replacement: 'X');
 
-        expect(document.text, 'aXa\nbeta\ngamma');
-        expect(document.debugPieceBackedLeafCount, greaterThan(0));
-        expect(document.debugMaterializedSourceLineTextCount, 0);
-      },
-    );
+      expect(document.text, 'aXa\nbeta\ngamma');
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+    });
 
     test(
       'parsed-line range helpers stay lazy until line text is read explicitly',
@@ -517,23 +488,20 @@ void main() {
       expect(document.debugMaterializedSourceLineTextCount, 0);
     });
 
-    test(
-      'replaceLines leaves revision and storage identity stable on no-op parsed edits',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta');
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
+    test('replaceLines leaves revision and storage identity stable on no-op parsed edits', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        document.replaceLines(const [
-          ['a', 'l', 'p', 'h', 'a'],
-          ['b', 'e', 't', 'a'],
-        ]);
+      document.replaceLines(const [
+        ['a', 'l', 'p', 'h', 'a'],
+        ['b', 'e', 't', 'a'],
+      ]);
 
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.text, 'alpha\nbeta');
-      },
-    );
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta');
+    });
 
     test('replaceLineTextRange stays lazy on no-op parsed line text edits', () {
       final document = TextDocument.fromParsedLines(const [
@@ -560,31 +528,28 @@ void main() {
       expect(change.newEndOffset, 11);
     });
 
-    test(
-      'composite text reads do not materialize line text caches just to assemble text',
-      () {
-        final lineTexts = List<String>.generate(
-          300,
-          (index) => 'line-$index',
-          growable: false,
-        );
-        final document = TextDocument.fromLineTexts(lineTexts);
+    test('composite text reads do not materialize line text caches just to assemble text', () {
+      final lineTexts = List<String>.generate(
+        300,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final document = TextDocument.fromLineTexts(lineTexts);
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugDistinctSourceCount, 1);
-        expect(document.debugHasMaterializedLineTextCache, isFalse);
-        expect(document.debugHasTextCache, isFalse);
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(0));
+      expect(document.debugDistinctSourceCount, 1);
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isFalse);
 
-        expect(document.text, lineTexts.join('\n'));
+      expect(document.text, lineTexts.join('\n'));
 
-        expect(document.debugHasMaterializedLineTextCache, isFalse);
-        expect(document.debugHasTextCache, isTrue);
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isTrue);
 
-        expect(document.lineTexts, lineTexts);
-        expect(document.debugHasMaterializedLineTextCache, isTrue);
-      },
-    );
+      expect(document.lineTexts, lineTexts);
+      expect(document.debugHasMaterializedLineTextCache, isTrue);
+    });
 
     test('line boundary offset helpers expose full-line ranges', () {
       final document = TextDocument(text: 'alpha\nbeta');
@@ -852,33 +817,30 @@ void main() {
       expect(document.debugHasTextCache, isFalse);
     });
 
-    test(
-      'composite grapheme range reads do not materialize every touched line cache',
-      () {
-        final lineTexts = List<String>.generate(
-          300,
-          (index) => 'line-$index-abcdefghij',
-          growable: false,
-        );
-        final document = TextDocument.fromLineTexts(lineTexts);
-        final start = document.lineStartOffset(120) + 2;
-        final end = document.lineEndOffset(180);
+    test('composite grapheme range reads do not materialize every touched line cache', () {
+      final lineTexts = List<String>.generate(
+        300,
+        (index) => 'line-$index-abcdefghij',
+        growable: false,
+      );
+      final document = TextDocument.fromLineTexts(lineTexts);
+      final start = document.lineStartOffset(120) + 2;
+      final end = document.lineEndOffset(180);
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugLineGraphemeCacheCount, 0);
 
-        final graphemes = document.graphemesInRange(
-          startOffset: start,
-          endOffset: end,
-        );
+      final graphemes = document.graphemesInRange(
+        startOffset: start,
+        endOffset: end,
+      );
 
-        expect(
-          graphemes.join(),
-          lineTexts.sublist(120, 181).join('\n').substring(2),
-        );
-        expect(document.debugLineGraphemeCacheCount, 0);
-      },
-    );
+      expect(
+        graphemes.join(),
+        lineTexts.sublist(120, 181).join('\n').substring(2),
+      );
+      expect(document.debugLineGraphemeCacheCount, 0);
+    });
 
     test(
       'composite text range reads do not materialize every touched line cache',
@@ -902,27 +864,24 @@ void main() {
       },
     );
 
-    test(
-      'flattenWithNewlines reuses the text cache path without warming line caches',
-      () {
-        final lineTexts = List<String>.generate(
-          300,
-          (index) => 'line-$index-abcdefghij',
-          growable: false,
-        );
-        final document = TextDocument.fromLineTexts(lineTexts);
+    test('flattenWithNewlines reuses the text cache path without warming line caches', () {
+      final lineTexts = List<String>.generate(
+        300,
+        (index) => 'line-$index-abcdefghij',
+        growable: false,
+      );
+      final document = TextDocument.fromLineTexts(lineTexts);
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugLineGraphemeCacheCount, 0);
-        expect(document.debugHasTextCache, isFalse);
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isFalse);
 
-        final flattened = document.flattenWithNewlines();
+      final flattened = document.flattenWithNewlines();
 
-        expect(flattened.join(), lineTexts.join('\n'));
-        expect(document.debugLineGraphemeCacheCount, 0);
-        expect(document.debugHasTextCache, isTrue);
-      },
-    );
+      expect(flattened.join(), lineTexts.join('\n'));
+      expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isTrue);
+    });
 
     test('revision is preserved on copies and increments on edits', () {
       final document = TextDocument(text: 'alpha');
@@ -937,49 +896,43 @@ void main() {
       expect(copy.revision, 0);
     });
 
-    test(
-      'replaceOffsetRange leaves revision and storage identity stable on no-op edits',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta');
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
+    test('replaceOffsetRange leaves revision and storage identity stable on no-op edits', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        final change = document.replaceOffsetRange(
-          startOffset: 6,
-          endOffset: 10,
-          replacement: const ['b', 'e', 't', 'a'],
-        );
+      final change = document.replaceOffsetRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: const ['b', 'e', 't', 'a'],
+      );
 
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.text, 'alpha\nbeta');
-        expect(change.startOffset, 6);
-        expect(change.oldEndOffset, 10);
-        expect(change.newEndOffset, 10);
-      },
-    );
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 10);
+      expect(change.newEndOffset, 10);
+    });
 
-    test(
-      'replaceTextRange leaves revision and storage identity stable on no-op string edits',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta');
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
+    test('replaceTextRange leaves revision and storage identity stable on no-op string edits', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        final change = document.replaceTextRange(
-          startOffset: 6,
-          endOffset: 10,
-          replacement: 'beta',
-        );
+      final change = document.replaceTextRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'beta',
+      );
 
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.text, 'alpha\nbeta');
-        expect(change.startOffset, 6);
-        expect(change.oldEndOffset, 10);
-        expect(change.newEndOffset, 10);
-      },
-    );
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 10);
+      expect(change.newEndOffset, 10);
+    });
 
     test('replaceOffsetRange keeps long-line grapheme caches cold', () {
       final prefix = List<String>.filled(4096, 'a').join();
@@ -1009,186 +962,160 @@ void main() {
       );
     });
 
-    test(
-      'replaceLineTextRange rewrites only the targeted line window with change metadata',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta\ngamma\ndelta');
+    test('replaceLineTextRange rewrites only the targeted line window with change metadata', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma\ndelta');
 
-        final change = document.replaceLineTextRange(
-          startLine: 1,
-          endLine: 3,
-          replacementLineTexts: const ['bravo', 'charlie'],
-        );
+      final change = document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 3,
+        replacementLineTexts: const ['bravo', 'charlie'],
+      );
 
-        expect(document.lineTexts, const [
-          'alpha',
-          'bravo',
-          'charlie',
-          'delta',
-        ]);
-        expect(document.text, 'alpha\nbravo\ncharlie\ndelta');
-        expect(change.startOffset, 6);
-        expect(change.oldEndOffset, 17);
-        expect(change.newEndOffset, 20);
-        expect(change.startPosition, const TextPosition(line: 1, column: 0));
-        expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
-        expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
-      },
-    );
+      expect(document.lineTexts, const ['alpha', 'bravo', 'charlie', 'delta']);
+      expect(document.text, 'alpha\nbravo\ncharlie\ndelta');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 17);
+      expect(change.newEndOffset, 20);
+      expect(change.startPosition, const TextPosition(line: 1, column: 0));
+      expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
+      expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
+    });
 
-    test(
-      'replaceLineTextRange builds large replacements through source-backed storage',
-      () {
-        final replacementLineTexts = List<String>.generate(
-          600,
-          (index) => 'line-$index-abcdefghij',
-          growable: false,
-        );
-        final document = TextDocument(text: 'alpha\nbeta');
+    test('replaceLineTextRange builds large replacements through source-backed storage', () {
+      final replacementLineTexts = List<String>.generate(
+        600,
+        (index) => 'line-$index-abcdefghij',
+        growable: false,
+      );
+      final document = TextDocument(text: 'alpha\nbeta');
 
+      document.replaceLineTextRange(
+        startLine: 0,
+        endLine: document.lineCount,
+        replacementLineTexts: replacementLineTexts,
+      );
+
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceBackedLeafCount, greaterThan(1));
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.lineCount, replacementLineTexts.length);
+      expect(document.lineAt(0), replacementLineTexts.first);
+      expect(document.lineAt(599), replacementLineTexts.last);
+    });
+
+    test('replaceLineTextRange keeps grapheme-heavy large replacement lengths correct', () {
+      const family = '👩‍👩‍👧‍👦';
+      final replacementLineTexts = List<String>.generate(
+        600,
+        (_) => family,
+        growable: false,
+      );
+      final document = TextDocument(text: 'alpha\nbeta');
+
+      document.replaceLineTextRange(
+        startLine: 0,
+        endLine: document.lineCount,
+        replacementLineTexts: replacementLineTexts,
+      );
+
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceBackedLeafCount, greaterThan(1));
+      expect(document.lineCount, replacementLineTexts.length);
+      expect(document.lineLength(0), 1);
+      expect(document.lineLength(255), 1);
+      expect(document.lineLength(256), 1);
+      expect(document.lineLength(599), 1);
+      expect(document.lineAt(0), family);
+      expect(document.lineAt(599), family);
+    });
+
+    test('fragmented large line-range edits collapse into chunked piece-backed leaves', () {
+      final lineTexts = List<String>.generate(
+        300,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final document = TextDocument.fromLineTexts(lineTexts);
+
+      for (final line in [20, 60, 100, 140, 180]) {
         document.replaceLineTextRange(
-          startLine: 0,
-          endLine: document.lineCount,
-          replacementLineTexts: replacementLineTexts,
+          startLine: line,
+          endLine: line + 1,
+          replacementLineTexts: ['edit-$line'],
         );
+      }
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugPieceBackedLeafCount, greaterThan(1));
-        expect(document.debugJoinedSourceTextCount, 0);
-        expect(document.lineCount, replacementLineTexts.length);
-        expect(document.lineAt(0), replacementLineTexts.first);
-        expect(document.lineAt(599), replacementLineTexts.last);
-      },
-    );
+      expect(document.lineAt(20), 'edit-20');
+      expect(document.lineAt(60), 'edit-60');
+      expect(document.lineAt(100), 'edit-100');
+      expect(document.lineAt(140), 'edit-140');
+      expect(document.lineAt(180), 'edit-180');
+      expect(document.debugStorageSegmentCount, lessThanOrEqualTo(4));
+      expect(
+        document.debugPieceCount,
+        lessThanOrEqualTo(document.lineCount + 1),
+      );
+      expect(document.debugPieceBackedLeafCount, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(1));
+    });
 
-    test(
-      'replaceLineTextRange keeps grapheme-heavy large replacement lengths correct',
-      () {
-        const family = '👩‍👩‍👧‍👦';
-        final replacementLineTexts = List<String>.generate(
-          600,
-          (_) => family,
-          growable: false,
-        );
-        final document = TextDocument(text: 'alpha\nbeta');
+    test('line-text-backed sources stay unjoined through composite full-text reads', () {
+      final replacementLineTexts = List<String>.generate(
+        600,
+        (index) => 'line-$index-abcdefghij',
+        growable: false,
+      );
+      final document = TextDocument(text: 'alpha\nbeta');
 
-        document.replaceLineTextRange(
-          startLine: 0,
-          endLine: document.lineCount,
-          replacementLineTexts: replacementLineTexts,
-        );
+      document.replaceLineTextRange(
+        startLine: 0,
+        endLine: document.lineCount,
+        replacementLineTexts: replacementLineTexts,
+      );
 
-        expect(document.debugStorageDepth, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugPieceBackedLeafCount, greaterThan(1));
-        expect(document.lineCount, replacementLineTexts.length);
-        expect(document.lineLength(0), 1);
-        expect(document.lineLength(255), 1);
-        expect(document.lineLength(256), 1);
-        expect(document.lineLength(599), 1);
-        expect(document.lineAt(0), family);
-        expect(document.lineAt(599), family);
-      },
-    );
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(
+        document.textBetweenLines(startLine: 120, endLine: 181),
+        replacementLineTexts.sublist(120, 181).join('\n'),
+      );
+      expect(document.debugJoinedSourceTextCount, 0);
 
-    test(
-      'fragmented large line-range edits collapse into chunked piece-backed leaves',
-      () {
-        final lineTexts = List<String>.generate(
-          300,
-          (index) => 'line-$index',
-          growable: false,
-        );
-        final document = TextDocument.fromLineTexts(lineTexts);
+      expect(document.text, replacementLineTexts.join('\n'));
+      expect(document.debugJoinedSourceTextCount, 0);
+    });
 
-        for (final line in [20, 60, 100, 140, 180]) {
-          document.replaceLineTextRange(
-            startLine: line,
-            endLine: line + 1,
-            replacementLineTexts: ['edit-$line'],
-          );
-        }
+    test('replaceLineTextRange leaves revision and storage identity stable on no-op edits', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        expect(document.lineAt(20), 'edit-20');
-        expect(document.lineAt(60), 'edit-60');
-        expect(document.lineAt(100), 'edit-100');
-        expect(document.lineAt(140), 'edit-140');
-        expect(document.lineAt(180), 'edit-180');
-        expect(document.debugStorageSegmentCount, lessThanOrEqualTo(4));
-        expect(
-          document.debugPieceCount,
-          lessThanOrEqualTo(document.lineCount + 1),
-        );
-        expect(document.debugPieceBackedLeafCount, greaterThan(1));
-        expect(document.debugSourceBackedLeafCount, greaterThan(1));
-      },
-    );
+      final change = document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 2,
+        replacementLineTexts: const ['beta'],
+      );
 
-    test(
-      'line-text-backed sources stay unjoined through composite full-text reads',
-      () {
-        final replacementLineTexts = List<String>.generate(
-          600,
-          (index) => 'line-$index-abcdefghij',
-          growable: false,
-        );
-        final document = TextDocument(text: 'alpha\nbeta');
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta\ngamma');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 11);
+      expect(change.newEndOffset, 11);
+    });
 
-        document.replaceLineTextRange(
-          startLine: 0,
-          endLine: document.lineCount,
-          replacementLineTexts: replacementLineTexts,
-        );
+    test('replaceLineTexts leaves revision and storage identity stable on no-op edits', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        expect(document.debugJoinedSourceTextCount, 0);
-        expect(
-          document.textBetweenLines(startLine: 120, endLine: 181),
-          replacementLineTexts.sublist(120, 181).join('\n'),
-        );
-        expect(document.debugJoinedSourceTextCount, 0);
+      document.replaceLineTexts(const ['alpha', 'beta', 'gamma']);
 
-        expect(document.text, replacementLineTexts.join('\n'));
-        expect(document.debugJoinedSourceTextCount, 0);
-      },
-    );
-
-    test(
-      'replaceLineTextRange leaves revision and storage identity stable on no-op edits',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta\ngamma');
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
-
-        final change = document.replaceLineTextRange(
-          startLine: 1,
-          endLine: 2,
-          replacementLineTexts: const ['beta'],
-        );
-
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.text, 'alpha\nbeta\ngamma');
-        expect(change.startOffset, 6);
-        expect(change.oldEndOffset, 11);
-        expect(change.newEndOffset, 11);
-      },
-    );
-
-    test(
-      'replaceLineTexts leaves revision and storage identity stable on no-op edits',
-      () {
-        final document = TextDocument(text: 'alpha\nbeta\ngamma');
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
-
-        document.replaceLineTexts(const ['alpha', 'beta', 'gamma']);
-
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.text, 'alpha\nbeta\ngamma');
-      },
-    );
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta\ngamma');
+    });
 
     test('replaceLineTextRange can delete lines down to one empty line', () {
       final document = TextDocument(text: 'alpha');

@@ -308,45 +308,39 @@ void main() {
         expect(Ansi.stripAnsi(view), contains('hello'));
       });
 
-      test(
-        'selected cursor grapheme does not leak raw ansi fragments in single-line view',
-        () {
-          final styles = TextInputStyles(
-            focused: TextInputStyleState(
-              text: Style().foreground(const AnsiColor(15)),
-              selection: Style()
-                  .background(const AnsiColor(4))
-                  .foreground(const AnsiColor(15)),
-            ),
-            blurred: TextInputStyleState(
-              text: Style().foreground(const AnsiColor(15)),
-              selection: Style()
-                  .background(const AnsiColor(4))
-                  .foreground(const AnsiColor(15)),
-            ),
-            cursor: TextInputCursorStyle(
-              color: const AnsiColor(6),
-              blink: false,
-            ),
-          );
-          final input = TextInputModel(
-            prompt: '',
-            useVirtualCursor: true,
-            styles: styles,
-          )..focus();
-          input.value = 'TODO';
-          input.selectionStart = 0;
-          input.selectionEnd = 4;
-          input.position = 0;
+      test('selected cursor grapheme does not leak raw ansi fragments in single-line view', () {
+        final styles = TextInputStyles(
+          focused: TextInputStyleState(
+            text: Style().foreground(const AnsiColor(15)),
+            selection: Style()
+                .background(const AnsiColor(4))
+                .foreground(const AnsiColor(15)),
+          ),
+          blurred: TextInputStyleState(
+            text: Style().foreground(const AnsiColor(15)),
+            selection: Style()
+                .background(const AnsiColor(4))
+                .foreground(const AnsiColor(15)),
+          ),
+          cursor: TextInputCursorStyle(color: const AnsiColor(6), blink: false),
+        );
+        final input = TextInputModel(
+          prompt: '',
+          useVirtualCursor: true,
+          styles: styles,
+        )..focus();
+        input.value = 'TODO';
+        input.selectionStart = 0;
+        input.selectionEnd = 4;
+        input.position = 0;
 
-          final stripped = Ansi.stripAnsi(input.view() as String);
+        final stripped = Ansi.stripAnsi(input.view() as String);
 
-          expect(stripped, contains('TODO'));
-          expect(stripped, isNot(contains('[7m')));
-          expect(stripped, isNot(contains('[27m')));
-          expect(stripped, isNot(contains('[38;5;')));
-        },
-      );
+        expect(stripped, contains('TODO'));
+        expect(stripped, isNot(contains('[7m')));
+        expect(stripped, isNot(contains('[27m')));
+        expect(stripped, isNot(contains('[38;5;')));
+      });
     });
 
     group('Grapheme Editing', () {
@@ -361,29 +355,26 @@ void main() {
         expect(input.position, 0);
       });
 
-      test(
-        'document-backed multiline backspace patches value without warming every line cache',
-        () {
-          final lines = List<String>.generate(
-            300,
-            (index) => 'line-$index',
-            growable: false,
-          );
-          final input = TextInputModel(multiline: true)..focus();
-          input.value = lines.join('\n');
-          input.position =
-              input.document.lineStartOffset(150) +
-              input.document.lineLength(150);
+      test('document-backed multiline backspace patches value without warming every line cache', () {
+        final lines = List<String>.generate(
+          300,
+          (index) => 'line-$index',
+          growable: false,
+        );
+        final input = TextInputModel(multiline: true)..focus();
+        input.value = lines.join('\n');
+        input.position =
+            input.document.lineStartOffset(150) +
+            input.document.lineLength(150);
 
-          expect(input.document.debugStorageDepth, greaterThan(1));
-          expect(input.document.debugLineGraphemeCacheCount, lessThan(10));
+        expect(input.document.debugStorageDepth, greaterThan(1));
+        expect(input.document.debugLineGraphemeCacheCount, lessThan(10));
 
-          input.update(KeyMsg(const Key(KeyType.backspace)));
+        input.update(KeyMsg(const Key(KeyType.backspace)));
 
-          expect(input.document.lineAt(150), 'line-15');
-          expect(input.document.debugLineGraphemeCacheCount, lessThan(10));
-        },
-      );
+        expect(input.document.lineAt(150), 'line-15');
+        expect(input.document.debugLineGraphemeCacheCount, lessThan(10));
+      });
 
       test('delete removes a full grapheme cluster', () {
         final input = TextInputModel()..focus();
@@ -874,48 +865,42 @@ void main() {
         expect(lineEnd.position, 6);
       });
 
-      test(
-        'selected cursor grapheme does not leak raw ansi fragments in multiline view',
-        () {
-          final styles = TextInputStyles(
-            focused: TextInputStyleState(
-              text: Style().foreground(const AnsiColor(15)),
-              selection: Style()
-                  .background(const AnsiColor(4))
-                  .foreground(const AnsiColor(15)),
-            ),
-            blurred: TextInputStyleState(
-              text: Style().foreground(const AnsiColor(15)),
-              selection: Style()
-                  .background(const AnsiColor(4))
-                  .foreground(const AnsiColor(15)),
-            ),
-            cursor: TextInputCursorStyle(
-              color: const AnsiColor(6),
-              blink: false,
-            ),
-          );
-          final input = TextInputModel(
-            prompt: '',
-            multiline: true,
-            width: 8,
-            maxHeight: 2,
-            useVirtualCursor: true,
-            styles: styles,
-          )..focus();
-          input.value = 'TODO';
-          input.selectionStart = 0;
-          input.selectionEnd = 4;
-          input.position = 0;
+      test('selected cursor grapheme does not leak raw ansi fragments in multiline view', () {
+        final styles = TextInputStyles(
+          focused: TextInputStyleState(
+            text: Style().foreground(const AnsiColor(15)),
+            selection: Style()
+                .background(const AnsiColor(4))
+                .foreground(const AnsiColor(15)),
+          ),
+          blurred: TextInputStyleState(
+            text: Style().foreground(const AnsiColor(15)),
+            selection: Style()
+                .background(const AnsiColor(4))
+                .foreground(const AnsiColor(15)),
+          ),
+          cursor: TextInputCursorStyle(color: const AnsiColor(6), blink: false),
+        );
+        final input = TextInputModel(
+          prompt: '',
+          multiline: true,
+          width: 8,
+          maxHeight: 2,
+          useVirtualCursor: true,
+          styles: styles,
+        )..focus();
+        input.value = 'TODO';
+        input.selectionStart = 0;
+        input.selectionEnd = 4;
+        input.position = 0;
 
-          final stripped = Ansi.stripAnsi(input.view() as String);
+        final stripped = Ansi.stripAnsi(input.view() as String);
 
-          expect(stripped, contains('TODO'));
-          expect(stripped, isNot(contains('[7m')));
-          expect(stripped, isNot(contains('[27m')));
-          expect(stripped, isNot(contains('[38;5;')));
-        },
-      );
+        expect(stripped, contains('TODO'));
+        expect(stripped, isNot(contains('[7m')));
+        expect(stripped, isNot(contains('[27m')));
+        expect(stripped, isNot(contains('[38;5;')));
+      });
 
       test('clicking far past line end moves cursor to end', () {
         var input = TextInputModel(multiline: true, prompt: ' ');

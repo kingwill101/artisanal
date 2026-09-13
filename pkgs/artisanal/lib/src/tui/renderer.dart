@@ -10,6 +10,7 @@ import 'terminal_native_frame.dart';
 import 'terminal_render_inspector.dart';
 import 'trace.dart';
 import 'view.dart';
+
 import 'package:ultraviolet/rendering.dart' show UvAnsi;
 import 'package:ultraviolet/core.dart' as uv_buffer;
 import 'package:ultraviolet/core.dart' as uv_styled;
@@ -209,8 +210,8 @@ class FullScreenTuiRenderer implements TuiRenderer {
   /// Creates a fullscreen renderer targeting the given [terminal].
   FullScreenTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(),
-  }) : _options = options;
+    this._options = const TuiRendererOptions(),
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;
@@ -499,11 +500,11 @@ class InlineTuiRenderer implements TuiRenderer {
   /// Creates an inline renderer targeting the given [terminal].
   InlineTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(
+    this._options = const TuiRendererOptions(
       altScreen: false,
       hideCursor: false,
     ),
-  }) : _options = options;
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;
@@ -739,6 +740,10 @@ class BufferedTuiRenderer implements TuiRenderer {
 
   @override
   void dispose() {
+    // Buffered output is transient; retaining it would allow a later flush
+    // after reinitialization to emit a frame from the previous lifecycle.
+    _pendingView = null;
+    _dirty = false;
     inner.dispose();
   }
 }
@@ -763,9 +768,9 @@ class UltravioletTuiRenderer
   /// terminal movement capabilities (tab stops and backspace support).
   UltravioletTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(),
+    this._options = const TuiRendererOptions(),
     this.movementCapsOverride,
-  }) : _options = options;
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;
@@ -1052,6 +1057,9 @@ class UltravioletTuiRenderer
     _inlineTerminalHeight = isBounded ? h : null;
     final renderWidth = geometry?.width ?? w;
     final renderHeight = geometry?.height ?? h;
+    // A renderer can be reinitialized after dispose(). Do not retain the
+    // previous frame's cells across that lifecycle boundary.
+    _screen?.dispose();
     _screen = uv_buffer.ScreenBuffer(renderWidth, renderHeight);
 
     final envMap = environment;
@@ -1693,6 +1701,21 @@ class UltravioletTuiRenderer
 
   @override
   void dispose() {
+    // Release transient frame storage. Logical print history is different:
+    // both log queues are bounded by _maxPrintLines and survive same-instance
+    // terminal release/restore so user-visible logs are not lost.
+    _pendingView = '';
+    _dirty = false;
+    _inlineCapture.clear();
+    _fullscreenCapture.clear();
+    _inlineSink = null;
+    _inlineNeedsFullClear = false;
+    // The inline log history is persistent across renderer teardown. A
+    // dispose clears the visible region, so a same-instance reinitialization
+    // (used by terminal release/restore) must replay that history on its first
+    // frame rather than treating it as already present.
+    _inlineNeedsLogReplay =
+        _options.isInline && _options.uiAnchor == UiAnchor.bottom;
     if (!_initialized) return;
 
     final isInline = _options.isInline;
@@ -1716,6 +1739,14 @@ class UltravioletTuiRenderer
     if (!isBounded && _options.altScreen) {
       terminal.exitAltScreen();
     }
+    _renderer?.dispose();
+    _renderer = null;
+    _screen?.dispose();
+    _screen = null;
+    _nativeFrameCache = null;
+    _nativeDeltaCache = null;
+    _nativeCellDeltaCache = null;
+    _previousNativeFrameForCellDelta = null;
     _initialized = false;
   }
 
@@ -1812,8 +1843,8 @@ class SimpleTuiRenderer implements TuiRenderer {
   /// Creates a simple renderer targeting the given [terminal].
   SimpleTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(),
-  }) : _options = options;
+    this._options = const TuiRendererOptions(),
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;

@@ -6,8 +6,7 @@ final class _LipglossPage extends _KitchenSinkPage {
         viewport: tui.ViewportModel(width: 0, height: 0, horizontalStep: 4),
       ),
       super(
-        help:
-            'tui.Tree/List/tui.Table: scroll with ↑/↓ j/k, PgUp/PgDn, mouse wheel • drag scrollbar',
+        help: 'tui.Tree/List/tui.Table: scroll with ↑/↓ j/k, PgUp/PgDn, mouse wheel • drag scrollbar',
       );
 
   final tui.ViewportScrollPane _pane;

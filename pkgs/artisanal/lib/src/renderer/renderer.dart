@@ -132,10 +132,9 @@ class StringRenderer implements Renderer {
 class NullRenderer implements Renderer {
   /// Creates a null renderer.
   NullRenderer({
-    ColorProfile colorProfile = ColorProfile.ascii,
-    bool hasDarkBackground = true,
-  }) : _colorProfile = colorProfile,
-       _hasDarkBackground = hasDarkBackground;
+    this._colorProfile = ColorProfile.ascii,
+    this._hasDarkBackground = true,
+  });
 
   ColorProfile _colorProfile;
   bool _hasDarkBackground;

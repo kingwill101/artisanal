@@ -78,17 +78,13 @@ class StopwatchModel extends ViewComponent {
 
   /// Private constructor for copyWith.
   StopwatchModel._({
-    required Duration elapsed,
+    required this._elapsed,
     required this.interval,
-    required bool running,
-    required int id,
-    required int tag,
-    required DateTime Function() nowProvider,
-  }) : _elapsed = elapsed,
-       _running = running,
-       _nowProvider = nowProvider,
-       _id = id,
-       _tag = tag;
+    required this._running,
+    required this._id,
+    required this._tag,
+    required this._nowProvider,
+  });
 
   /// The elapsed duration.
   final Duration _elapsed;

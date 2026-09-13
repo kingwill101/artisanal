@@ -50,8 +50,9 @@ class StyledBlockComponent extends DisplayComponent {
         (String s) => renderConfig
             .configureStyle(Style().foreground(Colors.error))
             .render(s),
-      BlockStyleType.note =>
-        (String s) => renderConfig.configureStyle(Style().dim()).render(s),
+      BlockStyleType.note => (
+        String s,
+      ) => renderConfig.configureStyle(Style().dim()).render(s),
     };
 
     final prefixText =
@@ -193,8 +194,7 @@ typedef StyledBlockStyleFunc = Style? Function(String line, int lineIndex);
 /// ```
 class StyledBlock extends DisplayComponent {
   /// Creates a new empty styled block builder.
-  StyledBlock({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  StyledBlock({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 
@@ -643,8 +643,7 @@ extension StyledBlockFactory on StyledBlock {
 /// ```
 class Comment extends DisplayComponent {
   /// Creates a new empty comment builder.
-  Comment({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  Comment({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

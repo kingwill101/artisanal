@@ -31,8 +31,7 @@ final class _OverviewPage extends _KitchenSinkPage {
 final class _InputPage extends _KitchenSinkPage {
   const _InputPage()
     : super(
-        help:
-            'Input: type in box • paste/mouse/focus/resize logs • c copy • p clipboard read • s size report',
+        help: 'Input: type in box • paste/mouse/focus/resize logs • c copy • p clipboard read • s size report',
       );
 
   @override
@@ -120,8 +119,7 @@ final class _ListSelectPage extends _KitchenSinkPage {
 final class _RendererPage extends _KitchenSinkPage {
   _RendererPage()
     : super(
-        help:
-            'TuiRenderer: r reset • g complete • ←/→ (or h/l) nudge • t toggle auto-tick',
+        help: 'TuiRenderer: r reset • g complete • ←/→ (or h/l) nudge • t toggle auto-tick',
       );
 
   bool _autoTick = false;

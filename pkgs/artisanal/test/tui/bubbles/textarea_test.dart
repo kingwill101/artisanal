@@ -566,44 +566,41 @@ void main() {
         },
       );
 
-      test(
-        'selection or line case transforms update the selected block or current line',
-        () {
-          final textarea = TextAreaModel();
-          textarea.setText('alpha beta\ngamma delta');
-          textarea.setCursor(0, 3);
+      test('selection or line case transforms update the selected block or current line', () {
+        final textarea = TextAreaModel();
+        textarea.setText('alpha beta\ngamma delta');
+        textarea.setCursor(0, 3);
 
-          expect(textarea.uppercaseSelectionOrLine(), isTrue);
-          expect(textarea.value, 'ALPHA BETA\ngamma delta');
-          expect(textarea.line, 0);
-          expect(textarea.column, 3);
+        expect(textarea.uppercaseSelectionOrLine(), isTrue);
+        expect(textarea.value, 'ALPHA BETA\ngamma delta');
+        expect(textarea.line, 0);
+        expect(textarea.column, 3);
 
-          textarea.setSelection(
-            baseLine: 1,
-            baseColumn: 0,
-            extentLine: 1,
-            extentColumn: 11,
-          );
-          expect(textarea.lowercaseSelectionOrLine(), isFalse);
+        textarea.setSelection(
+          baseLine: 1,
+          baseColumn: 0,
+          extentLine: 1,
+          extentColumn: 11,
+        );
+        expect(textarea.lowercaseSelectionOrLine(), isFalse);
 
-          textarea.setText('alpha beta\nGAMMA DELTA');
-          textarea.setSelection(
-            baseLine: 1,
-            baseColumn: 0,
-            extentLine: 1,
-            extentColumn: 11,
-          );
-          expect(textarea.lowercaseSelectionOrLine(), isTrue);
-          expect(textarea.value, 'alpha beta\ngamma delta');
-          expect(textarea.selectionBase, (line: 1, column: 0));
-          expect(textarea.selectionExtent, (line: 1, column: 11));
+        textarea.setText('alpha beta\nGAMMA DELTA');
+        textarea.setSelection(
+          baseLine: 1,
+          baseColumn: 0,
+          extentLine: 1,
+          extentColumn: 11,
+        );
+        expect(textarea.lowercaseSelectionOrLine(), isTrue);
+        expect(textarea.value, 'alpha beta\ngamma delta');
+        expect(textarea.selectionBase, (line: 1, column: 0));
+        expect(textarea.selectionExtent, (line: 1, column: 11));
 
-          expect(textarea.capitalizeSelectionOrLine(), isTrue);
-          expect(textarea.value, 'alpha beta\nGamma Delta');
-          expect(textarea.selectionBase, (line: 1, column: 0));
-          expect(textarea.selectionExtent, (line: 1, column: 11));
-        },
-      );
+        expect(textarea.capitalizeSelectionOrLine(), isTrue);
+        expect(textarea.value, 'alpha beta\nGamma Delta');
+        expect(textarea.selectionBase, (line: 1, column: 0));
+        expect(textarea.selectionExtent, (line: 1, column: 11));
+      });
 
       test('sortSelectedLines sorts the selected block or entire buffer', () {
         final textarea = TextAreaModel();
@@ -793,35 +790,32 @@ void main() {
         expect(textarea.selectionExtent, (line: 1, column: 4));
       });
 
-      test(
-        'unwrapSelection removes matching delimiters and preserves the selection',
-        () {
-          final textarea = TextAreaModel();
-          textarea.setText('alpha (beta)');
-          textarea.setSelection(
-            baseLine: 0,
-            baseColumn: 7,
-            extentLine: 0,
-            extentColumn: 11,
-          );
+      test('unwrapSelection removes matching delimiters and preserves the selection', () {
+        final textarea = TextAreaModel();
+        textarea.setText('alpha (beta)');
+        textarea.setSelection(
+          baseLine: 0,
+          baseColumn: 7,
+          extentLine: 0,
+          extentColumn: 11,
+        );
 
-          expect(textarea.unwrapSelection(), isTrue);
-          expect(textarea.value, 'alpha beta');
-          expect(textarea.selectionBase, (line: 0, column: 6));
-          expect(textarea.selectionExtent, (line: 0, column: 10));
-          expect(textarea.line, 0);
-          expect(textarea.column, 10);
+        expect(textarea.unwrapSelection(), isTrue);
+        expect(textarea.value, 'alpha beta');
+        expect(textarea.selectionBase, (line: 0, column: 6));
+        expect(textarea.selectionExtent, (line: 0, column: 10));
+        expect(textarea.line, 0);
+        expect(textarea.column, 10);
 
-          textarea.setText('alpha beta');
-          textarea.setSelection(
-            baseLine: 0,
-            baseColumn: 6,
-            extentLine: 0,
-            extentColumn: 10,
-          );
-          expect(textarea.unwrapSelection(), isFalse);
-        },
-      );
+        textarea.setText('alpha beta');
+        textarea.setSelection(
+          baseLine: 0,
+          baseColumn: 6,
+          extentLine: 0,
+          extentColumn: 10,
+        );
+        expect(textarea.unwrapSelection(), isFalse);
+      });
 
       test('deleteLines removes the current line or selected block', () {
         final textarea = TextAreaModel();

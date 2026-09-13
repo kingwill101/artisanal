@@ -526,34 +526,42 @@ final class DebugOverlayModel {
 
   /// Overlays [overlay] onto [base] at column [x].
   static String _overlayLine(String base, String overlay, int x, int screenW) {
-    // Pad base to reach x position if needed
-    final baseVisLen = Style.visibleLength(base);
-    final overlayVisLen = Style.visibleLength(overlay);
-
     if (x >= screenW) return base;
 
-    // Build the result: [prefix][overlay][suffix]
-    final buf = StringBuffer();
+    final baseVisLen = Style.visibleLength(base);
+    final available = screenW - x;
+    final overlayVisLen = Style.visibleLength(overlay).clamp(0, available);
+    if (overlayVisLen == 0) return base;
 
-    // Get prefix (content before x)
+    // Slice by terminal cells, not Dart code units. In particular, markdown
+    // links contain zero-width OSC 8 sequences (terminated by either BEL or
+    // ST), and wide graphemes occupy two cells. Cutting either by character
+    // count can leave a partial OSC sequence in the next layer.
+    final buf = StringBuffer();
     if (x > 0) {
       if (baseVisLen <= x) {
-        // Base is shorter than x, use base + padding
-        buf.write(base);
-        buf.write(' ' * (x - baseVisLen));
+        buf
+          ..write(base)
+          ..write(' ' * (x - baseVisLen));
       } else {
-        // Truncate base at position x (respecting ANSI)
-        buf.write(_truncateAtVisiblePos(base, x));
+        buf.write(uv.clipAnsiByCells(base, 0, x));
       }
     }
 
-    // Add the overlay
-    buf.write(overlay);
+    // The base pen must not leak into the opaque panel (notably an OSC 8
+    // hyperlink). Restore the base pen at the suffix boundary below.
+    buf
+      ..write('\x1b[0m')
+      ..write('\x1b]8;;\x1b\\')
+      ..write(uv.clipAnsiByCells(overlay, 0, overlayVisLen))
+      // Cutting at the final visible cell may omit trailing pen resets.
+      // A default-styled suffix has no opening state of its own.
+      ..write('\x1b[0m')
+      ..write('\x1b]8;;\x1b\\');
 
-    // Add suffix if base extends past overlay
     final endX = x + overlayVisLen;
     if (baseVisLen > endX) {
-      buf.write(_substringFromVisiblePos(base, endX));
+      buf.write(uv.clipAnsiByCells(base, endX, baseVisLen));
     }
 
     return buf.toString();
@@ -561,50 +569,8 @@ final class DebugOverlayModel {
 
   /// Truncates a string at the given visible position, preserving ANSI codes.
   static String _truncateAtVisiblePos(String s, int visPos) {
-    final buf = StringBuffer();
-    var visible = 0;
-    var i = 0;
-
-    while (i < s.length && visible < visPos) {
-      if (s[i] == '\x1B' && i + 1 < s.length && s[i + 1] == '[') {
-        // ANSI escape sequence - copy it entirely
-        final start = i;
-        i += 2;
-        while (i < s.length && s[i] != 'm') {
-          i++;
-        }
-        if (i < s.length) i++; // include 'm'
-        buf.write(s.substring(start, i));
-      } else {
-        buf.write(s[i]);
-        visible++;
-        i++;
-      }
-    }
-
-    return buf.toString();
-  }
-
-  /// Returns substring starting from the given visible position.
-  static String _substringFromVisiblePos(String s, int visPos) {
-    var visible = 0;
-    var i = 0;
-
-    while (i < s.length && visible < visPos) {
-      if (s[i] == '\x1B' && i + 1 < s.length && s[i + 1] == '[') {
-        // ANSI escape sequence - skip it (don't count as visible)
-        i += 2;
-        while (i < s.length && s[i] != 'm') {
-          i++;
-        }
-        if (i < s.length) i++; // skip 'm'
-      } else {
-        visible++;
-        i++;
-      }
-    }
-
-    return i < s.length ? s.substring(i) : '';
+    if (visPos <= 0) return '';
+    return uv.cutAnsiByCells(s, 0, visPos);
   }
 
   ({int w, int h}) _panelSize() {

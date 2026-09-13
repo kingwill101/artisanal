@@ -19,11 +19,10 @@ typedef TextPositionDiagnosticsBuilder =
 final class TextPositionDiagnosticsSource extends ChangeNotifier
     implements ValueListenable<Iterable<TextPositionDiagnosticRange>> {
   TextPositionDiagnosticsSource({
-    required ValueListenable<String> text,
-    required TextPositionDiagnosticsBuilder buildDiagnostics,
+    required this._text,
+    required this._buildDiagnostics,
     bool syncImmediately = true,
-  }) : _text = text,
-       _buildDiagnostics = buildDiagnostics {
+  }) {
     _text.addListener(_handleTextChanged);
     if (syncImmediately) {
       sync(force: true);

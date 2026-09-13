@@ -6,8 +6,8 @@ class _NoopCommand extends Command<void> {
     this._name,
     this._description, {
     void Function()? configure,
-    Future<void> Function()? onRun,
-  }) : _onRun = onRun {
+    this._onRun,
+  }) {
     configure?.call();
   }
 

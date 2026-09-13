@@ -42,50 +42,44 @@ void main() {
     },
   );
 
-  test(
-    'UvTerminalRenderer wraps rendered frames when synchronized output is enabled',
-    () {
-      final out = _TestSink();
-      final r = UvTerminalRenderer(
-        out,
-        env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
-      );
-      r.setSynchronizedOutput(true);
-      final buf = Buffer.create(4, 1);
-      buf.setCell(0, 0, Cell(content: 'X'));
+  test('UvTerminalRenderer wraps rendered frames when synchronized output is enabled', () {
+    final out = _TestSink();
+    final r = UvTerminalRenderer(
+      out,
+      env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+    );
+    r.setSynchronizedOutput(true);
+    final buf = Buffer.create(4, 1);
+    buf.setCell(0, 0, Cell(content: 'X'));
 
-      r.render(buf);
-      r.flush();
+    r.render(buf);
+    r.flush();
 
-      final s = out.value;
-      final begin = s.indexOf(UvAnsi.beginSynchronizedUpdate);
-      final end = s.indexOf(UvAnsi.endSynchronizedUpdate);
-      expect(begin, isNonNegative);
-      expect(end, greaterThan(begin));
-    },
-  );
+    final s = out.value;
+    final begin = s.indexOf(UvAnsi.beginSynchronizedUpdate);
+    final end = s.indexOf(UvAnsi.endSynchronizedUpdate);
+    expect(begin, isNonNegative);
+    expect(end, greaterThan(begin));
+  });
 
-  test(
-    'UvTerminalRenderer emits nothing for skipped frames even with synchronized output enabled',
-    () {
-      final out = _TestSink();
-      final r = UvTerminalRenderer(
-        out,
-        env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
-      );
-      r.setSynchronizedOutput(true);
-      final buf = Buffer.create(4, 1);
-      buf.setCell(0, 0, Cell(content: 'X'));
+  test('UvTerminalRenderer emits nothing for skipped frames even with synchronized output enabled', () {
+    final out = _TestSink();
+    final r = UvTerminalRenderer(
+      out,
+      env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+    );
+    r.setSynchronizedOutput(true);
+    final buf = Buffer.create(4, 1);
+    buf.setCell(0, 0, Cell(content: 'X'));
 
-      r.render(buf);
-      r.flush();
-      out.reset();
+    r.render(buf);
+    r.flush();
+    out.reset();
 
-      // Rendering the same untouched buffer should be skipped.
-      r.render(buf);
-      r.flush();
+    // Rendering the same untouched buffer should be skipped.
+    r.render(buf);
+    r.flush();
 
-      expect(out.value, isEmpty);
-    },
-  );
+    expect(out.value, isEmpty);
+  });
 }

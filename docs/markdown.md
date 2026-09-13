@@ -11,6 +11,16 @@ renderer for documents. Choose based on the output you need:
 Use the ANSI renderer for fast, minimal output. Use Glamour for rich,
 document-style rendering.
 
+## Nested blockquotes
+
+The ANSI renderers lay out a quote's contents inside its available width,
+then prefix every output row—including headings, code/table borders, wrapped
+list lines, and blank separators. Each level contributes `│ `, so a nested
+quote is displayed as `│ │ `.
+
+For visual inspection, use [native terminal captures](capture.md) to render
+Markdown scenarios to PNG with explicit terminal fonts and colors.
+
 ## Quick Start (ANSI)
 
 ```dart
@@ -181,7 +191,13 @@ Features:
 - Handles nested tables within cells
 - Respects alignment hints (left, center, right) in table headers
 
-The ANSI renderer provides basic table borders with fixed-width columns, while Glamour adapts column widths to fit content optimally.
+The ANSI renderers keep natural column widths when a table fits. With
+`AnsiRendererOptions(width: ...)`, they wrap headers and cell contents while
+preserving ANSI styles, hyperlinks, and alignment hints. Quote prefixes and
+list indentation are deducted before table layout. When even the minimum grid
+cannot fit, tables become stacked labeled fields instead of losing columns.
+As with other text, a viewport narrower than a single wide grapheme cannot
+display that grapheme without overflow.
 
 ### Code Block Handling with Chroma Syntax Highlighting
 
@@ -283,10 +299,17 @@ Raw HTML is rendered using appropriate text styling where applicable:
 
 ```html
 <strong>Bold</strong> and <em>italic</em>
-<span style="color: red">Colored text</span>
+<code>Inline code</code>
 ```
 
-The renderer applies semantic text styles (bold, italic, underline) instead of passing through raw HTML tags. Color information from inline styles is mapped to theme-appropriate colors where possible. Security-sensitive tags are stripped to prevent injection.
+Supported HTML elements are normalized into the shared Markdown tree and given
+semantic text styles. HTML containers retain their scope across blank lines,
+including Markdown content inside blockquotes and details. A closed `<details>`
+shows its summary but hides its body; add `open` to display the body. Whitespace
+between inline HTML elements is preserved.
+
+This is not a browser HTML/CSS renderer. Arbitrary CSS is not applied, and
+script/style elements are omitted rather than executed.
 
 ### Link Reference Definitions
 
@@ -318,13 +341,13 @@ Supported shortcodes follow the GitHub emoji specification, with rendering that 
 | Feature | ANSI Renderer (`markdown.dart`) | Glamour Renderer (`glamour.dart`) |
 |---------|---------------------------------|-----------------------------------|
 | **Speed** | Faster - lightweight parsing | Moderate - theme processing overhead |
-| **Tables** | Basic borders, fixed widths | Dynamic column widths, alignment hints |
+| **Tables** | Width-bounded cell wrapping and alignment | Dynamic column widths, alignment hints |
 | **Code blocks** | Syntax highlighting only | Chroma-integrated with theme adaptation |
 | **Nesting** | Supported, basic indentation | Enhanced indentation with per-level control |
-| **Blockquotes** | Simple `>` prefix | Styled with border markers and nesting |
+| **Blockquotes** | Nested `│ ` borders around all child blocks | Styled with border markers and nesting |
 | **Headings** | Color per level | Full theme-driven styling with backgrounds |
 | **Customization** | Style options per render | Comprehensive theme system |
-| **Inline HTML** | Basic tag stripping | Semantic style mapping |
+| **Inline HTML** | Scoped containers and semantic styles | Semantic style mapping |
 | **Link handling** | Standard and OSC 8 | Standard, OSC 8, and themed styling |
 | **Emoji support** | Basic shortcodes | Full GitHub shortcode set with theme awareness |
 | **Horizontal rules** | Static characters | Theme-adaptive formats |

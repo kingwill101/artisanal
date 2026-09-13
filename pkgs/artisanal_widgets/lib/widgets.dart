@@ -39,8 +39,11 @@ export 'src/widgets/components/overlay.dart';
 export 'src/widgets/chords/chords.dart';
 export 'src/widgets/render_object.dart';
 export 'src/widgets/rendering/rendering.dart';
+
 export 'package:artisanal/runtime.dart' show ZoneInBoundsMsg;
-export 'package:artisanal/runtime.dart' show KeyBinding, KeyMap, Spinner, Spinners;
+export 'package:artisanal/runtime.dart'
+    show KeyBinding, KeyMap, Spinner, Spinners;
+
 export 'src/widgets/input/input_widgets.dart';
 export 'src/widgets/input/text_decoration_binding.dart';
 export 'src/widgets/input/text_diagnostics_binding.dart';

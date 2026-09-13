@@ -83,9 +83,9 @@ Future<Map<String, Object?>> _allocationForRegion(
     };
   }
 
-  final raw =
-      (jsonDecode(await rawFile.readAsString()) as Map<Object?, Object?>)
-          .cast<String, Object?>();
+  final raw = (jsonDecode(
+    await rawFile.readAsString(),
+  ) as Map<Object?, Object?>).cast<String, Object?>();
   final start = _classTotals(raw['start']);
   final end = _classTotals(raw['end']);
   final deltas = <_ClassDelta>[];

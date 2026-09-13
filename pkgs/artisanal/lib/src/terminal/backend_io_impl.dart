@@ -4,8 +4,10 @@ import 'dart:io' as io;
 
 import '../colorprofile/detect_impl.dart' as cp_detect;
 import '../style/color.dart';
+
 import 'package:ultraviolet/terminal.dart'
     show enableWindowsVtInput, restoreWindowsVtInput;
+
 import 'backend.dart';
 import 'stdin_stream.dart';
 import 'stty_flow_control.dart';

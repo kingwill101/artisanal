@@ -14,6 +14,7 @@
 //   6. Color matrix application (effects/filters)
 
 import 'dart:math';
+
 import 'package:ultraviolet/ultraviolet.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 
@@ -24,25 +25,21 @@ void main() {
   // Generate many RGBA pairs
   final srcColors = List.generate(
     10_000,
-    (_) =>
-        UvColor.rgb(
-              rng.nextInt(256),
-              rng.nextInt(256),
-              rng.nextInt(256),
-              a: rng.nextInt(256),
-            )
-            as UvRgb,
+    (_) => UvColor.rgb(
+      rng.nextInt(256),
+      rng.nextInt(256),
+      rng.nextInt(256),
+      a: rng.nextInt(256),
+    ) as UvRgb,
   );
   final dstColors = List.generate(
     10_000,
-    (_) =>
-        UvColor.rgb(
-              rng.nextInt(256),
-              rng.nextInt(256),
-              rng.nextInt(256),
-              a: rng.nextInt(256),
-            )
-            as UvRgb,
+    (_) => UvColor.rgb(
+      rng.nextInt(256),
+      rng.nextInt(256),
+      rng.nextInt(256),
+      a: rng.nextInt(256),
+    ) as UvRgb,
   );
   final phase1Start = Stopwatch()..start();
   const phase1Iterations = 2000;

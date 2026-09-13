@@ -45,8 +45,7 @@ class FrecencyStore {
     final entry = _data[key];
     if (entry == null) return 0;
     final at = now ?? _clock();
-    final ageDays =
-        at.difference(entry.lastOpen).inMilliseconds / 86400000.0;
+    final ageDays = at.difference(entry.lastOpen).inMilliseconds / 86400000.0;
     return entry.frequency / (1 + (ageDays < 0 ? 0 : ageDays));
   }
 

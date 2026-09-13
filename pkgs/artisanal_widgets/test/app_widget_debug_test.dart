@@ -149,33 +149,30 @@ void main() {
       expect(tester.view, contains('7i'));
     });
 
-    test(
-      'components forms section routes shared diagnostics through embedded editors',
-      () async {
-        final tester = WidgetTester();
-        addTearDown(() => tester.dispose());
+    test('components forms section routes shared diagnostics through embedded editors', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
 
-        await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+      await tester.pumpWidget(AppWidget(), width: 120, height: 40);
 
-        tester.tap(tester.find.textLocation('Components'));
-        tester.tap(tester.find.textLocation('Forms'));
+      tester.tap(tester.find.textLocation('Components'));
+      tester.tap(tester.find.textLocation('Forms'));
 
-        final codeEditor = tester
-            .elementsWhere((element) => element.widget is w.CodeEditor)
-            .map((element) => element.widget as w.CodeEditor)
-            .single;
-        expect(codeEditor.controller, isNotNull);
-        expect(codeEditor.controller!.diagnostics, isNotEmpty);
+      final codeEditor = tester
+          .elementsWhere((element) => element.widget is w.CodeEditor)
+          .map((element) => element.widget as w.CodeEditor)
+          .single;
+      expect(codeEditor.controller, isNotNull);
+      expect(codeEditor.controller!.diagnostics, isNotEmpty);
 
-        codeEditor.controller!.selectDiagnosticAtLine(4);
-        tester.pump();
+      codeEditor.controller!.selectDiagnosticAtLine(4);
+      tester.pump();
 
-        expect(tester.view, contains('error [showcase/FIX001]'));
-        expect(tester.view, contains('Replace'));
-        expect(tester.view, contains('real hosted'));
-        expect(tester.view, contains('bootstrap flow.'));
-      },
-    );
+      expect(tester.view, contains('error [showcase/FIX001]'));
+      expect(tester.view, contains('Replace'));
+      expect(tester.view, contains('real hosted'));
+      expect(tester.view, contains('bootstrap flow.'));
+    });
 
     test(
       'overlays panel modal does not shift panel content vertically',

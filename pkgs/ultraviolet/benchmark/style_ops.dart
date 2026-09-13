@@ -11,6 +11,7 @@
 //   5. Style equality + hashing
 
 import 'dart:math';
+
 import 'package:ultraviolet/ultraviolet.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 

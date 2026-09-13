@@ -10,11 +10,7 @@ import '../types.dart';
 import '../util.dart';
 
 /// Renders an area chart onto [screen] within [area].
-void renderAreaChart(
-  Screen screen,
-  Rectangle area,
-  AreaChartProps props,
-) {
+void renderAreaChart(Screen screen, Rectangle area, AreaChartProps props) {
   final width = area.width;
   final height = area.height;
   if (width <= 0 || height <= 0 || props.series.isEmpty) return;
@@ -49,8 +45,9 @@ void renderAreaChart(
 
   if (plotW < 3 || plotH < 3) return;
 
-  final processedSeries =
-      props.series.map((s) => List<double>.from(s.data)).toList();
+  final processedSeries = props.series
+      .map((s) => List<double>.from(s.data))
+      .toList();
   if (stacked && processedSeries.length > 1) {
     for (var si = 1; si < processedSeries.length; si++) {
       for (var i = 0; i < processedSeries[si].length; i++) {

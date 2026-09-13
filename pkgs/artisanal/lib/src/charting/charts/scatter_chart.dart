@@ -108,8 +108,9 @@ void renderScatterChart(
         px < plotX + plotW - 1 &&
         py >= plotY &&
         py < plotY + plotH - 1) {
-      final pointColor =
-          point.color != null ? fg(point.color!) : defaultPointColor;
+      final pointColor = point.color != null
+          ? fg(point.color!)
+          : defaultPointColor;
       putCell(screen, px, py, dotChar, mergeStyle(pointColor, bg));
     }
   }

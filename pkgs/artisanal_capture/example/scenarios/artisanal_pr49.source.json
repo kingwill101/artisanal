@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/kingwill101/artisanal/pull/49",
+  "api_source": "https://api.github.com/repos/kingwill101/artisanal/pulls/49",
+  "pull_request": 49,
+  "pull_request_id": 4516270290,
+  "title": "feat: add native captures and fix complex Markdown rendering",
+  "author": "kingwill101",
+  "updated_at": "2026-09-13T02:52:07Z",
+  "sha256": "0d1a9140d94a9553bebfa86fd33c3b713c43a8c8b5b24589f417d1981dcb5f5d",
+  "normalization": {
+    "line_endings": "LF",
+    "body_bytes": "UTF-8",
+    "notes": "Copied from the public GitHub REST pull request body. No END marker was inserted."
+  }
+}

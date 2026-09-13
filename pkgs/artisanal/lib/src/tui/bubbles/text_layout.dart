@@ -9,6 +9,7 @@
 library;
 
 import 'package:ultraviolet/unicode.dart' as uni;
+
 import 'runeutil.dart';
 
 /// A visual segment of an underlying content line.

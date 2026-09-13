@@ -1867,12 +1867,10 @@ void main() {
     test('deletes words and line segments from offset-state wrappers', () {
       bool isWord(String grapheme) => grapheme != ' ';
 
-      final deleteWord = TextOffsetStateSnapshot.collapsed(
-        cursorOffset: 10,
-      ).deleteWordBackwardCommand('alpha beta'.split(''), isWord: isWord);
-      final deleteLineEnd = TextOffsetStateSnapshot.collapsed(
-        cursorOffset: 5,
-      ).deleteToLineEndCommand('alpha beta'.split(''), lineEndOffset: 10);
+      final deleteWord = TextOffsetStateSnapshot.collapsed(cursorOffset: 10)
+          .deleteWordBackwardCommand('alpha beta'.split(''), isWord: isWord);
+      final deleteLineEnd = TextOffsetStateSnapshot.collapsed(cursorOffset: 5)
+          .deleteToLineEndCommand('alpha beta'.split(''), lineEndOffset: 10);
 
       expect(deleteWord.graphemes.join(), 'alpha ');
       expect(deleteWord.cursorOffset, 6);
@@ -2106,22 +2104,20 @@ void main() {
       'inserts indented newlines and replaces closing-brace spacer text',
       () {
         final preservedIndent =
-            TextOffsetStateSnapshot.collapsed(
-              cursorOffset: 7,
-            ).insertIndentedNewlineCommand(
-              '  alpha'.split(''),
-              baseIndent: const [' ', ' '],
-            );
+            TextOffsetStateSnapshot.collapsed(cursorOffset: 7)
+                .insertIndentedNewlineCommand(
+                  '  alpha'.split(''),
+                  baseIndent: const [' ', ' '],
+                );
         final blockIndented =
-            TextOffsetStateSnapshot.collapsed(
-              cursorOffset: 12,
-            ).insertIndentedNewlineCommand(
-              'if (ready) {   }'.split(''),
-              baseIndent: const <String>[],
-              additionalIndent: const [' ', ' '],
-              trailingSuffix: const ['\n'],
-              trailingSuffixReplaceCount: 3,
-            );
+            TextOffsetStateSnapshot.collapsed(cursorOffset: 12)
+                .insertIndentedNewlineCommand(
+                  'if (ready) {   }'.split(''),
+                  baseIndent: const <String>[],
+                  additionalIndent: const [' ', ' '],
+                  trailingSuffix: const ['\n'],
+                  trailingSuffixReplaceCount: 3,
+                );
 
         expect(preservedIndent.graphemes.join(), '  alpha\n  ');
         expect(preservedIndent.cursorOffset, 10);

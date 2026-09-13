@@ -63,7 +63,10 @@ void renderHeatmapChart(
     for (var c = 0; c < cols; c++) {
       final v = props.data[r][c];
       final t = (v - minV) / (maxV - minV);
-      final idx = (t * (colorScale.length - 1)).round().clamp(0, colorScale.length - 1);
+      final idx = (t * (colorScale.length - 1)).round().clamp(
+        0,
+        colorScale.length - 1,
+      );
       final cellColor = fg(colorScale[idx]);
       final x = plotX + c * cellW;
       final y = plotY + r * cellH;

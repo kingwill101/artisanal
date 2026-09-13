@@ -10,6 +10,7 @@
 //   4. Scroll / line-shift patterns
 
 import 'dart:math';
+
 import 'package:ultraviolet/ultraviolet.dart';
 
 void main() {

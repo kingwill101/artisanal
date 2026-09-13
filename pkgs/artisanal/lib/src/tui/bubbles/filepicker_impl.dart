@@ -288,37 +288,29 @@ int _nextFilePickerId() {
 class FilePickerModel extends ViewComponent {
   /// Creates a new file picker model.
   ///
-  /// [currentDirectory] is the starting directory.
+  /// [_currentDirectory] is the starting directory.
   /// `allowedTypes` is a list of allowed file extensions (e.g., `['.dart', '.txt']`).
-  /// [fileAllowed] whether files can be selected.
-  /// [dirAllowed] whether directories can be selected.
-  /// [showHidden] whether to show hidden files.
-  /// [showPermissions] whether to show file permissions.
-  /// [showSize] whether to show file sizes.
+  /// [_fileAllowed] whether files can be selected.
+  /// [_dirAllowed] whether directories can be selected.
+  /// [_showHidden] whether to show hidden files.
+  /// [_showPermissions] whether to show file permissions.
+  /// [_showSize] whether to show file sizes.
   /// [height] is the visible height of the file list.
   FilePickerModel({
-    required String currentDirectory,
+    required this._currentDirectory,
     List<String>? allowedTypes,
-    bool fileAllowed = true,
-    bool dirAllowed = false,
-    bool showHidden = false,
-    bool showPermissions = true,
-    bool showSize = true,
+    this._fileAllowed = true,
+    this._dirAllowed = false,
+    this._showHidden = false,
+    this._showPermissions = true,
+    this._showSize = true,
     int height = 10,
-    bool autoHeight = true,
-    String cursor = '> ',
+    this._autoHeight = true,
+    this._cursor = '> ',
     FilePickerKeyMap? keyMap,
     FilePickerStyles? styles,
-  }) : _currentDirectory = currentDirectory,
-       _allowedTypes = allowedTypes ?? [],
-       _fileAllowed = fileAllowed,
-       _dirAllowed = dirAllowed,
-       _showHidden = showHidden,
-       _showPermissions = showPermissions,
-       _showSize = showSize,
+  }) : _allowedTypes = allowedTypes ?? [],
        _height = height,
-       _autoHeight = autoHeight,
-       _cursor = cursor,
        _keyMap = keyMap ?? FilePickerKeyMap(),
        _styles = styles ?? FilePickerStyles(),
        _files = [],
@@ -332,46 +324,27 @@ class FilePickerModel extends ViewComponent {
 
   /// Private constructor for copyWith.
   FilePickerModel._({
-    required String currentDirectory,
-    required List<String> allowedTypes,
-    required bool fileAllowed,
-    required bool dirAllowed,
-    required bool showHidden,
-    required bool showPermissions,
-    required bool showSize,
-    required int height,
-    required bool autoHeight,
-    required String cursor,
-    required FilePickerKeyMap keyMap,
-    required FilePickerStyles styles,
-    required List<FileEntry> files,
-    required int selected,
-    required int min,
-    required int max,
-    required String? selectedPath,
-    required List<ViewState> selectedStack,
-    required int id,
-    String? errorMessage,
-  }) : _currentDirectory = currentDirectory,
-       _allowedTypes = allowedTypes,
-       _fileAllowed = fileAllowed,
-       _dirAllowed = dirAllowed,
-       _showHidden = showHidden,
-       _showPermissions = showPermissions,
-       _showSize = showSize,
-       _height = height,
-       _autoHeight = autoHeight,
-       _cursor = cursor,
-       _keyMap = keyMap,
-       _styles = styles,
-       _files = files,
-       _selected = selected,
-       _min = min,
-       _max = max,
-       _selectedPath = selectedPath,
-       _selectedStack = selectedStack,
-       _id = id,
-       _errorMessage = errorMessage;
+    required this._currentDirectory,
+    required this._allowedTypes,
+    required this._fileAllowed,
+    required this._dirAllowed,
+    required this._showHidden,
+    required this._showPermissions,
+    required this._showSize,
+    required this._height,
+    required this._autoHeight,
+    required this._cursor,
+    required this._keyMap,
+    required this._styles,
+    required this._files,
+    required this._selected,
+    required this._min,
+    required this._max,
+    required this._selectedPath,
+    required this._selectedStack,
+    required this._id,
+    this._errorMessage,
+  });
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Fields

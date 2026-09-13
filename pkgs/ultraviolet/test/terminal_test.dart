@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:ultraviolet/src/uv/uv.dart';
 
@@ -89,9 +90,9 @@ void main() {
 
       final output = outputBuffer.toString();
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.setModeAltScreenSaveCursor),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.setModeAltScreenSaveCursor))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(
@@ -99,40 +100,40 @@ void main() {
         1,
       );
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.enableMouseAllEvents),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.enableMouseAllEvents))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.enableBracketedPaste),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.enableBracketedPaste))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.enableFocusReporting),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.enableFocusReporting))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(RegExp(r'\x1b\[>1u').allMatches(output).length, 1);
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.disableFocusReporting),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.disableFocusReporting))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.disableBracketedPaste),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.disableBracketedPaste))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.disableMouseAllEvents),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.disableMouseAllEvents))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(
@@ -140,9 +141,9 @@ void main() {
         1,
       );
       expect(
-        RegExp(
-          RegExp.escape(UvAnsi.resetModeAltScreenSaveCursor),
-        ).allMatches(output).length,
+        RegExp(RegExp.escape(UvAnsi.resetModeAltScreenSaveCursor))
+            .allMatches(output)
+            .length,
         1,
       );
       expect(RegExp(r'\x1b\[<u').allMatches(output).length, 1);

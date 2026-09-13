@@ -39,10 +39,7 @@ void main() {
     });
 
     test('tiny screens return the base view untouched', () {
-      expect(
-        renderModal('base', ['x'], screenW: 5, screenH: 3),
-        'base',
-      );
+      expect(renderModal('base', ['x'], screenW: 5, screenH: 3), 'base');
     });
   });
 }

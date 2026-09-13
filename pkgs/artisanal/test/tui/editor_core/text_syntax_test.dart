@@ -216,30 +216,27 @@ void main() {
       expect(provider.calls.single.documentText, 'alpha\nbeta');
     });
 
-    test(
-      'default buildDocument can read composite documents through the text cache path',
-      () {
-        final provider = _DefaultBuildSyntaxProvider();
-        final document = TextDocument(
-          text: List<String>.generate(
-            300,
-            (index) => 'line-$index',
-            growable: false,
-          ).join('\n'),
-        );
+    test('default buildDocument can read composite documents through the text cache path', () {
+      final provider = _DefaultBuildSyntaxProvider();
+      final document = TextDocument(
+        text: List<String>.generate(
+          300,
+          (index) => 'line-$index',
+          growable: false,
+        ).join('\n'),
+      );
 
-        expect(document.debugHasTextCache, isFalse);
-        expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isFalse);
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
 
-        final result = provider.buildDocument(document);
+      final result = provider.buildDocument(document);
 
-        expect(result.decorations, isNotEmpty);
-        expect(document.debugHasTextCache, isTrue);
-        expect(document.debugHasMaterializedLineTextCache, isFalse);
-        expect(provider.calls, hasLength(1));
-        expect(provider.calls.single.documentText, isNotNull);
-      },
-    );
+      expect(result.decorations, isNotEmpty);
+      expect(document.debugHasTextCache, isTrue);
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(provider.calls, hasLength(1));
+      expect(provider.calls.single.documentText, isNotNull);
+    });
 
     test('syncDocument reuses snapshots for unchanged document copies', () {
       final provider = _RecordingSyntaxProvider();

@@ -88,9 +88,7 @@ void main() {
       final hub = tui.KeymapHub();
       hub.push(tui.ShortcutSurface(id: 'home'));
       hub.push(tui.ShortcutSurface(id: 'session'));
-      hub.replace(
-        tui.ShortcutSurface(id: 'home', exclusive: true),
-      );
+      hub.replace(tui.ShortcutSurface(id: 'home', exclusive: true));
       expect(hub.surfaceIds, ['home', 'session']);
       expect(hub.stack.first.exclusive, isTrue);
       expect(hub.top!.id, 'session');
@@ -201,11 +199,7 @@ void main() {
 
     test('base runs only after stack passes', () {
       final order = <String>[];
-      final hub = tui.KeymapHub(
-        base: [
-          _OrderInterceptor('base', order),
-        ],
-      );
+      final hub = tui.KeymapHub(base: [_OrderInterceptor('base', order)]);
       hub.push(
         tui.ShortcutSurface(
           id: 'session',
@@ -233,9 +227,7 @@ void main() {
         ],
       );
       final hub = tui.KeymapHub();
-      hub.push(
-        tui.ShortcutSurface(id: 'session', interceptor: chords),
-      );
+      hub.push(tui.ShortcutSurface(id: 'session', interceptor: chords));
 
       final prefix = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
       expect(prefix, isA<tui.KeyChordPrefixMsg>());

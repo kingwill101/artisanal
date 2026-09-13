@@ -446,7 +446,11 @@ List<w.TextSpan> _queueLabelSpans(
   if (labels.isNotEmpty) {
     for (final label in labels.take(3)) {
       final labelStyle = theme.bodySmall.copy()
-        ..foreground(labelBackgroundColor(label, fallback: fallbackColor))
+        ..foreground(
+          selected
+              ? theme.listRowSelectedAccentForeground
+              : labelBackgroundColor(label, fallback: fallbackColor),
+        )
         ..bold();
       if (!addPart(label.name, labelStyle)) return spans;
     }

@@ -13,6 +13,7 @@
 //   6. Mixed real-world input stream
 
 import 'dart:math';
+
 import 'package:ultraviolet/ultraviolet.dart';
 
 /// Generate N bytes of plain ASCII keystrokes (a-z, space, enter).

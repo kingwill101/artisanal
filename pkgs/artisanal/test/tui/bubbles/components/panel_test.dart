@@ -374,10 +374,7 @@ void main() {
         final panel = Panel()
           ..content('Content')
           ..paddingAll(top: 1, bottom: 1);
-        expect(
-          panel.lineCount,
-          equals(5),
-        ); // Top border + top padding + content + bottom padding + bottom border
+        expect(panel.lineCount, equals(5)); // Top border + top padding + content + bottom padding + bottom border
       });
     });
 

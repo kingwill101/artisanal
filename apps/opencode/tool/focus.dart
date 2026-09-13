@@ -118,8 +118,7 @@ final List<ChatMessage> _messages = [
       toolName: 'todowrite',
       title: 'Todos',
       isBlock: true,
-      output:
-          '- [x] Add split-border cards\n- [x] Add tool card variants\n- [ ] Match every OpenCode nuance',
+      output: '- [x] Add split-border cards\n- [x] Add tool card variants\n- [ ] Match every OpenCode nuance',
     ),
     ToolPart(
       toolName: 'question',

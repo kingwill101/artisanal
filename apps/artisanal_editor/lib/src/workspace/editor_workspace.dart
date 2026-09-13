@@ -144,11 +144,9 @@ final class EditorBuffer {
     required this.file,
     required this.controller,
     required this.completionProvider,
-    EditorSyntaxHighlighter? syntaxHighlighter,
-    required void Function(EditorBuffer buffer) onTextChanged,
-  }) : _onTextChanged = onTextChanged,
-       _syntaxHighlighter = syntaxHighlighter,
-       _diagnostics = _EditorDiagnostics(controller),
+    required this._onTextChanged,
+    this._syntaxHighlighter,
+  }) : _diagnostics = _EditorDiagnostics(controller),
        _lastText = controller.text {
     controller.addListener(_handleControllerChanged);
     // Supplying the file contents to TextAreaController is a replacement
@@ -251,13 +249,11 @@ final class EditorWorkspace {
   EditorWorkspace({
     required this.root,
     required this.files,
-    required EditorFileRepository repository,
-    EditorLanguageService? languageService,
-    EditorSyntaxHighlighter? syntaxHighlighter,
-  }) : _repository = repository,
-       _languageService = languageService,
-       _syntaxHighlighter = syntaxHighlighter {
-    _languageSubscription = languageService?.events.listen(
+    required this._repository,
+    this._languageService,
+    this._syntaxHighlighter,
+  }) {
+    _languageSubscription = _languageService?.events.listen(
       _handleLanguageEvent,
     );
   }

@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart';
+
 import 'base.dart';
 
 /// Callback for per-item styling in lists.

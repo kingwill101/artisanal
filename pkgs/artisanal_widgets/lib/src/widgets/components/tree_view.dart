@@ -7,16 +7,21 @@ import '_component_foundation.dart';
 import 'scroll_area.dart';
 
 /// Builds a widget for one projected [bubbles.TreeRow].
-typedef TreeViewItemBuilder<T> =
-    Widget Function(BuildContext context, bubbles.TreeRow<T> row);
+typedef TreeViewItemBuilder<T> = Widget Function(
+  BuildContext context,
+  bubbles.TreeRow<T> row,
+);
 
 /// Handles selection or activation of a tree item.
-typedef TreeViewItemCallback<T> =
-    runtime.Cmd? Function(bubbles.TreeItem<T> item);
+typedef TreeViewItemCallback<T> = runtime.Cmd? Function(
+  bubbles.TreeItem<T> item,
+);
 
 /// Handles a change to a branch's expansion state.
-typedef TreeViewToggleCallback<T> =
-    runtime.Cmd? Function(bubbles.TreeItem<T> item, bool expanded);
+typedef TreeViewToggleCallback<T> = runtime.Cmd? Function(
+  bubbles.TreeItem<T> item,
+  bool expanded,
+);
 
 /// A node in the compatibility [TreeView] constructor.
 ///

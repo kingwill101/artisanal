@@ -656,9 +656,9 @@ Map<String, Object?> _metadata(_Options options) {
   String cpuModel() {
     if (!Platform.isLinux) return 'unavailable';
     try {
-      final line = File(
-        '/proc/cpuinfo',
-      ).readAsLinesSync().firstWhere((value) => value.startsWith('model name'));
+      final line = File('/proc/cpuinfo')
+          .readAsLinesSync()
+          .firstWhere((value) => value.startsWith('model name'));
       return line.split(':').last.trim();
     } on Object {
       return 'unavailable';

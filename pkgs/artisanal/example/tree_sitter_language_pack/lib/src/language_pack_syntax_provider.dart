@@ -13,8 +13,8 @@ import 'package:tree_sitter_language_pack/tree_sitter_language_pack.dart'
 final class LanguagePackSyntaxProvider extends AsyncSyntaxTreeProvider {
   LanguagePackSyntaxProvider._({
     required this.languageId,
-    required language_pack.ProcessConfig config,
-  }) : _config = config;
+    required this._config,
+  });
 
   /// Creates a provider configured for [languageId].
   static Future<LanguagePackSyntaxProvider> create(String languageId) async {

@@ -4,6 +4,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:ultraviolet/core.dart';
+
 import 'braille.dart';
 
 /// A finite range used to project world coordinates onto a terminal canvas.

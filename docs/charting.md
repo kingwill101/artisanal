@@ -298,7 +298,9 @@ void main() {
 
 ## Sequence Diagrams
 
-Sequence diagrams visualize interactions between actors/participants over time, showing message flows and control structures. Artisanal implements Mermaid-compatible syntax for terminal rendering.
+Sequence diagrams visualize interactions between actors/participants over time.
+Artisanal renders a supported subset of Mermaid sequence syntax as terminal cells;
+it is not a complete implementation of Mermaid's browser renderer.
 
 ### Overview
 
@@ -350,12 +352,16 @@ void main() {
   if (diagram != null) {
     final layout = chart.layoutSequenceDiagram(diagram);
     final canvas = Canvas(layout.width, layout.height);
-    chart.drawSequenceDiagram(
-      canvas,
-      rect(0, 0, layout.width, layout.height),
-      diagram,
-    );
-    print(canvas.render());
+    try {
+      chart.drawSequenceDiagram(
+        canvas,
+        rect(0, 0, layout.width, layout.height),
+        diagram,
+      );
+      print(canvas.render());
+    } finally {
+      canvas.dispose();
+    }
   }
 }
 ```
@@ -394,28 +400,38 @@ sequenceDiagram
   participant C
 ```
 
-Participants can be declared with or without an alias using `as`. Undeclared participants are auto-created when referenced in messages.
+Participants can be declared with or without an alias using `as`. Undeclared
+participants are auto-created when referenced in messages. `actor A as Alice`
+uses a stick figure rather than a participant box. Labels support `<br/>` line
+breaks.
 
 #### Message Arrows
 
 | Arrow | Style | Description |
 |-------|-------|-------------|
-| `->>` | solid | Synchronous request |
-| `-->>` | dashed | Asynchronous response |
-| `->` | solid | Simple message |
-| `-->` | dashed | Return message |
+| `->>` | solid | Arrowhead |
+| `-->>` | dashed | Arrowhead |
+| `->` | solid | Line without an arrowhead |
+| `-->` | dashed | Line without an arrowhead |
+| `<<->>` | solid | Bidirectional arrowheads |
+| `<<-->>` | dashed | Bidirectional arrowheads |
 | `-x` | solid | Lost message |
 | `--x` | dashed | Lost response |
-| `-\)` | solid | Open arrow |
-| `--\)` | dashed | Dashed open arrow |
+| `-)` | solid | Open asynchronous arrow |
+| `--)` | dashed | Open asynchronous arrow |
 
 Activate/deactivate lifelines with `+` and `-`:
 
 ```mermaid
 sequenceDiagram
   A->>+B: Activate B
-  B-->>-A: Deactivate A
+  B-->>-A: Return and deactivate B
 ```
+
+`+` activates the receiver; `-` deactivates the sender. Explicit `activate B` /
+`deactivate B` directives are also supported, including nested activation bars.
+An unmatched deactivation is an error. An activation left open extends to the
+end of the diagram.
 
 #### Notes
 
@@ -427,7 +443,8 @@ sequenceDiagram
   note over A,B: Spanning both
 ```
 
-Position notes with `right of`, `left of`, or `over` participants.
+Position notes with `right of`, `left of`, or `over` participants. Notes and
+message labels support `<br/>` line breaks.
 
 #### Control Fragments
 
@@ -450,10 +467,23 @@ sequenceDiagram
 
   critical Database Write
     A->>D: Commit
+  option Unavailable
+    D-->>A: Retry later
+  end
+
+  break Cancelled
+    A-->>B: Stop
   end
 ```
 
-Supported fragments: `alt/else/end`, `loop`, `opt`, `critical`, `par/and/end`, and `rect`.
+Supported fragments: `alt/else/end`, `loop`, `opt`, `critical/option/end`,
+`par/and/end`, `break/end`, and colored `rect/end` regions. Blocks can nest.
+Branches must belong to the current block: `else` to `alt`, `and` to `par`,
+and `option` to `critical`. Unmatched or unclosed blocks are errors.
+
+Participant groups use `box COLOR Label` followed by declarations and `end`.
+Colors precede labels; CSS names, `rgb(...)`, and `rgba(...)` are supported.
+Rect and group backgrounds preserve the messages and lifelines drawn inside.
 
 #### Autonumbering
 
@@ -467,7 +497,7 @@ sequenceDiagram
   A->>B: Tenth (starts at 10, increments by 5)
 ```
 
-#### CSS Color Names
+#### Artisanal Color Extensions
 
 Use CSS color names for inline styling:
 
@@ -477,7 +507,8 @@ sequenceDiagram
   B-->>A: Red response #red
 ```
 
-Color names are parsed from Mermaid `style` declarations and arrow colors.
+The inline arrow-color suffix and `style` declarations are Artisanal extensions;
+do not assume every Mermaid implementation accepts them.
 
 ### Customization
 
@@ -545,6 +576,24 @@ final layout = chart.layoutSequenceDiagram(
   ),
 );
 ```
+
+For a string that fits a terminal width, use
+`renderSequenceDiagram(source, maxWidth: 80)`. Participant and message labels
+wrap onto additional rows instead of being shortened with ellipses. Allocate
+enough height for the resulting diagram. A canvas that cannot accommodate the
+geometry gets an explicit diagnostic instead of a clipped partial diagram.
+The convenience renderer rejects canvases above one million cells before
+allocation; use narrower wrapping or a smaller diagram for large inputs.
+
+Unknown sequence statements produce `FormatException`. The GitHub CLI displays
+the diagnostic alongside literal source rather than replacing the whole app with
+an error screen. Other Mermaid diagram types fall back to their code block.
+
+Currently unsupported Mermaid features include participant stereotype/inline
+JSON configuration, participant creation/destruction, half-arrows, central `()`
+connections, actor link menus, and decimal autonumber values. Mermaid entity-code
+notation and HSL/HSLA colors are not implemented. No full Mermaid compatibility
+or browser-identical appearance is claimed.
 
 ### Examples
 

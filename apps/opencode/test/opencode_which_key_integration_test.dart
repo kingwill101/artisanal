@@ -27,26 +27,19 @@ void main() {
           expect(prefix, isA<tui.KeymapSequencePrefixMsg>());
           tester.sendMsg(prefix!);
 
-          expect(
-            tester.find.text('which-key'),
-            isTrue,
-            reason: tester.view,
-          );
+          expect(tester.find.text('which-key'), isTrue, reason: tester.view);
           expect(
             tester.find.text('toggle sidebar'),
             isTrue,
             reason: tester.view,
           );
-          expect(
-            tester.find.text('models'),
-            isTrue,
-            reason: tester.view,
-          );
+          expect(tester.find.text('models'), isTrue, reason: tester.view);
           expect(
             tester.view.contains('b l m t n a d s') ||
                 tester.view.contains('toggle sidebar'),
             isTrue,
-            reason: 'banner/panel should list continuation keys\n'
+            reason:
+                'banner/panel should list continuation keys\n'
                 '${tester.view}',
           );
           expect(
@@ -61,91 +54,68 @@ void main() {
       },
     );
 
-    test(
-      'interceptor-shaped ctrl+x path shows the same dock',
-      () async {
-        final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
-        try {
-          final hub = openCodeKeymapHub();
-          await tester.pumpWidget(opencode.OpenCodeApp(hub: hub));
+    test('interceptor-shaped ctrl+x path shows the same dock', () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+      try {
+        final hub = openCodeKeymapHub();
+        await tester.pumpWidget(opencode.OpenCodeApp(hub: hub));
 
-          tester.sendKey('x');
-          tester.sendKey('\n');
+        tester.sendKey('x');
+        tester.sendKey('\n');
 
-          final transformed = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
-          expect(transformed, isA<tui.KeymapSequencePrefixMsg>());
-          tester.sendMsg(transformed!);
+        final transformed = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
+        expect(transformed, isA<tui.KeymapSequencePrefixMsg>());
+        tester.sendMsg(transformed!);
 
-          expect(tester.find.text('which-key'), isTrue, reason: tester.view);
-          expect(
-            tester.find.text('toggle sidebar'),
-            isTrue,
-            reason: tester.view,
-          );
-        } finally {
-          await tester.dispose();
-        }
-      },
-    );
+        expect(tester.find.text('which-key'), isTrue, reason: tester.view);
+        expect(tester.find.text('toggle sidebar'), isTrue, reason: tester.view);
+      } finally {
+        await tester.dispose();
+      }
+    });
 
-    test(
-      'chord cancel hides which-key dock',
-      () async {
-        final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
-        try {
-          final hub = openCodeKeymapHub();
-          await tester.pumpWidget(opencode.OpenCodeApp(hub: hub));
+    test('chord cancel hides which-key dock', () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+      try {
+        final hub = openCodeKeymapHub();
+        await tester.pumpWidget(opencode.OpenCodeApp(hub: hub));
 
-          tester.sendKey('x');
-          tester.sendKey('\n');
+        tester.sendKey('x');
+        tester.sendKey('\n');
 
-          final prefix = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
-          tester.sendMsg(prefix!);
-          expect(tester.find.text('which-key'), isTrue, reason: tester.view);
+        final prefix = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
+        tester.sendMsg(prefix!);
+        expect(tester.find.text('which-key'), isTrue, reason: tester.view);
 
-          hub.resetPending();
-          tester.sendMsg(
-            tui.KeymapSequenceCancelledMsg(surfaceId: 'session'),
-          );
-          expect(
-            tester.find.text('which-key'),
-            isFalse,
-            reason: tester.view,
-          );
-        } finally {
-          await tester.dispose();
-        }
-      },
-    );
+        hub.resetPending();
+        tester.sendMsg(tui.KeymapSequenceCancelledMsg(surfaceId: 'session'));
+        expect(tester.find.text('which-key'), isFalse, reason: tester.view);
+      } finally {
+        await tester.dispose();
+      }
+    });
 
-    test(
-      'chord resolve (sidebar) hides dock and toggles sidebar',
-      () async {
-        final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
-        try {
-          final hub = openCodeKeymapHub();
-          await tester.pumpWidget(opencode.OpenCodeApp(hub: hub));
+    test('chord resolve (sidebar) hides dock and toggles sidebar', () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+      try {
+        final hub = openCodeKeymapHub();
+        await tester.pumpWidget(opencode.OpenCodeApp(hub: hub));
 
-          tester.sendKey('x');
-          tester.sendKey('\n');
+        tester.sendKey('x');
+        tester.sendKey('\n');
 
-          final prefix = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
-          tester.sendMsg(prefix!);
-          expect(tester.find.text('which-key'), isTrue, reason: tester.view);
+        final prefix = hub.onSend(tui.KeyMsg(tui.Keys.ctrl('x')));
+        tester.sendMsg(prefix!);
+        expect(tester.find.text('which-key'), isTrue, reason: tester.view);
 
-          final action = hub.onSend(tui.KeyMsg(tui.Key.char('b')));
-          expect(action, isA<tui.KeymapActionMsg>());
-          tester.sendMsg(action!);
+        final action = hub.onSend(tui.KeyMsg(tui.Key.char('b')));
+        expect(action, isA<tui.KeymapActionMsg>());
+        tester.sendMsg(action!);
 
-          expect(
-            tester.find.text('which-key'),
-            isFalse,
-            reason: tester.view,
-          );
-        } finally {
-          await tester.dispose();
-        }
-      },
-    );
+        expect(tester.find.text('which-key'), isFalse, reason: tester.view);
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 }

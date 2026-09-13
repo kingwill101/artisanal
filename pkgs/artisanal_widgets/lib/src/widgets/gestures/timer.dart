@@ -10,8 +10,10 @@ abstract interface class GestureTimerHandle {
 }
 
 /// Factory used by gesture recognizers to schedule time-based transitions.
-typedef GestureTimerFactory =
-    GestureTimerHandle Function(Duration delay, void Function() callback);
+typedef GestureTimerFactory = GestureTimerHandle Function(
+  Duration delay,
+  void Function() callback,
+);
 
 /// Default timer factory backed by `dart:async` [Timer].
 GestureTimerHandle defaultGestureTimerFactory(

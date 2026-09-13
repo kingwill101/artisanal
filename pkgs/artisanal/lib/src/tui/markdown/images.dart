@@ -9,6 +9,7 @@ import 'image_renderer.dart'
         imageCellDimensions,
         renderImageToAnsi;
 import 'render_context.dart';
+import 'github_images.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Image Helpers
@@ -23,10 +24,20 @@ import 'render_context.dart';
 void renderImage(MarkdownRenderContext ctx, Element element) {
   final alt = element.attributes['alt'] ?? 'image';
   final src = element.attributes['src'] ?? '';
+  final linked =
+      ctx.elementStack.length > 1 &&
+      ctx.elementStack[ctx.elementStack.length - 2].tag == 'a';
+  if (!githubImageVariantVisible(
+    src,
+    hasDarkBackground: ctx.options.hasDarkBackground,
+  )) {
+    return;
+  }
 
   if (ctx.options.renderImages && src.isNotEmpty) {
-    if (ctx.imageCache.containsKey(src)) {
-      final bytes = ctx.imageCache[src]!;
+    final key = githubImageCacheKey(src);
+    final bytes = ctx.imageCache[src] ?? ctx.imageCache[key];
+    if (bytes != null) {
       final image = img.decodeImage(bytes);
       if (image != null) {
         _renderTerminalImage(ctx, image);
@@ -35,7 +46,7 @@ void renderImage(MarkdownRenderContext ctx, Element element) {
     }
   }
 
-  _renderImagePlaceholder(ctx, alt, src);
+  _renderImagePlaceholder(ctx, alt, githubImageCacheKey(src), linked: linked);
 }
 
 void _renderTerminalImage(MarkdownRenderContext ctx, img.Image image) {
@@ -61,12 +72,15 @@ void _renderTerminalImage(MarkdownRenderContext ctx, img.Image image) {
 void _renderImagePlaceholder(
   MarkdownRenderContext ctx,
   String alt,
-  String src,
-) {
+  String src, {
+  bool linked = false,
+}) {
   final style = Style().dim();
   ctx.outputBuffer.write(ctx.styleToAnsi(style));
   ctx.outputBuffer.write('[Image: $alt]');
-  if (src.isNotEmpty) {
+  // A linked image already has its destination in the surrounding OSC 8
+  // sequence. Repeating the SVG URL makes GitHub review buttons unreadable.
+  if (src.isNotEmpty && !linked) {
     ctx.outputBuffer.write(' ($src)');
   }
   ctx.outputBuffer.write(MarkdownRenderContext.ansiReset);

@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import 'render_object.dart';
 import '../layout/geometry.dart' show BoxConstraints, Size, Offset;
+
 import 'package:artisanal/style.dart'
     show Layout, Style, HorizontalAlign, VerticalAlign;
 import 'package:artisanal/runtime.dart' show TuiTrace, TraceTag;

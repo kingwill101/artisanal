@@ -1069,9 +1069,9 @@ index aaa..bbb 100644
 
         // Strip ANSI codes and collapse all whitespace to verify
         // the full text is present across the wrapped output.
-        final plainText = Style.stripAnsi(
-          model.view(),
-        ).replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
+        final plainText = Style.stripAnsi(model.view())
+            .replaceAll('\n', ' ')
+            .replaceAll(RegExp(r'\s+'), ' ');
         expect(plainText, contains('this is a very long line'));
         expect(plainText, contains('wrapping behavior'));
       });

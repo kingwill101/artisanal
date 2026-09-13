@@ -121,10 +121,9 @@ class _Token {
 class ConsoleTagParser {
   /// Creates a new console tag parser with default named styles.
   ConsoleTagParser({
-    ColorProfile colorProfile = ColorProfile.trueColor,
-    bool hasDarkBackground = true,
-  }) : _colorProfile = colorProfile,
-       _hasDarkBackground = hasDarkBackground {
+    this._colorProfile = ColorProfile.trueColor,
+    this._hasDarkBackground = true,
+  }) {
     // Register default Symfony-style named styles
     _namedStyles['info'] = Style().foreground(Colors.green);
     _namedStyles['comment'] = Style().foreground(Colors.yellow);

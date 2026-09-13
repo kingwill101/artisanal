@@ -612,9 +612,8 @@ void main() {
 
   group('ProgramHost', () {
     test('stdio host can prefer inputTTY', () {
-      final binding = ProgramHost.stdio(
-        inputTTY: true,
-      ).resolve(const ProgramOptions());
+      final binding = ProgramHost.stdio(inputTTY: true)
+          .resolve(const ProgramOptions());
 
       expect(binding.terminal, isNull);
       expect(binding.options.inputTTY, isTrue);
@@ -622,9 +621,8 @@ void main() {
 
     test('terminal host injects terminal and disables inputTTY override', () {
       final terminal = MockTerminal();
-      final binding = ProgramHost.terminal(
-        terminal,
-      ).resolve(const ProgramOptions(inputTTY: true));
+      final binding = ProgramHost.terminal(terminal)
+          .resolve(const ProgramOptions(inputTTY: true));
 
       expect(binding.terminal, same(terminal));
       expect(binding.options.inputTTY, isFalse);
@@ -657,9 +655,8 @@ void main() {
 
     test('backend host resolves to a BackendTerminal', () {
       final backend = EmbeddedTerminalBackend(output: (_) {});
-      final binding = ProgramHost.backend(
-        backend,
-      ).resolve(const ProgramOptions());
+      final binding = ProgramHost.backend(backend)
+          .resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -668,9 +665,8 @@ void main() {
 
     test('bridge host resolves to a BackendTerminal', () {
       final bridge = TerminalBridge();
-      final binding = ProgramHost.bridge(
-        bridge,
-      ).resolve(const ProgramOptions());
+      final binding = ProgramHost.bridge(bridge)
+          .resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -702,9 +698,8 @@ void main() {
       );
       final serverSocket = await acceptedSocket;
 
-      final binding = webSocketHost(
-        serverSocket,
-      ).resolve(const ProgramOptions());
+      final binding = webSocketHost(serverSocket)
+          .resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -1244,111 +1239,102 @@ void main() {
       },
     );
 
-    test(
-      'init-triggered quit initializes and restores ultraviolet fullscreen state',
-      () async {
-        final program = Program(
-          ImmediateQuitModel(),
-          options: const ProgramOptions(
-            altScreen: true,
-            useUltravioletRenderer: true,
-            startupProbes: false,
-          ),
-          terminal: terminal,
-        );
+    test('init-triggered quit initializes and restores ultraviolet fullscreen state', () async {
+      final program = Program(
+        ImmediateQuitModel(),
+        options: const ProgramOptions(
+          altScreen: true,
+          useUltravioletRenderer: true,
+          startupProbes: false,
+        ),
+        terminal: terminal,
+      );
 
-        await program.run();
+      await program.run();
 
-        expect(terminal.operations, contains('enterAltScreen'));
-        expect(terminal.operations, contains('exitAltScreen'));
-        expect(terminal.isAltScreen, isFalse);
-      },
-    );
+      expect(terminal.operations, contains('enterAltScreen'));
+      expect(terminal.operations, contains('exitAltScreen'));
+      expect(terminal.isAltScreen, isFalse);
+    });
 
-    test(
-      'init-triggered suspend initializes and restores fullscreen renderer state',
-      () async {
-        final program = Program(
-          _CallbackModel(
-            onInit: () => Cmd.message(const SuspendMsg()),
-            onUpdate: (msg) {
-              if (msg is ResumeMsg) {
-                return Cmd.tick(
-                  const Duration(milliseconds: 1),
-                  (_) => const QuitMsg(),
-                );
-              }
-              return null;
-            },
-            onView: () => 'init suspend',
-          ),
-          options: const ProgramOptions(
-            altScreen: true,
-            hideCursor: true,
-            sendSuspendSignal: false,
-            useUltravioletRenderer: false,
-          ),
-          terminal: terminal,
-        );
+    test('init-triggered suspend initializes and restores fullscreen renderer state', () async {
+      final program = Program(
+        _CallbackModel(
+          onInit: () => Cmd.message(const SuspendMsg()),
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => 'init suspend',
+        ),
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: true,
+          sendSuspendSignal: false,
+          useUltravioletRenderer: false,
+        ),
+        terminal: terminal,
+      );
 
-        await program.run();
+      await program.run();
 
-        expect(
-          terminal.operations.where((op) => op == 'enterAltScreen').length,
-          2,
-        );
-        expect(
-          terminal.operations.where((op) => op == 'exitAltScreen').length,
-          2,
-        );
-        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
-        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
-        expect(terminal.isAltScreen, isFalse);
-      },
-    );
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        2,
+      );
+      expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+      expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
+      expect(terminal.isAltScreen, isFalse);
+    });
 
-    test(
-      'init-triggered suspend initializes and restores ultraviolet fullscreen state',
-      () async {
-        final program = Program(
-          _CallbackModel(
-            onInit: () => Cmd.message(const SuspendMsg()),
-            onUpdate: (msg) {
-              if (msg is ResumeMsg) {
-                return Cmd.tick(
-                  const Duration(milliseconds: 1),
-                  (_) => const QuitMsg(),
-                );
-              }
-              return null;
-            },
-            onView: () => 'init suspend uv',
-          ),
-          options: const ProgramOptions(
-            altScreen: true,
-            hideCursor: true,
-            sendSuspendSignal: false,
-            useUltravioletRenderer: true,
-            startupProbes: false,
-          ),
-          terminal: terminal,
-        );
+    test('init-triggered suspend initializes and restores ultraviolet fullscreen state', () async {
+      final program = Program(
+        _CallbackModel(
+          onInit: () => Cmd.message(const SuspendMsg()),
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => 'init suspend uv',
+        ),
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: true,
+          sendSuspendSignal: false,
+          useUltravioletRenderer: true,
+          startupProbes: false,
+        ),
+        terminal: terminal,
+      );
 
-        await program.run();
+      await program.run();
 
-        expect(
-          terminal.operations.where((op) => op == 'enterAltScreen').length,
-          2,
-        );
-        expect(
-          terminal.operations.where((op) => op == 'exitAltScreen').length,
-          2,
-        );
-        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
-        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
-        expect(terminal.isAltScreen, isFalse);
-      },
-    );
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        2,
+      );
+      expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+      expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
+      expect(terminal.isAltScreen, isFalse);
+    });
 
     test(
       'init-triggered exec renders and restores fullscreen renderer state',
@@ -2044,37 +2030,34 @@ void main() {
       expect(output, isNot(contains(Ansi.requestColorScheme)));
     });
 
-    test(
-      'non-terminal hosts suppress color, palette, and clipboard report queries',
-      () async {
-        final terminal = _NonTerminalMockTerminal();
-        final model = _CallbackModel(
-          onInit: () => Cmd.batch([
-            Cmd.requestForegroundColor(),
-            Cmd.requestBackgroundColor(),
-            Cmd.requestCursorColor(),
-            Cmd.requestColorPalette(42),
-            Cmd.requestClipboard(),
-            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-          ]),
-        );
+    test('non-terminal hosts suppress color, palette, and clipboard report queries', () async {
+      final terminal = _NonTerminalMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestForegroundColor(),
+          Cmd.requestBackgroundColor(),
+          Cmd.requestCursorColor(),
+          Cmd.requestColorPalette(42),
+          Cmd.requestClipboard(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(altScreen: false),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
 
-        await program.run();
+      await program.run();
 
-        final output = terminal.output.join();
-        expect(output, isNot(contains(Ansi.requestForegroundColor)));
-        expect(output, isNot(contains(Ansi.requestBackgroundColor)));
-        expect(output, isNot(contains(Ansi.requestCursorColor)));
-        expect(output, isNot(contains('\x1b]4;42;?\x07')));
-        expect(output, isNot(contains('\x1b]52;c;?\x07')));
-      },
-    );
+      final output = terminal.output.join();
+      expect(output, isNot(contains(Ansi.requestForegroundColor)));
+      expect(output, isNot(contains(Ansi.requestBackgroundColor)));
+      expect(output, isNot(contains(Ansi.requestCursorColor)));
+      expect(output, isNot(contains('\x1b]4;42;?\x07')));
+      expect(output, isNot(contains('\x1b]52;c;?\x07')));
+    });
 
     test(
       'non-ANSI hosts suppress color, palette, and clipboard report queries',
@@ -3147,83 +3130,73 @@ void main() {
       },
     );
 
-    test(
-      'collapses medium multiline key burst to avoid Enter side effects (UV parser)',
-      () async {
-        final receivedMessages = <Msg>[];
-        final payload = List.generate(
-          220,
-          (i) => i % 19 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
-        ).join();
+    test('collapses medium multiline key burst to avoid Enter side effects (UV parser)', () async {
+      final receivedMessages = <Msg>[];
+      final payload = List.generate(
+        220,
+        (i) => i % 19 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
+      ).join();
 
-        final model = _CallbackModel(
-          onInit: () => Cmd.tick(
-            const Duration(milliseconds: 200),
-            (_) => const QuitMsg(),
-          ),
-          onUpdate: (msg) {
-            receivedMessages.add(msg);
-            if (msg is PasteTextMsg) return Cmd.quit();
-            return null;
-          },
-        );
+      final model = _CallbackModel(
+        onInit: () =>
+            Cmd.tick(const Duration(milliseconds: 200), (_) => const QuitMsg()),
+        onUpdate: (msg) {
+          receivedMessages.add(msg);
+          if (msg is PasteTextMsg) return Cmd.quit();
+          return null;
+        },
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            useUltravioletInputDecoder: true,
-          ),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await Future<void>.delayed(const Duration(milliseconds: 40));
-        terminal.sendInput(payload.codeUnits);
-        await runFuture;
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      terminal.sendInput(payload.codeUnits);
+      await runFuture;
 
-        expect(receivedMessages.whereType<PasteTextMsg>(), hasLength(1));
-      },
-    );
+      expect(receivedMessages.whereType<PasteTextMsg>(), hasLength(1));
+    });
 
-    test(
-      'collapses medium multiline key burst to avoid Enter side effects (key parser)',
-      () async {
-        final receivedMessages = <Msg>[];
-        final payload = List.generate(
-          220,
-          (i) => i % 17 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
-        ).join();
+    test('collapses medium multiline key burst to avoid Enter side effects (key parser)', () async {
+      final receivedMessages = <Msg>[];
+      final payload = List.generate(
+        220,
+        (i) => i % 17 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
+      ).join();
 
-        final model = _CallbackModel(
-          onInit: () => Cmd.tick(
-            const Duration(milliseconds: 200),
-            (_) => const QuitMsg(),
-          ),
-          onUpdate: (msg) {
-            receivedMessages.add(msg);
-            if (msg is PasteTextMsg) return Cmd.quit();
-            return null;
-          },
-        );
+      final model = _CallbackModel(
+        onInit: () =>
+            Cmd.tick(const Duration(milliseconds: 200), (_) => const QuitMsg()),
+        onUpdate: (msg) {
+          receivedMessages.add(msg);
+          if (msg is PasteTextMsg) return Cmd.quit();
+          return null;
+        },
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            useUltravioletInputDecoder: false,
-          ),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: false,
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await Future<void>.delayed(const Duration(milliseconds: 40));
-        terminal.sendInput(payload.codeUnits);
-        await runFuture;
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      terminal.sendInput(payload.codeUnits);
+      await runFuture;
 
-        expect(receivedMessages.whereType<PasteTextMsg>(), hasLength(1));
-      },
-    );
+      expect(receivedMessages.whereType<PasteTextMsg>(), hasLength(1));
+    });
 
     test('key send drops queued frame ticks in same drain cycle', () async {
       final received = <Msg>[];
@@ -3815,67 +3788,62 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'ExecProcess completion-triggered messages update the first restored frame',
-      () async {
-        var renderCount = 0;
-        var execDone = false;
-        late Program program;
+    test('ExecProcess completion-triggered messages update the first restored frame', () async {
+      var renderCount = 0;
+      var execDone = false;
+      late Program program;
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('exec')) {
-              return Cmd.exec('echo', [
-                'test output',
-              ], onComplete: (_) => const CustomMsg('done'));
-            }
-            if (msg == const CustomMsg('done')) {
-              execDone = true;
-              return Cmd.tick(
-                const Duration(milliseconds: 1),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () {
-            renderCount += 1;
-            return execDone
-                ? 'exec-done render #$renderCount'
-                : 'initial render #$renderCount';
-          },
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec('echo', [
+              'test output',
+            ], onComplete: (_) => const CustomMsg('done'));
+          }
+          if (msg == const CustomMsg('done')) {
+            execDone = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () {
+          renderCount += 1;
+          return execDone
+              ? 'exec-done render #$renderCount'
+              : 'initial render #$renderCount';
+        },
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(altScreen: false, mouse: false),
-          terminal: terminal,
-        );
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, mouse: false),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(
-          () => terminal.output.join().contains('initial render #1'),
-        );
-        program.send(const CustomMsg('exec'));
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('initial render #1'),
+      );
+      program.send(const CustomMsg('exec'));
+      await runFuture;
 
-        final joinedOutput = terminal.output.join();
-        expect(joinedOutput, contains('initial render #1'));
-        expect(joinedOutput, contains('exec-done render #3'));
-        expect(joinedOutput, isNot(contains('initial render #3')));
-      },
-    );
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains('initial render #1'));
+      expect(joinedOutput, contains('exec-done render #3'));
+      expect(joinedOutput, isNot(contains('initial render #3')));
+    });
 
-    test(
-      'ExecProcess pauses frame ticks while released and restarts them after restore',
-      () async {
-        final tempDir = await io.Directory.systemTemp.createTemp(
-          'artisanal_exec_frame_ticks_',
-        );
-        addTearDown(() => tempDir.delete(recursive: true));
+    test('ExecProcess pauses frame ticks while released and restarts them after restore', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_frame_ticks_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
 
-        final script = io.File('${tempDir.path}/delay.dart');
-        await script.writeAsString('''
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3883,66 +3851,65 @@ Future<void> main() async {
 }
 ''');
 
-        late Program program;
-        var execActive = false;
-        var execDone = false;
-        var ticksBeforeExec = 0;
-        var ticksDuringExec = 0;
-        var ticksAfterExec = 0;
+      late Program program;
+      var execActive = false;
+      var execDone = false;
+      var ticksBeforeExec = 0;
+      var ticksDuringExec = 0;
+      var ticksAfterExec = 0;
 
-        final model = _FrameTickCallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('start')) {
-              execActive = true;
-              return Cmd.exec(io.Platform.resolvedExecutable, [
-                script.path,
-              ], onComplete: (_) => const CustomMsg('exec-done'));
+      final model = _FrameTickCallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            execActive = true;
+            return Cmd.exec(io.Platform.resolvedExecutable, [
+              script.path,
+            ], onComplete: (_) => const CustomMsg('exec-done'));
+          }
+
+          if (msg == const CustomMsg('exec-done')) {
+            execActive = false;
+            execDone = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 250),
+              (_) => const QuitMsg(),
+            );
+          }
+
+          if (msg is FrameTickMsg) {
+            if (execActive) {
+              ticksDuringExec++;
+            } else if (execDone) {
+              ticksAfterExec++;
+              if (ticksAfterExec >= 1) return Cmd.quit();
+            } else {
+              ticksBeforeExec++;
             }
+          }
+          return null;
+        },
+        onView: () => 'frame ticks around exec',
+      );
 
-            if (msg == const CustomMsg('exec-done')) {
-              execActive = false;
-              execDone = true;
-              return Cmd.tick(
-                const Duration(milliseconds: 250),
-                (_) => const QuitMsg(),
-              );
-            }
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          frameTick: true,
+          fps: 60,
+        ),
+        terminal: terminal,
+      );
 
-            if (msg is FrameTickMsg) {
-              if (execActive) {
-                ticksDuringExec++;
-              } else if (execDone) {
-                ticksAfterExec++;
-                if (ticksAfterExec >= 1) return Cmd.quit();
-              } else {
-                ticksBeforeExec++;
-              }
-            }
-            return null;
-          },
-          onView: () => 'frame ticks around exec',
-        );
+      final runFuture = program.run();
+      await _waitUntil(() => ticksBeforeExec > 0);
+      program.send(const CustomMsg('start'));
+      await runFuture;
 
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            frameTick: true,
-            fps: 60,
-          ),
-          terminal: terminal,
-        );
-
-        final runFuture = program.run();
-        await _waitUntil(() => ticksBeforeExec > 0);
-        program.send(const CustomMsg('start'));
-        await runFuture;
-
-        expect(ticksBeforeExec, greaterThan(0));
-        expect(ticksDuringExec, 0);
-        expect(ticksAfterExec, greaterThanOrEqualTo(1));
-      },
-    );
+      expect(ticksBeforeExec, greaterThan(0));
+      expect(ticksDuringExec, 0);
+      expect(ticksAfterExec, greaterThanOrEqualTo(1));
+    });
 
     test(
       'ExecProcess suppresses renders triggered during terminal release',
@@ -4294,16 +4261,14 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'backend shutdown during exec does not restore the terminal after process exit',
-      () async {
-        final tempDir = await io.Directory.systemTemp.createTemp(
-          'artisanal_exec_backend_shutdown_release_',
-        );
-        addTearDown(() => tempDir.delete(recursive: true));
+    test('backend shutdown during exec does not restore the terminal after process exit', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_backend_shutdown_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
 
-        final script = io.File('${tempDir.path}/delay.dart');
-        await script.writeAsString('''
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -4311,47 +4276,46 @@ Future<void> main() async {
 }
 ''');
 
-        final writes = <String>[];
-        final backend = EmbeddedTerminalBackend(output: writes.add);
-        final terminal = BackendTerminal(backend);
+      final writes = <String>[];
+      final backend = EmbeddedTerminalBackend(output: writes.add);
+      final terminal = BackendTerminal(backend);
 
-        late Program program;
-        var completionDelivered = false;
+      late Program program;
+      var completionDelivered = false;
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('start')) {
-              Timer(const Duration(milliseconds: 30), backend.requestShutdown);
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) {
-                  completionDelivered = true;
-                  return const CustomMsg('exec-done');
-                },
-              );
-            }
-            return null;
-          },
-          onView: () => 'backend shutdown during exec',
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            Timer(const Duration(milliseconds: 30), backend.requestShutdown);
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) {
+                completionDelivered = true;
+                return const CustomMsg('exec-done');
+              },
+            );
+          }
+          return null;
+        },
+        onView: () => 'backend shutdown during exec',
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(altScreen: false),
-          terminal: terminal,
-        );
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await Future<void>.delayed(const Duration(milliseconds: 40));
-        program.send(const CustomMsg('start'));
-        await runFuture;
-        await Future<void>.delayed(const Duration(milliseconds: 180));
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+      await Future<void>.delayed(const Duration(milliseconds: 180));
 
-        expect(completionDelivered, isFalse);
-        expect(backend.isRawMode, isFalse);
-      },
-    );
+      expect(completionDelivered, isFalse);
+      expect(backend.isRawMode, isFalse);
+    });
 
     test(
       'terminal write control messages are suppressed while released',
@@ -4501,9 +4465,9 @@ Future<void> main() async {
           greaterThanOrEqualTo(2),
         );
         expect(
-          RegExp(
-            RegExp.escape(Ansi.requestKittyKeyboard),
-          ).allMatches(joinedOutput).length,
+          RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
+              .allMatches(joinedOutput)
+              .length,
           greaterThanOrEqualTo(2),
         );
         expect(
@@ -4687,105 +4651,93 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'ExecProcess restore reapplies startup title when no view override exists',
-      () async {
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('exec')) {
-              return Cmd.exec('echo', [
-                'restored',
-              ], onComplete: (_) => const QuitMsg());
-            }
-            return null;
-          },
-          onView: () => 'plain view',
-        );
+    test('ExecProcess restore reapplies startup title when no view override exists', () async {
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec('echo', [
+              'restored',
+            ], onComplete: (_) => const QuitMsg());
+          }
+          return null;
+        },
+        onView: () => 'plain view',
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            startupTitle: 'Base Title',
-          ),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          startupTitle: 'Base Title',
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(
-          () => terminal.output.join().contains('\x1b]0;Base Title\x07'),
-        );
-        program.send(const CustomMsg('exec'));
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('\x1b]0;Base Title\x07'),
+      );
+      program.send(const CustomMsg('exec'));
+      await runFuture;
 
-        expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
-        expect(
-          terminal.operations
-              .where((op) => op == 'setTitle(Base Title)')
-              .length,
-          greaterThanOrEqualTo(1),
-        );
-      },
-    );
+      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+      expect(
+        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+        greaterThanOrEqualTo(1),
+      );
+    });
 
-    test(
-      'ExecProcess restore reapplies a view-scoped window title without falling back to startup title',
-      () async {
-        const view = View(content: 'plain view', windowTitle: 'Scoped Title');
+    test('ExecProcess restore reapplies a view-scoped window title without falling back to startup title', () async {
+      const view = View(content: 'plain view', windowTitle: 'Scoped Title');
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('exec')) {
-              return Cmd.exec('echo', [
-                'restored',
-              ], onComplete: (_) => const QuitMsg());
-            }
-            return null;
-          },
-          onView: () => view,
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec('echo', [
+              'restored',
+            ], onComplete: (_) => const QuitMsg());
+          }
+          return null;
+        },
+        onView: () => view,
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            startupTitle: 'Base Title',
-          ),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          startupTitle: 'Base Title',
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(
-          () => terminal.operations.contains('setTitle(Scoped Title)'),
-        );
-        program.send(const CustomMsg('exec'));
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.operations.contains('setTitle(Scoped Title)'),
+      );
+      program.send(const CustomMsg('exec'));
+      await runFuture;
 
-        expect(
-          terminal.operations
-              .where((op) => op == 'setTitle(Base Title)')
-              .length,
-          0,
-        );
-        expect(
-          terminal.operations
-              .where((op) => op == 'setTitle(Scoped Title)')
-              .length,
-          2,
-        );
-      },
-    );
+      expect(
+        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+        0,
+      );
+      expect(
+        terminal.operations
+            .where((op) => op == 'setTitle(Scoped Title)')
+            .length,
+        2,
+      );
+    });
 
-    test(
-      'ExecProcess restore emits the current terminal size when it changes while released',
-      () async {
-        final tempDir = await io.Directory.systemTemp.createTemp(
-          'artisanal_exec_restore_size_',
-        );
-        addTearDown(() => tempDir.delete(recursive: true));
+    test('ExecProcess restore emits the current terminal size when it changes while released', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_restore_size_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
 
-        final script = io.File('${tempDir.path}/delay.dart');
-        await script.writeAsString('''
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -4793,45 +4745,44 @@ Future<void> main() async {
 }
 ''');
 
-        final terminal = _ResizableMockTerminal();
-        WindowSizeMsg? restoredSize;
+      final terminal = _ResizableMockTerminal();
+      WindowSizeMsg? restoredSize;
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('exec')) {
-              Timer(
-                const Duration(milliseconds: 30),
-                () => terminal.setSize(width: 120, height: 33),
-              );
-              return Cmd.exec(io.Platform.resolvedExecutable, [
-                script.path,
-              ], onComplete: (_) => const QuitMsg());
-            }
-            if (msg case WindowSizeMsg(width: 120, height: 33)) {
-              restoredSize = msg;
-            }
-            return null;
-          },
-          onView: () => restoredSize == null
-              ? 'size=80x24'
-              : 'size=${restoredSize!.width}x${restoredSize!.height}',
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            Timer(
+              const Duration(milliseconds: 30),
+              () => terminal.setSize(width: 120, height: 33),
+            );
+            return Cmd.exec(io.Platform.resolvedExecutable, [
+              script.path,
+            ], onComplete: (_) => const QuitMsg());
+          }
+          if (msg case WindowSizeMsg(width: 120, height: 33)) {
+            restoredSize = msg;
+          }
+          return null;
+        },
+        onView: () => restoredSize == null
+            ? 'size=80x24'
+            : 'size=${restoredSize!.width}x${restoredSize!.height}',
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(altScreen: false),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(() => terminal.output.join().contains('size=80x24'));
-        program.send(const CustomMsg('exec'));
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('size=80x24'));
+      program.send(const CustomMsg('exec'));
+      await runFuture;
 
-        expect(restoredSize, const WindowSizeMsg(120, 33));
-        expect(terminal.output.join(), contains('120x33'));
-      },
-    );
+      expect(restoredSize, const WindowSizeMsg(120, 33));
+      expect(terminal.output.join(), contains('120x33'));
+    });
   });
 
   group('Suspend lifecycle', () {
@@ -5174,55 +5125,50 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'SuspendMsg restore reapplies a view-scoped window title without falling back to startup title',
-      () async {
-        const view = View(content: 'plain view', windowTitle: 'Scoped Title');
+    test('SuspendMsg restore reapplies a view-scoped window title without falling back to startup title', () async {
+      const view = View(content: 'plain view', windowTitle: 'Scoped Title');
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is ResumeMsg) {
-              return Cmd.tick(
-                const Duration(milliseconds: 1),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () => view,
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => view,
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            startupTitle: 'Base Title',
-            sendSuspendSignal: false,
-          ),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          startupTitle: 'Base Title',
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(
-          () => terminal.operations.contains('setTitle(Scoped Title)'),
-        );
-        program.send(const SuspendMsg());
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.operations.contains('setTitle(Scoped Title)'),
+      );
+      program.send(const SuspendMsg());
+      await runFuture;
 
-        expect(
-          terminal.operations
-              .where((op) => op == 'setTitle(Base Title)')
-              .length,
-          0,
-        );
-        expect(
-          terminal.operations
-              .where((op) => op == 'setTitle(Scoped Title)')
-              .length,
-          2,
-        );
-      },
-    );
+      expect(
+        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+        0,
+      );
+      expect(
+        terminal.operations
+            .where((op) => op == 'setTitle(Scoped Title)')
+            .length,
+        2,
+      );
+    });
 
     test(
       'SuspendMsg restore reapplies a view-scoped alt-screen override',
@@ -5271,97 +5217,91 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'SuspendMsg restore emits the current terminal size when it changes while released',
-      () async {
-        final terminal = _ResizableMockTerminal(
-          onDisableRawMode: (terminal) {
-            terminal.setSize(width: 120, height: 33);
-          },
-        );
-        WindowSizeMsg? restoredSize;
+    test('SuspendMsg restore emits the current terminal size when it changes while released', () async {
+      final terminal = _ResizableMockTerminal(
+        onDisableRawMode: (terminal) {
+          terminal.setSize(width: 120, height: 33);
+        },
+      );
+      WindowSizeMsg? restoredSize;
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg case WindowSizeMsg(width: 120, height: 33)) {
-              restoredSize = msg;
-            }
-            if (msg is ResumeMsg) {
-              return Cmd.tick(
-                const Duration(milliseconds: 1),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () => restoredSize == null
-              ? 'size=80x24'
-              : 'size=${restoredSize!.width}x${restoredSize!.height}',
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg case WindowSizeMsg(width: 120, height: 33)) {
+            restoredSize = msg;
+          }
+          if (msg is ResumeMsg) {
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => restoredSize == null
+            ? 'size=80x24'
+            : 'size=${restoredSize!.width}x${restoredSize!.height}',
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            sendSuspendSignal: false,
-          ),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(() => terminal.output.join().contains('size=80x24'));
-        program.send(const SuspendMsg());
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('size=80x24'));
+      program.send(const SuspendMsg());
+      await runFuture;
 
-        expect(restoredSize, const WindowSizeMsg(120, 33));
-        expect(terminal.output.join(), contains('120x33'));
-      },
-    );
+      expect(restoredSize, const WindowSizeMsg(120, 33));
+      expect(terminal.output.join(), contains('120x33'));
+    });
 
-    test(
-      'SuspendMsg resume-triggered kill skips restore resize dispatch and repaint',
-      () async {
-        final terminal = _ResizableMockTerminal(
-          onDisableRawMode: (terminal) {
-            terminal.setSize(width: 120, height: 33);
-          },
-        );
-        WindowSizeMsg? restoredSize;
-        late Program program;
+    test('SuspendMsg resume-triggered kill skips restore resize dispatch and repaint', () async {
+      final terminal = _ResizableMockTerminal(
+        onDisableRawMode: (terminal) {
+          terminal.setSize(width: 120, height: 33);
+        },
+      );
+      WindowSizeMsg? restoredSize;
+      late Program program;
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg case WindowSizeMsg(width: 120, height: 33)) {
-              restoredSize = msg;
-            }
-            if (msg is ResumeMsg) {
-              program.kill();
-            }
-            return null;
-          },
-          onView: () => restoredSize == null
-              ? 'size=80x24'
-              : 'size=${restoredSize!.width}x${restoredSize!.height}',
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg case WindowSizeMsg(width: 120, height: 33)) {
+            restoredSize = msg;
+          }
+          if (msg is ResumeMsg) {
+            program.kill();
+          }
+          return null;
+        },
+        onView: () => restoredSize == null
+            ? 'size=80x24'
+            : 'size=${restoredSize!.width}x${restoredSize!.height}',
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            sendSuspendSignal: false,
-          ),
-          terminal: terminal,
-        );
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(() => terminal.output.join().contains('size=80x24'));
-        program.send(const SuspendMsg());
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('size=80x24'));
+      program.send(const SuspendMsg());
+      await runFuture;
 
-        expect(restoredSize, isNull);
-        expect(terminal.output.join(), isNot(contains('120x33')));
-      },
-    );
+      expect(restoredSize, isNull);
+      expect(terminal.output.join(), isNot(contains('120x33')));
+    });
 
     test('SuspendMsg resume-triggered quit skips forced repaint', () async {
       var renderCount = 0;
@@ -6238,9 +6178,8 @@ Future<void> main() async {
 
     test('withoutInterceptor clears interceptor', () {
       final interceptor = _RecordingProgramInterceptor();
-      final options = ProgramOptions(
-        interceptor: interceptor,
-      ).withoutInterceptor();
+      final options = ProgramOptions(interceptor: interceptor)
+          .withoutInterceptor();
       expect(options.interceptor, isNull);
     });
 
@@ -6993,54 +6932,51 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'quit during pre-render startup probing aborts later probes and skips first render',
-      () async {
-        late Program<_CallbackModel> program;
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (data == Ansi.requestBackgroundColor) {
-              scheduleMicrotask(() {
-                program.send(const QuitMsg());
-              });
-            }
-          },
-        );
+    test('quit during pre-render startup probing aborts later probes and skips first render', () async {
+      late Program<_CallbackModel> program;
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(() {
+              program.send(const QuitMsg());
+            });
+          }
+        },
+      );
 
-        var rendered = false;
-        final model = _CallbackModel(
-          onView: () {
-            rendered = true;
-            return 'should not render';
-          },
-        );
+      var rendered = false;
+      final model = _CallbackModel(
+        onView: () {
+          rendered = true;
+          return 'should not render';
+        },
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-          ),
-          terminal: terminal,
-        );
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+        ),
+        terminal: terminal,
+      );
 
-        await program.run();
+      await program.run();
 
-        final joinedOutput = terminal.output.join();
-        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-        expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(
-          joinedOutput,
-          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
-        );
-        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(joinedOutput, isNot(_containsRenderedText('should not render')));
-        expect(rendered, isFalse);
-      },
-    );
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      expect(joinedOutput, isNot(_containsRenderedText('should not render')));
+      expect(rendered, isFalse);
+    });
 
     test(
       'quit during post-render emoji probing skips the forced repaint',
@@ -7085,463 +7021,438 @@ Future<void> main() async {
       },
     );
 
-    test(
-      'backend shutdown during pre-render probing aborts later probes and skips first render',
-      () async {
-        late final EmbeddedTerminalBackend backend;
-        final writes = <String>[];
-        backend = EmbeddedTerminalBackend(
-          output: (data) {
-            writes.add(data);
-            if (data == Ansi.requestBackgroundColor) {
-              scheduleMicrotask(backend.requestShutdown);
-            }
-          },
-        );
+    test('backend shutdown during pre-render probing aborts later probes and skips first render', () async {
+      late final EmbeddedTerminalBackend backend;
+      final writes = <String>[];
+      backend = EmbeddedTerminalBackend(
+        output: (data) {
+          writes.add(data);
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(backend.requestShutdown);
+          }
+        },
+      );
 
-        var rendered = false;
-        final program = Program(
-          _CallbackModel(
-            onView: () {
-              rendered = true;
-              return 'should not render';
-            },
-          ),
-          options: const ProgramOptions(
-            altScreen: false,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-          ),
-          terminal: BackendTerminal(backend),
-        );
-
-        await program.run();
-
-        final joinedOutput = writes.join();
-        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-        expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(
-          joinedOutput,
-          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
-        );
-        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(rendered, isFalse);
-      },
-    );
-
-    test(
-      'suspend during pre-render startup probing aborts later probes and defers first render until resume',
-      () async {
-        late Program<_CallbackModel> program;
-        var resumed = false;
-        var renderCount = 0;
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (data == Ansi.requestBackgroundColor) {
-              program.send(const SuspendMsg());
-            }
-          },
-        );
-
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is ResumeMsg) {
-              resumed = true;
-              return Cmd.tick(
-                const Duration(milliseconds: 10),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () {
-            renderCount++;
-            return resumed ? 'resumed render' : 'initial render';
-          },
-        );
-
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-            sendSuspendSignal: false,
-          ),
-          terminal: terminal,
-        );
-
-        await program.run();
-
-        final joinedOutput = terminal.output.join();
-        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-        expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(
-          joinedOutput,
-          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
-        );
-        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(joinedOutput, isNot(_containsRenderedText('initial render')));
-        expect(joinedOutput, _containsRenderedText('resumed render'));
-        expect(renderCount, 1);
-      },
-    );
-
-    test(
-      'exec during pre-render startup probing aborts later probes and restores cleanly',
-      () async {
-        late Program<_CallbackModel> program;
-        var execDone = false;
-        var renderCount = 0;
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (data == Ansi.requestBackgroundColor) {
-              program.send(
-                ExecProcessMsg(
-                  executable: 'echo',
-                  arguments: const ['startup exec'],
-                  onComplete: (_) => const CustomMsg('exec-done'),
-                ),
-              );
-            }
-          },
-        );
-
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('exec-done')) {
-              execDone = true;
-              return Cmd.tick(
-                const Duration(milliseconds: 10),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () {
-            renderCount++;
-            return execDone ? 'exec-done render' : 'initial render';
-          },
-        );
-
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-          ),
-          terminal: terminal,
-        );
-
-        await program.run();
-
-        final joinedOutput = terminal.output.join();
-        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-        expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(
-          joinedOutput,
-          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
-        );
-        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(joinedOutput, _containsRenderedText('initial render'));
-        expect(joinedOutput, _containsRenderedText('exec-done render'));
-        expect(renderCount, greaterThanOrEqualTo(2));
-      },
-    );
-
-    test(
-      'kill during pre-render startup probing aborts later probes and skips first render',
-      () async {
-        late Program<_CallbackModel> program;
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (data == Ansi.requestBackgroundColor) {
-              scheduleMicrotask(program.kill);
-            }
-          },
-        );
-
-        var rendered = false;
-        final model = _CallbackModel(
+      var rendered = false;
+      final program = Program(
+        _CallbackModel(
           onView: () {
             rendered = true;
             return 'should not render';
           },
-        );
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+        ),
+        terminal: BackendTerminal(backend),
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: false,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-          ),
-          terminal: terminal,
-        );
+      await program.run();
 
-        await program.run();
+      final joinedOutput = writes.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      expect(rendered, isFalse);
+    });
 
-        final joinedOutput = terminal.output.join();
-        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-        expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(
-          joinedOutput,
-          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
-        );
-        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(rendered, isFalse);
-        expect(program.wasKilled, isTrue);
-      },
-    );
+    test('suspend during pre-render startup probing aborts later probes and defers first render until resume', () async {
+      late Program<_CallbackModel> program;
+      var resumed = false;
+      var renderCount = 0;
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            program.send(const SuspendMsg());
+          }
+        },
+      );
 
-    test(
-      'cancel signal during pre-render startup probing aborts later probes and skips first render',
-      () async {
-        final cancelCompleter = Completer<void>();
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (data == Ansi.requestBackgroundColor) {
-              scheduleMicrotask(cancelCompleter.complete);
-            }
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            resumed = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () {
+          renderCount++;
+          return resumed ? 'resumed render' : 'initial render';
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      expect(joinedOutput, isNot(_containsRenderedText('initial render')));
+      expect(joinedOutput, _containsRenderedText('resumed render'));
+      expect(renderCount, 1);
+    });
+
+    test('exec during pre-render startup probing aborts later probes and restores cleanly', () async {
+      late Program<_CallbackModel> program;
+      var execDone = false;
+      var renderCount = 0;
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            program.send(
+              ExecProcessMsg(
+                executable: 'echo',
+                arguments: const ['startup exec'],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              ),
+            );
+          }
+        },
+      );
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec-done')) {
+            execDone = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () {
+          renderCount++;
+          return execDone ? 'exec-done render' : 'initial render';
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      expect(joinedOutput, _containsRenderedText('initial render'));
+      expect(joinedOutput, _containsRenderedText('exec-done render'));
+      expect(renderCount, greaterThanOrEqualTo(2));
+    });
+
+    test('kill during pre-render startup probing aborts later probes and skips first render', () async {
+      late Program<_CallbackModel> program;
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(program.kill);
+          }
+        },
+      );
+
+      var rendered = false;
+      final model = _CallbackModel(
+        onView: () {
+          rendered = true;
+          return 'should not render';
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      expect(rendered, isFalse);
+      expect(program.wasKilled, isTrue);
+    });
+
+    test('cancel signal during pre-render startup probing aborts later probes and skips first render', () async {
+      final cancelCompleter = Completer<void>();
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(cancelCompleter.complete);
+          }
+        },
+      );
+
+      var rendered = false;
+      final program = Program(
+        _CallbackModel(
+          onView: () {
+            rendered = true;
+            return 'should not render';
           },
-        );
+        ),
+        options: ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+          cancelSignal: cancelCompleter.future,
+        ),
+        terminal: terminal,
+      );
 
-        var rendered = false;
-        final program = Program(
-          _CallbackModel(
-            onView: () {
-              rendered = true;
-              return 'should not render';
-            },
-          ),
-          options: ProgramOptions(
-            altScreen: false,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-            cancelSignal: cancelCompleter.future,
-          ),
-          terminal: terminal,
-        );
+      await expectLater(program.run(), throwsA(isA<ProgramCancelledError>()));
 
-        await expectLater(program.run(), throwsA(isA<ProgramCancelledError>()));
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(
+        joinedOutput,
+        isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+      );
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      expect(rendered, isFalse);
+    });
 
-        final joinedOutput = terminal.output.join();
-        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-        expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(
-          joinedOutput,
-          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
-        );
-        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(rendered, isFalse);
-      },
-    );
+    test('backend shutdown during post-render emoji probing skips the forced repaint', () async {
+      late final EmbeddedTerminalBackend backend;
+      var renderCount = 0;
+      var shutdownRequested = false;
+      backend = EmbeddedTerminalBackend(
+        output: (data) {
+          if (!shutdownRequested &&
+              data == Ansi.requestExtendedCursorPosition) {
+            shutdownRequested = true;
+            scheduleMicrotask(backend.requestShutdown);
+          }
+        },
+      );
 
-    test(
-      'backend shutdown during post-render emoji probing skips the forced repaint',
-      () async {
-        late final EmbeddedTerminalBackend backend;
-        var renderCount = 0;
-        var shutdownRequested = false;
-        backend = EmbeddedTerminalBackend(
-          output: (data) {
-            if (!shutdownRequested &&
-                data == Ansi.requestExtendedCursorPosition) {
-              shutdownRequested = true;
-              scheduleMicrotask(backend.requestShutdown);
-            }
-          },
-        );
-
-        final program = Program(
-          _CallbackModel(
-            onView: () {
-              renderCount++;
-              return 'render #$renderCount';
-            },
-          ),
-          options: const ProgramOptions(
-            altScreen: true,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-          ),
-          terminal: BackendTerminal(backend),
-        );
-
-        await program.run();
-
-        expect(shutdownRequested, isTrue);
-        expect(renderCount, 1);
-      },
-    );
-
-    test(
-      'suspend during post-render emoji probing resumes without rerunning startup probes',
-      () async {
-        late Program<_CallbackModel> program;
-        var renderCount = 0;
-        var resumed = false;
-        var suspendScheduled = false;
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (!suspendScheduled &&
-                data == Ansi.requestExtendedCursorPosition) {
-              suspendScheduled = true;
-              program.send(const SuspendMsg());
-            }
-          },
-        );
-
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is ResumeMsg) {
-              resumed = true;
-              return Cmd.tick(
-                const Duration(milliseconds: 10),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
+      final program = Program(
+        _CallbackModel(
           onView: () {
             renderCount++;
-            return resumed
-                ? 'resumed render #$renderCount'
-                : 'render #$renderCount';
+            return 'render #$renderCount';
           },
-        );
+        ),
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: BackendTerminal(backend),
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: true,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-            sendSuspendSignal: false,
-          ),
-          terminal: terminal,
-        );
+      await program.run();
 
-        await program.run();
+      expect(shutdownRequested, isTrue);
+      expect(renderCount, 1);
+    });
 
-        final joinedOutput = terminal.output.join();
-        expect(suspendScheduled, isTrue);
-        expect(renderCount, greaterThanOrEqualTo(2));
-        expect(joinedOutput, _containsRenderedText('resumed render'));
-        expect(
-          RegExp(
-            RegExp.escape(Ansi.requestSecondaryDeviceAttributes),
-          ).allMatches(joinedOutput).length,
-          1,
-        );
-        expect(
-          RegExp(
-            RegExp.escape(Ansi.requestKittyKeyboard),
-          ).allMatches(joinedOutput).length,
-          1,
-        );
-        expect(
-          RegExp(
-            RegExp.escape(Ansi.requestExtendedCursorPosition),
-          ).allMatches(joinedOutput).length,
-          1,
-        );
-      },
-    );
+    test('suspend during post-render emoji probing resumes without rerunning startup probes', () async {
+      late Program<_CallbackModel> program;
+      var renderCount = 0;
+      var resumed = false;
+      var suspendScheduled = false;
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (!suspendScheduled && data == Ansi.requestExtendedCursorPosition) {
+            suspendScheduled = true;
+            program.send(const SuspendMsg());
+          }
+        },
+      );
 
-    test(
-      'exec during post-render emoji probing resumes without rerunning startup probes',
-      () async {
-        late Program<_CallbackModel> program;
-        var renderCount = 0;
-        var execScheduled = false;
-        var execDone = false;
-        final terminal = _ProbeAwareMockTerminal(
-          onWrite: (data, terminal) {
-            if (!execScheduled && data == Ansi.requestExtendedCursorPosition) {
-              execScheduled = true;
-              program.send(
-                ExecProcessMsg(
-                  executable: 'echo',
-                  arguments: const ['post-render exec'],
-                  onComplete: (_) => const CustomMsg('exec-done'),
-                ),
-              );
-            }
-          },
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            resumed = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () {
+          renderCount++;
+          return resumed
+              ? 'resumed render #$renderCount'
+              : 'render #$renderCount';
+        },
+      );
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg == const CustomMsg('exec-done')) {
-              execDone = true;
-              return Cmd.tick(
-                const Duration(milliseconds: 10),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () {
-            renderCount++;
-            return execDone
-                ? 'exec-done render #$renderCount'
-                : 'render #$renderCount';
-          },
-        );
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
 
-        program = Program(
-          model,
-          options: const ProgramOptions(
-            altScreen: true,
-            hideCursor: false,
-            useUltravioletRenderer: true,
-            useUltravioletInputDecoder: true,
-            startupProbes: true,
-          ),
-          terminal: terminal,
-        );
+      await program.run();
 
-        await program.run();
+      final joinedOutput = terminal.output.join();
+      expect(suspendScheduled, isTrue);
+      expect(renderCount, greaterThanOrEqualTo(2));
+      expect(joinedOutput, _containsRenderedText('resumed render'));
+      expect(
+        RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
+            .allMatches(joinedOutput)
+            .length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
+            .allMatches(joinedOutput)
+            .length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(Ansi.requestExtendedCursorPosition))
+            .allMatches(joinedOutput)
+            .length,
+        1,
+      );
+    });
 
-        final joinedOutput = terminal.output.join();
-        expect(execScheduled, isTrue);
-        expect(renderCount, greaterThanOrEqualTo(2));
-        expect(joinedOutput, _containsRenderedText('exec-done render'));
-        expect(
-          RegExp(
-            RegExp.escape(Ansi.requestSecondaryDeviceAttributes),
-          ).allMatches(joinedOutput).length,
-          1,
-        );
-        expect(
-          RegExp(
-            RegExp.escape(Ansi.requestKittyKeyboard),
-          ).allMatches(joinedOutput).length,
-          1,
-        );
-        expect(
-          RegExp(
-            RegExp.escape(Ansi.requestExtendedCursorPosition),
-          ).allMatches(joinedOutput).length,
-          1,
-        );
-      },
-    );
+    test('exec during post-render emoji probing resumes without rerunning startup probes', () async {
+      late Program<_CallbackModel> program;
+      var renderCount = 0;
+      var execScheduled = false;
+      var execDone = false;
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (!execScheduled && data == Ansi.requestExtendedCursorPosition) {
+            execScheduled = true;
+            program.send(
+              ExecProcessMsg(
+                executable: 'echo',
+                arguments: const ['post-render exec'],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              ),
+            );
+          }
+        },
+      );
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec-done')) {
+            execDone = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () {
+          renderCount++;
+          return execDone
+              ? 'exec-done render #$renderCount'
+              : 'render #$renderCount';
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(execScheduled, isTrue);
+      expect(renderCount, greaterThanOrEqualTo(2));
+      expect(joinedOutput, _containsRenderedText('exec-done render'));
+      expect(
+        RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
+            .allMatches(joinedOutput)
+            .length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
+            .allMatches(joinedOutput)
+            .length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(Ansi.requestExtendedCursorPosition))
+            .allMatches(joinedOutput)
+            .length,
+        1,
+      );
+    });
 
     test(
       'kill during post-render emoji probing skips the forced repaint',
@@ -8074,46 +7985,43 @@ Future<void> main() async {
       expect(gotCapture, isFalse);
     });
 
-    test(
-      'print() during the same update that returns Cmd.quit() is still delivered',
-      () async {
-        final captured = <CapturedOutputMsg>[];
+    test('print() during the same update that returns Cmd.quit() is still delivered', () async {
+      final captured = <CapturedOutputMsg>[];
 
-        final model = _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is CapturedOutputMsg) {
-              captured.add(msg);
-            }
-            if (msg == const CustomMsg('go')) {
-              // print() synchronously enqueues a CapturedOutputMsg.
-              // Cmd.quit() is async (returns QuitMsg via a Future), so the
-              // drain loop processes the CapturedOutputMsg before the
-              // QuitMsg arrives on the next microtask.
-              print('captured before quit');
-              return Cmd.quit();
-            }
-            return null;
-          },
-          onView: () => 'quit capture',
-        );
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is CapturedOutputMsg) {
+            captured.add(msg);
+          }
+          if (msg == const CustomMsg('go')) {
+            // print() synchronously enqueues a CapturedOutputMsg.
+            // Cmd.quit() is async (returns QuitMsg via a Future), so the
+            // drain loop processes the CapturedOutputMsg before the
+            // QuitMsg arrives on the next microtask.
+            print('captured before quit');
+            return Cmd.quit();
+          }
+          return null;
+        },
+        onView: () => 'quit capture',
+      );
 
-        final program = Program(
-          model,
-          options: const ProgramOptions(altScreen: false, captureOutput: true),
-          terminal: terminal,
-        );
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, captureOutput: true),
+        terminal: terminal,
+      );
 
-        final runFuture = program.run();
-        await _waitUntil(() => terminal.output.isNotEmpty);
-        program.send(const CustomMsg('go'));
-        await runFuture;
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+      program.send(const CustomMsg('go'));
+      await runFuture;
 
-        // The CapturedOutputMsg is processed by the drain loop before the
-        // async QuitMsg arrives from Cmd.quit().
-        expect(captured, hasLength(1));
-        expect(captured.first.line, 'captured before quit');
-      },
-    );
+      // The CapturedOutputMsg is processed by the drain loop before the
+      // async QuitMsg arrives from Cmd.quit().
+      expect(captured, hasLength(1));
+      expect(captured.first.line, 'captured before quit');
+    });
 
     test('withCaptureOutput() convenience enables capture', () {
       const base = ProgramOptions(altScreen: false);
@@ -8316,9 +8224,8 @@ class _CapturedOutputTestModel extends Model implements CapturedOutputModel {
   _CapturedOutputTestModel({
     OutputLog? outputLog,
     int maxEntries = 500,
-    Cmd? Function(Msg)? onUpdate,
-  }) : outputLog = outputLog ?? OutputLog(maxEntries: maxEntries),
-       _onUpdate = onUpdate;
+    this._onUpdate,
+  }) : outputLog = outputLog ?? OutputLog(maxEntries: maxEntries);
 
   @override
   final OutputLog outputLog;
@@ -8450,13 +8357,7 @@ String _stripAnsi(String value) {
 
 /// A model that uses callbacks for testing.
 class _CallbackModel implements Model {
-  _CallbackModel({
-    Cmd? Function()? onInit,
-    Cmd? Function(Msg)? onUpdate,
-    Object Function()? onView,
-  }) : _onInit = onInit,
-       _onUpdate = onUpdate,
-       _onView = onView;
+  _CallbackModel({this._onInit, this._onUpdate, this._onView});
 
   final Cmd? Function()? _onInit;
   final Cmd? Function(Msg)? _onUpdate;
@@ -8972,15 +8873,10 @@ final class _FrameTickCaptureModel extends Model implements FrameTickModel {
 }
 
 class _ResizableMockTerminal extends MockTerminal {
-  _ResizableMockTerminal({
-    int width = 80,
-    int height = 24,
-    this.onDisableRawMode,
-  }) : _width = width,
-       _height = height;
+  _ResizableMockTerminal({this.onDisableRawMode});
 
-  int _width;
-  int _height;
+  int _width = 80;
+  int _height = 24;
   final void Function(_ResizableMockTerminal terminal)? onDisableRawMode;
 
   @override

@@ -875,9 +875,11 @@ final class TrelloModel implements tui.Model {
     final (modalPanel, cursor) = _renderModal(m);
     final comp = uv.Compositor([
       uv.Layer(uv.StyledString(base)).setId('base').setZ(0),
-      uv.Layer(
-        uv.StyledString(modalPanel),
-      ).setId('modal').setX(m.x).setY(m.y).setZ(10),
+      uv.Layer(uv.StyledString(modalPanel))
+          .setId('modal')
+          .setX(m.x)
+          .setY(m.y)
+          .setZ(10),
     ]);
     final composed = debug.compose(_padToScreen(comp.render()));
     return View(content: _padToScreen(composed), cursor: cursor);

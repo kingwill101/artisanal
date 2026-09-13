@@ -381,6 +381,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
   Buffer? _lastRenderedInput;
   List<bool> _sixelRows = const <bool>[];
   bool _curbufContainsSixel = false;
+  bool _disposed = false;
   final Cell _emptyCell = Cell.emptyCell();
   _StyleTransitionCache? _styleTransitionCache;
   String _lastFlushedOutput = '';
@@ -875,6 +876,7 @@ final class UvTerminalRenderer extends TerminalRenderer {
   /// is separate from [resize], which intentionally preserves the previous
   /// surface for normal renderer parity.
   void resetForResize(int width, int height) {
+    _curbuf?.dispose();
     _curbuf = Buffer.create(width, height);
     _lastRenderedInput = null;
     _sixelRows = List<bool>.filled(height, false);
@@ -888,6 +890,32 @@ final class UvTerminalRenderer extends TerminalRenderer {
     _newhash = const [];
     _hashtab = const [];
     _oldnum = const [];
+  }
+
+  /// Releases the renderer-owned previous-frame buffer and transient state.
+  ///
+  /// The buffer passed to [render] is borrowed and is never disposed.
+  /// Repeated calls are safe.
+  @override
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _curbuf?.dispose();
+    _curbuf = null;
+    _lastRenderedInput = null;
+    _tabs = null;
+    _oldhash = const [];
+    _newhash = const [];
+    _hashtab = const [];
+    _oldnum = const [];
+    _arena.clear();
+    _sixelRows = const <bool>[];
+    _alwaysUpdateCells.clear();
+    _deferredRetainedGraphics.clear();
+    _deferredDisplayPayloads.clear();
+    _styleTransitionCache = null;
+    _buf.clear();
+    _lastFlushedOutput = '';
   }
 
   /// Returns the current cursor position as `(x, y)`.
@@ -1005,6 +1033,9 @@ final class UvTerminalRenderer extends TerminalRenderer {
   /// [metrics].
   @override
   void render(Buffer newbuf) {
+    if (_disposed) {
+      throw StateError('Cannot render with a disposed renderer');
+    }
     metrics.beginFrame();
     _arena.reset();
     _deferredRetainedGraphics.clear();
@@ -2440,6 +2471,19 @@ final class _FrameArena {
     _stringIndex = 0;
     _hashIndex = 0;
     _int32Index = 0;
+  }
+
+  /// Releases all frame backing stores.
+  ///
+  /// Unlike [reset], this drops the lists themselves so a long-lived
+  /// renderer does not retain the largest frame it has ever rendered.
+  /// Clearing an already-cleared arena is safe.
+  void clear() {
+    _boolLists.clear();
+    _stringBuffers.clear();
+    _hashTables.clear();
+    _int32Lists.clear();
+    reset();
   }
 
   List<bool> acquireBoolList(int length) {

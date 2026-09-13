@@ -224,16 +224,14 @@ final class JsonTerminalBackend implements TerminalBackend {
   JsonTerminalBackend({
     required void Function(String message) sendMessage,
     required Stream<Object?> inboundMessages,
-    Future<void> Function()? flushMessages,
-    Future<void> Function()? closeTransport,
+    this._flushMessages,
+    this._closeTransport,
     TerminalDimensions initialSize = const (width: 80, height: 24),
     this.supportsAnsi = true,
     this.isTerminal = true,
     this.colorProfile = ColorProfile.trueColor,
     this.movementCaps = const (useTabs: false, useBackspace: true),
-  }) : _flushMessages = flushMessages,
-       _closeTransport = closeTransport,
-       _delegate = EmbeddedTerminalBackend(
+  }) : _delegate = EmbeddedTerminalBackend(
          output: (data) {
            _trySendBridgeMessage(
              sendMessage,

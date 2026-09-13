@@ -298,15 +298,13 @@ class _NamedRoutesHomeState extends w.State<_NamedRoutesHome> {
   tui.Cmd? handleIntercept(tui.Msg msg) {
     if (msg is tui.KeyMsg) {
       if (msg.key.char == '1') {
-        w.Navigator.of(
-          context,
-        ).pushWidget(_DetailPage(title: 'Settings'), name: '/settings');
+        w.Navigator.of(context)
+            .pushWidget(_DetailPage(title: 'Settings'), name: '/settings');
         return tui.Cmd.none();
       }
       if (msg.key.char == '2') {
-        w.Navigator.of(
-          context,
-        ).pushWidget(_DetailPage(title: 'Profile'), name: '/profile');
+        w.Navigator.of(context)
+            .pushWidget(_DetailPage(title: 'Profile'), name: '/profile');
         return tui.Cmd.none();
       }
     }

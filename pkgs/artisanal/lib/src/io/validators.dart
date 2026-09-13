@@ -430,8 +430,7 @@ class Validators {
 
   /// Validates that the input is a valid identifier (e.g., variable name).
   static String? Function(String) identifier({
-    String message =
-        'Must be a valid identifier (letters, numbers, underscores, starting with a letter).',
+    String message = 'Must be a valid identifier (letters, numbers, underscores, starting with a letter).',
   }) {
     return (value) {
       if (value.trim().isEmpty) return null;

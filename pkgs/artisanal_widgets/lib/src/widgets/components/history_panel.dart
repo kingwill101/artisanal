@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart' show Color, Style;
+
 import '_component_foundation.dart';
 
 /// A single entry in the undo/redo history.

@@ -20,19 +20,11 @@ void main() async {
   final hub = KeymapHub();
 
   // Session surface (default).
-  hub.push(
-    ShortcutSurface(
-      id: 'session',
-      bindings: _sessionBindings,
-    ),
-  );
+  hub.push(ShortcutSurface(id: 'session', bindings: _sessionBindings));
 
   await runProgram(
     _KeymapDemoModel(hub: hub),
-    options: ProgramOptions(
-      altScreen: true,
-      interceptor: hub,
-    ),
+    options: ProgramOptions(altScreen: true, interceptor: hub),
   );
 }
 
@@ -127,22 +119,16 @@ final class _KeymapDemoModel implements Model {
     }
 
     if (msg is KeymapSequencePrefixMsg) {
-      final cont = hub.activeContinuations
-          .map((c) => c.keyLabel)
-          .join(' ');
+      final cont = hub.activeContinuations.map((c) => c.keyLabel).join(' ');
       return (
-        copyWith(
-          status: 'Leader ${msg.matchedLabels.join(' ')} — then: $cont',
-        ),
+        copyWith(status: 'Leader ${msg.matchedLabels.join(' ')} — then: $cont'),
         null,
       );
     }
 
     if (msg is KeymapSequenceCancelledMsg) {
       return (
-        copyWith(
-          status: msg.timedOut ? 'Chord timed out' : 'Chord cancelled',
-        ),
+        copyWith(status: msg.timedOut ? 'Chord timed out' : 'Chord cancelled'),
         null,
       );
     }
@@ -152,7 +138,7 @@ final class _KeymapDemoModel implements Model {
     }
 
     if (msg is KeyMsg) {
-      if (msg.key.isCtrlC || msg.key.rune == 0x71 /* q */) {
+      if (msg.key.isCtrlC || msg.key.rune == 0x71 /* q */ ) {
         return (this, Cmd.quit());
       }
     }
@@ -172,10 +158,7 @@ final class _KeymapDemoModel implements Model {
         );
       case 'command_list':
         return (
-          copyWith(
-            lastAction: id,
-            status: 'Command palette (demo) — ctrl+p',
-          ),
+          copyWith(lastAction: id, status: 'Command palette (demo) — ctrl+p'),
           null,
         );
       case 'open_dialog':
@@ -218,13 +201,7 @@ final class _KeymapDemoModel implements Model {
           null,
         );
       default:
-        return (
-          copyWith(
-            lastAction: id,
-            status: 'Action: $id',
-          ),
-          null,
-        );
+        return (copyWith(lastAction: id, status: 'Action: $id'), null);
     }
   }
 

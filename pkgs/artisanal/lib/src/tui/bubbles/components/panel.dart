@@ -210,8 +210,7 @@ typedef PanelContentStyleFunc = Style? Function(String line, int lineIndex);
 /// ```
 class Panel extends DisplayComponent {
   /// Creates a new empty panel builder.
-  Panel({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  Panel({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

@@ -15,7 +15,7 @@ Rendering flows through the element tree into UV buffers:
 `UvTerminalRenderer` → diffed terminal output. `WidgetApp` is itself a
 `Model`, so widget apps run on the same `Program` runtime as plain TEA apps.
 
-Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.10.0 <4.0.0`.
+Part of a Dart workspace (`resolution: workspace`). SDK: `>=3.13.0 <4.0.0`.
 Version 0.4.0. Depends on `artisanal ^0.6.0`, `image`, `meta`. This package
 has its own `analysis_options.yaml` (`package:lints/recommended.yaml`).
 

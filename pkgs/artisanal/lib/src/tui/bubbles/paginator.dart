@@ -2,6 +2,7 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import 'key_binding.dart';
+
 import 'package:artisanal/style.dart';
 
 /// Pagination rendering type.

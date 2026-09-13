@@ -1,4 +1,5 @@
 import '../widgets/footer_bar.dart';
+
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
@@ -137,8 +138,9 @@ class _SessionContentPaneState extends w.State<SessionContentPane> {
     final chordActive = hub?.isSequencePending ?? false;
     final scannerRunning = widget.scanner?.isRunning ?? false;
     final dimmed = chordActive || scannerRunning;
-    final statusHint =
-        chordActive ? (hub?.pendingStatusHint ?? '') : widget.statusHint;
+    final statusHint = chordActive
+        ? (hub?.pendingStatusHint ?? '')
+        : widget.statusHint;
 
     return w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,

@@ -40,6 +40,7 @@ export 'package:artisanal_widgets/app.dart'
         WidgetApp;
 export 'package:artisanal_widgets/widgets.dart'
     show ImageAutoMode, Theme, ThemeMode;
+
 export 'src/terminal_painter.dart';
 export 'src/terminal_colors.dart';
 export 'src/app_shell.dart';

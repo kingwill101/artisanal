@@ -9,7 +9,8 @@ import 'host_server.dart' show TerminalHostServer;
 
 /// Session handler invoked for each accepted browser websocket connection.
 typedef BrowserTerminalSessionHandler = Future<void> Function(
-    io.WebSocket socket);
+  io.WebSocket socket,
+);
 
 /// Reusable browser host server for remote TUI sessions.
 ///
@@ -64,7 +65,8 @@ final class BrowserTerminalHostServer implements TerminalHostServer {
       server: server,
       pagePath: normalizedPagePath,
       webSocketPath: normalizedWebSocketPath,
-      pageHtml: pageHtml ??
+      pageHtml:
+          pageHtml ??
           defaultPageHtml(title: title, webSocketPath: normalizedWebSocketPath),
       onSession: onSession,
     );
@@ -108,19 +110,19 @@ final class BrowserTerminalHostServer implements TerminalHostServer {
 
   /// URL for the served browser page.
   Uri get pageUri => Uri(
-        scheme: 'http',
-        host: server.address.address,
-        port: server.port,
-        path: pagePath,
-      );
+    scheme: 'http',
+    host: server.address.address,
+    port: server.port,
+    path: pagePath,
+  );
 
   /// URL for websocket terminal sessions.
   Uri get webSocketUri => Uri(
-        scheme: 'ws',
-        host: server.address.address,
-        port: server.port,
-        path: webSocketPath,
-      );
+    scheme: 'ws',
+    host: server.address.address,
+    port: server.port,
+    path: webSocketPath,
+  );
 
   Future<void> _handleRequest(io.HttpRequest request) async {
     final path = request.uri.path.isEmpty ? '/' : request.uri.path;
@@ -235,8 +237,9 @@ final class BrowserTerminalHostServer implements TerminalHostServer {
     String lightCursor = '#2563eb',
     String lightSelectionBackground = '#cbd5e1',
   }) {
-    final cssColorScheme =
-        _prefersDarkColorScheme(background) ? 'dark light' : 'light dark';
+    final cssColorScheme = _prefersDarkColorScheme(background)
+        ? 'dark light'
+        : 'light dark';
     final darkToolbarStart =
         _blendHexColor(background, foreground, 0.08) ?? '#161c25';
     final darkToolbarEnd =
@@ -1617,9 +1620,10 @@ bool _prefersDarkColorScheme(String background) {
 String? _normalizedHexColor(String color) {
   final normalized = color.trim();
   final hex = switch (normalized.length) {
-    4 when normalized.startsWith('#') => '${normalized[1]}${normalized[1]}'
-        '${normalized[2]}${normalized[2]}'
-        '${normalized[3]}${normalized[3]}',
+    4 when normalized.startsWith('#') =>
+      '${normalized[1]}${normalized[1]}'
+          '${normalized[2]}${normalized[2]}'
+          '${normalized[3]}${normalized[3]}',
     7 when normalized.startsWith('#') => normalized.substring(1),
     _ => null,
   };
@@ -1649,7 +1653,8 @@ String? _blendHexColor(String start, String end, double amount) {
   final red = mix(channel(left, 0), channel(right, 0));
   final green = mix(channel(left, 2), channel(right, 2));
   final blue = mix(channel(left, 4), channel(right, 4));
-  final hex = red.toRadixString(16).padLeft(2, '0') +
+  final hex =
+      red.toRadixString(16).padLeft(2, '0') +
       green.toRadixString(16).padLeft(2, '0') +
       blue.toRadixString(16).padLeft(2, '0');
   return '#$hex';

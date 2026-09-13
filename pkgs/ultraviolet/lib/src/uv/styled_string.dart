@@ -487,18 +487,20 @@ void _printString(
           tailCell.width > 0 &&
           x + cell.width > bounds.maxX - tailCell.width) {
         final t = tailCell.clone();
+        final tWidth = t.width;
         if (hasCurrentAttributes) applyCurrentAttributes(t);
         setFreshCell(x, y, t);
         lastCellX = x;
         lastCellY = y;
-        x += t.width;
+        x += tWidth;
         // Stop drawing further content on this line.
         x = bounds.maxX;
       } else {
+        final cellWidth = cell.width;
         setFreshCell(x, y, cell);
         lastCellX = x;
         lastCellY = y;
-        x += cell.width;
+        x += cellWidth;
       }
     } else {
       x += cell.width;

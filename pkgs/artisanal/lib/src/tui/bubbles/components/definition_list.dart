@@ -65,8 +65,12 @@ class DefinitionListComponent extends DisplayComponent {
 /// [isTerm] indicates whether this is the term (true) or description (false).
 ///
 /// Return a [Style] to apply, or `null` for no styling.
-typedef DefinitionStyleFunc =
-    Style? Function(String term, String description, int index, bool isTerm);
+typedef DefinitionStyleFunc = Style? Function(
+  String term,
+  String description,
+  int index,
+  bool isTerm,
+);
 
 /// A fluent builder for creating styled definition lists.
 ///
@@ -86,8 +90,7 @@ typedef DefinitionStyleFunc =
 /// ```
 class DefinitionList extends DisplayComponent {
   /// Creates a new empty definition list builder.
-  DefinitionList({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  DefinitionList({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 
@@ -273,8 +276,7 @@ class DefinitionList extends DisplayComponent {
 /// ```
 class GroupedDefinitionList extends DisplayComponent {
   /// Creates a new empty grouped definition list builder.
-  GroupedDefinitionList({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  GroupedDefinitionList({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

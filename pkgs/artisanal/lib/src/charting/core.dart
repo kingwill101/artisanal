@@ -4,6 +4,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:ultraviolet/core.dart';
+import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:artisanal/style.dart';
 
 /// Signature for chart painters.
@@ -77,12 +78,27 @@ void putText(
 ) {
   if (y < area.minY || y >= area.maxY) return;
   var cursor = x;
-  for (final rune in text.runes) {
-    if (cursor >= area.maxX) break;
-    if (cursor >= area.minX) {
-      putCell(screen, cursor, y, String.fromCharCode(rune), style);
+  final widthMethod = screen.widthMethod();
+  for (final grapheme in uni.graphemes(text)) {
+    final cell = Cell.newCell(widthMethod, grapheme)..style = style;
+    final width = cell.width;
+    // A grapheme must fit as a whole: placing a wide cell at either edge of
+    // the viewport would leave a half-glyph in the chart.
+    if (cursor >= area.maxX) {
+      cell.dispose();
+      break;
     }
-    cursor++;
+    if (width > 0 && cursor >= area.minX && cursor + width <= area.maxX) {
+      if (screen case final OwnedCellScreen owned) {
+        owned.setCellOwned(cursor, y, cell);
+      } else {
+        screen.setCell(cursor, y, cell);
+        cell.dispose();
+      }
+    } else {
+      cell.dispose();
+    }
+    cursor += width;
   }
 }
 

@@ -2,7 +2,9 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../view.dart';
+
 import 'package:artisanal/style.dart';
+
 import 'key_binding.dart';
 import 'textinput.dart';
 import 'paginator.dart';
@@ -48,12 +50,11 @@ class FilteredSearchItem<T> {
 }
 
 /// Filter function type for search.
-typedef SearchFilterFunc<T> =
-    List<FilteredSearchItem<T>> Function(
-      String query,
-      List<T> items,
-      String Function(T) toString,
-    );
+typedef SearchFilterFunc<T> = List<FilteredSearchItem<T>> Function(
+  String query,
+  List<T> items,
+  String Function(T) toString,
+);
 
 /// Default fuzzy filter implementation.
 List<FilteredSearchItem<T>> defaultSearchFilter<T>(
@@ -370,7 +371,7 @@ class MultiSearchKeyMap extends SearchKeyMap {
 class SearchModel<T> extends ViewComponent {
   /// Creates a new search model.
   SearchModel({
-    required List<T> items,
+    required this._items,
     this.title = '',
     this.placeholder = 'Type to search...',
     this.noResultsText = 'No matches found',
@@ -378,17 +379,15 @@ class SearchModel<T> extends ViewComponent {
     this.showHelp = true,
     this.showPagination = true,
     this.highlightMatches = true,
-    int height = 10,
+    this._height = 10,
     int initialIndex = 0,
     this.display,
     SearchFilterFunc<T>? filter,
     SearchKeyMap? keyMap,
     SearchStyles? styles,
-  }) : _items = items,
-       _filter = filter ?? defaultSearchFilter,
+  }) : _filter = filter ?? defaultSearchFilter,
        keyMap = keyMap ?? SearchKeyMap(),
-       styles = styles ?? SearchStyles.defaults(),
-       _height = height {
+       styles = styles ?? SearchStyles.defaults() {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
     _paginator = PaginatorModel(
       type: PaginationType.dots,
@@ -704,7 +703,7 @@ class SearchModel<T> extends ViewComponent {
 /// A multi-select search/filter component.
 class MultiSearchModel<T> extends ViewComponent {
   MultiSearchModel({
-    required List<T> items,
+    required this._items,
     this.title = '',
     this.hint = '(Space to toggle, ^a to toggle all, Enter to confirm)',
     this.placeholder = 'Type to search...',
@@ -714,19 +713,17 @@ class MultiSearchModel<T> extends ViewComponent {
     this.showHelp = true,
     this.showPagination = true,
     this.highlightMatches = true,
-    int height = 10,
+    this._height = 10,
     int initialIndex = 0,
     Set<int>? initialSelected,
     this.display,
     SearchFilterFunc<T>? filter,
     MultiSearchKeyMap? keyMap,
     SearchStyles? styles,
-  }) : _items = items,
-       _selected = initialSelected ?? {},
+  }) : _selected = initialSelected ?? {},
        _filter = filter ?? defaultSearchFilter,
        keyMap = keyMap ?? MultiSearchKeyMap(),
-       styles = styles ?? SearchStyles.defaults(),
-       _height = height {
+       styles = styles ?? SearchStyles.defaults() {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
     _paginator = PaginatorModel(
       type: PaginationType.dots,

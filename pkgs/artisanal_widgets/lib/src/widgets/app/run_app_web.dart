@@ -8,8 +8,13 @@ export 'package:artisanal/web.dart' show BrowserRunOptions;
 Future<void> runWidgetApp(
   WidgetApp app, {
   BrowserRunOptions options = const BrowserRunOptions(),
-}) =>
-    runBrowserProgram(app, options: options);
+}) async {
+  try {
+    await runBrowserProgram(app, options: options);
+  } finally {
+    app.dispose();
+  }
+}
 
 /// Network hosting is unavailable inside a browser tab.
 Future<Never> serveWidgetApp({
@@ -28,5 +33,4 @@ Future<Never> serveWidgetApp({
   Object? initialSize,
   bool supportsAnsi = true,
   Object? colorProfile,
-}) =>
-    throw UnsupportedError('serveWidgetApp is not available on web.');
+}) => throw UnsupportedError('serveWidgetApp is not available on web.');

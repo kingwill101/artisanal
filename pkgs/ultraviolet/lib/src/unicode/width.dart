@@ -5,6 +5,7 @@
 library;
 
 import 'grapheme.dart' as uni;
+import 'bounded_string_int_cache.dart';
 
 /// Runtime configuration for width calculations that depend on terminal
 /// behavior.
@@ -33,16 +34,17 @@ void setEmojiPresentationWidth(int width) {
 /// Maximum number of entries in [_unicodeStringWidthCache].
 const _unicodeStringWidthCacheLimit = 2048;
 const _unicodeStringWidthCacheMaxLength = 4096;
+const _unicodeStringWidthCacheMaxBytes = 256 * 1024;
 
-final _unicodeStringWidthCache = <String, int>{};
+final _unicodeStringWidthCache = BoundedStringIntCache(
+  maxEntries: _unicodeStringWidthCacheLimit,
+  maxKeyLength: _unicodeStringWidthCacheMaxLength,
+  maxKeyBytes: _unicodeStringWidthCacheMaxBytes,
+);
 
 int? _cachedStringWidth(String s) => _unicodeStringWidthCache[s];
 
 void _cacheStringWidth(String s, int width) {
-  if (s.length > _unicodeStringWidthCacheMaxLength) return;
-  if (_unicodeStringWidthCache.length >= _unicodeStringWidthCacheLimit) {
-    _unicodeStringWidthCache.clear();
-  }
   _unicodeStringWidthCache[s] = width;
 }
 

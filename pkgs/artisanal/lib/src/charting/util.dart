@@ -6,8 +6,6 @@ import 'dart:typed_data';
 
 import 'package:ultraviolet/ultraviolet.dart';
 
-
-
 import 'core.dart';
 import 'types.dart';
 
@@ -341,7 +339,13 @@ void drawAxes(
       final y = (ePY + ePH - 1 - t * (ePH - 1)).round();
       if (y < plotY || y >= plotY + plotH) continue;
 
-      putCell(screen, plotX - 1, y, LineChars.teeLeft, mergeStyle(axisColor, bg));
+      putCell(
+        screen,
+        plotX - 1,
+        y,
+        LineChars.teeLeft,
+        mergeStyle(axisColor, bg),
+      );
 
       final fmt = yAxisOpts?.formatTick != null
           ? yAxisOpts!.formatTick!(tick)
@@ -364,21 +368,40 @@ void drawAxes(
   if (showXAxis && labels != null && labels.isNotEmpty) {
     final step = math.max(1, (labels.length / math.max(1, plotW ~/ 6)).ceil());
     for (var i = 0; i < labels.length; i += step) {
-      final x = (plotX +
-              1 +
-              (i / math.max(1, labels.length - 1)) * (plotW - 2))
+      final x = (plotX + 1 + (i / math.max(1, labels.length - 1)) * (plotW - 2))
           .round();
       if (x > plotX && x < plotX + plotW) {
-        putCell(screen, x, plotY + plotH - 1, LineChars.teeBottom, mergeStyle(axisColor, bg));
-        final label = labels[i].length > 6 ? labels[i].substring(0, 6) : labels[i];
+        putCell(
+          screen,
+          x,
+          plotY + plotH - 1,
+          LineChars.teeBottom,
+          mergeStyle(axisColor, bg),
+        );
+        final label = labels[i].length > 6
+            ? labels[i].substring(0, 6)
+            : labels[i];
         final lx = math.max(0, x - label.length ~/ 2);
-        putText(screen, area, lx, plotY + plotH, label, mergeStyle(axisColor, bg));
+        putText(
+          screen,
+          area,
+          lx,
+          plotY + plotH,
+          label,
+          mergeStyle(axisColor, bg),
+        );
       }
     }
   }
 
   if (showXAxis && showYAxis) {
-    putCell(screen, plotX, plotY + plotH - 1, LineChars.cornerBl, mergeStyle(axisColor, bg));
+    putCell(
+      screen,
+      plotX,
+      plotY + plotH - 1,
+      LineChars.cornerBl,
+      mergeStyle(axisColor, bg),
+    );
   }
 }
 
@@ -416,7 +439,14 @@ void drawLegend(
     final entryLen = item.name.length + 3;
     if (cx + entryLen + 2 > x + maxWidth) break;
     putSolidChartCell(screen, cx, y, fg(item.color), Block.full);
-    putText(screen, area, cx + 1, y, ' ${item.name}', mergeStyle(fg('#AAAAAA'), bg));
+    putText(
+      screen,
+      area,
+      cx + 1,
+      y,
+      ' ${item.name}',
+      mergeStyle(fg('#AAAAAA'), bg),
+    );
     cx += entryLen;
   }
 }
@@ -584,10 +614,22 @@ final class QuadrantCanvas {
   final List<String?> _pixels;
 
   static const _chars = [
-    ' ', '▘', '▝', '▀',
-    '▖', '▌', '▞', '▛',
-    '▗', '▚', '▐', '▜',
-    '▄', '▙', '▟', '█',
+    ' ',
+    '▘',
+    '▝',
+    '▀',
+    '▖',
+    '▌',
+    '▞',
+    '▛',
+    '▗',
+    '▚',
+    '▐',
+    '▜',
+    '▄',
+    '▙',
+    '▟',
+    '█',
   ];
 
   void clear() {
@@ -648,7 +690,8 @@ final class QuadrantCanvas {
 
         final unique = set.toSet().toList();
         if (unique.length == 1) {
-          final mask = (tlHex != null ? 1 : 0) |
+          final mask =
+              (tlHex != null ? 1 : 0) |
               (trHex != null ? 2 : 0) |
               (blHex != null ? 4 : 0) |
               (brHex != null ? 8 : 0);
@@ -668,7 +711,8 @@ final class QuadrantCanvas {
             ..sort((a, b) => b.value.compareTo(a.value));
           final primary = sorted[0].key;
           final secondary = sorted[1].key;
-          final mask = (tlHex == primary ? 1 : 0) |
+          final mask =
+              (tlHex == primary ? 1 : 0) |
               (trHex == primary ? 2 : 0) |
               (blHex == primary ? 4 : 0) |
               (brHex == primary ? 8 : 0);
@@ -688,7 +732,15 @@ final class QuadrantCanvas {
 // ─── Rendering helpers ───────────────────────────────────────────────────────
 
 /// Fills a rectangular region on [screen] with [style] as the background.
-void fillRect(Screen screen, Rectangle area, int x, int y, int w, int h, UvStyle style) {
+void fillRect(
+  Screen screen,
+  Rectangle area,
+  int x,
+  int y,
+  int w,
+  int h,
+  UvStyle style,
+) {
   final bg = style.bg ?? style.fg;
   if (bg == null) return;
   final fill = UvStyle(fg: bg, bg: bg);

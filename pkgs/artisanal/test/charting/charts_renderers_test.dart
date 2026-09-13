@@ -135,7 +135,11 @@ void main() {
 
     test('handles empty series', () {
       final out = _render(20, 10, (s, a) {
-        renderLineChart(s, a, LineChartProps(width: 20, height: 10, series: []));
+        renderLineChart(
+          s,
+          a,
+          LineChartProps(width: 20, height: 10, series: []),
+        );
       });
       expect(out, isNotNull);
     });
@@ -154,7 +158,9 @@ void main() {
           BarChartProps(
             width: 40,
             height: 12,
-            series: [DataSeries(name: 'Sales', data: [10, 20, 15, 30])],
+            series: [
+              DataSeries(name: 'Sales', data: [10, 20, 15, 30]),
+            ],
             labels: const ['Q1', 'Q2', 'Q3', 'Q4'],
           ),
         );
@@ -172,7 +178,9 @@ void main() {
           BarChartProps(
             width: 40,
             height: 12,
-            series: [DataSeries(name: 'A', data: [10, 20, 15])],
+            series: [
+              DataSeries(name: 'A', data: [10, 20, 15]),
+            ],
             orientation: ChartOrientation.horizontal,
           ),
         );
@@ -204,7 +212,9 @@ void main() {
         BarChartProps(
           width: 40,
           height: 12,
-          series: [DataSeries(name: 'A', data: [1, 2, 3])],
+          series: [
+            DataSeries(name: 'A', data: [1, 2, 3]),
+          ],
         ),
       );
       expect(out.split('\n').length, 12);
@@ -212,11 +222,7 @@ void main() {
 
     test('handles empty series', () {
       final out = _render(20, 10, (s, a) {
-        renderBarChart(
-          s,
-          a,
-          BarChartProps(width: 20, height: 10, series: []),
-        );
+        renderBarChart(s, a, BarChartProps(width: 20, height: 10, series: []));
       });
       expect(out, isNotNull);
     });
@@ -235,7 +241,9 @@ void main() {
           AreaChartProps(
             width: 40,
             height: 12,
-            series: [DataSeries(name: 'A', data: [1, 4, 2, 6, 3])],
+            series: [
+              DataSeries(name: 'A', data: [1, 4, 2, 6, 3]),
+            ],
           ),
         );
       });
@@ -285,7 +293,9 @@ void main() {
         AreaChartProps(
           width: 40,
           height: 12,
-          series: [DataSeries(name: 'A', data: [1, 2, 3])],
+          series: [
+            DataSeries(name: 'A', data: [1, 2, 3]),
+          ],
         ),
       );
       expect(out.split('\n').length, 12);
@@ -652,7 +662,9 @@ void main() {
         StackedBarChartProps(
           width: 50,
           height: 14,
-          series: const [DataSeries(name: 'A', data: [1, 2, 3])],
+          series: const [
+            DataSeries(name: 'A', data: [1, 2, 3]),
+          ],
         ),
       );
       expect(out.split('\n').length, 14);

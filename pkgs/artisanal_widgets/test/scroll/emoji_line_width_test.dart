@@ -99,73 +99,70 @@ void main() {
       }
     });
 
-    test(
-      'viewport content lines have consistent width before joinHorizontal',
-      () async {
-        // This tests the paint output of SingleChildScrollView viewport directly
-        const w = 40;
-        const h = 5;
-        final tester = WidgetTester(screenWidth: w, screenHeight: h);
-        try {
-          final controller = WidgetScrollController();
-          await tester.pumpWidget(
-            SingleChildScrollView(
-              controller: controller,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Plain text line'),
-                  Text('😀 😎 🤔 emoji line'),
-                  Text('Another plain line'),
-                  Text('🐱 🐶 more emoji'),
-                  Text('Final plain line'),
-                  Text('Extra line 1'),
-                  Text('Extra line 2'),
-                  Text('Extra line 3'),
-                  Text('Extra line 4'),
-                  Text('Extra line 5'),
-                ],
-              ),
+    test('viewport content lines have consistent width before joinHorizontal', () async {
+      // This tests the paint output of SingleChildScrollView viewport directly
+      const w = 40;
+      const h = 5;
+      final tester = WidgetTester(screenWidth: w, screenHeight: h);
+      try {
+        final controller = WidgetScrollController();
+        await tester.pumpWidget(
+          SingleChildScrollView(
+            controller: controller,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Plain text line'),
+                Text('😀 😎 🤔 emoji line'),
+                Text('Another plain line'),
+                Text('🐱 🐶 more emoji'),
+                Text('Final plain line'),
+                Text('Extra line 1'),
+                Text('Extra line 2'),
+                Text('Extra line 3'),
+                Text('Extra line 4'),
+                Text('Extra line 5'),
+              ],
             ),
+          ),
+        );
+
+        // Check view at offset 0
+        var view = tester.view;
+        var viewLines = view.split('\n');
+        final ansiRegex = RegExp(r'\x1B\[[0-9;]*[a-zA-Z]');
+
+        for (var i = 0; i < viewLines.length; i++) {
+          final stripped = viewLines[i].replaceAll(ansiRegex, '');
+          final visLen = _visibleWidth(stripped);
+          expect(
+            visLen,
+            w,
+            reason:
+                'At offset 0, line $i: visible width $visLen != $w. '
+                'Content: "$stripped"',
           );
-
-          // Check view at offset 0
-          var view = tester.view;
-          var viewLines = view.split('\n');
-          final ansiRegex = RegExp(r'\x1B\[[0-9;]*[a-zA-Z]');
-
-          for (var i = 0; i < viewLines.length; i++) {
-            final stripped = viewLines[i].replaceAll(ansiRegex, '');
-            final visLen = _visibleWidth(stripped);
-            expect(
-              visLen,
-              w,
-              reason:
-                  'At offset 0, line $i: visible width $visLen != $w. '
-                  'Content: "$stripped"',
-            );
-          }
-
-          // Scroll down to show emoji lines
-          tester.sendSpecialKey(KeyType.down);
-          view = tester.view;
-          viewLines = view.split('\n');
-
-          for (var i = 0; i < viewLines.length; i++) {
-            final stripped = viewLines[i].replaceAll(ansiRegex, '');
-            final visLen = _visibleWidth(stripped);
-            expect(
-              visLen,
-              w,
-              reason:
-                  'At offset 1, line $i: visible width $visLen != $w. '
-                  'Content: "$stripped"',
-            );
-          }
-        } finally {
-          await tester.dispose();
         }
-      },
-    );
+
+        // Scroll down to show emoji lines
+        tester.sendSpecialKey(KeyType.down);
+        view = tester.view;
+        viewLines = view.split('\n');
+
+        for (var i = 0; i < viewLines.length; i++) {
+          final stripped = viewLines[i].replaceAll(ansiRegex, '');
+          final visLen = _visibleWidth(stripped);
+          expect(
+            visLen,
+            w,
+            reason:
+                'At offset 1, line $i: visible width $visLen != $w. '
+                'Content: "$stripped"',
+          );
+        }
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 }

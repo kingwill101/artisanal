@@ -376,8 +376,7 @@ class _PromptInputState extends w.State<PromptInput> {
         });
         return tui.Cmd.none();
       }
-      if (key.type == tui.KeyType.tab ||
-          (key.isEnterLike && !key.shift)) {
+      if (key.type == tui.KeyType.tab || (key.isEnterLike && !key.shift)) {
         if (_items.isNotEmpty) {
           _applySelection(_items[_selected.clamp(0, _items.length - 1)]);
         }
@@ -505,10 +504,7 @@ class _PromptInputState extends w.State<PromptInput> {
                 w.Row(
                   gap: 1,
                   children: [
-                    w.Text(
-                      agentLabel,
-                      style: style.Style()..foreground(color),
-                    ),
+                    w.Text(agentLabel, style: style.Style()..foreground(color)),
                     w.Text(
                       modelDisplay,
                       style: style.Style()..foreground(OC.text),

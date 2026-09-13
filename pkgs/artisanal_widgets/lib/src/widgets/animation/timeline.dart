@@ -8,8 +8,10 @@ import 'curves.dart';
 enum TimelineDirection { forward, reverse }
 
 /// Builds one timeline step for a staged controller choreography.
-typedef TimelineStepBuilder =
-    AnimationTimelineStep Function(int index, AnimationController controller);
+typedef TimelineStepBuilder = AnimationTimelineStep Function(
+  int index,
+  AnimationController controller,
+);
 
 /// Invoked by [AnimationTimelineStep.callback].
 typedef TimelineStepCallback = Cmd? Function(TimelineDirection direction);
@@ -1414,8 +1416,7 @@ final class _CallbackStep extends AnimationTimelineStep {
 }
 
 final class _ControllerRuntime implements _TimelineStepRuntime {
-  _ControllerRuntime(this.controller, {required Cmd Function() start})
-    : _start = start;
+  _ControllerRuntime(this.controller, {required this._start});
 
   final AnimationController controller;
   final Cmd Function() _start;
@@ -1432,10 +1433,8 @@ final class _ControllerRuntime implements _TimelineStepRuntime {
     if (_isComplete) {
       return null;
     }
-    if (msg case AnimationTickMsg(
-      controllerId: final id,
-      time: final time,
-    ) when id == controller.id) {
+    if (msg case AnimationTickMsg(controllerId: final id, time: final time)
+        when id == controller.id) {
       final next = controller.processTick(time);
       if (!controller.isAnimating) {
         _isComplete = true;
@@ -1474,10 +1473,12 @@ final class _DelayRuntime implements _TimelineStepRuntime {
     if (_isComplete) {
       return null;
     }
-    if (msg case TimelineDelayMsg(
-      timelineId: final msgTimelineId,
-      token: final token,
-    ) when msgTimelineId == timelineId && token == _token) {
+    if (msg
+        case TimelineDelayMsg(
+          timelineId: final msgTimelineId,
+          token: final token,
+        )
+        when msgTimelineId == timelineId && token == _token) {
       _isComplete = true;
     }
     return null;

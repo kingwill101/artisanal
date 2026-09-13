@@ -74,8 +74,10 @@ import 'package:artisanal/bubbles.dart'
         UndoCommandJournalEntry,
         UndoManager,
         UndoableCommand;
+
 import 'dart:async';
 import 'dart:io' as dartio;
+
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
@@ -1132,8 +1134,7 @@ class UiPanelCommand extends Command<void> {
 
     // Simple panel
     PanelComponent(
-      content:
-          'This is a simple panel with some content.\nIt can have multiple lines.',
+      content: 'This is a simple panel with some content.\nIt can have multiple lines.',
       title: 'Info',
       chars: chars,
       renderConfig: renderConfig,
@@ -1845,8 +1846,7 @@ class UiBlockCommand extends Command<void> {
 
     io.section('Success Block');
     StyledBlockComponent(
-      message:
-          'Operation completed successfully!\nAll tasks finished without errors.',
+      message: 'Operation completed successfully!\nAll tasks finished without errors.',
       blockStyle: BlockStyleType.success,
       large: large,
       renderConfig: renderConfig,
@@ -2697,8 +2697,7 @@ class UiComponentSystemCommand extends Command<void> {
 
     io.writeln('PanelComponent:');
     PanelComponent(
-      content:
-          'This is a panel using the component system.\nIt supports titles and alignment.',
+      content: 'This is a panel using the component system.\nIt supports titles and alignment.',
       title: 'Panel Demo',
       renderConfig: renderConfig,
     ).writelnTo(io);

@@ -81,6 +81,44 @@ void main() {
       expect(debugGraphemeRefCount(pooledId), 0);
     });
 
+    test('plain cells can attach and reuse independent pooled resources', () {
+      final source = Cell(content: 'x');
+      final plain = source.clone();
+      plain.dispose();
+      plain.dispose();
+
+      source.content = '\u0076\u0323\u0305';
+      source.link = const Link(url: 'https://late-cell-tokens.example');
+      final graphemeId = source.pooledContentId!;
+      final linkId = source.linkId!;
+      final clone = source.clone();
+      addTearDown(source.dispose);
+      addTearDown(clone.dispose);
+      expect(debugGraphemeRefCount(graphemeId), 2);
+      expect(debugLinkRefCount(linkId), 2);
+
+      source.empty();
+      expect(debugGraphemeRefCount(graphemeId), 1);
+      expect(debugLinkRefCount(linkId), 2);
+      source.link = const Link();
+      expect(debugLinkRefCount(linkId), 1);
+
+      source.copyFrom(clone);
+      expect(debugGraphemeRefCount(graphemeId), 2);
+      expect(debugLinkRefCount(linkId), 2);
+      source.resetToEmptyCell();
+      expect(debugGraphemeRefCount(graphemeId), 1);
+      expect(debugLinkRefCount(linkId), 1);
+
+      source.copyEmptyFrom(clone);
+      expect(debugGraphemeRefCount(graphemeId), 1);
+      expect(debugLinkRefCount(linkId), 2);
+      source.dispose();
+      clone.dispose();
+      expect(debugGraphemeRefCount(graphemeId), 0);
+      expect(debugLinkRefCount(linkId), 0);
+    });
+
     test('mutating complex content releases the previous pooled grapheme', () {
       final cell = Cell(content: '\u0071\u0323', width: 1);
       final oldId = cell.pooledContentId!;
@@ -183,6 +221,74 @@ void main() {
         const Link(url: 'https://example-parity-link-registry-b.test'),
       );
       second.dispose();
+    });
+
+    test('keeps a live link identity stable during sustained link churn', () {
+      final live = Cell(
+        content: 'A',
+        link: const Link(url: 'https://generation-live.example'),
+      );
+      final liveId = live.linkId!;
+      final first = Cell(
+        content: 'A',
+        link: const Link(url: 'https://generation-0.example'),
+      );
+      final firstId = first.linkId!;
+      final firstSlot = debugLinkSlot(firstId);
+      final firstPacked = first.packed;
+      first.dispose();
+
+      // This is intentionally much larger than the old 8-bit generation
+      // space. It models transient links created by repeated rendered frames.
+      for (var i = 0; i < 10000; i++) {
+        final cell = Cell(
+          content: 'A',
+          link: Link(url: 'https://generation-$i.example'),
+        );
+        cell.dispose();
+      }
+
+      final replacement = Cell(
+        content: 'A',
+        link: const Link(url: 'https://generation-replacement.example'),
+      );
+
+      expect(live.linkId, liveId);
+      expect(live.packed.word3, liveId);
+      expect(debugLinkRefCount(liveId), 1);
+      expect(debugLinkSlot(replacement.linkId!), firstSlot);
+      expect(debugLinkGeneration(replacement.linkId!), greaterThan(0xff));
+      expect(replacement.link.url, 'https://generation-replacement.example');
+      expect(debugLinkRefCount(firstId), 0);
+      // A retained packed snapshot must remain the old identity, rather than
+      // aliasing the current occupant of its recycled slot.
+      expect(firstPacked.word3, firstId);
+      expect(firstPacked.word3, isNot(replacement.linkId));
+
+      replacement.dispose();
+      live.dispose();
+    });
+
+    test('retains stale packed cells without aliasing a new link', () {
+      final old = Cell(
+        content: 'A',
+        link: const Link(url: 'https://stale-packed.example/old'),
+      );
+      final stale = old.packed;
+      final oldId = old.linkId!;
+      final slot = debugLinkSlot(oldId);
+      old.dispose();
+
+      final current = Cell(
+        content: 'B',
+        link: const Link(url: 'https://stale-packed.example/current'),
+      );
+
+      expect(debugLinkSlot(current.linkId!), slot);
+      expect(current.linkId, isNot(oldId));
+      expect(stale.word3, oldId);
+      expect(stale, isNot(current.packed));
+      current.dispose();
     });
 
     test('link links with control characters are rejected', () {

@@ -15,7 +15,8 @@ void main() {
               path: 'a.dart',
               additions: 2,
               deletions: 1,
-              diff: 'diff --git a/a.dart b/a.dart\n'
+              diff:
+                  'diff --git a/a.dart b/a.dart\n'
                   '--- a/a.dart\n'
                   '+++ b/a.dart\n'
                   '@@ -1 +1,2 @@\n'
@@ -27,7 +28,8 @@ void main() {
               path: 'b.md',
               additions: 1,
               deletions: 0,
-              diff: 'diff --git a/b.md b/b.md\n'
+              diff:
+                  'diff --git a/b.md b/b.md\n'
                   '--- a/b.md\n'
                   '+++ b/b.md\n'
                   '@@ -0,0 +1 @@\n'

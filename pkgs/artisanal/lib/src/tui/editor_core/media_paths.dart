@@ -96,9 +96,7 @@ String? _candidateFromToken(String token) {
   if (value.isEmpty) return null;
   // Heuristic: must look like a path (separator or extension), otherwise
   // this is just pasted prose.
-  if (!value.contains('/') &&
-      !value.contains('\\') &&
-      !value.contains('.')) {
+  if (!value.contains('/') && !value.contains('\\') && !value.contains('.')) {
     return null;
   }
   return value;

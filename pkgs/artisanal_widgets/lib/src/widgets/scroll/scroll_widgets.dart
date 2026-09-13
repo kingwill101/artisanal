@@ -18,6 +18,7 @@ import 'package:artisanal/runtime.dart'
         ViewportModel,
         ViewportScrollPane;
 import 'package:artisanal/style.dart' hide Padding;
+
 import '../core/element.dart'
     show
         elementOf,
@@ -36,6 +37,7 @@ import '../theme/theme.dart' show hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../layout/_layout_core.dart' show EdgeInsets, Padding;
 import '../selection/selection_text_utils.dart';
+
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart'
     show Canvas, StyledString, suppressOverflowingTerminalGraphics;
@@ -1145,9 +1147,9 @@ class _SingleChildViewport extends SingleChildRenderObjectWidget {
 /// skips `offset` lines, and returns only `viewportHeight` lines.
 class RenderSingleChildViewport extends RenderBox {
   RenderSingleChildViewport({
-    required ScrollController controller,
+    required this._controller,
     required this.selectionHighlightStyle,
-  }) : _controller = controller;
+  });
 
   ScrollController _controller;
   Style selectionHighlightStyle;
@@ -1211,7 +1213,11 @@ class RenderSingleChildViewport extends RenderBox {
       minHeight: 0,
       maxHeight: double.infinity,
     );
-    child.layout(childConstraints);
+    // Scrolling changes the viewport slice, not the static document. Generic
+    // descendant changes still mark the child dirty and require fresh layout.
+    if (child.paintDirty || child.constraints != childConstraints) {
+      child.layout(childConstraints);
+    }
 
     // Invalidate paint cache if child constraints or size changed.
     if (_cachedChildConstraints != childConstraints ||
@@ -2470,6 +2476,17 @@ class RenderScrollbar extends RenderBox {
 
   @override
   void layout(BoxConstraints constraints) {
+    // Repeating the full-width/gutter-width measurement on every offset
+    // change reflows the document twice and invalidates its line cache.
+    // Keep the existing allocation, but still lay out wrappers above the
+    // viewport: some compute their paint output during layout.
+    if (paintOnlyDirty &&
+        this.constraints == constraints &&
+        children.isNotEmpty) {
+      final child = children.first;
+      child.layout(child.constraints);
+      return;
+    }
     super.layout(constraints);
     if (children.isNotEmpty) {
       final child = children.first;
@@ -2615,21 +2632,25 @@ class RenderScrollbar extends RenderBox {
     }
 
     final canvas = Canvas(stableW, stableH);
-    _drawStyledContent(canvas, content, 0, 0);
-    final barX = math.max(0, stableW - trackWidth);
-    final barOverwritesSpaces =
-        trackUsesBackground ||
-        thumbUsesBackground ||
-        (effectiveTrackGradient?.useBackground ?? false) ||
-        (effectiveThumbGradient?.useBackground ?? false);
-    _drawStyledContent(
-      canvas,
-      bar,
-      barX,
-      0,
-      treatSpacesAsTransparent: !barOverwritesSpaces,
-    );
-    return canvas.render();
+    try {
+      _drawStyledContent(canvas, content, 0, 0);
+      final barX = math.max(0, stableW - trackWidth);
+      final barOverwritesSpaces =
+          trackUsesBackground ||
+          thumbUsesBackground ||
+          (effectiveTrackGradient?.useBackground ?? false) ||
+          (effectiveThumbGradient?.useBackground ?? false);
+      _drawStyledContent(
+        canvas,
+        bar,
+        barX,
+        0,
+        treatSpacesAsTransparent: !barOverwritesSpaces,
+      );
+      return canvas.render();
+    } finally {
+      canvas.dispose();
+    }
   }
 }
 
@@ -2642,9 +2663,13 @@ String _composeScrollbarWithCanvas({
 }) {
   // Use a canvas when control sequences require real cell compositing.
   final canvas = Canvas(width, height);
-  _drawStyledContent(canvas, content, 0, 0);
-  _drawStyledContent(canvas, bar, barX, 0);
-  return canvas.render();
+  try {
+    _drawStyledContent(canvas, content, 0, 0);
+    _drawStyledContent(canvas, bar, barX, 0);
+    return canvas.render();
+  } finally {
+    canvas.dispose();
+  }
 }
 
 String _composeScrollbarBesideContent({
@@ -3039,22 +3064,26 @@ void _drawStyledContent(
   final styled = StyledString(content);
   final styledBounds = styled.bounds();
   final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
-  styled.draw(tempCanvas, tempCanvas.bounds());
+  try {
+    styled.draw(tempCanvas, tempCanvas.bounds());
 
-  for (var y = 0; y < styledBounds.height; y++) {
-    for (var x = 0; x < styledBounds.width; x++) {
-      final destX = startX + x;
-      final destY = startY + y;
+    for (var y = 0; y < styledBounds.height; y++) {
+      for (var x = 0; x < styledBounds.width; x++) {
+        final destX = startX + x;
+        final destY = startY + y;
 
-      if (destX < 0 || destY < 0) continue;
-      if (destX >= canvas.width() || destY >= canvas.height()) continue;
+        if (destX < 0 || destY < 0) continue;
+        if (destX >= canvas.width() || destY >= canvas.height()) continue;
 
-      final srcCell = tempCanvas.cellAt(x, y);
-      if (srcCell == null || srcCell.isZero) continue;
-      if (treatSpacesAsTransparent && srcCell.isEmpty) continue;
+        final srcCell = tempCanvas.cellAt(x, y);
+        if (srcCell == null || srcCell.isZero) continue;
+        if (treatSpacesAsTransparent && srcCell.isEmpty) continue;
 
-      canvas.setCell(destX, destY, srcCell.clone());
+        canvas.setCellOwned(destX, destY, srcCell.clone());
+      }
     }
+  } finally {
+    tempCanvas.dispose();
   }
 }
 
@@ -3071,8 +3100,10 @@ void _drawStyledContent(
 /// - [ListView.separated] for generated separators between items
 typedef IndexedWidgetBuilder = Widget Function(BuildContext context, int index);
 
-typedef IndexedSeparatorBuilder =
-    Widget Function(BuildContext context, int index);
+typedef IndexedSeparatorBuilder = Widget Function(
+  BuildContext context,
+  int index,
+);
 
 class ListView extends StatefulWidget {
   /// Creates a list view that keeps child widgets mounted.

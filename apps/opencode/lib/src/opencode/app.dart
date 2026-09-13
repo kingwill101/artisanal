@@ -9,6 +9,7 @@
 
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
+
 import 'chords.dart';
 import 'data.dart';
 import 'models/chat_model.dart';
@@ -32,7 +33,7 @@ import 'widgets/theme_list_dialog.dart';
 
 class OpenCodeApp extends w.StatefulWidget {
   OpenCodeApp({tui.KeymapHub? hub, super.key})
-      : hub = hub ?? openCodeKeymapHub();
+    : hub = hub ?? openCodeKeymapHub();
 
   /// Surface-first keymap hub (also the program interceptor).
   final tui.KeymapHub hub;
@@ -282,8 +283,9 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     }
 
     final hub = widget.hub;
-    final footerHint =
-        hub.isSequencePending ? hub.pendingStatusHint : _footerStatusHint;
+    final footerHint = hub.isSequencePending
+        ? hub.pendingStatusHint
+        : _footerStatusHint;
 
     final navigator = w.Navigator(
       key: const w.ValueKey('app-navigator'),
@@ -346,9 +348,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         '/review': (ctx) => w.ShortcutSurfaceScope(
           surfaceId: 'review',
           bindings: openCodeReviewBindings(),
-          child: ReviewScreen(
-            workingDirectory: _model.workingDirectory,
-          ),
+          child: ReviewScreen(workingDirectory: _model.workingDirectory),
         ),
       },
     );
