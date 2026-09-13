@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:image/image.dart' as img;
+
 import '../ansi.dart';
 
 /// Utilities for the Kitty Graphics Protocol.

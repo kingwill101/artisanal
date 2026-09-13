@@ -11,34 +11,33 @@ import 'package:artisanal_widgets/widgets.dart' as tui;
 
 import '_editor_demo_theme.dart' as demo_theme;
 
-const List<b.TextPatternDiagnosticRule>
-_showcaseDiagnosticRules = <b.TextPatternDiagnosticRule>[
-  b.TextPatternDiagnosticRule(
-    pattern: 'FIXME',
-    severity: b.TextDiagnosticSeverity.error,
-    code: 'FIX001',
-    message:
-        'Replace the placeholder host runner with the real hosted bootstrap flow.',
-    source: 'showcase',
-    wholeWord: true,
-  ),
-  b.TextPatternDiagnosticRule(
-    pattern: 'TODO',
-    severity: b.TextDiagnosticSeverity.warning,
-    code: 'TODO001',
-    message: 'Finish the pending editor-core showcase work.',
-    source: 'showcase',
-    wholeWord: true,
-  ),
-  b.TextPatternDiagnosticRule(
-    pattern: 'NOTE',
-    severity: b.TextDiagnosticSeverity.info,
-    code: 'NOTE001',
-    message: 'Review the release-notes callout for extra context.',
-    source: 'showcase',
-    wholeWord: true,
-  ),
-];
+const List<b.TextPatternDiagnosticRule> _showcaseDiagnosticRules =
+    <b.TextPatternDiagnosticRule>[
+      b.TextPatternDiagnosticRule(
+        pattern: 'FIXME',
+        severity: b.TextDiagnosticSeverity.error,
+        code: 'FIX001',
+        message: 'Replace the placeholder host runner with the real hosted bootstrap flow.',
+        source: 'showcase',
+        wholeWord: true,
+      ),
+      b.TextPatternDiagnosticRule(
+        pattern: 'TODO',
+        severity: b.TextDiagnosticSeverity.warning,
+        code: 'TODO001',
+        message: 'Finish the pending editor-core showcase work.',
+        source: 'showcase',
+        wholeWord: true,
+      ),
+      b.TextPatternDiagnosticRule(
+        pattern: 'NOTE',
+        severity: b.TextDiagnosticSeverity.info,
+        code: 'NOTE001',
+        message: 'Review the release-notes callout for extra context.',
+        source: 'showcase',
+        wholeWord: true,
+      ),
+    ];
 
 const String _initialEditorBodyText =
     'Build the widget showcase\n'

@@ -3,7 +3,9 @@ import 'package:markdown/markdown.dart' show Element, Text;
 import '../../style/border.dart' as style_border;
 import '../../style/color.dart';
 import '../../style/style.dart';
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
 import 'render_context.dart';
 
 Style defaultCodeBlockStyle() => Style().foreground(Colors.brightYellow);

@@ -271,8 +271,9 @@ final class ReplayEventDirective {
 /// Hook invoked when replay reaches an `event` action.
 ///
 /// Return `null` to use default behavior (emit [ReplayEventMsg]).
-typedef ReplayEventHook =
-    FutureOr<ReplayEventDirective?> Function(ReplayCustomEvent event);
+typedef ReplayEventHook = FutureOr<ReplayEventDirective?> Function(
+  ReplayCustomEvent event,
+);
 
 /// Replay action schema used by TUI scenario JSON files.
 final class ReplayAction {

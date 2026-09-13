@@ -825,9 +825,8 @@ class _SpinnerTaskModel<T> extends ViewComponent {
     required this.message,
     required this.task,
     required Spinner spinner,
-    required _PromptController<T> controller,
-  }) : _spinner = SpinnerModel(spinner: spinner),
-       _controller = controller;
+    required this._controller,
+  }) : _spinner = SpinnerModel(spinner: spinner);
 
   final String message;
   final Future<T> Function() task;

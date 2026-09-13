@@ -106,9 +106,8 @@ void main() {
     test('uses non-interactive numeric defaults', () async {
       final host = _OperationHost(interactive: false);
 
-      final result = await ConsolePrompts(
-        host,
-      ).number('Port', defaultValue: 8080, min: 1);
+      final result = await ConsolePrompts(host)
+          .number('Port', defaultValue: 8080, min: 1);
 
       expect(result, 8080);
       expect(host.promptTerminal.operations, isEmpty);
@@ -139,9 +138,8 @@ void main() {
     test('uses a non-interactive secret fallback', () async {
       final host = _OperationHost(interactive: false);
 
-      final result = await ConsolePrompts(
-        host,
-      ).secret('Token', fallback: 'configured');
+      final result = await ConsolePrompts(host)
+          .secret('Token', fallback: 'configured');
 
       expect(result, 'configured');
       expect(host.promptTerminal.operations, isEmpty);
@@ -161,9 +159,8 @@ void main() {
     test('parses numbered multi-select choices', () {
       final host = _OperationHost(interactive: true, input: ['0, 2']);
 
-      final result = ConsolePrompts(
-        host,
-      ).choice('Select', choices: ['zero', 'one', 'two'], multiSelect: true);
+      final result = ConsolePrompts(host)
+          .choice('Select', choices: ['zero', 'one', 'two'], multiSelect: true);
 
       expect(result, ['zero', 'two']);
     });
@@ -173,9 +170,9 @@ void main() {
     test('progress iteration renders through the operation terminal', () {
       final host = _OperationHost(interactive: true);
 
-      final values = ConsoleOperations(
-        host,
-      ).progressIterate([1, 2], clearOnDone: true).toList();
+      final values = ConsoleOperations(host)
+          .progressIterate([1, 2], clearOnDone: true)
+          .toList();
 
       expect(values, [1, 2]);
       expect(host.promptTerminal.operations, contains('hideCursor'));
@@ -250,9 +247,8 @@ void main() {
     test('steps restore the cursor after an interactive failure', () async {
       final host = _OperationHost(interactive: true);
 
-      final result = await ConsoleOperations(
-        host,
-      ).steps(steps: [('Build', () async => throw StateError('failed'))]);
+      final result = await ConsoleOperations(host)
+          .steps(steps: [('Build', () async => throw StateError('failed'))]);
 
       expect(result.failed.single.$1, 'Build');
       expect(host.promptTerminal.output, contains('✗'));
@@ -287,9 +283,8 @@ void main() {
     test('renders a plain task through the shared operation host', () async {
       final host = _OperationHost(interactive: false);
 
-      final result = await ConsoleOperations(
-        host,
-      ).task('Build', run: () async => TaskResult.success);
+      final result = await ConsoleOperations(host)
+          .task('Build', run: () async => TaskResult.success);
 
       expect(result, TaskResult.success);
       expect(host.output.toString(), contains('Build'));
@@ -315,9 +310,8 @@ void main() {
       final host = _OperationHost(interactive: true);
 
       await expectLater(
-        ConsoleOperations(
-          host,
-        ).task('Build', run: () async => throw StateError('failed')),
+        ConsoleOperations(host)
+            .task('Build', run: () async => throw StateError('failed')),
         throwsStateError,
       );
 
@@ -328,9 +322,8 @@ void main() {
     test('uses plain output when the host is non-interactive', () async {
       final host = _OperationHost(interactive: false);
 
-      final result = await ConsoleOperations(
-        host,
-      ).spin('Loading', run: () async => 42, doneMessage: 'Loaded');
+      final result = await ConsoleOperations(host)
+          .spin('Loading', run: () async => 42, doneMessage: 'Loaded');
 
       expect(result, 42);
       expect(host.output.toString(), contains('Loading Loaded'));

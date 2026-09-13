@@ -52,27 +52,24 @@ void main() {
       expect(out, contains('世界'));
     });
 
-    test(
-      'reapplies original pen state after styled segment resets (ansi + emoji case)',
-      () {
-        // Ported from lipgloss v2 ranges_test.go "ansi and emoji" case.
-        const input = '\x1b[90m\ue615\x1b[39m \x1b[3mDownloads';
+    test('reapplies original pen state after styled segment resets (ansi + emoji case)', () {
+      // Ported from lipgloss v2 ranges_test.go "ansi and emoji" case.
+      const input = '\x1b[90m\ue615\x1b[39m \x1b[3mDownloads';
 
-        final out = styleRanges(
-          input,
-          [StyleRange(2, 5, Style().foreground(const AnsiColor(2)))], // "Dow"
-        );
+      final out = styleRanges(
+        input,
+        [StyleRange(2, 5, Style().foreground(const AnsiColor(2)))], // "Dow"
+      );
 
-        expect(Style.stripAnsi(out), equals('\ue615 Downloads'));
+      expect(Style.stripAnsi(out), equals('\ue615 Downloads'));
 
-        // The output should still contain the original italic sequence after the
-        // highlighted segment, otherwise the renderer will drop italic for the
-        // remainder.
-        expect(out, contains('\x1b[3m'));
-        // The dim glyph should remain dimmed.
-        expect(out, contains('\x1b[90m'));
-      },
-    );
+      // The output should still contain the original italic sequence after the
+      // highlighted segment, otherwise the renderer will drop italic for the
+      // remainder.
+      expect(out, contains('\x1b[3m'));
+      // The dim glyph should remain dimmed.
+      expect(out, contains('\x1b[90m'));
+    });
 
     test('rejects overlapping ranges', () {
       expect(

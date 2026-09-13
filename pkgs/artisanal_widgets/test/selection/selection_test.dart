@@ -335,29 +335,26 @@ void main() {
       );
     });
 
-    test(
-      'rich text line selection preserves span styling outside explicit overrides',
-      () {
-        final selectionStyle = Style()
-          ..background(const AnsiColor(160))
-          ..foreground(const AnsiColor(231));
-        final line =
-            '${Style().foreground(const AnsiColor(45)).render('alpha ')}'
-            '${Style().foreground(const AnsiColor(208)).render('beta')}';
-        final output = applySelectionHighlighting(
-          [line],
-          offset: 0,
-          selectionStart: (x: 0, y: 0),
-          selectionEnd: (x: 10, y: 0),
-          highlightStyle: selectionStyle,
-        ).single;
+    test('rich text line selection preserves span styling outside explicit overrides', () {
+      final selectionStyle = Style()
+        ..background(const AnsiColor(160))
+        ..foreground(const AnsiColor(231));
+      final line =
+          '${Style().foreground(const AnsiColor(45)).render('alpha ')}'
+          '${Style().foreground(const AnsiColor(208)).render('beta')}';
+      final output = applySelectionHighlighting(
+        [line],
+        offset: 0,
+        selectionStart: (x: 0, y: 0),
+        selectionEnd: (x: 10, y: 0),
+        highlightStyle: selectionStyle,
+      ).single;
 
-        expect(output, contains('38;5;45'));
-        expect(output, contains('38;5;208'));
-        expect(output, contains('48;5;160m'));
-        expect(output, isNot(contains('38;5;231')));
-      },
-    );
+      expect(output, contains('38;5;45'));
+      expect(output, contains('38;5;208'));
+      expect(output, contains('48;5;160m'));
+      expect(output, isNot(contains('38;5;231')));
+    });
 
     test('markdown line selection preserves inline markdown styling', () {
       final selectionStyle = Style()

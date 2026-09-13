@@ -1,6 +1,6 @@
 # Ultraviolet
 
-[![Dart SDK](https://img.shields.io/badge/Dart-3.10%2B-0175C2?logo=dart&logoColor=white)](https://dart.dev/)
+[![Dart SDK](https://img.shields.io/badge/Dart-3.13%2B-0175C2?logo=dart&logoColor=white)](https://dart.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 [![Package](https://img.shields.io/badge/package-ultraviolet-0A1F44)](./)
 

@@ -8,6 +8,7 @@ import 'package:ultraviolet/ultraviolet.dart' as uv;
 import 'package:artisanal_widgets/app.dart'
     show ArtisanalApp, WidgetApp, defaultWidgetProgramOptions;
 import 'package:artisanal_widgets/widgets.dart' show ImageAutoMode;
+
 import 'tui_controller.dart';
 
 T _configureImageAutoMode<T extends WidgetApp>(
@@ -42,10 +43,10 @@ class WidgetAppBinding {
     this.rendererOptions,
     ImageAutoMode? imageAutoMode,
   }) : _controller = TuiController<WidgetApp>(
-          model: _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
-          options: options ?? defaultWidgetProgramOptions,
-          rendererOptions: rendererOptions,
-        );
+         model: _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
+         options: options ?? defaultWidgetProgramOptions,
+         rendererOptions: rendererOptions,
+       );
 
   final TuiController<WidgetApp> _controller;
   final ProgramOptions? options;
@@ -70,10 +71,10 @@ class ArtisanalAppBinding {
     this.rendererOptions,
     ImageAutoMode? imageAutoMode,
   }) : _controller = TuiController<ArtisanalApp>(
-          model: _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
-          options: _resolveOptions(app, options),
-          rendererOptions: rendererOptions,
-        );
+         model: _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
+         options: _resolveOptions(app, options),
+         rendererOptions: rendererOptions,
+       );
 
   final TuiController<ArtisanalApp> _controller;
   final ProgramOptions? options;

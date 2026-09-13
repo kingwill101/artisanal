@@ -37,10 +37,7 @@ void main() {
     addTearDown(() => tester.dispose());
 
     await tester.pumpWidget(
-      ThemeScope(
-        theme: openCodeTheme(),
-        child: PromptInput(),
-      ),
+      ThemeScope(theme: openCodeTheme(), child: PromptInput()),
     );
     tester.pump();
 

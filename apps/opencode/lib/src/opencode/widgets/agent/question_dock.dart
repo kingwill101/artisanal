@@ -72,7 +72,10 @@ class QuestionDock extends w.StatefulWidget {
     this.dangerColor,
     this.narrowBreakpoint = 56,
     super.key,
-  }) : assert(questions.isNotEmpty, 'QuestionDock requires at least one question');
+  }) : assert(
+         questions.isNotEmpty,
+         'QuestionDock requires at least one question',
+       );
 
   final List<AgentQuestion> questions;
   final String title;
@@ -140,9 +143,7 @@ class _QuestionDockState extends w.State<QuestionDock> {
   void initState() {
     super.initState();
     _tab = widget.activeTab ?? 0;
-    _answers = {
-      for (final q in widget.questions) q.id: <String>[],
-    };
+    _answers = {for (final q in widget.questions) q.id: <String>[]};
     if (widget.answers != null) {
       for (final e in widget.answers!.entries) {
         _answers[e.key] = List<String>.of(e.value);
@@ -244,7 +245,14 @@ class _QuestionDockState extends w.State<QuestionDock> {
             gap: 1,
             crossAxisAlignment: w.CrossAxisAlignment.stretch,
             children: [
-              _buildHeader(theme, accent, muted, titleStyle, mutedStyle, narrow),
+              _buildHeader(
+                theme,
+                accent,
+                muted,
+                titleStyle,
+                mutedStyle,
+                narrow,
+              ),
               w.Divider(style: style.Style().foreground(border)),
               if (_onConfirm)
                 _buildConfirm(theme, mutedStyle, promptStyle, narrow)
@@ -295,10 +303,7 @@ class _QuestionDockState extends w.State<QuestionDock> {
       return w.Column(
         gap: 1,
         crossAxisAlignment: w.CrossAxisAlignment.stretch,
-        children: [
-          identity,
-          ?tabs,
-        ],
+        children: [identity, ?tabs],
       );
     }
 
@@ -324,8 +329,7 @@ class _QuestionDockState extends w.State<QuestionDock> {
           },
           child: w.Text(
             active ? '[${i + 1}]' : '${i + 1}',
-            style: theme.labelSmall.copy()
-              ..foreground(active ? accent : muted),
+            style: theme.labelSmall.copy()..foreground(active ? accent : muted),
           ),
         ),
       );
@@ -387,7 +391,8 @@ class _QuestionDockState extends w.State<QuestionDock> {
             accent: accent,
             muted: muted,
             multi: q.multiple,
-            picked: customText.trim().isNotEmpty &&
+            picked:
+                customText.trim().isNotEmpty &&
                 (_currentAnswers[q.id] ?? const []).contains(customText.trim()),
             focused: _selected == options.length,
             label: customText.trim().isEmpty
@@ -397,8 +402,9 @@ class _QuestionDockState extends w.State<QuestionDock> {
             indexLabel: '$rowCount',
             narrow: narrow,
             onTap: () {
-              final text =
-                  customText.trim().isEmpty ? 'custom answer' : customText;
+              final text = customText.trim().isEmpty
+                  ? 'custom answer'
+                  : customText;
               widget.onCustomChanged?.call(q.id, text);
               if (!_controlledAnswers) {
                 setState(() {
@@ -489,9 +495,7 @@ class _QuestionDockState extends w.State<QuestionDock> {
     required bool narrow,
     required void Function() onTap,
   }) {
-    final mark = multi
-        ? (picked ? '[x]' : '[ ]')
-        : (picked ? '(•)' : '( )');
+    final mark = multi ? (picked ? '[x]' : '[ ]') : (picked ? '(•)' : '( )');
     final fg = focused || picked ? theme.onSurface : muted;
     final labelStyle = theme.bodySmall.copy()
       ..foreground(fg)
@@ -501,10 +505,7 @@ class _QuestionDockState extends w.State<QuestionDock> {
     final leading = w.Row(
       gap: 1,
       children: [
-        w.Text(
-          indexLabel,
-          style: theme.labelSmall.copy()..foreground(muted),
-        ),
+        w.Text(indexLabel, style: theme.labelSmall.copy()..foreground(muted)),
         w.Text(
           mark,
           style: theme.labelSmall.copy()..foreground(picked ? accent : muted),

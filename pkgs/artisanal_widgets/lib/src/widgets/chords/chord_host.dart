@@ -82,9 +82,6 @@ class _ChordHostState extends State<ChordHost> {
 
   @override
   Widget build(context) {
-    return ChordScope(
-      controller: widget.controller,
-      child: widget.child,
-    );
+    return ChordScope(controller: widget.controller, child: widget.child);
   }
 }

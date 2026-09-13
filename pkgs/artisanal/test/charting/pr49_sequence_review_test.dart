@@ -26,9 +26,8 @@ end
           .fragment;
       expect(fragment.depth, 1);
 
-      final lines = Style.stripAnsi(
-        renderSequenceDiagram(source, maxWidth: 80),
-      ).split('\n');
+      final lines = Style.stripAnsi(renderSequenceDiagram(source, maxWidth: 80))
+          .split('\n');
       final opening = lines.singleWhere(
         (line) => line.contains('$opener: inner'),
       );

@@ -87,7 +87,8 @@ class _ShortcutSurfaceScopeState extends State<ShortcutSurfaceScope> {
   tui.Cmd? didUpdateWidget(covariant ShortcutSurfaceScope oldWidget) {
     super.didUpdateWidget(oldWidget);
     final bindingsChanged = !_listEquals(oldWidget.bindings, widget.bindings);
-    final configChanged = oldWidget.surfaceId != widget.surfaceId ||
+    final configChanged =
+        oldWidget.surfaceId != widget.surfaceId ||
         oldWidget.exclusive != widget.exclusive ||
         oldWidget.sequenceTimeout != widget.sequenceTimeout ||
         !identical(oldWidget.hub, widget.hub) ||

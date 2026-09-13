@@ -359,9 +359,8 @@ final class TextDocument {
     }
 
     final replacementLineTexts = _parseLineTexts(replacement);
-    final replacementLineLengths = _computeLineTextStats(
-      replacementLineTexts,
-    ).lineLengths;
+    final replacementLineLengths = _computeLineTextStats(replacementLineTexts)
+        .lineLengths;
     final replacementStorage =
         _pieceBackedReplacementStorageFromLineTexts(
           storage: _storage,
@@ -1530,12 +1529,11 @@ abstract base class _TextDocumentSource {
 
 final class _RawTextDocumentSource extends _TextDocumentSource {
   _RawTextDocumentSource._({
-    required String rawText,
+    required this._rawText,
     required super.lineStarts,
     required super.lineEnds,
     required super.lineLengths,
-  }) : _rawText = rawText,
-       super._();
+  }) : super._();
 
   final String _rawText;
   List<List<int>?>? _graphemeOffsetsByLine;
@@ -1705,12 +1703,11 @@ final class _RawTextDocumentSource extends _TextDocumentSource {
 
 final class _LineTextDocumentSource extends _TextDocumentSource {
   _LineTextDocumentSource._({
-    required List<String> lineTexts,
+    required this._lineTexts,
     required super.lineStarts,
     required super.lineEnds,
     required super.lineLengths,
-  }) : _lineTexts = lineTexts,
-       super._();
+  }) : super._();
 
   _LineTextDocumentSource._appendable()
     : _lineTexts = <String>[],
@@ -1905,12 +1902,11 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
 
 final class _ParsedLineDocumentSource extends _TextDocumentSource {
   _ParsedLineDocumentSource._({
-    required List<List<String>> parsedLines,
+    required this._parsedLines,
     required super.lineStarts,
     required super.lineEnds,
     required super.lineLengths,
-  }) : _parsedLines = parsedLines,
-       super._();
+  }) : super._();
 
   final List<List<String>> _parsedLines;
   List<String?>? _materializedParsedLineTexts;
@@ -1977,12 +1973,11 @@ final class _ParsedLineDocumentSource extends _TextDocumentSource {
 
 final class _PieceTableTextDocumentSource extends _TextDocumentSource {
   _PieceTableTextDocumentSource._({
-    required List<List<_TextDocumentSourcePiece>> linePieces,
+    required this._linePieces,
     required super.lineStarts,
     required super.lineEnds,
     required super.lineLengths,
-  }) : _linePieces = linePieces,
-       super._();
+  }) : super._();
 
   final List<List<_TextDocumentSourcePiece>> _linePieces;
   List<String?>? _materializedLineTexts;
@@ -2449,10 +2444,7 @@ final class _InlineTextDocumentLeafBacking extends _TextDocumentLeafBacking {
 
 final class _SourceSliceTextDocumentLeafBacking
     extends _TextDocumentLeafBacking {
-  _SourceSliceTextDocumentLeafBacking({
-    required _TextDocumentSourceSlice sourceSlice,
-  }) : _sourceSlice = sourceSlice,
-       super._();
+  _SourceSliceTextDocumentLeafBacking({required this._sourceSlice}) : super._();
 
   final _TextDocumentSourceSlice _sourceSlice;
 

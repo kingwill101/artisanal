@@ -1146,12 +1146,11 @@ class GitDiffModel extends ViewComponent {
     List<DiffFile>? files,
     List<String>? renderedLines,
     List<DiffCommentLineHighlight>? commentHighlights,
-    DiffLayout? layout,
+    this._layout,
   }) : styles = styles ?? DiffStyles(),
        keyMap = keyMap ?? GitDiffKeyMap(),
        _files = files ?? const [],
        _renderedLines = renderedLines ?? const [],
-       _layout = layout,
        commentHighlights = commentHighlights ?? const [],
        _viewport = viewport ?? ViewportModel(width: width, height: height);
 

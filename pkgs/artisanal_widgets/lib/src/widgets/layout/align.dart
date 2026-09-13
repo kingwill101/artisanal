@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:artisanal/style.dart' hide Padding, Align;
+
 import 'geometry.dart';
 import '../rendering/render_object.dart';
 import '../core/element.dart' show ElementTree, elementOf;

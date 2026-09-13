@@ -616,9 +616,7 @@ class _TestInterceptor extends ProgramInterceptor {
 }
 
 class _CallbackModel implements Model {
-  _CallbackModel({Cmd? Function(Msg)? onUpdate, Object Function()? onView})
-    : _onUpdate = onUpdate,
-      _onView = onView;
+  _CallbackModel({this._onUpdate, this._onView});
 
   final Cmd? Function(Msg)? _onUpdate;
   final Object Function()? _onView;

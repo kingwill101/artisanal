@@ -33,27 +33,24 @@ void main() {
     expect(defaultWidgetProgramOptions.diagnostics, isNotNull);
   });
 
-  test(
-    'stable widgets entrypoint exposes the high-level app and component surface',
-    () {
-      final widget = Text('hello');
-      final app = ArtisanalApp(title: 'Demo', home: widget);
-      final help = HelpView(keyMap: _DemoKeyMap());
-      final picker = FilePicker(directory: '.');
-      final editor = TextEditor(controller: TextAreaController(text: 'hello'));
-      final codeEditor = CodeEditor(
-        controller: TextAreaController(text: 'void main() {}'),
-      );
+  test('stable widgets entrypoint exposes the high-level app and component surface', () {
+    final widget = Text('hello');
+    final app = ArtisanalApp(title: 'Demo', home: widget);
+    final help = HelpView(keyMap: _DemoKeyMap());
+    final picker = FilePicker(directory: '.');
+    final editor = TextEditor(controller: TextAreaController(text: 'hello'));
+    final codeEditor = CodeEditor(
+      controller: TextAreaController(text: 'void main() {}'),
+    );
 
-      expect(app, isA<ArtisanalApp>());
-      expect(help, isA<HelpView>());
-      expect(picker, isA<FilePicker>());
-      expect(editor, isA<TextEditor>());
-      expect(codeEditor, isA<CodeEditor>());
-      expect(widget, isA<Widget>());
-      expect(ZoneInBoundsMsg, isA<Type>());
-    },
-  );
+    expect(app, isA<ArtisanalApp>());
+    expect(help, isA<HelpView>());
+    expect(picker, isA<FilePicker>());
+    expect(editor, isA<TextEditor>());
+    expect(codeEditor, isA<CodeEditor>());
+    expect(widget, isA<Widget>());
+    expect(ZoneInBoundsMsg, isA<Type>());
+  });
 
   test('stable editors entrypoint exposes text input and editor widgets', () {
     final textFieldKeyMap = TextInputKeyMap();

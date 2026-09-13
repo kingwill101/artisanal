@@ -3,6 +3,7 @@ import 'package:artisanal/style.dart' show AnsiColor, Style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:test/test.dart';
+
 import '../testing/loose_layout_host.dart';
 
 Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>
@@ -88,40 +89,43 @@ Widget _buildVirtualScrollable({
 
 void main() {
   group('ScrollView selection', () {
-    test('press+drag selects text and highlighting appears in output', () async {
-      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
-      final ctrl = WidgetScrollController();
-      try {
-        await _pumpSmallRoot(
-          tester,
-          _buildScrollable(controller: ctrl, useScrollView: true),
-        );
+    test(
+      'press+drag selects text and highlighting appears in output',
+      () async {
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+        final ctrl = WidgetScrollController();
+        try {
+          await _pumpSmallRoot(
+            tester,
+            _buildScrollable(controller: ctrl, useScrollView: true),
+          );
 
-        // Verify "Line 0" is visible.
-        expect(tester.find.text('Line 0'), isTrue);
+          // Verify "Line 0" is visible.
+          expect(tester.find.text('Line 0'), isTrue);
 
-        // Mouse down at start of "Line 0" (column 0, row 0).
-        tester.mouseDown(0, 0);
-        // Drag to end of "Line 0" (column 5, row 0).
-        tester.mouseMove(5, 0);
-        // Release.
-        tester.mouseUp(5, 0);
+          // Mouse down at start of "Line 0" (column 0, row 0).
+          tester.mouseDown(0, 0);
+          // Drag to end of "Line 0" (column 5, row 0).
+          tester.mouseMove(5, 0);
+          // Release.
+          tester.mouseUp(5, 0);
 
-        // Selection should be active.
-        expect(ctrl.hasSelection, isTrue);
-        expect(ctrl.selectionStart, equals((x: 0, y: 0)));
-        expect(ctrl.selectionEnd, equals((x: 5, y: 0)));
+          // Selection should be active.
+          expect(ctrl.hasSelection, isTrue);
+          expect(ctrl.selectionStart, equals((x: 0, y: 0)));
+          expect(ctrl.selectionEnd, equals((x: 5, y: 0)));
 
-        // Output should contain ANSI escape codes for selection highlighting.
-        // The selection style uses AnsiColor(7) background / AnsiColor(0) foreground.
-        final output = tester.view;
-        // Selection highlighting replaces normal text with styled text.
-        // We can verify by checking that the output contains ANSI codes.
-        expect(output.contains('\x1b['), isTrue);
-      } finally {
-        await tester.dispose();
-      }
-    });
+          // Output should contain ANSI escape codes for selection highlighting.
+          // The selection style uses AnsiColor(7) background / AnsiColor(0) foreground.
+          final output = tester.view;
+          // Selection highlighting replaces normal text with styled text.
+          // We can verify by checking that the output contains ANSI codes.
+          expect(output.contains('\x1b['), isTrue);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
 
     test('click clears previous selection', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);

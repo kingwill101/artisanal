@@ -12,8 +12,9 @@ import 'package:listen/listen.dart' show ValueListenable;
 import 'input_widgets.dart' show TextAreaController;
 
 /// Builds positional diagnostics from plain text.
-typedef TextDiagnosticsBuilder =
-    Iterable<TextPositionDiagnosticRange> Function(String text);
+typedef TextDiagnosticsBuilder = Iterable<TextPositionDiagnosticRange> Function(
+  String text,
+);
 
 /// Keeps a [TextAreaController]'s diagnostics in sync with its current text.
 ///
@@ -70,15 +71,12 @@ final class TextDiagnosticsBinding {
   }
 
   TextDiagnosticsBinding._({
-    required TextAreaController controller,
-    TextDiagnosticsBuilder? buildDiagnostics,
-    ValueListenable<Iterable<TextDiagnosticRange>>? rangeDiagnostics,
-    ValueListenable<Iterable<TextPositionDiagnosticRange>>? positionDiagnostics,
+    required this._controller,
+    this._buildDiagnostics,
+    this._rangeDiagnostics,
+    this._positionDiagnostics,
     bool syncImmediately = true,
-  }) : _controller = controller,
-       _buildDiagnostics = buildDiagnostics,
-       _rangeDiagnostics = rangeDiagnostics,
-       _positionDiagnostics = positionDiagnostics {
+  }) {
     _attachListeners();
     if (syncImmediately) {
       sync(force: true);

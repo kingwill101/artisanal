@@ -37,9 +37,7 @@ void main() {
     expect(tester.find.text('models'), isTrue);
     expect(tester.find.text('themes'), isTrue);
 
-    tester.sendMsg(
-      tui.KeymapSequenceCancelledMsg(surfaceId: 'session'),
-    );
+    tester.sendMsg(tui.KeymapSequenceCancelledMsg(surfaceId: 'session'));
     tester.pump();
     expect(tester.find.text('which-key'), isFalse);
   });

@@ -1641,12 +1641,10 @@ class CommandCenterModel implements tui.Model {
     // Right side: system stats if enabled
     String rightPart;
     if (showStats) {
-      final cpu = _colorForPercent(
-        cpuUsage,
-      ).render('CPU:${cpuUsage.toStringAsFixed(0)}%');
-      final mem = _colorForPercent(
-        memUsage,
-      ).render('MEM:${memUsage.toStringAsFixed(0)}%');
+      final cpu = _colorForPercent(cpuUsage)
+          .render('CPU:${cpuUsage.toStringAsFixed(0)}%');
+      final mem = _colorForPercent(memUsage)
+          .render('MEM:${memUsage.toStringAsFixed(0)}%');
       final net = _textStyle().render(
         'NET:↓${networkIn.toStringAsFixed(1)} ↑${networkOut.toStringAsFixed(1)}',
       );

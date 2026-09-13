@@ -50,6 +50,7 @@ import 'package:artisanal/uv.dart'
 import 'package:artisanal/style.dart'
     show AdaptiveColor, Color, Colors, CompleteAdaptiveColor, Style;
 import 'package:artisanal/terminal.dart' show KeyType;
+
 import '../core/element.dart'
     show BuildOwner, Element, ElementTree, HitTestElementEntry, StatefulElement;
 import '../core/framework.dart'
@@ -82,7 +83,7 @@ class WidgetApp
     this.root, {
     this.backgroundColor,
     this.backgroundColorBuilder,
-    ImageAutoMode imageAutoMode = ImageAutoMode.environment,
+    this._imageAutoMode = ImageAutoMode.environment,
     TerminalCapabilities? initialImageCapabilities,
     int? initialImageCellPixelWidth,
     int? initialImageCellPixelHeight,
@@ -97,7 +98,6 @@ class WidgetApp
            initialImageCapabilities ?? TerminalCapabilities(),
        _sessionImageCellPixelWidth = initialImageCellPixelWidth,
        _sessionImageCellPixelHeight = initialImageCellPixelHeight,
-       _imageAutoMode = imageAutoMode,
        _metricsHolder = RenderMetricsHolder() {
     _tree = ElementTree(
       _MediaQueryHost(
@@ -1040,8 +1040,8 @@ class _ErrorScreen extends StatefulWidget {
   _ErrorScreen({
     required this.error,
     required this.stackTrace,
-    required CmdCallback onDismiss,
-  }) : _onDismiss = onDismiss;
+    required this._onDismiss,
+  });
 
   final String error;
   final String stackTrace;

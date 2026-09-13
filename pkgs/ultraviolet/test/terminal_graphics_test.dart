@@ -24,8 +24,7 @@ void main() {
     });
 
     test('keeps an unchanged anonymous retained image between frames', () {
-      const anonymous =
-          '\x1b_Ga=T,f=100,c=3,r=2,C=1,q=2,m=0;AAAA\x1b\\';
+      const anonymous = '\x1b_Ga=T,f=100,c=3,r=2,C=1,q=2,m=0;AAAA\x1b\\';
       final previous = TerminalGraphicsFrame.scan(anonymous);
       final current = TerminalGraphicsFrame.scan(anonymous);
 

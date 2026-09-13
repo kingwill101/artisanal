@@ -52,7 +52,7 @@ Future<void> runBrowserProgram(
 }) async {
   final canvas = options.canvasId != null
       ? (web.document.getElementById(options.canvasId!)
-          as web.HTMLCanvasElement)
+            as web.HTMLCanvasElement)
       : web.document.createElement('canvas') as web.HTMLCanvasElement;
 
   if (options.appendToBody && canvas.parentNode == null) {

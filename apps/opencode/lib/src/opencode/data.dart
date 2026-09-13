@@ -50,7 +50,11 @@ ChatModel initialModel() {
         additions: 74,
         deletions: 0,
       ),
-      ModifiedFile('apps/opencode/bin/opencode.dart', additions: 210, deletions: 0),
+      ModifiedFile(
+        'apps/opencode/bin/opencode.dart',
+        additions: 210,
+        deletions: 0,
+      ),
     ],
     messages: [
       ChatMessage.user(
@@ -405,27 +409,15 @@ List<w.CommandPaletteItem> sampleCommands() {
       shortcut: 'ctrl+x a',
       group: 'Model',
     ),
-    w.CommandPaletteItem(
-      label: 'Go to Agent Overview',
-      group: 'Navigate',
-    ),
+    w.CommandPaletteItem(label: 'Go to Agent Overview', group: 'Navigate'),
     w.CommandPaletteItem(
       label: 'Open Diff Review',
       shortcut: 'ctrl+x d',
       group: 'Navigate',
     ),
-    w.CommandPaletteItem(
-      label: 'Demo Permission Dock',
-      group: 'Agent',
-    ),
-    w.CommandPaletteItem(
-      label: 'Demo Question Dock',
-      group: 'Agent',
-    ),
-    w.CommandPaletteItem(
-      label: 'Clear Agent Dock',
-      group: 'Agent',
-    ),
+    w.CommandPaletteItem(label: 'Demo Permission Dock', group: 'Agent'),
+    w.CommandPaletteItem(label: 'Demo Question Dock', group: 'Agent'),
+    w.CommandPaletteItem(label: 'Clear Agent Dock', group: 'Agent'),
     w.CommandPaletteItem(
       label: 'Switch Model',
       shortcut: 'ctrl+x m',
@@ -560,8 +552,7 @@ List<AgentOption> sampleAgents() {
 // Sample diff (unified format)
 // ---------------------------------------------------------------------------
 
-const _sampleDiff =
-    '''diff --git a/lib/src/widgets/theme/theme.dart b/lib/src/widgets/theme/theme.dart
+const _sampleDiff = '''diff --git a/lib/src/widgets/theme/theme.dart b/lib/src/widgets/theme/theme.dart
 index 9a3f1c2..4e7b8d1 100644
 --- a/lib/src/widgets/theme/theme.dart
 +++ b/lib/src/widgets/theme/theme.dart
@@ -592,8 +583,7 @@ index 9a3f1c2..4e7b8d1 100644
  }
 ''';
 
-const _containerDiff =
-    '''diff --git a/lib/src/widgets/layout/container.dart b/lib/src/widgets/layout/container.dart
+const _containerDiff = '''diff --git a/lib/src/widgets/layout/container.dart b/lib/src/widgets/layout/container.dart
 index a1b2c3d..e4f5678 100644
 --- a/lib/src/widgets/layout/container.dart
 +++ b/lib/src/widgets/layout/container.dart
@@ -632,8 +622,7 @@ index a1b2c3d..e4f5678 100644
      _child?.layout(childConstraints);
 ''';
 
-const _dividerDiff =
-    '''diff --git a/lib/src/widgets/layout/vertical_divider.dart b/lib/src/widgets/layout/vertical_divider.dart
+const _dividerDiff = '''diff --git a/lib/src/widgets/layout/vertical_divider.dart b/lib/src/widgets/layout/vertical_divider.dart
 index 1234567..abcdef0 100644
 --- a/lib/src/widgets/layout/vertical_divider.dart
 +++ b/lib/src/widgets/layout/vertical_divider.dart
@@ -659,8 +648,7 @@ index 1234567..abcdef0 100644
 +  }
 ''';
 
-const _renderLayoutDiff =
-    '''diff --git a/lib/src/widgets/rendering/render_layout.dart b/lib/src/widgets/rendering/render_layout.dart
+const _renderLayoutDiff = '''diff --git a/lib/src/widgets/rendering/render_layout.dart b/lib/src/widgets/rendering/render_layout.dart
 index 7890abc..def1234 100644
 --- a/lib/src/widgets/rendering/render_layout.dart
 +++ b/lib/src/widgets/rendering/render_layout.dart

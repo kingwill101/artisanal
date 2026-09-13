@@ -165,8 +165,8 @@ final class WidgetStormProfile {
     this.specialKeys = _defaultStormSpecialKeys,
     this.pasteSamples = _defaultPasteSamples,
     this.captureFrames = false,
-    List<WidgetStormStep>? customSteps,
-  }) : _customSteps = customSteps;
+    this._customSteps,
+  });
 
   /// Rapid keyboard input at an impossible typing rate.
   factory WidgetStormProfile.keyboardStorm({

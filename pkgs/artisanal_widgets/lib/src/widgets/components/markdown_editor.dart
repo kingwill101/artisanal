@@ -1,5 +1,6 @@
 import 'package:artisanal/text_editing.dart'
     show CursorModel, TextAreaKeyMap, TextAreaModel, TextAreaStyles;
+
 import '_component_foundation.dart';
 import '../layout/markdown_text.dart';
 import 'panel.dart';

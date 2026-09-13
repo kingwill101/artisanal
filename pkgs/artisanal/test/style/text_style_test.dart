@@ -178,9 +178,8 @@ void main() {
     });
 
     test('decorations remain continuous across interior spaces', () {
-      final underline = const TextStyle(
-        decoration: TextDecoration.underline,
-      ).toStyle();
+      final underline = const TextStyle(decoration: TextDecoration.underline)
+          .toStyle();
       final lineThrough = const TextStyle(
         decoration: TextDecoration.lineThrough,
       ).toStyle();
@@ -220,9 +219,8 @@ void main() {
     });
 
     test('decoration style alone does not enable underline', () {
-      final style = const TextStyle(
-        decorationStyle: TextDecorationStyle.double,
-      ).toStyle();
+      final style = const TextStyle(decorationStyle: TextDecorationStyle.double)
+          .toStyle();
 
       expect(style.isUnderline, isFalse);
     });
@@ -230,9 +228,8 @@ void main() {
     test('decoration style updates an inherited underline', () {
       final style = Style().underline();
 
-      const TextStyle(
-        decorationStyle: TextDecorationStyle.double,
-      ).applyTo(style);
+      const TextStyle(decorationStyle: TextDecorationStyle.double)
+          .applyTo(style);
 
       expect(style.isUnderline, isTrue);
       expect(style.getUnderlineStyle, UnderlineStyle.double);

@@ -78,9 +78,8 @@ class _PseudoTerminalViewState extends State<PseudoTerminalView> {
 
   @override
   runtime.Cmd? handleUpdate(runtime.Msg msg) {
-    if (msg case _PtyEventMsg(
-      :final event,
-    ) when identical(event.owner, _activeOwner)) {
+    if (msg case _PtyEventMsg(:final event)
+        when identical(event.owner, _activeOwner)) {
       switch (event) {
         case _PtyOutputEvent(:final data):
           try {

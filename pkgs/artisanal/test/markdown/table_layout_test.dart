@@ -10,9 +10,8 @@ void main() {
         final options = AnsiRendererOptions(width: width);
         return modern
             ? MarkdownRenderer(options: options).renderToAnsi(source)
-            : AnsiRenderer(
-                options: options,
-              ).render(backend.parseMarkdownNodes(source));
+            : AnsiRenderer(options: options)
+                  .render(backend.parseMarkdownNodes(source));
       }
 
       void fits(String output, int width) {
@@ -50,9 +49,8 @@ void main() {
             width: 12,
           );
           fits(output, 12);
-          final content = Style.stripAnsi(
-            output,
-          ).replaceAll(RegExp(r'[\s│╭╮╰╯─├┤┬┴┼]'), '');
+          final content = Style.stripAnsi(output)
+              .replaceAll(RegExp(r'[\s│╭╮╰╯─├┤┬┴┼]'), '');
           expect(content, 'LongHeaderNameabcdefghijklmnopqrstuvwxyz');
         },
       );

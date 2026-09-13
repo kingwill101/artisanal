@@ -492,8 +492,8 @@ class ListModel extends ViewComponent {
   ListModel({
     List<ListItem>? items,
     ItemDelegate? delegate,
-    int width = 80,
-    int height = 20,
+    this._width = 80,
+    this._height = 20,
     this.title = 'List',
     this.showTitle = true,
     this.showFilter = true,
@@ -514,9 +514,7 @@ class ListModel extends ViewComponent {
        styles = styles ?? ListStyles.defaults(),
        _filter = filter ?? defaultFilter,
        statusMessageLifetime =
-           statusMessageLifetime ?? const Duration(seconds: 1),
-       _width = width,
-       _height = height {
+           statusMessageLifetime ?? const Duration(seconds: 1) {
     paginator = PaginatorModel(
       type: PaginationType.dots,
       activeDot: this.styles.activePaginationDot ?? PaginationDots.active,

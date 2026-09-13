@@ -44,7 +44,6 @@ void main() {
       ..writeln(',');
   }
   output.write('};\n');
-  File(
-    '${root.path}/lib/src/opencode/generated/builtin_assets.dart',
-  ).writeAsStringSync(output.toString());
+  File('${root.path}/lib/src/opencode/generated/builtin_assets.dart')
+      .writeAsStringSync(output.toString());
 }

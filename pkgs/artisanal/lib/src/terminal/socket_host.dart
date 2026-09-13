@@ -101,16 +101,14 @@ final class SocketTerminalHostServer implements TerminalHostServer {
   static String resizeControlSequence({
     required int width,
     required int height,
-  }) =>
-      '\x1b]9999;$width;$height\x07';
+  }) => '\x1b]9999;$width;$height\x07';
 
   /// Encodes [resizeControlSequence] as bytes for transport over a socket.
   static List<int> resizeControlBytes({
     required int width,
     required int height,
     Encoding encoding = utf8,
-  }) =>
-      encoding.encode(resizeControlSequence(width: width, height: height));
+  }) => encoding.encode(resizeControlSequence(width: width, height: height));
 
   Future<void> _handleSession(io.Socket socket) async {
     _activeSockets.add(socket);

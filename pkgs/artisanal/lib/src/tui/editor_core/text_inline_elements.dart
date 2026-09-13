@@ -126,13 +126,13 @@ final class InlineElementStore {
   /// Element of [kind] ending exactly at [offset] (cursor resting on the
   /// chip's right edge), or `null`.
   InlineElement? elementEndingAtOfKind(int offset, String kind) {
-    final candidates = _elements.values
-        .where(
-          (element) =>
-              element.kind == kind && element.endOffset == offset,
-        )
-        .toList(growable: false)
-      ..sort((a, b) => a.startOffset.compareTo(b.startOffset));
+    final candidates =
+        _elements.values
+            .where(
+              (element) => element.kind == kind && element.endOffset == offset,
+            )
+            .toList(growable: false)
+          ..sort((a, b) => a.startOffset.compareTo(b.startOffset));
     return candidates.isEmpty ? null : candidates.last;
   }
 
@@ -247,10 +247,7 @@ final class InlineElementStore {
 /// Mirrors the submit-time reconcile: deleting a chip's text deletes the
 /// chip, and reconciling at cleanup boundaries keeps orphans out of sends.
 /// Returns the removed records for temp-file cleanup.
-List<V> reconcileExternalRecords<V>(
-  Map<int, V> records,
-  Set<int> liveIds,
-) {
+List<V> reconcileExternalRecords<V>(Map<int, V> records, Set<int> liveIds) {
   final removed = <V>[];
   for (final id in records.keys.toList(growable: false)) {
     if (!liveIds.contains(id)) removed.add(records.remove(id) as V);

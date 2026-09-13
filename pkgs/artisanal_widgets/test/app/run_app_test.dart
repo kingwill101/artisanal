@@ -221,120 +221,109 @@ void main() {
   });
 
   group('reloadable runners', () {
-    test(
-      'runWidgetApp + ArtisanalApp(child: ReloadHost) keeps the app shell title',
-      () async {
-        final terminal = runtime.StringTerminal();
-        final controller = w.ReloadController();
+    test('runWidgetApp + ArtisanalApp(child: ReloadHost) keeps the app shell title', () async {
+      final terminal = runtime.StringTerminal();
+      final controller = w.ReloadController();
 
-        addTearDown(controller.dispose);
+      addTearDown(controller.dispose);
 
-        await w.runWidgetApp(
-          w.ArtisanalApp(
-            title: 'Reloadable App',
-            child: w.ReloadHost(
-              controller: controller,
-              builder: (context, revision) => _QuitOnInitWidget(),
-            ),
+      await w.runWidgetApp(
+        w.ArtisanalApp(
+          title: 'Reloadable App',
+          child: w.ReloadHost(
+            controller: controller,
+            builder: (context, revision) => _QuitOnInitWidget(),
           ),
-          host: runtime.ProgramHost.terminal(terminal),
-        );
+        ),
+        host: runtime.ProgramHost.terminal(terminal),
+      );
 
-        expect(
-          _terminalOperationsText(terminal),
-          contains('write: \x1B]0;Reloadable App\x07'),
-        );
-      },
-    );
+      expect(
+        _terminalOperationsText(terminal),
+        contains('write: \x1B]0;Reloadable App\x07'),
+      );
+    });
   });
 
   group('watched runners', () {
-    test(
-      'runWidgetApp + external watcher wires a file watcher around the reload host',
-      () async {
-        final terminal = runtime.StringTerminal();
-        final tempDir = await Directory.systemTemp.createTemp(
-          'run-watched-widget-',
-        );
+    test('runWidgetApp + external watcher wires a file watcher around the reload host', () async {
+      final terminal = runtime.StringTerminal();
+      final tempDir = await Directory.systemTemp.createTemp(
+        'run-watched-widget-',
+      );
 
-        addTearDown(() async {
-          await tempDir.delete(recursive: true);
-        });
+      addTearDown(() async {
+        await tempDir.delete(recursive: true);
+      });
 
-        final controller = w.ReloadController();
-        addTearDown(controller.dispose);
-        final watcher = await w.ReloadFileWatcher.watch(
-          controller: controller,
-          roots: [tempDir.path],
-        );
-        addTearDown(watcher.dispose);
+      final controller = w.ReloadController();
+      addTearDown(controller.dispose);
+      final watcher = await w.ReloadFileWatcher.watch(
+        controller: controller,
+        roots: [tempDir.path],
+      );
+      addTearDown(watcher.dispose);
 
-        await w.runWidgetApp(
-          w.WidgetApp(
-            w.ReloadHost(
-              controller: controller,
-              builder: (context, revision) => _QuitOnInitWidget(),
-            ),
+      await w.runWidgetApp(
+        w.WidgetApp(
+          w.ReloadHost(
+            controller: controller,
+            builder: (context, revision) => _QuitOnInitWidget(),
           ),
-          host: runtime.ProgramHost.terminal(terminal),
-        );
+        ),
+        host: runtime.ProgramHost.terminal(terminal),
+      );
 
-        expect(terminal.operations, contains('enterAltScreen'));
-        expect(terminal.operations, contains('enableMouseAllMotion'));
-      },
-    );
+      expect(terminal.operations, contains('enterAltScreen'));
+      expect(terminal.operations, contains('enableMouseAllMotion'));
+    });
 
-    test(
-      'runWidgetApp + ArtisanalApp + external watcher applies the app shell title',
-      () async {
-        final terminal = runtime.StringTerminal();
-        final tempDir = await Directory.systemTemp.createTemp(
-          'run-watched-artisanal-',
-        );
+    test('runWidgetApp + ArtisanalApp + external watcher applies the app shell title', () async {
+      final terminal = runtime.StringTerminal();
+      final tempDir = await Directory.systemTemp.createTemp(
+        'run-watched-artisanal-',
+      );
 
-        addTearDown(() async {
-          await tempDir.delete(recursive: true);
-        });
+      addTearDown(() async {
+        await tempDir.delete(recursive: true);
+      });
 
-        final controller = w.ReloadController();
-        addTearDown(controller.dispose);
-        final watcher = await w.ReloadFileWatcher.watch(
-          controller: controller,
-          roots: [tempDir.path],
-        );
-        addTearDown(watcher.dispose);
+      final controller = w.ReloadController();
+      addTearDown(controller.dispose);
+      final watcher = await w.ReloadFileWatcher.watch(
+        controller: controller,
+        roots: [tempDir.path],
+      );
+      addTearDown(watcher.dispose);
 
-        await w.runWidgetApp(
-          w.ArtisanalApp(
-            title: 'Watched App',
-            child: w.ReloadHost(
-              controller: controller,
-              builder: (context, revision) => _QuitOnInitWidget(),
-            ),
+      await w.runWidgetApp(
+        w.ArtisanalApp(
+          title: 'Watched App',
+          child: w.ReloadHost(
+            controller: controller,
+            builder: (context, revision) => _QuitOnInitWidget(),
           ),
-          host: runtime.ProgramHost.terminal(terminal),
-        );
+        ),
+        host: runtime.ProgramHost.terminal(terminal),
+      );
 
-        expect(
-          _terminalOperationsText(terminal),
-          contains('write: \x1B]0;Watched App\x07'),
-        );
-      },
-    );
+      expect(
+        _terminalOperationsText(terminal),
+        contains('write: \x1B]0;Watched App\x07'),
+      );
+    });
   });
 
   group('hosted runners', () {
     test(
       'serveWidgetApp + browser transport exposes the browser page',
       () async {
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.browser,
-                  port: 0,
-                  browserTitle: 'Widget Browser Test',
-                  appBuilder: () => w.WidgetApp(_QuitOnInitWidget()),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          browserTitle: 'Widget Browser Test',
+          appBuilder: () => w.WidgetApp(_QuitOnInitWidget()),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -350,82 +339,72 @@ void main() {
       },
     );
 
-    test(
-      'serveWidgetApp + browser transport uses session capability image mode by default',
-      () async {
-        late w.ArtisanalApp app;
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.browser,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => app = w.ArtisanalApp(
-                    home: w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+    test('serveWidgetApp + browser transport uses session capability image mode by default', () async {
+      late w.ArtisanalApp app;
+      final server = await w.serveWidgetApp(
+        transport: w.Transport.browser,
+        port: 0,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => app = w.ArtisanalApp(
+          home: w.Image(
+            image: w.MemoryImage(_encodeTestImage()),
+            width: 2,
+            height: 1,
+            renderMode: w.ImageRenderMode.auto,
+          ),
+        ),
+      ) as hosts.BrowserTerminalHostServer;
 
-        addTearDown(server.close);
+      addTearDown(server.close);
 
-        final socket = await WebSocket.connect(server.webSocketUri.toString());
-        addTearDown(socket.close);
+      final socket = await WebSocket.connect(server.webSocketUri.toString());
+      addTearDown(socket.close);
 
-        await socket.first.timeout(const Duration(seconds: 5));
+      await socket.first.timeout(const Duration(seconds: 5));
 
-        expect(app.imageAutoMode, w.ImageAutoMode.sessionCapabilities);
-      },
-    );
+      expect(app.imageAutoMode, w.ImageAutoMode.sessionCapabilities);
+    });
 
-    test(
-      'serveWidgetApp + browser transport requests image capability reports by default',
-      () async {
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.browser,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.ArtisanalApp(
-                    home: w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+    test('serveWidgetApp + browser transport requests image capability reports by default', () async {
+      final server = await w.serveWidgetApp(
+        transport: w.Transport.browser,
+        port: 0,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => w.ArtisanalApp(
+          home: w.Image(
+            image: w.MemoryImage(_encodeTestImage()),
+            width: 2,
+            height: 1,
+            renderMode: w.ImageRenderMode.auto,
+          ),
+        ),
+      ) as hosts.BrowserTerminalHostServer;
 
-        addTearDown(server.close);
+      addTearDown(server.close);
 
-        final socket = await WebSocket.connect(server.webSocketUri.toString());
-        addTearDown(socket.close);
+      final socket = await WebSocket.connect(server.webSocketUri.toString());
+      addTearDown(socket.close);
 
-        final output = await _readWebSocketOutputUntil(
-          socket,
-          (output) =>
-              output.contains(Ansi.requestPrimaryDeviceAttributes) &&
-              output.contains(Ansi.requestTerminalVersion),
-        );
+      final output = await _readWebSocketOutputUntil(
+        socket,
+        (output) =>
+            output.contains(Ansi.requestPrimaryDeviceAttributes) &&
+            output.contains(Ansi.requestTerminalVersion),
+      );
 
-        expect(output, contains(Ansi.requestPrimaryDeviceAttributes));
-        expect(output, contains(Ansi.requestTerminalVersion));
-      },
-    );
+      expect(output, contains(Ansi.requestPrimaryDeviceAttributes));
+      expect(output, contains(Ansi.requestTerminalVersion));
+    });
 
     test(
       'serveWidgetApp + browser transport + external watcher watches files',
@@ -441,19 +420,17 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        final host =
-            await w.serveWidgetApp(
-                  transport: w.Transport.browser,
-                  port: 0,
-                  browserTitle: 'Watched Browser Test',
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _QuitOnInitWidget(),
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+        final host = await w.serveWidgetApp(
+          transport: w.Transport.browser,
+          port: 0,
+          browserTitle: 'Watched Browser Test',
+          appBuilder: () => w.WidgetApp(
+            w.ReloadHost(
+              controller: controller,
+              builder: (context, revision) => _QuitOnInitWidget(),
+            ),
+          ),
+        ) as hosts.BrowserTerminalHostServer;
 
         addTearDown(() => host.close());
 
@@ -468,9 +445,8 @@ void main() {
         expect(body, contains('Watched Browser Test'));
 
         final signalFuture = controller.stream.first;
-        await File(
-          '${tempDir.path}/main.dart',
-        ).writeAsString('void main() {}\n');
+        await File('${tempDir.path}/main.dart')
+            .writeAsString('void main() {}\n');
         final signal = await signalFuture.timeout(const Duration(seconds: 5));
         expect(signal.mode, w.ReloadMode.reload);
       },
@@ -479,20 +455,18 @@ void main() {
     test(
       'serveWidgetApp + socket transport exposes app output over tcp',
       () async {
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () =>
-                      w.ArtisanalApp(title: 'Socket App', home: _ReadyWidget()),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () =>
+              w.ArtisanalApp(title: 'Socket App', home: _ReadyWidget()),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(server.close);
 
@@ -511,135 +485,119 @@ void main() {
       },
     );
 
-    test(
-      'serveWidgetApp + socket transport uses session capability image mode by default',
-      () async {
-        late w.WidgetApp app;
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => app = w.WidgetApp(
-                    w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+    test('serveWidgetApp + socket transport uses session capability image mode by default', () async {
+      late w.WidgetApp app;
+      final server = await w.serveWidgetApp(
+        transport: w.Transport.socket,
+        port: 0,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => app = w.WidgetApp(
+          w.Image(
+            image: w.MemoryImage(_encodeTestImage()),
+            width: 2,
+            height: 1,
+            renderMode: w.ImageRenderMode.auto,
+          ),
+        ),
+      ) as hosts.SocketTerminalHostServer;
 
-        addTearDown(server.close);
+      addTearDown(server.close);
 
-        final socket = await Socket.connect(
-          server.server.address.address,
-          server.server.port,
-        );
-        addTearDown(socket.close);
+      final socket = await Socket.connect(
+        server.server.address.address,
+        server.server.port,
+      );
+      addTearDown(socket.close);
 
-        final output = await _readSocketUntil(
-          socket,
-          (output) => output.contains('▀'),
-        );
+      final output = await _readSocketUntil(
+        socket,
+        (output) => output.contains('▀'),
+      );
 
-        expect(app.imageAutoMode, w.ImageAutoMode.sessionCapabilities);
-        expect(output, contains('▀'));
-        expect(output, isNot(contains('\x1b_G')));
-        expect(output, isNot(contains('\x1b]1337;File=')));
-        expect(output, isNot(contains('\x1bPq')));
-      },
-    );
+      expect(app.imageAutoMode, w.ImageAutoMode.sessionCapabilities);
+      expect(output, contains('▀'));
+      expect(output, isNot(contains('\x1b_G')));
+      expect(output, isNot(contains('\x1b]1337;File=')));
+      expect(output, isNot(contains('\x1bPq')));
+    });
 
-    test(
-      'serveWidgetApp + socket transport portable image mode skips session capability probes',
-      () async {
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.socket,
-                  port: 0,
-                  imageAutoMode: w.ImageAutoMode.portableFallback,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.Image(
-                      image: w.MemoryImage(_encodeTestImage()),
-                      width: 2,
-                      height: 1,
-                      renderMode: w.ImageRenderMode.auto,
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+    test('serveWidgetApp + socket transport portable image mode skips session capability probes', () async {
+      final server = await w.serveWidgetApp(
+        transport: w.Transport.socket,
+        port: 0,
+        imageAutoMode: w.ImageAutoMode.portableFallback,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => w.WidgetApp(
+          w.Image(
+            image: w.MemoryImage(_encodeTestImage()),
+            width: 2,
+            height: 1,
+            renderMode: w.ImageRenderMode.auto,
+          ),
+        ),
+      ) as hosts.SocketTerminalHostServer;
 
-        addTearDown(server.close);
+      addTearDown(server.close);
 
-        final socket = await Socket.connect(
-          server.server.address.address,
-          server.server.port,
-        );
-        addTearDown(socket.close);
+      final socket = await Socket.connect(
+        server.server.address.address,
+        server.server.port,
+      );
+      addTearDown(socket.close);
 
-        final output = await _readSocketUntil(
-          socket,
-          (output) => output.contains('▀'),
-        );
+      final output = await _readSocketUntil(
+        socket,
+        (output) => output.contains('▀'),
+      );
 
-        expect(output, contains('▀'));
-        expect(output, isNot(contains(Ansi.requestPrimaryDeviceAttributes)));
-        expect(output, isNot(contains(Ansi.requestTerminalVersion)));
-      },
-    );
+      expect(output, contains('▀'));
+      expect(output, isNot(contains(Ansi.requestPrimaryDeviceAttributes)));
+      expect(output, isNot(contains(Ansi.requestTerminalVersion)));
+    });
 
-    test(
-      'serveWidgetApp + socket transport suppresses startup probes for non-ANSI clients',
-      () async {
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.socket,
-                  port: 0,
-                  supportsAnsi: false,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () =>
-                      w.ArtisanalApp(home: w.Text('plain socket client')),
-                )
-                as hosts.SocketTerminalHostServer;
+    test('serveWidgetApp + socket transport suppresses startup probes for non-ANSI clients', () async {
+      final server = await w.serveWidgetApp(
+        transport: w.Transport.socket,
+        port: 0,
+        supportsAnsi: false,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => w.ArtisanalApp(home: w.Text('plain socket client')),
+      ) as hosts.SocketTerminalHostServer;
 
-        addTearDown(server.close);
+      addTearDown(server.close);
 
-        final socket = await Socket.connect(
-          server.server.address.address,
-          server.server.port,
-        );
-        addTearDown(socket.close);
+      final socket = await Socket.connect(
+        server.server.address.address,
+        server.server.port,
+      );
+      addTearDown(socket.close);
 
-        final output = await _readSocketUntil(
-          socket,
-          (output) => output.contains('plain socket client'),
-        );
+      final output = await _readSocketUntil(
+        socket,
+        (output) => output.contains('plain socket client'),
+      );
 
-        expect(output, contains('plain socket client'));
-        expect(output, isNot(contains('\x1b]11;?\x07')));
-        expect(output, isNot(contains('\x1b[?996n')));
-        expect(output, isNot(contains('\x1b[?c')));
-        expect(output, isNot(contains('\x1b[>0q')));
-      },
-    );
+      expect(output, contains('plain socket client'));
+      expect(output, isNot(contains('\x1b]11;?\x07')));
+      expect(output, isNot(contains('\x1b[?996n')));
+      expect(output, isNot(contains('\x1b[?c')));
+      expect(output, isNot(contains('\x1b[>0q')));
+    });
 
     test(
       'serveWidgetApp + socket transport + external watcher watches files',
@@ -655,24 +613,22 @@ void main() {
         );
         addTearDown(watcher.dispose);
 
-        final server =
-            await w.serveWidgetApp(
-                  transport: w.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _ReadyWidget(),
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+        final server = await w.serveWidgetApp(
+          transport: w.Transport.socket,
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.WidgetApp(
+            w.ReloadHost(
+              controller: controller,
+              builder: (context, revision) => _ReadyWidget(),
+            ),
+          ),
+        ) as hosts.SocketTerminalHostServer;
 
         addTearDown(() => server.close());
 
@@ -689,147 +645,136 @@ void main() {
         expect(output, contains('ready'));
 
         final signalFuture = controller.stream.first;
-        await File(
-          '${tempDir.path}/main.dart',
-        ).writeAsString('void main() {}\n');
+        await File('${tempDir.path}/main.dart')
+            .writeAsString('void main() {}\n');
         final signal = await signalFuture.timeout(const Duration(seconds: 5));
         expect(signal.mode, w.ReloadMode.reload);
       },
     );
 
-    test(
-      'serveWidgetApp + socket transport + watcher close(force: true) tears down clients',
-      () async {
-        final tempDir = await Directory.systemTemp.createTemp(
-          'watched-socket-force-close-',
-        );
-        final controller = w.ReloadController();
-        addTearDown(controller.dispose);
-        final watcher = await w.ReloadFileWatcher.watch(
-          controller: controller,
-          roots: [tempDir.path],
-        );
-        addTearDown(watcher.dispose);
+    test('serveWidgetApp + socket transport + watcher close(force: true) tears down clients', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'watched-socket-force-close-',
+      );
+      final controller = w.ReloadController();
+      addTearDown(controller.dispose);
+      final watcher = await w.ReloadFileWatcher.watch(
+        controller: controller,
+        roots: [tempDir.path],
+      );
+      addTearDown(watcher.dispose);
 
-        final host =
-            await w.serveWidgetApp(
-                  transport: w.Transport.socket,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _IdleWidget(),
-                    ),
-                  ),
-                )
-                as hosts.SocketTerminalHostServer;
+      final host = await w.serveWidgetApp(
+        transport: w.Transport.socket,
+        port: 0,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => w.WidgetApp(
+          w.ReloadHost(
+            controller: controller,
+            builder: (context, revision) => _IdleWidget(),
+          ),
+        ),
+      ) as hosts.SocketTerminalHostServer;
 
-        addTearDown(() async {
-          await host.close(force: true);
-          await tempDir.delete(recursive: true);
-        });
-
-        final socket = await Socket.connect(
-          host.server.address.address,
-          host.server.port,
-        );
-
-        final firstOutput = Completer<void>();
-        final closed = Completer<void>();
-        late final StreamSubscription<List<int>> subscription;
-        subscription = socket.listen(
-          (_) {
-            if (!firstOutput.isCompleted) {
-              firstOutput.complete();
-            }
-          },
-          onDone: () {
-            if (!closed.isCompleted) {
-              closed.complete();
-            }
-          },
-        );
-        addTearDown(() async {
-          await subscription.cancel();
-          await socket.close();
-        });
-
-        await firstOutput.future.timeout(const Duration(seconds: 5));
+      addTearDown(() async {
         await host.close(force: true);
-        await closed.future.timeout(const Duration(seconds: 5));
-      },
-    );
+        await tempDir.delete(recursive: true);
+      });
 
-    test(
-      'serveWidgetApp + browser transport + watcher close(force: true) tears down clients',
-      () async {
-        final tempDir = await Directory.systemTemp.createTemp(
-          'watched-browser-force-close-',
-        );
-        final controller = w.ReloadController();
-        addTearDown(controller.dispose);
-        final watcher = await w.ReloadFileWatcher.watch(
-          controller: controller,
-          roots: [tempDir.path],
-        );
-        addTearDown(watcher.dispose);
+      final socket = await Socket.connect(
+        host.server.address.address,
+        host.server.port,
+      );
 
-        final host =
-            await w.serveWidgetApp(
-                  transport: w.Transport.browser,
-                  port: 0,
-                  options: const runtime.ProgramOptions(
-                    altScreen: false,
-                    mouseMode: runtime.MouseMode.none,
-                    signalHandlers: false,
-                    frameTick: false,
-                  ),
-                  appBuilder: () => w.WidgetApp(
-                    w.ReloadHost(
-                      controller: controller,
-                      builder: (context, revision) => _IdleWidget(),
-                    ),
-                  ),
-                )
-                as hosts.BrowserTerminalHostServer;
+      final firstOutput = Completer<void>();
+      final closed = Completer<void>();
+      late final StreamSubscription<List<int>> subscription;
+      subscription = socket.listen(
+        (_) {
+          if (!firstOutput.isCompleted) {
+            firstOutput.complete();
+          }
+        },
+        onDone: () {
+          if (!closed.isCompleted) {
+            closed.complete();
+          }
+        },
+      );
+      addTearDown(() async {
+        await subscription.cancel();
+        await socket.close();
+      });
 
-        addTearDown(() async {
-          await host.close(force: true);
-          await tempDir.delete(recursive: true);
-        });
+      await firstOutput.future.timeout(const Duration(seconds: 5));
+      await host.close(force: true);
+      await closed.future.timeout(const Duration(seconds: 5));
+    });
 
-        final socket = await WebSocket.connect(host.webSocketUri.toString());
-        final firstOutput = Completer<void>();
-        final closed = Completer<void>();
-        late final StreamSubscription<dynamic> subscription;
-        subscription = socket.listen(
-          (_) {
-            if (!firstOutput.isCompleted) {
-              firstOutput.complete();
-            }
-          },
-          onDone: () {
-            if (!closed.isCompleted) {
-              closed.complete();
-            }
-          },
-        );
-        addTearDown(() async {
-          await subscription.cancel();
-          await socket.close();
-        });
+    test('serveWidgetApp + browser transport + watcher close(force: true) tears down clients', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'watched-browser-force-close-',
+      );
+      final controller = w.ReloadController();
+      addTearDown(controller.dispose);
+      final watcher = await w.ReloadFileWatcher.watch(
+        controller: controller,
+        roots: [tempDir.path],
+      );
+      addTearDown(watcher.dispose);
 
-        await firstOutput.future.timeout(const Duration(seconds: 5));
+      final host = await w.serveWidgetApp(
+        transport: w.Transport.browser,
+        port: 0,
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouseMode: runtime.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        appBuilder: () => w.WidgetApp(
+          w.ReloadHost(
+            controller: controller,
+            builder: (context, revision) => _IdleWidget(),
+          ),
+        ),
+      ) as hosts.BrowserTerminalHostServer;
+
+      addTearDown(() async {
         await host.close(force: true);
-        await closed.future.timeout(const Duration(seconds: 5));
-      },
-    );
+        await tempDir.delete(recursive: true);
+      });
+
+      final socket = await WebSocket.connect(host.webSocketUri.toString());
+      final firstOutput = Completer<void>();
+      final closed = Completer<void>();
+      late final StreamSubscription<dynamic> subscription;
+      subscription = socket.listen(
+        (_) {
+          if (!firstOutput.isCompleted) {
+            firstOutput.complete();
+          }
+        },
+        onDone: () {
+          if (!closed.isCompleted) {
+            closed.complete();
+          }
+        },
+      );
+      addTearDown(() async {
+        await subscription.cancel();
+        await socket.close();
+      });
+
+      await firstOutput.future.timeout(const Duration(seconds: 5));
+      await host.close(force: true);
+      await closed.future.timeout(const Duration(seconds: 5));
+    });
   });
 }
 

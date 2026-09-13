@@ -30,16 +30,16 @@ final class CodeLanguageProfile extends EditorLanguageAdapter {
 
   @override
   EditorCommentConfig get comments => EditorCommentConfig(
-        linePrefix: lineCommentPrefix,
-        blockStart: blockCommentDelimiters?.start,
-        blockEnd: blockCommentDelimiters?.end,
-      );
+    linePrefix: lineCommentPrefix,
+    blockStart: blockCommentDelimiters?.start,
+    blockEnd: blockCommentDelimiters?.end,
+  );
 
   @override
   EditorPairConfig get pairs => EditorPairConfig(
-        autoPairs: autoPairs,
-        closingToOpening: closingToOpening,
-      );
+    autoPairs: autoPairs,
+    closingToOpening: closingToOpening,
+  );
 
   @override
   bool shouldIncreaseIndent(EditorIndentContext context) {
@@ -54,10 +54,7 @@ final class CodeLanguageProfile extends EditorLanguageAdapter {
     return id == 'python' ||
         id == 'yaml' ||
         aliases.any(
-          (alias) =>
-              alias == 'py' ||
-              alias == 'yaml' ||
-              alias == 'yml',
+          (alias) => alias == 'py' || alias == 'yaml' || alias == 'yml',
         );
   }
 }
@@ -86,75 +83,61 @@ const defaultCodeClosingToOpening = <String, String>{
 /// ignore [registerBuiltinEditorLanguages] and register only their own
 /// [EditorLanguageAdapter]s (Tree-sitter grammars, LSP-provided configs,
 /// etc.) on any [EditorLanguageRegistry].
-List<CodeLanguageProfile> builtinCodeLanguageProfiles() =>
-    const <CodeLanguageProfile>[
-      CodeLanguageProfile(
-        languageId: 'default',
-        lineCommentPrefix: '//',
-        blockCommentDelimiters: CodeBlockCommentDelimiters(
-          start: '/*',
-          end: '*/',
-        ),
-      ),
-      CodeLanguageProfile(
-        languageId: 'python',
-        aliases: ['py'],
-        lineCommentPrefix: '#',
-      ),
-      CodeLanguageProfile(
-        languageId: 'yaml',
-        aliases: ['yml'],
-        lineCommentPrefix: '#',
-      ),
-      CodeLanguageProfile(languageId: 'toml', lineCommentPrefix: '#'),
-      CodeLanguageProfile(
-        languageId: 'make',
-        aliases: ['makefile'],
-        lineCommentPrefix: '#',
-      ),
-      CodeLanguageProfile(
-        languageId: 'ruby',
-        aliases: ['rb'],
-        lineCommentPrefix: '#',
-        blockCommentDelimiters: CodeBlockCommentDelimiters(
-          start: '/*',
-          end: '*/',
-        ),
-      ),
-      CodeLanguageProfile(
-        languageId: 'shell',
-        aliases: ['sh', 'bash', 'zsh'],
-        lineCommentPrefix: '#',
-        blockCommentDelimiters: CodeBlockCommentDelimiters(
-          start: '/*',
-          end: '*/',
-        ),
-      ),
-      CodeLanguageProfile(
-        languageId: 'sql',
-        aliases: ['lua', 'haskell', 'hs'],
-        lineCommentPrefix: '--',
-        blockCommentDelimiters: CodeBlockCommentDelimiters(
-          start: '/*',
-          end: '*/',
-        ),
-      ),
-      CodeLanguageProfile(
-        languageId: 'html',
-        aliases: ['xml', 'svg', 'markdown', 'md', 'mdx'],
-        lineCommentPrefix: '//',
-        blockCommentDelimiters: CodeBlockCommentDelimiters(
-          start: '<!--',
-          end: '-->',
-        ),
-      ),
-    ];
+List<CodeLanguageProfile>
+builtinCodeLanguageProfiles() => const <CodeLanguageProfile>[
+  CodeLanguageProfile(
+    languageId: 'default',
+    lineCommentPrefix: '//',
+    blockCommentDelimiters: CodeBlockCommentDelimiters(start: '/*', end: '*/'),
+  ),
+  CodeLanguageProfile(
+    languageId: 'python',
+    aliases: ['py'],
+    lineCommentPrefix: '#',
+  ),
+  CodeLanguageProfile(
+    languageId: 'yaml',
+    aliases: ['yml'],
+    lineCommentPrefix: '#',
+  ),
+  CodeLanguageProfile(languageId: 'toml', lineCommentPrefix: '#'),
+  CodeLanguageProfile(
+    languageId: 'make',
+    aliases: ['makefile'],
+    lineCommentPrefix: '#',
+  ),
+  CodeLanguageProfile(
+    languageId: 'ruby',
+    aliases: ['rb'],
+    lineCommentPrefix: '#',
+    blockCommentDelimiters: CodeBlockCommentDelimiters(start: '/*', end: '*/'),
+  ),
+  CodeLanguageProfile(
+    languageId: 'shell',
+    aliases: ['sh', 'bash', 'zsh'],
+    lineCommentPrefix: '#',
+    blockCommentDelimiters: CodeBlockCommentDelimiters(start: '/*', end: '*/'),
+  ),
+  CodeLanguageProfile(
+    languageId: 'sql',
+    aliases: ['lua', 'haskell', 'hs'],
+    lineCommentPrefix: '--',
+    blockCommentDelimiters: CodeBlockCommentDelimiters(start: '/*', end: '*/'),
+  ),
+  CodeLanguageProfile(
+    languageId: 'html',
+    aliases: ['xml', 'svg', 'markdown', 'md', 'mdx'],
+    lineCommentPrefix: '//',
+    blockCommentDelimiters: CodeBlockCommentDelimiters(
+      start: '<!--',
+      end: '-->',
+    ),
+  ),
+];
 
 /// Registers the builtin profiles on [registry] (defaults to the shared
 /// registry). Safe to call multiple times.
-void registerBuiltinEditorLanguages([
-  EditorLanguageRegistry? registry,
-]) {
+void registerBuiltinEditorLanguages([EditorLanguageRegistry? registry]) {
   final target = registry ?? EditorLanguageRegistry.shared;
   for (final profile in builtinCodeLanguageProfiles()) {
     target.register(profile);
@@ -162,10 +145,7 @@ void registerBuiltinEditorLanguages([
   target.fallback ??= const CodeLanguageProfile(
     languageId: 'default',
     lineCommentPrefix: '//',
-    blockCommentDelimiters: CodeBlockCommentDelimiters(
-      start: '/*',
-      end: '*/',
-    ),
+    blockCommentDelimiters: CodeBlockCommentDelimiters(start: '/*', end: '*/'),
   );
 }
 

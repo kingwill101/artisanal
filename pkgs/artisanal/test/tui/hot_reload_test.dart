@@ -169,12 +169,10 @@ class _ReassembleDoneMsg extends Msg {
 
 class _CallbackModel implements Model {
   _CallbackModel({
-    required String Function() onView,
-    required Cmd? Function() onInit,
-    required Cmd? Function(Msg) onUpdate,
-  })  : _onView = onView,
-        _onInit = onInit,
-        _onUpdate = onUpdate;
+    required this._onView,
+    required this._onInit,
+    required this._onUpdate,
+  });
 
   final String Function() _onView;
   final Cmd? Function() _onInit;

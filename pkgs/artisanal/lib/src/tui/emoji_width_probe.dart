@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:artisanal/terminal.dart' show Ansi;
 
 import 'package:ultraviolet/unicode.dart' as uni_width;
+
 import 'msg.dart';
 import 'startup_probe.dart';
+
 import 'package:ultraviolet/input.dart' as uvev;
 
 /// Best-effort probe to align emoji cell width with the active terminal.

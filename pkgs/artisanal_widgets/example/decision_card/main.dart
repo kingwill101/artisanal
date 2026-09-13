@@ -130,8 +130,7 @@ class _DecisionCardShowcaseState extends w.State<DecisionCardShowcase> {
                   signal: w.DecisionSignal.green,
                   actionLabel: 'proceed',
                   level: w.DisclosureLevel.plainEnglish,
-                  explanation:
-                      'High confidence in rendering strategy based on stable frame history.',
+                  explanation: 'High confidence in rendering strategy based on stable frame history.',
                 ),
               ),
               w.Divider(),
@@ -143,8 +142,7 @@ class _DecisionCardShowcaseState extends w.State<DecisionCardShowcase> {
                   signal: w.DecisionSignal.yellow,
                   actionLabel: 'review_strategy',
                   level: w.DisclosureLevel.evidenceTerms,
-                  explanation:
-                      'Mixed signals suggest reviewing the current rendering approach.',
+                  explanation: 'Mixed signals suggest reviewing the current rendering approach.',
                   evidence: [
                     w.EvidenceTerm(
                       label: 'change_rate',

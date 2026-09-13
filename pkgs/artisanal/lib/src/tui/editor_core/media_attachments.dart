@@ -65,8 +65,8 @@ final class MediaAttachment {
     required this.mimeType,
     this.dimensions,
     this.sourceLabel,
-    List<int>? sourceBytes,
-  }) : _sourceBytes = sourceBytes;
+    this._sourceBytes,
+  });
 
   /// Id of the `image` element rendering this attachment's chip.
   final int elementId;
@@ -160,8 +160,7 @@ final class MediaViewerState {
       attachment: attachment,
       title: title,
       loading: false,
-      error:
-          attachment.preview.error ?? 'Preview unavailable for this media.',
+      error: attachment.preview.error ?? 'Preview unavailable for this media.',
     );
   }
 
@@ -179,8 +178,7 @@ final class MediaViewerState {
   void applyLoaded() {
     loading = false;
     if (attachment.preview.status != AttachmentPreviewStatus.ready) {
-      error =
-          attachment.preview.error ?? 'Preview unavailable for this media.';
+      error = attachment.preview.error ?? 'Preview unavailable for this media.';
     } else {
       error = null;
     }

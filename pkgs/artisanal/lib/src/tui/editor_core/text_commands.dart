@@ -12,14 +12,14 @@ import 'text_view.dart';
 
 final class TextCommandResult {
   const TextCommandResult({
-    List<String>? graphemes,
+    this._graphemes,
     required this.cursorOffset,
     this.selectionBaseOffset,
     this.selectionExtentOffset,
     this.document,
     this.documentChange,
     this.changed = true,
-  }) : _graphemes = graphemes;
+  });
 
   final List<String>? _graphemes;
   final int cursorOffset;

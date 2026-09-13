@@ -42,9 +42,8 @@ void main() {
             final options = AnsiRendererOptions(width: width);
             final output = Style.stripAnsi(
               entry.$1 == 'AnsiRenderer'
-                  ? AnsiRenderer(
-                      options: options,
-                    ).render(backend.parseMarkdownNodes(input))
+                  ? AnsiRenderer(options: options)
+                        .render(backend.parseMarkdownNodes(input))
                   : MarkdownRenderer(options: options).renderToAnsi(input),
             );
             final prefix = quoted ? '│ ' : '';
@@ -91,12 +90,10 @@ void main() {
       () {
         final output = Style.stripAnsi(
           entry.$1 == 'AnsiRenderer'
-              ? AnsiRenderer(
-                  options: const AnsiRendererOptions(width: 30),
-                ).render(backend.parseMarkdownNodes(source))
-              : MarkdownRenderer(
-                  options: const AnsiRendererOptions(width: 30),
-                ).renderToAnsi(source),
+              ? AnsiRenderer(options: const AnsiRendererOptions(width: 30))
+                    .render(backend.parseMarkdownNodes(source))
+              : MarkdownRenderer(options: const AnsiRendererOptions(width: 30))
+                    .renderToAnsi(source),
         );
         expect(output.split('\n'), contains('  │ dart test...'));
         expect(output, contains('Targeted...'));
@@ -126,9 +123,8 @@ void main() {
               );
               final output = Style.stripAnsi(
                 entry.$1 == 'AnsiRenderer'
-                    ? AnsiRenderer(
-                        options: options,
-                      ).render(backend.parseMarkdownNodes(input))
+                    ? AnsiRenderer(options: options)
+                          .render(backend.parseMarkdownNodes(input))
                     : MarkdownRenderer(options: options).renderToAnsi(input),
               );
               final lines = output.split('\n');

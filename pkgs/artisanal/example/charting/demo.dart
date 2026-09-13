@@ -13,8 +13,16 @@ void main() {
       height: h,
       title: 'Line — Monthly Revenue',
       series: const [
-        DataSeries(name: '2025', data: [28, 47, 47, 40, 38, 35], color: '#4FC3F7'),
-        DataSeries(name: '2026', data: [32, 41, 55, 62, 58, 70], color: '#81C784'),
+        DataSeries(
+          name: '2025',
+          data: [28, 47, 47, 40, 38, 35],
+          color: '#4FC3F7',
+        ),
+        DataSeries(
+          name: '2026',
+          data: [32, 41, 55, 62, 58, 70],
+          color: '#81C784',
+        ),
       ],
       showDots: true,
       grid: GridOptions(show: true, style: GridStyle.dotted),

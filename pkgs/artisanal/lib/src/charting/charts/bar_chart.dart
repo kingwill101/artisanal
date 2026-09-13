@@ -10,19 +10,13 @@ import '../types.dart';
 import '../util.dart';
 
 /// Renders a bar chart onto [screen] within [area].
-void renderBarChart(
-  Screen screen,
-  Rectangle area,
-  BarChartProps props,
-) {
+void renderBarChart(Screen screen, Rectangle area, BarChartProps props) {
   final width = area.width;
   final height = area.height;
   if (width <= 0 || height <= 0) return;
 
   final bg = fg(props.backgroundColor ?? '#1A1A2E');
-  final axisColor = fg(
-    props.yAxis?.color ?? props.xAxis?.color ?? '#555555',
-  );
+  final axisColor = fg(props.yAxis?.color ?? props.xAxis?.color ?? '#555555');
   final colors = props.colors ?? defaultColors;
   final margins = resolveMargins(props.margins);
   final barChar = props.barChar ?? Block.full;
@@ -70,8 +64,7 @@ void renderBarChart(
   );
 
   final dataLen = props.series.map((s) => s.data.length).fold(0, math.max);
-  final labels = props.labels ??
-      List.generate(dataLen, (i) => '${i + 1}');
+  final labels = props.labels ?? List.generate(dataLen, (i) => '${i + 1}');
 
   if (orientation == ChartOrientation.vertical) {
     drawAxes(
@@ -97,7 +90,8 @@ void renderBarChart(
     final totalGroups = dataLen;
     final groupWidth = (plotW - 2) ~/ math.max(1, totalGroups);
     final gap = props.gap ?? 1;
-    final barWidth = props.barWidth ??
+    final barWidth =
+        props.barWidth ??
         (grouped
             ? math.max(1, (groupWidth - gap) ~/ math.max(1, numSeries))
             : math.max(1, groupWidth - gap));
@@ -146,8 +140,8 @@ void renderBarChart(
       final y = plotY + 1 + gi * groupHeight + groupHeight ~/ 2;
       final label = gi < labels.length
           ? (labels[gi].length > margins.left - 1
-              ? labels[gi].substring(0, margins.left - 1)
-              : labels[gi])
+                ? labels[gi].substring(0, margins.left - 1)
+                : labels[gi])
           : '';
       putText(
         screen,

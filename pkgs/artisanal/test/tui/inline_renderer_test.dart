@@ -675,55 +675,52 @@ void main() {
         );
       });
 
-      test(
-        'virtual terminal log band is intact after resize (ESC[2J would blank it)',
-        () {
-          // End-to-end test: feed output through InlineVirtualTerminal, which
-          // NOW implements ESC[J.  If ESC[2J leaks, the virtual terminal blanks
-          // all rows — the log band assertion fails.
-          final terminal = _TraceResizableStringTerminal(width: 76, height: 32);
-          final renderer = buildInlineRenderer(terminal, inlineHeight: 6);
-          final playback = InlineVirtualTerminal(width: 76, height: 32);
+      test('virtual terminal log band is intact after resize (ESC[2J would blank it)', () {
+        // End-to-end test: feed output through InlineVirtualTerminal, which
+        // NOW implements ESC[J.  If ESC[2J leaks, the virtual terminal blanks
+        // all rows — the log band assertion fails.
+        final terminal = _TraceResizableStringTerminal(width: 76, height: 32);
+        final renderer = buildInlineRenderer(terminal, inlineHeight: 6);
+        final playback = InlineVirtualTerminal(width: 76, height: 32);
 
-          void drain() {
-            final out = terminal.takeOutput();
-            if (out.isNotEmpty) playback.feed(out);
-          }
+        void drain() {
+          final out = terminal.takeOutput();
+          if (out.isNotEmpty) playback.feed(out);
+        }
 
-          renderer.render(_wideInlineDashboard(progress: 5));
+        renderer.render(_wideInlineDashboard(progress: 5));
+        drain();
+        for (var i = 1; i <= 40; i++) {
+          renderer.printLine('[${i.toString().padLeft(4, '0')}] log line $i');
           drain();
-          for (var i = 1; i <= 40; i++) {
-            renderer.printLine('[${i.toString().padLeft(4, '0')}] log line $i');
-            drain();
-          }
+        }
 
-          // Resize — the post-resize flush previously contained ESC[2J.
-          terminal.resize(width: 68, height: 32);
-          playback.resize(width: 68, height: 32);
-          renderer.render(_wideInlineDashboard(progress: 30));
-          drain();
+        // Resize — the post-resize flush previously contained ESC[2J.
+        terminal.resize(width: 68, height: 32);
+        playback.resize(width: 68, height: 32);
+        renderer.render(_wideInlineDashboard(progress: 30));
+        drain();
 
-          // The log band spans rows 1..(32-6)=26.  Every row must be non-empty
-          // because the log replay fills them from the retained history.
-          // If ESC[2J leaks, the VT blanks everything before the UI rows are
-          // written, leaving most log rows empty.
-          final logBand = List.generate(26, (i) => playback.line(i + 1));
-          final dump = List.generate(
-            32,
-            (i) => '${(i + 1).toString().padLeft(2)}: ${playback.line(i + 1)}',
-          ).join('\n');
-          printOnFailure(dump);
+        // The log band spans rows 1..(32-6)=26.  Every row must be non-empty
+        // because the log replay fills them from the retained history.
+        // If ESC[2J leaks, the VT blanks everything before the UI rows are
+        // written, leaving most log rows empty.
+        final logBand = List.generate(26, (i) => playback.line(i + 1));
+        final dump = List.generate(
+          32,
+          (i) => '${(i + 1).toString().padLeft(2)}: ${playback.line(i + 1)}',
+        ).join('\n');
+        printOnFailure(dump);
 
-          expect(
-            logBand.every((l) => l.trim().isNotEmpty),
-            isTrue,
-            reason:
-                'All 26 log-band rows must be non-empty after resize. '
-                'An ESC[2J leak would blank them all before the UI is drawn.\n'
-                '$dump',
-          );
-        },
-      );
+        expect(
+          logBand.every((l) => l.trim().isNotEmpty),
+          isTrue,
+          reason:
+              'All 26 log-band rows must be non-empty after resize. '
+              'An ESC[2J leak would blank them all before the UI is drawn.\n'
+              '$dump',
+        );
+      });
     });
   });
 

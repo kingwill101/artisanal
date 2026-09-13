@@ -44,12 +44,11 @@ class KeyBinding {
   KeyBinding({
     List<String>? keys,
     Help? help,
-    bool disabled = false,
+    this._disabled = false,
     this.handler,
     this.action,
   }) : keys = keys ?? [],
-       help = help ?? const Help(),
-       _disabled = disabled;
+       help = help ?? const Help();
 
   /// Creates a key binding with the given keys.
   factory KeyBinding.withKeys(List<String> keys) {

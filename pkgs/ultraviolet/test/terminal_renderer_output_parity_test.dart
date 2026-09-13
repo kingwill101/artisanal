@@ -98,7 +98,10 @@ void main() {
             wrap: const [],
             relative: false,
             altscreen: false,
-            expected: ['\x1b[2;1HABCEFGHIJK\r\x1b[5;1H', '\x1b[2;5H\x1b[K\x1b[5;1H'],
+            expected: [
+              '\x1b[2;1HABCEFGHIJK\r\x1b[5;1H',
+              '\x1b[2;5H\x1b[K\x1b[5;1H',
+            ],
           ),
         ];
 

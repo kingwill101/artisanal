@@ -184,9 +184,7 @@ class AutocompleteOverlay extends StatelessWidget {
     final visible = items.length > maxVisible
         ? items.sublist(0, maxVisible)
         : items;
-    final sel = items.isEmpty
-        ? 0
-        : selectedIndex.clamp(0, items.length - 1);
+    final sel = items.isEmpty ? 0 : selectedIndex.clamp(0, items.length - 1);
 
     return Frame(
       background: bg,
@@ -204,11 +202,7 @@ class AutocompleteOverlay extends StatelessWidget {
               if (query != null && query!.isNotEmpty) ...[
                 Text('·', style: mutedStyle),
                 Expanded(
-                  child: Text(
-                    query!,
-                    style: mutedStyle,
-                    softWrap: false,
-                  ),
+                  child: Text(query!, style: mutedStyle, softWrap: false),
                 ),
               ] else
                 Spacer(),
@@ -235,10 +229,7 @@ class AutocompleteOverlay extends StatelessWidget {
                 muted: muted,
               ),
           if (items.length > maxVisible)
-            Text(
-              '… ${items.length - maxVisible} more',
-              style: mutedStyle,
-            ),
+            Text('… ${items.length - maxVisible} more', style: mutedStyle),
         ],
       ),
     );
@@ -261,28 +252,16 @@ class AutocompleteOverlay extends StatelessWidget {
     final row = Row(
       gap: 1,
       children: [
-        Text(
-          selected ? '›' : ' ',
-          style: labelStyle,
-        ),
-        Expanded(
-          child: Text(item.label, style: labelStyle, softWrap: false),
-        ),
+        Text(selected ? '›' : ' ', style: labelStyle),
+        Expanded(child: Text(item.label, style: labelStyle, softWrap: false)),
         if (item.description != null && item.description!.isNotEmpty)
           Flexible(
-            child: Text(
-              item.description!,
-              style: descStyle,
-              softWrap: false,
-            ),
+            child: Text(item.description!, style: descStyle, softWrap: false),
           ),
       ],
     );
 
     if (!selected) return row;
-    return Container(
-      color: selBg,
-      child: row,
-    );
+    return Container(color: selBg, child: row);
   }
 }

@@ -74,14 +74,13 @@ class CompositeFilter extends BufferFilter {
 }
 
 /// Signature for position-aware intensity curves used by spatial filters.
-typedef BufferFalloff =
-    double Function({
-      required double normalizedDistance,
-      required int x,
-      required int y,
-      required int width,
-      required int height,
-    });
+typedef BufferFalloff = double Function({
+  required double normalizedDistance,
+  required int x,
+  required int y,
+  required int width,
+  required int height,
+});
 
 /// Signature for custom buffer allocation.
 typedef BufferFactory = Buffer Function(int width, int height);

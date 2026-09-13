@@ -2,6 +2,7 @@ import '../style/color.dart';
 import 'cmd.dart';
 import 'degradation.dart';
 import 'msg.dart';
+
 import 'package:ultraviolet/ultraviolet.dart' hide MouseMode;
 
 /// A rectangular region in a structured terminal [Frame].

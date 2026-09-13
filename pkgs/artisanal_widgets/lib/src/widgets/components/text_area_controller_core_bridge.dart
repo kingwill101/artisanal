@@ -6,6 +6,7 @@ import 'package:artisanal/text_editing.dart'
         TextLineStateSnapshot,
         TextCommandResult,
         TextLineCommandResult;
+
 import '_component_foundation.dart';
 
 final class TextAreaControllerCoreBridge {

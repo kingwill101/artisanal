@@ -32,13 +32,10 @@ void main() {
     'PR 49 fixture is attributed and preserves the exact public body',
     () async {
       final file = await _fixture();
-      final metadata =
-          jsonDecode(
-                await File(
-                  '${file.parent.path}/artisanal_pr49.source.json',
-                ).readAsString(),
-              )
-              as Map<String, dynamic>;
+      final metadata = jsonDecode(
+        await File('${file.parent.path}/artisanal_pr49.source.json')
+            .readAsString(),
+      ) as Map<String, dynamic>;
       expect(metadata['source'], endsWith('/pull/49'));
       expect(metadata['api_source'], endsWith('/pulls/49'));
       expect(

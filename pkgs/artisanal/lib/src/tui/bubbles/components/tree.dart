@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart';
+
 import 'base.dart';
 
 /// Callback for per-item styling in trees.
@@ -8,8 +9,11 @@ import 'base.dart';
 /// [isDirectory] indicates if the item has children.
 ///
 /// Return a [Style] to apply to the item, or `null` for no styling.
-typedef TreeStyleFunc =
-    Style? Function(String item, int depth, bool isDirectory);
+typedef TreeStyleFunc = Style? Function(
+  String item,
+  int depth,
+  bool isDirectory,
+);
 
 /// Callback for per-item enumerator (branch character) styling in trees.
 ///
@@ -27,8 +31,10 @@ typedef TreeStyleFunc =
 ///   return Style().foreground(Colors.dim);
 /// });
 /// ```
-typedef TreeEnumeratorStyleFunc =
-    Style? Function(List<dynamic> children, int index);
+typedef TreeEnumeratorStyleFunc = Style? Function(
+  List<dynamic> children,
+  int index,
+);
 
 /// Defines the characters used to draw tree branches.
 ///
@@ -403,10 +409,9 @@ final class TreeFilter implements TreeChildren {
 }
 
 final class _TreeLeaf implements TreeNode {
-  _TreeLeaf(this._value, {bool hidden = false}) : _hidden = hidden;
+  _TreeLeaf(this._value);
 
   final String _value;
-  final bool _hidden;
 
   @override
   String get value => _value;
@@ -415,11 +420,13 @@ final class _TreeLeaf implements TreeNode {
   Iterable<TreeNode> get childrenNodes => const [];
 
   @override
-  bool get hidden => _hidden;
+  bool get hidden => false;
 }
 
-typedef TreeEnumeratorFunc =
-    String Function(List<TreeNode> children, int index);
+typedef TreeEnumeratorFunc = String Function(
+  List<TreeNode> children,
+  int index,
+);
 typedef TreeIndenterFunc = String Function(List<TreeNode> children, int index);
 typedef TreeNodeStyleFunc = Style Function(List<TreeNode> children, int index);
 
@@ -493,9 +500,7 @@ final class _TreeRenderer {
 /// print(tree.render());
 /// ```
 class Tree extends DisplayComponent implements TreeNode {
-  Tree({RenderConfig renderConfig = const RenderConfig(), bool showRoot = true})
-    : _renderConfig = renderConfig,
-      _showRoot = showRoot;
+  Tree({this._renderConfig = const RenderConfig(), this._showRoot = true});
 
   final RenderConfig _renderConfig;
 

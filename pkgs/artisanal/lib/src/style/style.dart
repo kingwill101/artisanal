@@ -32,6 +32,7 @@ import '../layout/layout.dart';
 import '../renderer/renderer.dart';
 import '../terminal/ansi.dart';
 import '../tui/trace.dart';
+
 import 'package:ultraviolet/unicode.dart' as uni;
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
 

@@ -39,6 +39,7 @@ library;
 import 'dart:async';
 
 import 'package:image/image.dart' as img;
+
 import '../colorprofile/profile.dart' as cp;
 import 'ansi.dart';
 import 'buffer.dart';

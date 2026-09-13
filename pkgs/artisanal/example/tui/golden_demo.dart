@@ -74,7 +74,9 @@ import 'package:artisanal/bubbles.dart'
         UndoCommandJournalEntry,
         UndoManager,
         UndoableCommand;
+
 import 'dart:async';
+
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;

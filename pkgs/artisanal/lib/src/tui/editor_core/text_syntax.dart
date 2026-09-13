@@ -18,13 +18,13 @@ final class TextSyntaxBuildResult<State> {
 
 final class TextSyntaxSnapshot<State> {
   TextSyntaxSnapshot({
-    String? text,
+    this._text,
     required this.decorations,
     required this.language,
     this.document,
     this.state,
     this.change,
-  }) : _text = text;
+  });
 
   String get text => _text ??= document?.text ?? '';
 

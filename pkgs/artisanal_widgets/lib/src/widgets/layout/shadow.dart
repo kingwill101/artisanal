@@ -193,9 +193,8 @@ final class _RenderShadow extends RenderBox {
       Cell.emptyCell(),
       rect(childX, childY, childWidth, childHeight),
     );
-    StyledString(
-      child.paint(),
-    ).draw(canvas, rect(childX, childY, childWidth, childHeight));
+    StyledString(child.paint())
+        .draw(canvas, rect(childX, childY, childWidth, childHeight));
     return padToStackSize(canvas.render(), width, height);
   }
 }

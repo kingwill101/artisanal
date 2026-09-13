@@ -8,6 +8,7 @@ import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
+
 import '../testing/loose_layout_host.dart';
 
 Future<void> _pumpSmallRoot(
@@ -293,9 +294,10 @@ void main() {
     expect(tester.view, contains('C=1'));
     expect(tester.view, contains('\x1b_Ga=d,d=I,i='));
 
-    final ids = RegExp(
-      r'\x1b_Ga=(?:d|T)[^;\x1b]*i=(\d+)',
-    ).allMatches(tester.view).map((match) => match.group(1)).toSet();
+    final ids = RegExp(r'\x1b_Ga=(?:d|T)[^;\x1b]*i=(\d+)')
+        .allMatches(tester.view)
+        .map((match) => match.group(1))
+        .toSet();
     expect(ids, hasLength(1));
   });
 

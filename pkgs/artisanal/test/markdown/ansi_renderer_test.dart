@@ -439,9 +439,10 @@ void main() {}
           '- [ ] This item has enough words to wrap onto another line cleanly.',
           options: const AnsiRendererOptions(width: 30),
         );
-        final lines = Ansi.stripAnsi(
-          result,
-        ).split('\n').where((line) => line.isNotEmpty).toList();
+        final lines = Ansi.stripAnsi(result)
+            .split('\n')
+            .where((line) => line.isNotEmpty)
+            .toList();
 
         expect(lines.first, startsWith('[ ] This item'));
         for (final line in lines.skip(1)) {
@@ -458,9 +459,10 @@ void main() {}
           'length header.',
           options: const AnsiRendererOptions(width: 68),
         );
-        final lines = Ansi.stripAnsi(
-          result,
-        ).split('\n').where((line) => line.isNotEmpty).toList();
+        final lines = Ansi.stripAnsi(result)
+            .split('\n')
+            .where((line) => line.isNotEmpty)
+            .toList();
 
         expect(lines.first, startsWith('[ ] After the fix'));
         for (final line in lines.skip(1)) {
@@ -475,9 +477,10 @@ void main() {}
           'runtime defaults.',
           options: const AnsiRendererOptions(width: 44),
         );
-        final lines = Ansi.stripAnsi(
-          result,
-        ).split('\n').where((line) => line.isNotEmpty).toList();
+        final lines = Ansi.stripAnsi(result)
+            .split('\n')
+            .where((line) => line.isNotEmpty)
+            .toList();
 
         expect(lines.first, startsWith('\u2022 Generous'));
         expect(lines[1], startsWith('  '));

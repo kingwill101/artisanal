@@ -314,22 +314,16 @@ final class Cell {
   }
 
   Cell._packed({
-    required UvStyle style,
-    required Link link,
-    required int width,
-    required int contentKind,
-    required int contentValue,
-    required int styleId,
-    required int linkId,
+    required this._style,
+    required this._link,
+    required this._width,
+    required this._contentKind,
+    required this._contentValue,
+    required this._styleId,
+    required this._linkId,
     this.diffOption = CellDiffOption.normal,
     this.drawable,
-  }) : _style = style,
-       _link = link,
-       _width = width,
-       _contentKind = contentKind,
-       _contentValue = contentValue,
-       _styleId = styleId,
-       _linkId = linkId {
+  }) {
     _attachPooledContentFinalizerIfNeeded();
     _attachLinkFinalizerIfNeeded();
   }

@@ -105,7 +105,8 @@ void renderStackedBarChart(
         cumulative += val;
         final seriesColor = fg(series.color ?? colors[si % colors.length]);
         final yNorm = (cumulative - scale.min) / (scale.max - scale.min);
-        final prevNorm = (cumulative - val - scale.min) / (scale.max - scale.min);
+        final prevNorm =
+            (cumulative - val - scale.min) / (scale.max - scale.min);
         final topY = ePY + ePH - 2 - (yNorm * (ePH - 2)).round();
         final bottomY = ePY + ePH - 2 - (prevNorm * (ePH - 2)).round();
 
@@ -133,7 +134,8 @@ void renderStackedBarChart(
         cumulative += val;
         final seriesColor = fg(series.color ?? colors[si % colors.length]);
         final xNorm = (cumulative - scale.min) / (scale.max - scale.min);
-        final prevNorm = (cumulative - val - scale.min) / (scale.max - scale.min);
+        final prevNorm =
+            (cumulative - val - scale.min) / (scale.max - scale.min);
         final leftX = plotX + 1 + (prevNorm * (plotW - 2)).round();
         final rightX = plotX + 1 + (xNorm * (plotW - 2)).round();
         final barH = math.max(1, (groupWidth - gap));

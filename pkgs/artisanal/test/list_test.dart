@@ -18,11 +18,8 @@ void main() {
     });
 
     test('uses arabic enumerator', () {
-      final list = LipList.create([
-        'A',
-        'B',
-        'C',
-      ]).enumerator(ListEnumerators.arabic);
+      final list = LipList.create(['A', 'B', 'C'])
+          .enumerator(ListEnumerators.arabic);
       final output = list.render();
       expect(output, contains('1.'));
       expect(output, contains('2.'));
@@ -30,12 +27,8 @@ void main() {
     });
 
     test('uses roman enumerator', () {
-      final list = LipList.create([
-        'A',
-        'B',
-        'C',
-        'D',
-      ]).enumerator(ListEnumerators.roman);
+      final list = LipList.create(['A', 'B', 'C', 'D'])
+          .enumerator(ListEnumerators.roman);
       final output = list.render();
       expect(output, contains('I.'));
       expect(output, contains('II.'));
@@ -44,11 +37,8 @@ void main() {
     });
 
     test('uses alphabet enumerator', () {
-      final list = LipList.create([
-        'A',
-        'B',
-        'C',
-      ]).enumerator(ListEnumerators.alphabet);
+      final list = LipList.create(['A', 'B', 'C'])
+          .enumerator(ListEnumerators.alphabet);
       final output = list.render();
       expect(output, contains('A.'));
       expect(output, contains('B.'));
@@ -91,13 +81,8 @@ void main() {
     });
 
     test('offset skips items', () {
-      final list = LipList.create([
-        'A',
-        'B',
-        'C',
-        'D',
-        'E',
-      ]).offset(1, 1); // Skip first and last
+      final list = LipList.create(['A', 'B', 'C', 'D', 'E'])
+          .offset(1, 1); // Skip first and last
       final output = list.render();
       expect(output, isNot(contains('• A')));
       expect(output, contains('B'));

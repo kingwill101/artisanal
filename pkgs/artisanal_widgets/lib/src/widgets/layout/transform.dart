@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:artisanal/uv.dart' show StyledString, Canvas, Cell;
+
 import '../rendering/render_object.dart';
 import '../style.dart';
 import '_layout_utils.dart';

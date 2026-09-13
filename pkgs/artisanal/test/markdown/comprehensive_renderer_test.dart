@@ -1008,9 +1008,8 @@ void main() {
 
     group('highlightCodeString convenience function', () {
       test('produces same output as SyntaxHighlighter', () {
-        final direct = SyntaxHighlighter(
-          theme: ChromaTheme.dark,
-        ).highlightCode('var x = 1;', language: 'dart');
+        final direct = SyntaxHighlighter(theme: ChromaTheme.dark)
+            .highlightCode('var x = 1;', language: 'dart');
         final convenience = highlightCodeString(
           'var x = 1;',
           language: 'dart',

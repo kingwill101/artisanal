@@ -27,10 +27,10 @@ final class _SendBridgeInterceptor extends ProgramInterceptor {
 
 class TuiController<M extends Model> {
   TuiController({
-    required M model,
+    required this._model,
     this.options = const ProgramOptions(),
     this.rendererOptions,
-  }) : _model = model;
+  });
 
   final M _model;
   final ProgramOptions options;

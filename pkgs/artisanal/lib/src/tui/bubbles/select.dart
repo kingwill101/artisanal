@@ -1,7 +1,9 @@
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
+
 import 'package:artisanal/style.dart';
+
 import 'key_binding.dart';
 import 'paginator.dart';
 
@@ -190,7 +192,7 @@ class SelectModel<T> extends ViewComponent {
     this.showTitle = true,
     this.showHelp = true,
     this.showPagination = true,
-    int height = 10,
+    this._height = 10,
     int initialIndex = 0,
     this.display,
     SelectKeyMap? keyMap,
@@ -198,8 +200,7 @@ class SelectModel<T> extends ViewComponent {
   }) : _items = items,
        keyMap = keyMap ?? SelectKeyMap(),
        styles = styles ?? SelectStyles.defaults(),
-       _cursor = initialIndex.clamp(0, items.isEmpty ? 0 : items.length - 1),
-       _height = height {
+       _cursor = initialIndex.clamp(0, items.isEmpty ? 0 : items.length - 1) {
     _paginator = PaginatorModel(
       type: PaginationType.dots,
       activeDot: PaginationDots.active,
@@ -629,7 +630,7 @@ class MultiSelectModel<T> extends ViewComponent {
     this.showHint = true,
     this.showHelp = true,
     this.showPagination = true,
-    int height = 10,
+    this._height = 10,
     int initialIndex = 0,
     Set<int>? initialSelected,
     this.display,
@@ -639,8 +640,7 @@ class MultiSelectModel<T> extends ViewComponent {
        _selected = initialSelected ?? {},
        keyMap = keyMap ?? MultiSelectKeyMap(),
        styles = styles ?? MultiSelectStyles.defaults(),
-       _cursor = initialIndex.clamp(0, items.isEmpty ? 0 : items.length - 1),
-       _height = height {
+       _cursor = initialIndex.clamp(0, items.isEmpty ? 0 : items.length - 1) {
     _paginator = PaginatorModel(
       type: PaginationType.dots,
       activeDot: PaginationDots.active,

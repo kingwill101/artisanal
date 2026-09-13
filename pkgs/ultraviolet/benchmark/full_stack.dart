@@ -8,6 +8,7 @@
 // event decoder, buffer operations, and color ops.
 
 import 'dart:math';
+
 import 'package:ultraviolet/ultraviolet.dart';
 
 void main() {

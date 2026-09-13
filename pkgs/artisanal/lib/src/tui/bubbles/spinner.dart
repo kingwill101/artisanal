@@ -45,6 +45,7 @@ library;
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
+
 import 'package:artisanal/style.dart';
 
 DateTime _defaultBubbleNowProvider() => DateTime.now();
@@ -658,26 +659,20 @@ class SpinnerTickMsg extends Msg {
 class SpinnerModel extends ViewComponent {
   /// Creates a new spinner model.
   SpinnerModel({
-    Spinner spinner = Spinners.line,
-    int frame = 0,
+    this._spinner = Spinners.line,
+    this._frame = 0,
     DateTime Function()? nowProvider,
-  }) : _spinner = spinner,
-       _frame = frame,
-       _nowProvider = nowProvider ?? _defaultBubbleNowProvider,
+  }) : _nowProvider = nowProvider ?? _defaultBubbleNowProvider,
        _id = _nextSpinnerId(),
        _tag = 0;
 
   SpinnerModel._internal({
-    required Spinner spinner,
-    required int frame,
-    required int id,
-    required int tag,
-    required DateTime Function() nowProvider,
-  }) : _spinner = spinner,
-       _frame = frame,
-       _nowProvider = nowProvider,
-       _id = id,
-       _tag = tag;
+    required this._spinner,
+    required this._frame,
+    required this._id,
+    required this._tag,
+    required this._nowProvider,
+  });
 
   final Spinner _spinner;
   final int _frame;

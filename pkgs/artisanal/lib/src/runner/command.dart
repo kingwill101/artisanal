@@ -35,7 +35,7 @@ import 'help_color_scheme.dart';
 /// ```
 abstract class Command<T> extends args.Command<T> {
   /// Creates a new command with optional aliases.
-  Command({List<String> aliases = const []}) : _aliases = aliases;
+  Command({this._aliases = const []});
 
   final List<String> _aliases;
 

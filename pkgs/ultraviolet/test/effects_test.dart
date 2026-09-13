@@ -20,9 +20,8 @@ void main() {
     });
 
     test('multiply scales color channels by multiplier color', () {
-      final color = ColorMatrix.multiply(
-        const UvRgb(255, 128, 64),
-      ).transformColor(const UvRgb(100, 200, 240));
+      final color = ColorMatrix.multiply(const UvRgb(255, 128, 64))
+          .transformColor(const UvRgb(100, 200, 240));
 
       expect(color, const UvRgb(100, 100, 60));
     });
@@ -451,37 +450,31 @@ void main() {
       },
     );
 
-    test(
-      'GhostingFilter preserves a fading glyph trail without trailing background',
-      () {
-        final source = Buffer.create(2, 1);
-        source.setCell(
-          0,
-          0,
-          Cell(
-            content: '@',
-            width: 1,
-            style: const UvStyle(
-              fg: UvRgb(200, 180, 120),
-              bg: UvRgb(40, 20, 10),
-            ),
-          ),
-        );
+    test('GhostingFilter preserves a fading glyph trail without trailing background', () {
+      final source = Buffer.create(2, 1);
+      source.setCell(
+        0,
+        0,
+        Cell(
+          content: '@',
+          width: 1,
+          style: const UvStyle(fg: UvRgb(200, 180, 120), bg: UvRgb(40, 20, 10)),
+        ),
+      );
 
-        final sink = BufferRenderSink(width: 2, height: 1);
-        final filter = GhostingFilter(persistence: 0.5, currentBoost: 0.0);
+      final sink = BufferRenderSink(width: 2, height: 1);
+      final filter = GhostingFilter(persistence: 0.5, currentBoost: 0.0);
 
-        final first = sink.render(source, [filter], dt: 0.1);
-        expect(first.cellAt(0, 0)!.content, '@');
+      final first = sink.render(source, [filter], dt: 0.1);
+      expect(first.cellAt(0, 0)!.content, '@');
 
-        source.clear();
-        final second = sink.render(source, [filter], dt: 0.1);
-        final ghost = second.cellAt(0, 0)!;
+      source.clear();
+      final second = sink.render(source, [filter], dt: 0.1);
+      final ghost = second.cellAt(0, 0)!;
 
-        expect(ghost.content, '@');
-        expect(ghost.style.bg, isNull);
-        expect(ghost.style.fg, const UvRgb(100, 90, 60));
-      },
-    );
+      expect(ghost.content, '@');
+      expect(ghost.style.bg, isNull);
+      expect(ghost.style.fg, const UvRgb(100, 90, 60));
+    });
   });
 }

@@ -168,8 +168,9 @@ final class _EditorTerminalSession {
 }
 
 /// Starts an integrated terminal rooted at [workingDirectory].
-typedef EditorTerminalStarter =
-    PseudoTerminal Function(String workingDirectory);
+typedef EditorTerminalStarter = PseudoTerminal Function(
+  String workingDirectory,
+);
 
 class EditorScreen extends w.StatefulWidget {
   EditorScreen({

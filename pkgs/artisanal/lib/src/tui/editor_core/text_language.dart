@@ -123,17 +123,18 @@ abstract class EditorLanguageAdapter {
 final class EditorLanguageRegistry {
   EditorLanguageRegistry({EditorLanguageAdapter? fallback});
 
-  final Map<String, EditorLanguageAdapter> _byId = <String, EditorLanguageAdapter>{};
+  final Map<String, EditorLanguageAdapter> _byId =
+      <String, EditorLanguageAdapter>{};
   EditorLanguageAdapter? _fallback;
 
   EditorLanguageRegistry._shared() : _fallback = null;
 
   /// Process-wide registry used by legacy string-based helpers.
-  static final EditorLanguageRegistry shared =
-      EditorLanguageRegistry._shared();
+  static final EditorLanguageRegistry shared = EditorLanguageRegistry._shared();
 
   EditorLanguageAdapter? get fallback => _fallback;
-  set fallback(EditorLanguageAdapter? adapter) => _fallback = adapter ?? _fallback;
+  set fallback(EditorLanguageAdapter? adapter) =>
+      _fallback = adapter ?? _fallback;
 
   void register(EditorLanguageAdapter adapter) {
     _byId[adapter.languageId.toLowerCase()] = adapter;
@@ -161,7 +162,6 @@ final class EditorLanguageRegistry {
     return adapter;
   }
 
-  List<String> get languageIds => List<String>.unmodifiable(
-        _byId.keys.toList(growable: false)..sort(),
-      );
+  List<String> get languageIds =>
+      List<String>.unmodifiable(_byId.keys.toList(growable: false)..sort());
 }

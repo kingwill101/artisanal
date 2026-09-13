@@ -20,21 +20,25 @@ Directory _packageRoot() => Directory('lib/src').existsSync()
     ? Directory.current
     : Directory('pkgs/artisanal');
 
-List<File> _editorCoreFiles(Directory packageRoot) => Directory(
-  p.join(packageRoot.path, 'lib', 'src', 'tui', 'editor_core'),
-).listSync().whereType<File>().where(
-  (file) => file.path.endsWith('.dart'),
-).toList();
+List<File> _editorCoreFiles(Directory packageRoot) =>
+    Directory(p.join(packageRoot.path, 'lib', 'src', 'tui', 'editor_core'))
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'))
+        .toList();
 
 void main() {
   test('editor core never touches dart:io or dart:ffi', () {
-    final offenders = _editorCoreFiles(
-      _packageRoot(),
-    ).where((file) {
-      // Doc comments may name the forbidden libraries; only directives
-      // create a real platform dependency.
-      return _platformImport.hasMatch(file.readAsStringSync());
-    }).map((file) => p.basename(file.path)).toList()..sort();
+    final offenders =
+        _editorCoreFiles(_packageRoot())
+            .where((file) {
+              // Doc comments may name the forbidden libraries; only directives
+              // create a real platform dependency.
+              return _platformImport.hasMatch(file.readAsStringSync());
+            })
+            .map((file) => p.basename(file.path))
+            .toList()
+          ..sort();
 
     expect(
       offenders,
@@ -82,11 +86,12 @@ void main() {
         'editor_core.dart',
       ),
     ).readAsStringSync();
-    final leaked = _extensionFiles
-        .where((name) => name != 'code_extensions.dart')
-        .where((name) => barrel.contains("'$name'"))
-        .toList()
-      ..sort();
+    final leaked =
+        _extensionFiles
+            .where((name) => name != 'code_extensions.dart')
+            .where((name) => barrel.contains("'$name'"))
+            .toList()
+          ..sort();
 
     expect(
       leaked,

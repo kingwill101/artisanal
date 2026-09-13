@@ -147,12 +147,14 @@ typedef GestureDoubleTapCallback = Cmd? Function();
 typedef GestureLongPressCallback = Cmd? Function();
 
 /// Callback for the start of a long-press gesture.
-typedef GestureLongPressStartCallback =
-    Cmd? Function(LongPressStartDetails details);
+typedef GestureLongPressStartCallback = Cmd? Function(
+  LongPressStartDetails details,
+);
 
 /// Callback for the end of a long-press gesture.
-typedef GestureLongPressEndCallback =
-    Cmd? Function(LongPressEndDetails details);
+typedef GestureLongPressEndCallback = Cmd? Function(
+  LongPressEndDetails details,
+);
 
 /// Callback for the start of a drag gesture.
 typedef GestureDragStartCallback = Cmd? Function(DragStartDetails details);

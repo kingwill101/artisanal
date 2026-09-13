@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../example/widget_catalog_support.dart';
+
 import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
@@ -93,9 +94,10 @@ void main() {
           preset,
           componentThemeForName(preset),
         ).replaceAll('\r\n', '\n').replaceAll('\x1b', '<ESC>').trimRight();
-        final golden = _goldenFile(
-          preset,
-        ).readAsStringSync().replaceAll('\r\n', '\n').trimRight();
+        final golden = _goldenFile(preset)
+            .readAsStringSync()
+            .replaceAll('\r\n', '\n')
+            .trimRight();
 
         expect(actual, golden, reason: preset);
       }

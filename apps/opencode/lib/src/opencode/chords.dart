@@ -206,12 +206,6 @@ List<tui.KeyChordBinding> openCodeChordBindings() => [
 /// Shared OpenCode [tui.KeymapHub] (program interceptor + surface stack).
 ///
 /// Pass [innerInterceptor] for replay/dev tooling as a **base** layer.
-tui.KeymapHub openCodeKeymapHub({
-  tui.ProgramInterceptor? innerInterceptor,
-}) {
-  return tui.KeymapHub(
-    base: [
-      ?innerInterceptor,
-    ],
-  );
+tui.KeymapHub openCodeKeymapHub({tui.ProgramInterceptor? innerInterceptor}) {
+  return tui.KeymapHub(base: [?innerInterceptor]);
 }

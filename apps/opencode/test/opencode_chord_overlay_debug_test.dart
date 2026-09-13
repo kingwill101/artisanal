@@ -13,7 +13,10 @@ void main() {
 
     final hub = openCodeKeymapHub();
     await tester.pumpWidget(
-      ThemeScope(theme: openCodeTheme(), child: OpenCodeApp(hub: hub)),
+      ThemeScope(
+        theme: openCodeTheme(),
+        child: OpenCodeApp(hub: hub),
+      ),
       width: 100,
       height: 30,
     );

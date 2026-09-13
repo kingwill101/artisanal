@@ -135,9 +135,9 @@ void main() {
         reason: 'truecolor bg preserved',
       );
       // Bold should appear in the reapplied style
-      final boldMatches = RegExp(
-        r'\x1b\[[^m]*1[^m]*m',
-      ).allMatches(wrapped).length;
+      final boldMatches = RegExp(r'\x1b\[[^m]*1[^m]*m')
+          .allMatches(wrapped)
+          .length;
       expect(
         boldMatches,
         greaterThanOrEqualTo(2),

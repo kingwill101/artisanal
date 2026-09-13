@@ -10,6 +10,7 @@ import 'terminal_native_frame.dart';
 import 'terminal_render_inspector.dart';
 import 'trace.dart';
 import 'view.dart';
+
 import 'package:ultraviolet/rendering.dart' show UvAnsi;
 import 'package:ultraviolet/core.dart' as uv_buffer;
 import 'package:ultraviolet/core.dart' as uv_styled;
@@ -209,8 +210,8 @@ class FullScreenTuiRenderer implements TuiRenderer {
   /// Creates a fullscreen renderer targeting the given [terminal].
   FullScreenTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(),
-  }) : _options = options;
+    this._options = const TuiRendererOptions(),
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;
@@ -499,11 +500,11 @@ class InlineTuiRenderer implements TuiRenderer {
   /// Creates an inline renderer targeting the given [terminal].
   InlineTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(
+    this._options = const TuiRendererOptions(
       altScreen: false,
       hideCursor: false,
     ),
-  }) : _options = options;
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;
@@ -767,9 +768,9 @@ class UltravioletTuiRenderer
   /// terminal movement capabilities (tab stops and backspace support).
   UltravioletTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(),
+    this._options = const TuiRendererOptions(),
     this.movementCapsOverride,
-  }) : _options = options;
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;
@@ -1842,8 +1843,8 @@ class SimpleTuiRenderer implements TuiRenderer {
   /// Creates a simple renderer targeting the given [terminal].
   SimpleTuiRenderer({
     required this.terminal,
-    TuiRendererOptions options = const TuiRendererOptions(),
-  }) : _options = options;
+    this._options = const TuiRendererOptions(),
+  });
 
   /// The terminal to render to.
   final TuiTerminal terminal;

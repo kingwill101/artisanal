@@ -240,9 +240,8 @@ UvColor? parseMermaidColor(String value) {
     return null;
   }
 
-  final rgbMatch = RegExp(
-    r'^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$',
-  ).firstMatch(lower);
+  final rgbMatch = RegExp(r'^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$')
+      .firstMatch(lower);
   if (rgbMatch != null) {
     final channels = [
       int.parse(rgbMatch.group(1)!),

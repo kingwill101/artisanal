@@ -16,9 +16,15 @@ void main() {
       store.touch('new');
       store.touch('new');
 
-      expect(store.score('new', now: DateTime.utc(2026, 1, 10)), greaterThan(0));
-      final ranked = store.sortByFrecency(['old', 'new'], (s) => s,
-          now: DateTime.utc(2026, 1, 10));
+      expect(
+        store.score('new', now: DateTime.utc(2026, 1, 10)),
+        greaterThan(0),
+      );
+      final ranked = store.sortByFrecency(
+        ['old', 'new'],
+        (s) => s,
+        now: DateTime.utc(2026, 1, 10),
+      );
       expect(ranked.first, 'new');
     });
   });

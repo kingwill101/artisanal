@@ -63,9 +63,7 @@ void main() {
 
     test('applyMessage cancel clears state', () {
       chords.applyMessage(tui.KeyChordPrefixMsg(tui.Keys.ctrl('x')));
-      chords.applyMessage(
-        tui.KeyChordCancelledMsg(prefix: tui.Keys.ctrl('x')),
-      );
+      chords.applyMessage(tui.KeyChordCancelledMsg(prefix: tui.Keys.ctrl('x')));
       expect(chords.isActive, isFalse);
     });
 

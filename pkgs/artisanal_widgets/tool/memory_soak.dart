@@ -45,9 +45,9 @@ Future<void> main(List<String> args) async {
       'teardown',
     ]) {
       samples.add(
-        (jsonDecode(await File('${directory.path}/$phase.json').readAsString())
-                as Map)
-            .cast<String, Object?>(),
+        (jsonDecode(
+          await File('${directory.path}/$phase.json').readAsString(),
+        ) as Map).cast<String, Object?>(),
       );
     }
     await _writeReport(options, samples);

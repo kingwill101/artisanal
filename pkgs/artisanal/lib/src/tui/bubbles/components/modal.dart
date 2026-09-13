@@ -21,8 +21,10 @@
 library;
 
 import '../../../style/style.dart' show Style;
+
 import 'package:ultraviolet/rendering.dart'
     show cutAnsiByCells, truncateLeftAnsiByCells;
+
 import 'base.dart' show RenderConfig;
 import 'panel.dart' show PanelComponent;
 
@@ -94,7 +96,10 @@ String renderModal(
   if (boxLines.length > screenH) {
     boxLines = boxLines.sublist(0, screenH);
   }
-  final x = ((screenW - Style.visibleLength(boxLines.first)) ~/ 2).clamp(0, screenW);
+  final x = ((screenW - Style.visibleLength(boxLines.first)) ~/ 2).clamp(
+    0,
+    screenW,
+  );
   var y = ((screenH - boxLines.length) ~/ 2).clamp(0, screenH);
   final base = baseView.split('\n');
   while (base.length < screenH) {

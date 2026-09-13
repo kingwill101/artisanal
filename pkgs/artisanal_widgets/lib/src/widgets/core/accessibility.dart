@@ -77,8 +77,8 @@ final class A11yTree {
   const A11yTree({
     required this.rootId,
     required this.nodes,
-    required Map<Widget, int> widgetToNodeId,
-  }) : _widgetToNodeId = widgetToNodeId;
+    required this._widgetToNodeId,
+  });
 
   /// Node id for the tree root.
   final int rootId;

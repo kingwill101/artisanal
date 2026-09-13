@@ -24,8 +24,7 @@ void main() {
     });
 
     test('multi-chunk Kitty payload survives a width cut intact', () {
-      const first =
-          '\x1b_Ga=T,q=2,f=100,c=10,r=4,m=1;QUJDRA==\x1b\\';
+      const first = '\x1b_Ga=T,q=2,f=100,c=10,r=4,m=1;QUJDRA==\x1b\\';
       const continuation = '\x1b_Gm=0;RUZHSA==\x1b\\';
 
       final kept = cutAnsiByCells('$first$continuation', 0, 10);

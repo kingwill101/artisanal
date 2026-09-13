@@ -2,12 +2,10 @@ import 'package:artisanal/editor_core.dart' show TextSelectionSet;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:test/test.dart';
 
-import '../../../example/tui/examples/prompt-composer/main.dart'
-    as composer;
+import '../../../example/tui/examples/prompt-composer/main.dart' as composer;
 
-tui.KeyMsg _ctrl(int rune) => tui.KeyMsg(
-  tui.Key(tui.KeyType.runes, runes: [rune], ctrl: true),
-);
+tui.KeyMsg _ctrl(int rune) =>
+    tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [rune], ctrl: true));
 
 /// Raw control code form, as real terminals deliver Ctrl+letter
 /// (e.g. 0x03 for Ctrl+C) without the `ctrl` flag set.

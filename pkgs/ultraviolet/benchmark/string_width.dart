@@ -13,6 +13,7 @@
 //   6. Cache thrash — many unique strings
 
 import 'dart:math';
+
 import 'package:ultraviolet/ultraviolet.dart';
 
 /// Generate a random ASCII string of given length.

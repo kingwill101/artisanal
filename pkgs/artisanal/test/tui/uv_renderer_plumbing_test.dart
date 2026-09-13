@@ -151,8 +151,7 @@ void main() {
       expect(
         terminal.output,
         isNot(contains(deleteAll)),
-        reason:
-            'A stale tracked image should be deleted by id, not by global clear.',
+        reason: 'A stale tracked image should be deleted by id, not by global clear.',
       );
     });
 

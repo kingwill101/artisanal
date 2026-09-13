@@ -133,8 +133,7 @@ typedef AlertStyleFunc = Style? Function(String line, int lineIndex);
 /// ```
 class Alert extends DisplayComponent {
   /// Creates a new empty alert builder.
-  Alert({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  Alert({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

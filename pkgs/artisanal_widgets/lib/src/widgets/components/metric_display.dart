@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart' show Color, Style;
+
 import '_component_foundation.dart';
 
 /// Trend direction for a [MetricDisplay].

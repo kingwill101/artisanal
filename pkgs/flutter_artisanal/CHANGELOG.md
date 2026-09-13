@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Require Dart SDK 3.13.0 or newer.
 - Reuse Ultraviolet's shared `UvPaintPolicy` in Flutter terminal painting, keeping
   palette and terminal-attribute resolution aligned with native and canvas
   renderers while retaining platform-specific font pixels.

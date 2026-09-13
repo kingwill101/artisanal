@@ -177,21 +177,17 @@ class _AnimatedBoxState extends w.AnimatedWidgetBaseState<AnimatedBox> {
 
   @override
   void forEachTween(w.TweenVisitor visitor) {
-    _widthTween =
-        visitor(
-              _widthTween,
-              widget.targetWidth.toDouble(),
-              (value) => w.Tween<double>(begin: value as double, end: value),
-            )
-            as w.Tween<double>?;
+    _widthTween = visitor(
+      _widthTween,
+      widget.targetWidth.toDouble(),
+      (value) => w.Tween<double>(begin: value as double, end: value),
+    ) as w.Tween<double>?;
 
-    _heightTween =
-        visitor(
-              _heightTween,
-              widget.targetHeight.toDouble(),
-              (value) => w.Tween<double>(begin: value as double, end: value),
-            )
-            as w.Tween<double>?;
+    _heightTween = visitor(
+      _heightTween,
+      widget.targetHeight.toDouble(),
+      (value) => w.Tween<double>(begin: value as double, end: value),
+    ) as w.Tween<double>?;
   }
 
   @override

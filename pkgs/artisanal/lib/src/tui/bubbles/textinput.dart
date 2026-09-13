@@ -11,13 +11,16 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart';
 
 import 'package:ultraviolet/terminal.dart';
+
 import '../automation.dart' show TraceTag, TuiTrace;
 import '../editor_core/editor_core.dart';
 import '../runtime.dart';
 import '../editor_core/editor_core.dart' as commands;
 import 'cursor.dart';
 import 'runeutil.dart';
+
 import 'package:ultraviolet/unicode.dart' as uni;
+
 import 'text_layout.dart' as layout;
 
 /// Echo mode for text input display.

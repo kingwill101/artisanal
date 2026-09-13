@@ -10,24 +10,25 @@ import 'package:artisanal/text_editing.dart'
 import 'input_widgets.dart' show TextAreaController;
 
 /// Builds range decorations from plain text.
-typedef TextDecorationLayerBuilder =
-    Iterable<TextDecorationRange> Function(String text);
+typedef TextDecorationLayerBuilder = Iterable<TextDecorationRange> Function(
+  String text,
+);
 
 /// Builds whole-line decorations from plain text.
-typedef TextLineDecorationLayerBuilder =
-    Iterable<TextLineDecoration> Function(String text);
+typedef TextLineDecorationLayerBuilder = Iterable<TextLineDecoration> Function(
+  String text,
+);
 
 /// Keeps one named range-decoration layer in sync with a text controller.
 final class TextDecorationLayerBinding {
   TextDecorationLayerBinding({
-    required TextAreaController controller,
+    required this._controller,
     required this.layerKey,
-    required TextDecorationLayerBuilder buildDecorations,
+    required this._buildDecorations,
     this.priority = textDefaultDecorationLayerPriority,
     this.isActive,
     bool syncImmediately = true,
-  }) : _controller = controller,
-       _buildDecorations = buildDecorations {
+  }) {
     _controller.addListener(_handleControllerChanged);
     if (syncImmediately) {
       sync(force: true);
@@ -107,13 +108,12 @@ final class TextDecorationLayerBinding {
 /// Keeps one named whole-line decoration layer in sync with a text controller.
 final class TextLineDecorationLayerBinding {
   TextLineDecorationLayerBinding({
-    required TextAreaController controller,
+    required this._controller,
     required this.layerKey,
-    required TextLineDecorationLayerBuilder buildDecorations,
+    required this._buildDecorations,
     this.priority = textDefaultLineDecorationLayerPriority,
     bool syncImmediately = true,
-  }) : _controller = controller,
-       _buildDecorations = buildDecorations {
+  }) {
     _controller.addListener(_handleControllerChanged);
     if (syncImmediately) {
       sync(force: true);

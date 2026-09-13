@@ -10,19 +10,13 @@ import '../types.dart';
 import '../util.dart';
 
 /// Renders a line chart onto [screen] within [area].
-void renderLineChart(
-  Screen screen,
-  Rectangle area,
-  LineChartProps props,
-) {
+void renderLineChart(Screen screen, Rectangle area, LineChartProps props) {
   final width = area.width;
   final height = area.height;
   if (width <= 0 || height <= 0) return;
 
   final bg = fg(props.backgroundColor ?? '#1A1A2E');
-  final axisColor = fg(
-    props.yAxis?.color ?? props.xAxis?.color ?? '#555555',
-  );
+  final axisColor = fg(props.yAxis?.color ?? props.xAxis?.color ?? '#555555');
   final colors = props.colors ?? defaultColors;
   final margins = resolveMargins(props.margins);
   final showDots = props.showDots != false;

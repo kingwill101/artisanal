@@ -23,7 +23,11 @@ final class PromptStashEntry {
     return '${oneLine.substring(0, 39)}…';
   }
 
-  PromptStashEntry copyWith({String? input, DateTime? timestamp, String? label}) {
+  PromptStashEntry copyWith({
+    String? input,
+    DateTime? timestamp,
+    String? label,
+  }) {
     return PromptStashEntry(
       input: input ?? this.input,
       timestamp: timestamp ?? this.timestamp,

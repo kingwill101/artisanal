@@ -87,9 +87,8 @@ void main() {
   test(
     'records strict failures, keeps cell evidence, and continues the matrix',
     () async {
-      await File(
-        '${input.path}/a.md',
-      ).writeAsString('Z'); // Missing font glyph.
+      await File('${input.path}/a.md')
+          .writeAsString('Z'); // Missing font glyph.
       await File('${input.path}/z.md').writeAsString('A');
       await runner.run(arguments());
       expect(code, 1);
@@ -129,9 +128,8 @@ void main() {
   );
 
   test('matches repeated END markers like String.contains', () async {
-    await File(
-      '${input.path}/a.md',
-    ).writeAsString(List<String>.filled(100, 'END_A').join('\n'));
+    await File('${input.path}/a.md')
+        .writeAsString(List<String>.filled(100, 'END_A').join('\n'));
     final args = arguments();
     args[args.indexOf('--widths') + 1] = '32';
     args.add('--no-strict');

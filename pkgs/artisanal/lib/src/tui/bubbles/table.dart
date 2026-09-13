@@ -7,6 +7,7 @@
 library;
 
 import 'package:artisanal/style.dart';
+
 import '../tui.dart';
 import 'runeutil.dart';
 import 'viewport.dart';
@@ -171,14 +172,13 @@ class TableModel extends ViewComponent {
     List<Row>? rows,
     int? height,
     int? width,
-    bool focused = false,
+    this._focused = false,
     TableKeyMap? keyMap,
     TableStyles? styles,
     HelpModel? help,
   }) : _columns = columns ?? [],
        _rows = rows ?? [],
        _cursor = 0,
-       _focused = focused,
        keyMap = keyMap ?? TableKeyMap(),
        styles = styles ?? TableStyles.defaults(),
        help = help ?? HelpModel() {

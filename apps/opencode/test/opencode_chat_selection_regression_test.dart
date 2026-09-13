@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import 'package:opencode/src/opencode/models/message.dart';
 import 'package:opencode/src/opencode/widgets/chat_body.dart';
+
 import 'testing/loose_layout_host.dart';
 
 Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>

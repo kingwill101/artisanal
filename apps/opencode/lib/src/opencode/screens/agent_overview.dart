@@ -39,10 +39,7 @@ class AgentOverview extends w.StatelessWidget {
         // Pin docks only when there is room; otherwise scroll with content.
         final pinDocks = height >= 36 && width >= 60;
 
-        final main = _AgentMainLane(
-          model: model,
-          pinDocks: pinDocks,
-        );
+        final main = _AgentMainLane(model: model, pinDocks: pinDocks);
 
         return w.Column(
           crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -230,11 +227,7 @@ class _AgentMainLane extends w.StatelessWidget {
                 child: w.Column(
                   crossAxisAlignment: w.CrossAxisAlignment.stretch,
                   gap: 1,
-                  children: [
-                    ...stream,
-                    w.SizedBox(height: 1),
-                    ...docks,
-                  ],
+                  children: [...stream, w.SizedBox(height: 1), ...docks],
                 ),
               ),
             ),

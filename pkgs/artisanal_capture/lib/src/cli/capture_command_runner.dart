@@ -52,8 +52,7 @@ final class _RenderCommand extends Command<void> {
         'format',
         allowed: ['png', 'html', 'capture'],
         defaultsTo: 'png',
-        help:
-            'Output format. Capture writes lossless cell JSON and needs no font.',
+        help: 'Output format. Capture writes lossless cell JSON and needs no font.',
       )
       ..addOption(
         'columns',
@@ -158,9 +157,8 @@ final class _RenderCommand extends Command<void> {
     }
     final columns = _integer('columns', max: 1000)!;
     final ansi = args['input-format'] == 'markdown'
-        ? MarkdownRenderer(
-            options: AnsiRendererOptions(width: columns),
-          ).renderToAnsi(source)
+        ? MarkdownRenderer(options: AnsiRendererOptions(width: columns))
+              .renderToAnsi(source)
         : source;
     final withoutTerminator = ansi.endsWith('\n')
         ? ansi.substring(0, ansi.length - 1)

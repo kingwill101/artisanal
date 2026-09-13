@@ -77,6 +77,7 @@ import 'package:artisanal/bubbles.dart'
         UndoableCommand;
 
 import 'dart:io';
+
 import 'package:artisanal/tui.dart';
 
 /// Run this directly: dart run example/spinner_demo.dart

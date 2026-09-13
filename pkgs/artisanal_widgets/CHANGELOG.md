@@ -2,6 +2,8 @@
 
 ## 0.4.2
 
+- Require Dart SDK 3.13.0 or newer.
+
 ### Added
 
 - Added `BoxConstraints.enforce` to compose child size requests within

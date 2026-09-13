@@ -227,11 +227,13 @@ final class PromptComposerModel implements tui.Model {
     placeholders.clear();
     for (final paste in _collapsedPastes) {
       paste.elementId = null;
-      final matches = core.findTextSearchMatches(
-        composer.document,
-        core.TextSearchQuery(pattern: paste.displayText),
-        maxResults: 1,
-      ).matches;
+      final matches = core
+          .findTextSearchMatches(
+            composer.document,
+            core.TextSearchQuery(pattern: paste.displayText),
+            maxResults: 1,
+          )
+          .matches;
       if (matches.isEmpty) continue;
       final match = matches.single;
       paste.elementId = elements.create(
@@ -350,17 +352,14 @@ final class PromptComposerModel implements tui.Model {
   }
 
   void _syncPlaceholderDecorations() {
-    composer.setDecorationLayer(
-      _pasteDecorationLayer,
-      [
-        for (final range in placeholders.ranges)
-          core.TextDecorationRange(
-            startOffset: range.startOffset,
-            endOffset: range.endOffset,
-            styleKey: _pasteDecorationStyle,
-          ),
-      ],
-    );
+    composer.setDecorationLayer(_pasteDecorationLayer, [
+      for (final range in placeholders.ranges)
+        core.TextDecorationRange(
+          startOffset: range.startOffset,
+          endOffset: range.endOffset,
+          styleKey: _pasteDecorationStyle,
+        ),
+    ]);
   }
 
   void _submit() {
@@ -394,8 +393,7 @@ final class PromptComposerModel implements tui.Model {
       placeholders.ranges,
     );
     final tempDir = io.Directory.systemTemp.createTempSync('prompt_composer_');
-    final file = io.File('${tempDir.path}/prompt.md')
-      ..writeAsStringSync(draft);
+    final file = io.File('${tempDir.path}/prompt.md')..writeAsStringSync(draft);
     status = 'External editor open…';
     return tui.Cmd.openEditor(
       file.path,
@@ -454,8 +452,10 @@ final class PromptComposerModel implements tui.Model {
     buffer.writeln(composer.view());
     final selection = activeIdeSelection;
     if (selection != null) {
-      buffer.writeln('IDE: ${selection.filePath} '
-          '${core.editorSelectionRangeLabel(selection.ranges.single) ?? ''}');
+      buffer.writeln(
+        'IDE: ${selection.filePath} '
+        '${core.editorSelectionRangeLabel(selection.ranges.single) ?? ''}',
+      );
     }
     if (!placeholders.isEmpty) {
       buffer.writeln('Placeholders: ${placeholders.ranges.length} tracked.');

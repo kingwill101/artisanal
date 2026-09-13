@@ -412,20 +412,14 @@ void main() {
         final box = BoxBuilder()
           ..content('Content')
           ..paddingAll(top: 1, bottom: 1);
-        expect(
-          box.lineCount,
-          equals(5),
-        ); // Top border + top padding + content + bottom padding + bottom border
+        expect(box.lineCount, equals(5)); // Top border + top padding + content + bottom padding + bottom border
       });
 
       test('calculates correct line count with margin', () {
         final box = BoxBuilder()
           ..content('Content')
           ..marginAll(top: 2, bottom: 1);
-        expect(
-          box.lineCount,
-          equals(6),
-        ); // 2 top margin + top border + content + bottom border + 1 bottom margin
+        expect(box.lineCount, equals(6)); // 2 top margin + top border + content + bottom border + 1 bottom margin
       });
     });
 

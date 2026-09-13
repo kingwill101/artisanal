@@ -68,9 +68,9 @@ Future<void> main(List<String> arguments) async {
       return;
     }
 
-    final timingJson =
-        (jsonDecode(await timingFile.readAsString()) as Map<Object?, Object?>)
-            .cast<String, Object?>();
+    final timingJson = (jsonDecode(
+      await timingFile.readAsString(),
+    ) as Map<Object?, Object?>).cast<String, Object?>();
     final report = await addAllocationAccounting(
       report: timingJson,
       sessionDirectory: artifactDirectory,

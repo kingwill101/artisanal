@@ -1,7 +1,9 @@
 library;
 
-typedef UndoCommandDecoder<State> =
-    UndoableCommand<State> Function(String type, Map<String, Object?> payload);
+typedef UndoCommandDecoder<State> = UndoableCommand<State> Function(
+  String type,
+  Map<String, Object?> payload,
+);
 
 Map<String, Object?> _serializeCommandForJournal<State>(
   UndoableCommand<State> command,
@@ -128,10 +130,7 @@ final class _UndoTransactionCommand<State> implements UndoableCommand<State> {
 
 /// Undo/redo command journal with optional transactional grouping.
 final class UndoManager<State> {
-  UndoManager({
-    required UndoCommandDecoder<State> decodeCommand,
-    this.maxEntries = 100,
-  }) : _decodeCommand = decodeCommand;
+  UndoManager({required this._decodeCommand, this.maxEntries = 100});
 
   /// Builds a manager from a persisted journal payload.
   factory UndoManager.fromJournal({

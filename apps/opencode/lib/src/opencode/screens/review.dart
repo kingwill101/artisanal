@@ -9,10 +9,7 @@ import '../widgets/footer_bar.dart';
 
 /// Sample multi-file review using [w.DiffReviewPane].
 class ReviewScreen extends w.StatelessWidget {
-  ReviewScreen({
-    this.workingDirectory = '~/code/artisanal',
-    super.key,
-  });
+  ReviewScreen({this.workingDirectory = '~/code/artisanal', super.key});
 
   final String workingDirectory;
 
@@ -93,9 +90,7 @@ new file mode 100644
                   '↑↓ files · v cycles patch view · ctrl+p commands · esc back',
                   style: style.Style()..foreground(OC.textMuted),
                 ),
-                w.Expanded(
-                  child: w.DiffReviewPane(files: sampleFiles),
-                ),
+                w.Expanded(child: w.DiffReviewPane(files: sampleFiles)),
               ],
             ),
           ),

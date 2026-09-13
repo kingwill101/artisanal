@@ -76,7 +76,8 @@ class ShortcutsSheet extends StatelessWidget {
       key: key,
       bindings: hub.activeShortcuts(includeReachable: includeReachable),
       title: title,
-      subtitle: subtitle ??
+      subtitle:
+          subtitle ??
           (top == null
               ? null
               : (includeReachable ? 'this view + reachable' : top.id)),
@@ -135,12 +136,7 @@ class ShortcutsSheet extends StatelessWidget {
             if (bindings.isEmpty)
               Text('No shortcuts for this view', style: mutedStyle)
             else
-              HelpView(
-                keyMap: keyMap,
-                showAll: true,
-                columnGap: 3,
-                rowGap: 0,
-              ),
+              HelpView(keyMap: keyMap, showAll: true, columnGap: 3, rowGap: 0),
             Text(footerHint, style: mutedStyle),
           ],
         ),

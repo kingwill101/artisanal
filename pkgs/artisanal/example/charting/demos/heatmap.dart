@@ -10,7 +10,8 @@ void main() {
   final data = List.generate(
     8,
     (y) => List.generate(12, (x) {
-      return (math.sin(x * 0.5) + math.cos(y * 0.4)) * 10 + rng.nextDouble() * 5;
+      return (math.sin(x * 0.5) + math.cos(y * 0.4)) * 10 +
+          rng.nextDouble() * 5;
     }),
   );
 

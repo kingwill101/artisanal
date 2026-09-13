@@ -98,31 +98,28 @@ void main() {
       expect(captured!.globalPosition, equals(const Offset(6, 6)));
     });
 
-    test(
-      'callback sequence: onLongPressStart → onLongPress → ... → onLongPressEnd',
-      () {
-        final sequence = <String>[];
-        recognizer
-          ..onLongPressStart = (_) {
-            sequence.add('start');
-            return null;
-          }
-          ..onLongPress = () {
-            sequence.add('longPress');
-            return null;
-          }
-          ..onLongPressEnd = (_) {
-            sequence.add('end');
-            return null;
-          };
+    test('callback sequence: onLongPressStart → onLongPress → ... → onLongPressEnd', () {
+      final sequence = <String>[];
+      recognizer
+        ..onLongPressStart = (_) {
+          sequence.add('start');
+          return null;
+        }
+        ..onLongPress = () {
+          sequence.add('longPress');
+          return null;
+        }
+        ..onLongPressEnd = (_) {
+          sequence.add('end');
+          return null;
+        };
 
-        recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-        timers.fireNext();
-        recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
+      recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
+      timers.fireNext();
+      recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
 
-        expect(sequence, equals(['start', 'longPress', 'end']));
-      },
-    );
+      expect(sequence, equals(['start', 'longPress', 'end']));
+    });
   });
 
   // -------------------------------------------------------------------------

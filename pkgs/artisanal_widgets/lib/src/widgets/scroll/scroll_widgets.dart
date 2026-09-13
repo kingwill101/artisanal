@@ -18,6 +18,7 @@ import 'package:artisanal/runtime.dart'
         ViewportModel,
         ViewportScrollPane;
 import 'package:artisanal/style.dart' hide Padding;
+
 import '../core/element.dart'
     show
         elementOf,
@@ -36,6 +37,7 @@ import '../theme/theme.dart' show hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../layout/_layout_core.dart' show EdgeInsets, Padding;
 import '../selection/selection_text_utils.dart';
+
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart'
     show Canvas, StyledString, suppressOverflowingTerminalGraphics;
@@ -1145,9 +1147,9 @@ class _SingleChildViewport extends SingleChildRenderObjectWidget {
 /// skips `offset` lines, and returns only `viewportHeight` lines.
 class RenderSingleChildViewport extends RenderBox {
   RenderSingleChildViewport({
-    required ScrollController controller,
+    required this._controller,
     required this.selectionHighlightStyle,
-  }) : _controller = controller;
+  });
 
   ScrollController _controller;
   Style selectionHighlightStyle;
@@ -3083,8 +3085,10 @@ void _drawStyledContent(
 /// - [ListView.separated] for generated separators between items
 typedef IndexedWidgetBuilder = Widget Function(BuildContext context, int index);
 
-typedef IndexedSeparatorBuilder =
-    Widget Function(BuildContext context, int index);
+typedef IndexedSeparatorBuilder = Widget Function(
+  BuildContext context,
+  int index,
+);
 
 class ListView extends StatefulWidget {
   /// Creates a list view that keeps child widgets mounted.

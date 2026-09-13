@@ -11,7 +11,7 @@ high-performance cell-buffer renderer. It is a faithful Dart port of Charm's
 Go libraries (Lip Gloss, Bubble Tea, Bubbles), plus renderer, markdown, and
 charting layers of its own.
 
-SDK: `>=3.10.0 <4.0.0`.
+SDK: `>=3.13.0 <4.0.0`.
 
 ## Packages and boundaries
 

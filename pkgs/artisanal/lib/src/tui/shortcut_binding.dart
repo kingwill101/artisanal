@@ -122,8 +122,7 @@ final class ShortcutBinding {
   bool get isSequence => keys.length > 1;
 
   /// Labels for UI (which-key, sheets).
-  List<String> get labels =>
-      displayKeys ?? List<String>.unmodifiable(keys);
+  List<String> get labels => displayKeys ?? List<String>.unmodifiable(keys);
 
   /// First-step key label (leader or single).
   String get prefixLabel => labels.first;
@@ -138,10 +137,7 @@ final class ShortcutBinding {
   bool matchesStep(Key key, int index) {
     if (index < 0 || index >= keys.length) return false;
     final spec = keys[index];
-    return keyMatchesSingle(
-      key,
-      KeyBinding.withHelp([spec], spec, ''),
-    );
+    return keyMatchesSingle(key, KeyBinding.withHelp([spec], spec, ''));
   }
 
   /// Convert to a help [KeyBinding] for single-key entries / HelpView adapters.
@@ -215,8 +211,7 @@ final class KeymapPendingSequence {
   final List<ShortcutBinding> candidates;
 
   /// Compact prefix label (first matched step).
-  String get prefixLabel =>
-      matchedLabels.isEmpty ? '' : matchedLabels.first;
+  String get prefixLabel => matchedLabels.isEmpty ? '' : matchedLabels.first;
 
   /// Full matched path as a single string.
   String get matchedPath => matchedLabels.join(' ');
@@ -279,13 +274,17 @@ String formatShortcutKeys(List<String> labels, {String separator = ' '}) {
 KeyMap keyMapFromShortcutBindings(Iterable<ShortcutBinding> bindings) {
   final byGroup = <String, List<KeyBinding>>{};
   for (final b in bindings) {
-    byGroup.putIfAbsent(b.group, () => []).add(
-      KeyBinding.withHelp([b.formattedKeys], b.formattedKeys, b.description),
-    );
+    byGroup
+        .putIfAbsent(b.group, () => [])
+        .add(
+          KeyBinding.withHelp(
+            [b.formattedKeys],
+            b.formattedKeys,
+            b.description,
+          ),
+        );
   }
-  final short = <KeyBinding>[
-    for (final list in byGroup.values) ...list,
-  ];
+  final short = <KeyBinding>[for (final list in byGroup.values) ...list];
   final full = [
     for (final list in byGroup.values)
       if (list.isNotEmpty) list,

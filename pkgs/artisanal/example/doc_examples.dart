@@ -309,11 +309,8 @@ final customBorder = Border(
 
 // #region lipgloss_list_example
 void lipglossList() {
-  final list = LipList.create([
-    'First item',
-    'Second item',
-    'Third item',
-  ]).enumerator(ListEnumerators.bullet);
+  final list = LipList.create(['First item', 'Second item', 'Third item'])
+      .enumerator(ListEnumerators.bullet);
 
   print(list.render());
 }

@@ -10,12 +10,10 @@ final class ReloadFileWatcher {
     required this.debounce,
     required this.recursive,
     required this.ignoreHidden,
-    required Set<String> extensions,
+    required this._extensions,
     required List<String> roots,
-    required List<StreamSubscription<FileSystemEvent>> subscriptions,
-  }) : _extensions = extensions,
-       roots = List<String>.unmodifiable(roots),
-       _subscriptions = subscriptions;
+    required this._subscriptions,
+  }) : roots = List<String>.unmodifiable(roots);
 
   static Future<ReloadFileWatcher> watch({
     required ReloadController controller,

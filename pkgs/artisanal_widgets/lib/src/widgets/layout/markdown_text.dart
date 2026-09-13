@@ -1,10 +1,12 @@
 import 'dart:collection';
 import 'dart:math' as math;
+
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/runtime.dart'
     show Cmd, Msg, MouseAction, MouseButton, HitTestMouseMsg;
 import 'package:artisanal/markdown.dart'
     show AnsiRendererOptions, MarkdownRenderer;
+
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
@@ -182,9 +184,8 @@ class MarkdownText extends StatefulWidget {
       hasDarkBackground: hasDarkBackground,
       textStyle: textStyle ?? baseOptions.textStyle,
     );
-    var content = MarkdownRenderer(
-      options: effectiveOptions,
-    ).renderToAnsi(data);
+    var content = MarkdownRenderer(options: effectiveOptions)
+        .renderToAnsi(data);
 
     if (!softWrap && maxWidth != null) {
       content = Layout.truncateLines(content, maxWidth);
@@ -401,19 +402,13 @@ class _MarkdownTextRenderObjectWidget extends LeafRenderObjectWidget {
 
 class _RenderMarkdownText extends RenderText {
   _RenderMarkdownText({
-    required String data,
-    required AnsiRendererOptions? options,
-    required Style? textStyle,
-    required bool softWrapMarkdown,
-    required int? maxWidth,
-    required bool hasDarkBackground,
-  }) : _data = data,
-       _options = options,
-       _textStyle = textStyle,
-       _softWrapMarkdown = softWrapMarkdown,
-       _maxWidth = maxWidth,
-       _hasDarkBackground = hasDarkBackground,
-       super(text: '', softWrap: false);
+    required this._data,
+    required this._options,
+    required this._textStyle,
+    required this._softWrapMarkdown,
+    required this._maxWidth,
+    required this._hasDarkBackground,
+  }) : super(text: '', softWrap: false);
 
   String _data;
   AnsiRendererOptions? _options;

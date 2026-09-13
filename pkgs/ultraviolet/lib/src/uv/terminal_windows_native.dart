@@ -20,10 +20,36 @@ const int _invalidHandleValue = -1;
 // Windows INPUT_RECORD event types.
 const int _keyEvent = 0x0001;
 
-typedef _CreateFileWC = IntPtr Function(Pointer<Uint16>, Uint32, Uint32, IntPtr, Uint32, Uint32, IntPtr);
-typedef _CreateFileWD = int Function(Pointer<Uint16>, int, int, int, int, int, int);
-typedef _ReadConsoleInputWC = Int32 Function(IntPtr, Pointer<Void>, Uint32, Pointer<Uint32>);
-typedef _ReadConsoleInputWD = int Function(int, Pointer<Void>, int, Pointer<Uint32>);
+typedef _CreateFileWC = IntPtr Function(
+  Pointer<Uint16>,
+  Uint32,
+  Uint32,
+  IntPtr,
+  Uint32,
+  Uint32,
+  IntPtr,
+);
+typedef _CreateFileWD = int Function(
+  Pointer<Uint16>,
+  int,
+  int,
+  int,
+  int,
+  int,
+  int,
+);
+typedef _ReadConsoleInputWC = Int32 Function(
+  IntPtr,
+  Pointer<Void>,
+  Uint32,
+  Pointer<Uint32>,
+);
+typedef _ReadConsoleInputWD = int Function(
+  int,
+  Pointer<Void>,
+  int,
+  Pointer<Uint32>,
+);
 typedef _CloseHandleC = Int32 Function(IntPtr);
 typedef _CloseHandleD = int Function(int);
 typedef _LocalAllocC = IntPtr Function(Uint32, IntPtr);
@@ -56,19 +82,24 @@ final class _InputRecord extends Struct {
 
 // Typed messages between the main isolate and the worker isolate.
 sealed class _WorkerMessage {}
+
 final class _WorkerReady extends _WorkerMessage {
   final SendPort replyPort;
   _WorkerReady(this.replyPort);
 }
+
 final class _WorkerBytes extends _WorkerMessage {
   final Uint8List bytes;
   _WorkerBytes(this.bytes);
 }
+
 final class _WorkerStopped extends _WorkerMessage {}
+
 final class _WorkerError extends _WorkerMessage {
   final String message;
   _WorkerError(this.message);
 }
+
 final class _StopReading extends _WorkerMessage {}
 
 /// A Windows-native input stream that reads directly from CONIN$ using
@@ -125,26 +156,32 @@ class NativeWindowsInputStream {
       return;
     }
 
-    receivePort.listen((message) {
-      if (_stopRequested) return;
-      if (message is _WorkerReady) {
-        _sendPort = message.replyPort;
-        if (_stopRequested) {
-          // close() ran before the worker was ready — send the stop now.
-          _sendPort?.send(_StopReading());
+    receivePort.listen(
+      (message) {
+        if (_stopRequested) return;
+        if (message is _WorkerReady) {
+          _sendPort = message.replyPort;
+          if (_stopRequested) {
+            // close() ran before the worker was ready — send the stop now.
+            _sendPort?.send(_StopReading());
+          }
+        } else if (message is _WorkerBytes) {
+          _controller?.add(message.bytes);
+        } else if (message is _WorkerError) {
+          _controller?.addError(
+            StateError('Native CONIN reader: ${message.message}'),
+          );
+        } else if (message is _WorkerStopped) {
+          _controller?.close();
         }
-      } else if (message is _WorkerBytes) {
-        _controller?.add(message.bytes);
-      } else if (message is _WorkerError) {
-        _controller?.addError(StateError('Native CONIN reader: ${message.message}'));
-      } else if (message is _WorkerStopped) {
+      },
+      onError: (err) {
+        _controller?.addError(err);
+      },
+      onDone: () {
         _controller?.close();
-      }
-    }, onError: (err) {
-      _controller?.addError(err);
-    }, onDone: () {
-      _controller?.close();
-    });
+      },
+    );
   }
 
   /// Stops the native input reader. Cooperative: sends a stop message
@@ -197,16 +234,20 @@ class NativeWindowsInputStream {
 
   static void _runReaderLoop(SendPort port) {
     final k32 = DynamicLibrary.open('kernel32.dll');
-    final createFileW =
-        k32.lookupFunction<_CreateFileWC, _CreateFileWD>('CreateFileW');
-    final readConsoleInputW =
-        k32.lookupFunction<_ReadConsoleInputWC, _ReadConsoleInputWD>('ReadConsoleInputW');
-    final closeHandle =
-        k32.lookupFunction<_CloseHandleC, _CloseHandleD>('CloseHandle');
-    final localAlloc =
-        k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
-    final localFree =
-        k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
+    final createFileW = k32.lookupFunction<_CreateFileWC, _CreateFileWD>(
+      'CreateFileW',
+    );
+    final readConsoleInputW = k32
+        .lookupFunction<_ReadConsoleInputWC, _ReadConsoleInputWD>(
+          'ReadConsoleInputW',
+        );
+    final closeHandle = k32.lookupFunction<_CloseHandleC, _CloseHandleD>(
+      'CloseHandle',
+    );
+    final localAlloc = k32.lookupFunction<_LocalAllocC, _LocalAllocD>(
+      'LocalAlloc',
+    );
+    final localFree = k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
 
     // Open CONIN$ directly. CreateFileW requires a NUL-terminated UTF-16
     // path; we allocate it via LocalAlloc so the FFI side can write into it.
@@ -233,9 +274,7 @@ class NativeWindowsInputStream {
     localFree(nameBuf);
 
     if (hConIn == 0 || hConIn == _invalidHandleValue) {
-      throw StateError(
-        'CreateFileW("CONIN\$") failed: handle=$hConIn',
-      );
+      throw StateError('CreateFileW("CONIN\$") failed: handle=$hConIn');
     }
 
     try {
@@ -244,12 +283,17 @@ class NativeWindowsInputStream {
       const recordCount = 64;
       const recordSize = 20; // sizeof(INPUT_RECORD) on x64
       const readCountSize = 4; // sizeof(UINT32)
-      final buf = localAlloc(_lmemZeroInit, recordCount * recordSize + readCountSize);
+      final buf = localAlloc(
+        _lmemZeroInit,
+        recordCount * recordSize + readCountSize,
+      );
       if (buf == 0) {
         throw StateError('LocalAlloc failed for INPUT_RECORD buffer');
       }
       final recPtr = Pointer<_InputRecord>.fromAddress(buf);
-      final readPtr = Pointer<Uint32>.fromAddress(buf + recordCount * recordSize);
+      final readPtr = Pointer<Uint32>.fromAddress(
+        buf + recordCount * recordSize,
+      );
 
       while (true) {
         final ok = readConsoleInputW(

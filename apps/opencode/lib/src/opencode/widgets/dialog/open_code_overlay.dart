@@ -15,14 +15,7 @@ import '../theme_list_dialog.dart';
 import 'agent_list_dialog.dart';
 
 /// Which OpenCode picker overlay is visible (mutual exclusion).
-enum OpenCodeOverlayKind {
-  none,
-  commands,
-  sessions,
-  models,
-  themes,
-  agents,
-}
+enum OpenCodeOverlayKind { none, commands, sessions, models, themes, agents }
 
 /// Exclusive hub surface id while any overlay is open.
 const openCodeOverlaySurfaceId = 'opencode-overlay';
@@ -86,10 +79,7 @@ class OpenCodeOverlayHost extends w.StatelessWidget {
       children: [
         w.Opacity(
           opacity: _open ? 0.4 : 1.0,
-          child: w.IgnorePointer(
-            ignoring: _open,
-            child: child,
-          ),
+          child: w.IgnorePointer(ignoring: _open, child: child),
         ),
         if (_open && dialog != null) ...[
           w.Positioned(
@@ -111,10 +101,7 @@ class OpenCodeOverlayHost extends w.StatelessWidget {
             top: 0,
             bottom: 0,
             child: w.Center(
-              child: w.FocusScope(
-                isTrapped: true,
-                child: dialog,
-              ),
+              child: w.FocusScope(isTrapped: true, child: dialog),
             ),
           ),
         ],
@@ -179,10 +166,7 @@ class OpenCodePickerShell extends w.StatelessWidget {
               ),
             ),
             w.SizedBox(height: 1),
-            if (search != null) ...[
-              search!,
-              w.SizedBox(height: 1),
-            ],
+            if (search != null) ...[search!, w.SizedBox(height: 1)],
             w.Expanded(child: body),
             w.Container(
               padding: const w.EdgeInsets.only(left: 4, right: 4, bottom: 1),
@@ -197,21 +181,19 @@ class OpenCodePickerShell extends w.StatelessWidget {
 }
 
 /// Standard footer hint bits for OpenCode pickers.
-List<w.Widget> openCodePickerHints({
-  required String countLabel,
-}) {
+List<w.Widget> openCodePickerHints({required String countLabel}) {
   w.Widget key(String t) => w.Text(
-        t,
-        style: style.Style()
-          ..foreground(OC.textMuted)
-          ..dim(),
-      );
+    t,
+    style: style.Style()
+      ..foreground(OC.textMuted)
+      ..dim(),
+  );
   w.Widget label(String t) => w.Text(
-        t,
-        style: style.Style()
-          ..foreground(OC.textMuted)
-          ..dim(),
-      );
+    t,
+    style: style.Style()
+      ..foreground(OC.textMuted)
+      ..dim(),
+  );
 
   return [
     key('↑↓'),

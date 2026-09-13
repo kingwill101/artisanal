@@ -37,9 +37,8 @@ mixin HotReloadMixin {
     Duration debounceInterval = const Duration(milliseconds: 500),
   }) {
     if (_reloader != null) return Future.value();
-    return _initialization ??= _initializeHotReload(
-      debounceInterval,
-    ).whenComplete(() => _initialization = null);
+    return _initialization ??= _initializeHotReload(debounceInterval)
+        .whenComplete(() => _initialization = null);
   }
 
   Future<void> _initializeHotReload(Duration debounceInterval) async {

@@ -284,8 +284,7 @@ void main() {
             ),
             (
               name: 'complex styling with multiple SGR sequences',
-              input:
-                  '\x1b[31;1;2;4mR\x1b[22;1med\x1b[0m \x1b[32;3mGreen\x1b[0m \x1b[34;9mBlue\x1b[0m \x1b[33;7mYellow\x1b[0m \x1b[35;5mPurple\x1b[0m',
+              input: '\x1b[31;1;2;4mR\x1b[22;1med\x1b[0m \x1b[32;3mGreen\x1b[0m \x1b[34;9mBlue\x1b[0m \x1b[33;7mYellow\x1b[0m \x1b[35;5mPurple\x1b[0m',
               expectedWidth: 28,
               expectedHeight: 1,
               expected: _bufferFromLines([
@@ -443,8 +442,7 @@ void main() {
             ),
             (
               name: 'different underline styles',
-              input:
-                  '\x1b[4:1mSingle\x1b[0m \x1b[4:2mDouble\x1b[0m \x1b[4:3mCurly\x1b[0m \x1b[4:4mDotted\x1b[0m \x1b[4:5mDashed\x1b[0m',
+              input: '\x1b[4:1mSingle\x1b[0m \x1b[4:2mDouble\x1b[0m \x1b[4:3mCurly\x1b[0m \x1b[4:4mDotted\x1b[0m \x1b[4:5mDashed\x1b[0m',
               expectedWidth: 33,
               expectedHeight: 1,
               expected: _bufferFromLines([
@@ -503,8 +501,7 @@ void main() {
             ),
             (
               name: 'truecolor and 256 color support',
-              input:
-                  '\x1b[38;2;255;0;0mRGB Red\x1b[0m \x1b[48;2;0;255;0mRGB Green BG\x1b[0m \x1b[38;5;33m256 Blue\x1b[0m',
+              input: '\x1b[38;2;255;0;0mRGB Red\x1b[0m \x1b[48;2;0;255;0mRGB Green BG\x1b[0m \x1b[38;5;33m256 Blue\x1b[0m',
               expectedWidth: 29,
               expectedHeight: 1,
               expected: _bufferFromLines([
@@ -543,8 +540,7 @@ void main() {
             ),
             (
               name: 'hyperlink support',
-              input:
-                  'Normal \x1b]8;;https://charm.sh\x1b\\Charm\x1b]8;;\x1b\\ Text \x1b]8;;https://github.com/charmbracelet\x1b\\GitHub\x1b]8;;\x1b\\',
+              input: 'Normal \x1b]8;;https://charm.sh\x1b\\Charm\x1b]8;;\x1b\\ Text \x1b]8;;https://github.com/charmbracelet\x1b\\GitHub\x1b]8;;\x1b\\',
               expectedWidth: 24,
               expectedHeight: 1,
               expected: _bufferFromLines([
@@ -577,8 +573,7 @@ void main() {
             ),
             (
               name: 'complex mixed styling with hyperlinks',
-              input:
-                  '\x1b[31;1;2;3mR\x1b[22;23;1med \x1b]8;;https://charm.sh\x1b\\\x1b[4mCharm\x1b]8;;\x1b\\\x1b[0m \x1b[38;5;33;48;2;0;100;0m\x1b]8;;https://github.com\x1b\\GitHub\x1b]8;;\x1b\\\x1b[0m',
+              input: '\x1b[31;1;2;3mR\x1b[22;23;1med \x1b]8;;https://charm.sh\x1b\\\x1b[4mCharm\x1b]8;;\x1b\\\x1b[0m \x1b[38;5;33;48;2;0;100;0m\x1b]8;;https://github.com\x1b\\GitHub\x1b]8;;\x1b\\\x1b[0m',
               expectedWidth: 16,
               expectedHeight: 1,
               expected: _bufferFromLines([

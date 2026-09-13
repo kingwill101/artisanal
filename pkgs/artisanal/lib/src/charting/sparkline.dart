@@ -2,7 +2,9 @@
 library;
 
 import 'package:ultraviolet/core.dart';
+
 import 'core.dart';
+
 import 'package:artisanal/style.dart';
 
 /// Block characters for sparkline rendering (9 levels: empty + 8 bars).

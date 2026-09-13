@@ -67,40 +67,37 @@ void main() {
       expect(caps.secondaryAttributes, [1, 4, 5]);
     });
 
-    test(
-      'tracks tertiary device attributes and infers image protocols from terminal version',
-      () {
-        final caps = TerminalCapabilities(env: const []);
+    test('tracks tertiary device attributes and infers image protocols from terminal version', () {
+      final caps = TerminalCapabilities(env: const []);
 
-        expect(
-          caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
-          isTrue,
-        );
-        expect(caps.tertiaryAttributes, 'Chrm');
-        expect(
-          caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
-          isFalse,
-        );
-        expect(
-          caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
-          isTrue,
-        );
-        expect(caps.terminalVersion, 'Ghostty 1.2.3');
-        expect(caps.hasKittyGraphics, isTrue);
-        expect(caps.hasITerm2, isFalse);
-        expect(
-          caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
-          isFalse,
-        );
+      expect(
+        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+        isTrue,
+      );
+      expect(caps.tertiaryAttributes, 'Chrm');
+      expect(
+        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+        isFalse,
+      );
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
+        isTrue,
+      );
+      expect(caps.terminalVersion, 'Ghostty 1.2.3');
+      expect(caps.hasKittyGraphics, isTrue);
+      expect(caps.hasITerm2, isFalse);
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
+        isFalse,
+      );
 
-        expect(
-          caps.updateFromEvent(const TerminalVersionEvent('iTerm2 3.5.0')),
-          isTrue,
-        );
-        expect(caps.terminalVersion, 'iTerm2 3.5.0');
-        expect(caps.hasITerm2, isTrue);
-      },
-    );
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('iTerm2 3.5.0')),
+        isTrue,
+      );
+      expect(caps.terminalVersion, 'iTerm2 3.5.0');
+      expect(caps.hasITerm2, isTrue);
+    });
 
     test('stores foreground, background, cursor, and palette reports', () {
       final caps = TerminalCapabilities(env: const []);

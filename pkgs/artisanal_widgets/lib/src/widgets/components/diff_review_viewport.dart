@@ -24,8 +24,10 @@ import 'diff_review_extents.dart';
 ///
 /// Keep drafts and provider payloads outside the widget tree, keyed by
 /// document/revision and thread ID: offscreen bodies are unmounted.
-typedef DiffReviewThreadBuilder =
-    Widget Function(BuildContext context, DiffReviewThreadPlacement placement);
+typedef DiffReviewThreadBuilder = Widget Function(
+  BuildContext context,
+  DiffReviewThreadPlacement placement,
+);
 
 /// Owns TEA review state and the single comment-inclusive scroll position.
 ///

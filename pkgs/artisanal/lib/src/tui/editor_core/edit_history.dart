@@ -2,16 +2,17 @@ library;
 
 typedef EditHistoryStateEquals<State> = bool Function(State a, State b);
 
-typedef EditHistoryCoalescePredicate<Action, State, Marker> =
-    bool Function(
-      Action action, {
-      required Action? lastAction,
-      required Marker? lastMarker,
-      required State currentState,
-    });
+typedef EditHistoryCoalescePredicate<Action, State, Marker> = bool Function(
+  Action action, {
+  required Action? lastAction,
+  required Marker? lastMarker,
+  required State currentState,
+});
 
-typedef EditHistoryMarkerBuilder<Action, State, Marker> =
-    Marker Function(Action action, State state);
+typedef EditHistoryMarkerBuilder<Action, State, Marker> = Marker Function(
+  Action action,
+  State state,
+);
 
 final class EditHistoryCheckpoint<Action, State, Marker> {
   const EditHistoryCheckpoint._({

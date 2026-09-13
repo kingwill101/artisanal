@@ -6,8 +6,10 @@ import '../command_palette.dart';
 typedef EditorCommandHandler<T> = bool Function(T target);
 
 /// Executes an editor command with a host-supplied argument such as insert text.
-typedef EditorCommandArgumentHandler<T> =
-    bool Function(T target, Object? argument);
+typedef EditorCommandArgumentHandler<T> = bool Function(
+  T target,
+  Object? argument,
+);
 
 /// Decides whether an editor command is currently available.
 typedef EditorCommandPredicate<T> = bool Function(T target);

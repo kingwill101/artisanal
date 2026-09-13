@@ -80,45 +80,22 @@ final class ChartMargins {
 }
 
 /// Grid line stroke style.
-enum GridStyle {
-  solid,
-  dotted,
-  dashed,
-}
+enum GridStyle { solid, dotted, dashed }
 
 /// Legend placement relative to the plot.
-enum LegendPosition {
-  top,
-  bottom,
-  right,
-}
+enum LegendPosition { top, bottom, right }
 
 /// Line interpolation style for line charts.
-enum LineStyle {
-  straight,
-  step,
-}
+enum LineStyle { straight, step }
 
 /// Bar / stacked-bar orientation.
-enum ChartOrientation {
-  vertical,
-  horizontal,
-}
+enum ChartOrientation { vertical, horizontal }
 
 /// Compact sparkline rendering style.
-enum SparklineStyle {
-  line,
-  bar,
-  dot,
-}
+enum SparklineStyle { line, bar, dot }
 
 /// Optional border style for chart containers (UI chrome).
-enum ChartBorderStyle {
-  single,
-  double,
-  rounded,
-  heavy,
-}
+enum ChartBorderStyle { single, double, rounded, heavy }
 
 /// Axis display options.
 final class AxisOptions {

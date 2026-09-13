@@ -1,8 +1,11 @@
 import 'package:artisanal/layout.dart' show Layout;
+
 import '_component_foundation.dart';
 import 'frame.dart' as widget_frame;
 import 'popup_menu.dart' show bestPopupAnchorRenderObject;
+
 import 'package:artisanal_widgets/src/widgets/core/element.dart';
+
 import 'dart:math' as math;
 
 import 'package:artisanal/runtime.dart';

@@ -5,7 +5,7 @@ import '../models/display_item.dart';
 
 /// Owns everything the work-queue pane needs to render.
 final class GithubQueueNotifier extends ChangeNotifier {
-  GithubQueueNotifier({int tabIndex = 2}) : _tabIndex = tabIndex;
+  GithubQueueNotifier({this._tabIndex = 2});
 
   int _tabIndex;
   GithubOverviewFilter _overviewFilter = GithubOverviewFilter.authored;

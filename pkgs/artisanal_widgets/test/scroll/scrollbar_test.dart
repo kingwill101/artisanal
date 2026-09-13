@@ -5,6 +5,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
+
 import '../testing/loose_layout_host.dart';
 
 Future<void> _pumpSmallRoot(WidgetTester tester, Widget child) =>
@@ -326,9 +327,8 @@ void main() {
       'releases hyperlink refs from scrollbar composition canvases',
       () async {
         final source = Canvas(10, 1);
-        StyledString(
-          Style().hyperlink('https://scroll.example').render('Link'),
-        ).draw(source, source.bounds());
+        StyledString(Style().hyperlink('https://scroll.example').render('Link'))
+            .draw(source, source.bounds());
         final probe = Cell(link: source.cellAt(0, 0)!.link);
         source.dispose();
         final linkId = probe.linkId!;
@@ -1230,8 +1230,7 @@ void main() {
         expect(
           viewAfter != viewBefore,
           isTrue,
-          reason:
-              'Scrollbar should repaint when controller scrollBy called externally',
+          reason: 'Scrollbar should repaint when controller scrollBy called externally',
         );
       } finally {
         await tester.dispose();

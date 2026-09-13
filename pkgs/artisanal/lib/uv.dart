@@ -114,4 +114,5 @@
 library;
 
 export 'package:ultraviolet/uv.dart';
+
 export 'src/uv/tui_adapter.dart';

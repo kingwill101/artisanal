@@ -1,6 +1,7 @@
 library;
 
 import 'package:ultraviolet/core.dart';
+
 import 'core.dart';
 
 /// A 2x4 sub-cell braille canvas for plotting terminal-native 2D graphics.

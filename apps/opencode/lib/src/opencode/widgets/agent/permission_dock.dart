@@ -5,11 +5,7 @@ import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 /// Action taken on a [PermissionDock].
-enum PermissionAction {
-  allow,
-  always,
-  reject,
-}
+enum PermissionAction { allow, always, reject }
 
 /// Bottom/session dock for agent permission prompts (OpenCode-style).
 ///
@@ -136,10 +132,7 @@ class PermissionDock extends w.StatelessWidget {
       return w.Column(
         gap: 0,
         crossAxisAlignment: w.CrossAxisAlignment.stretch,
-        children: [
-          badge,
-          titleText,
-        ],
+        children: [badge, titleText],
       );
     }
 
@@ -188,11 +181,7 @@ class PermissionDock extends w.StatelessWidget {
       gap: 1,
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [
-        w.Wrap(
-          spacing: 2,
-          runSpacing: 1,
-          children: chips,
-        ),
+        w.Wrap(spacing: 2, runSpacing: 1, children: chips),
         hints,
       ],
     );

@@ -10,11 +10,7 @@ import '../types.dart';
 import '../util.dart';
 
 /// Renders a sparkline chart onto [screen] within [area].
-void renderSparklineChart(
-  Screen screen,
-  Rectangle area,
-  SparklineProps props,
-) {
+void renderSparklineChart(Screen screen, Rectangle area, SparklineProps props) {
   final width = area.width;
   final height = area.height;
   if (width <= 0 || height <= 0 || props.data.isEmpty) return;
@@ -70,8 +66,13 @@ void renderSparklineChart(
         final y = ((plotH - 1) - (v - minV) / range * (plotH - 1))
             .round()
             .clamp(0, plotH - 1);
-        putCell(screen, x, y + titleOffset, LineChars.dot,
-            mergeStyle(lineColor, bg));
+        putCell(
+          screen,
+          x,
+          y + titleOffset,
+          LineChars.dot,
+          mergeStyle(lineColor, bg),
+        );
       }
     case SparklineStyle.line:
       for (var x = 0; x < width; x++) {
@@ -91,10 +92,22 @@ void renderSparklineChart(
   if (props.showMinMax ?? false) {
     final minStr = formatNumber(minV);
     final maxStr = formatNumber(maxV);
-    putText(screen, area, 0, titleOffset, maxStr,
-        mergeStyle(fg('#888888'), bg));
-    putText(screen, area, math.max(0, width - minStr.length), height - 1,
-        minStr, mergeStyle(fg('#888888'), bg));
+    putText(
+      screen,
+      area,
+      0,
+      titleOffset,
+      maxStr,
+      mergeStyle(fg('#888888'), bg),
+    );
+    putText(
+      screen,
+      area,
+      math.max(0, width - minStr.length),
+      height - 1,
+      minStr,
+      mergeStyle(fg('#888888'), bg),
+    );
   }
 }
 

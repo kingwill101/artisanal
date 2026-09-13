@@ -222,9 +222,9 @@ void main() {
     });
 
     await _waitUntil(
-      () => Layout.stripAnsi(
-        program.currentModel?.view().toString() ?? '',
-      ).contains('Dismiss'),
+      () =>
+          Layout.stripAnsi(program.currentModel?.view().toString() ?? '')
+              .contains('Dismiss'),
     );
     final output = Layout.stripAnsi(program.currentModel!.view().toString());
     expect(output, contains('paint failure'));

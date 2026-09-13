@@ -3,6 +3,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
+
 import '../testing/loose_layout_host.dart';
 
 Future<void> _pumpSmallRoot(WidgetTester tester, w.Widget child) =>
@@ -47,9 +48,8 @@ class _PushPageState extends w.State<_PushPage> {
       final char = String.fromCharCodes(msg.key.runes);
       if (char == 'p') {
         // Push a new page.
-        w.Navigator.of(
-          context,
-        ).pushWidget(_TestPage(widget.targetLabel), name: widget.targetName);
+        w.Navigator.of(context)
+            .pushWidget(_TestPage(widget.targetLabel), name: widget.targetName);
         return null;
       }
       if (char == 'n') {

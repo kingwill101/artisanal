@@ -453,9 +453,8 @@ void _validateAnsi(String text) {
       if (text.codeUnitAt(i + 1) == 0x5b) {
         final end = text.indexOf('m', i + 2);
         if (end < 0 ||
-            !RegExp(
-              r'^\x1b\[[0-9;:]*m$',
-            ).hasMatch(text.substring(i, end + 1))) {
+            !RegExp(r'^\x1b\[[0-9;:]*m$')
+                .hasMatch(text.substring(i, end + 1))) {
           throw const FormatException('only SGR ANSI sequences are supported');
         }
         i = end;

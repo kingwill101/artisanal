@@ -10,11 +10,7 @@ import '../types.dart';
 import '../util.dart';
 
 /// Renders a gauge chart onto [screen] within [area].
-void renderGaugeChart(
-  Screen screen,
-  Rectangle area,
-  GaugeChartProps props,
-) {
+void renderGaugeChart(Screen screen, Rectangle area, GaugeChartProps props) {
   final width = area.width;
   final height = area.height;
   if (width <= 0 || height <= 0) return;
@@ -46,8 +42,8 @@ void renderGaugeChart(
   final chartH = height - margins.top - margins.bottom - titleOffset;
   if (chartW < 4 || chartH < 3) return;
 
-  final textRows = (props.showValue == false ? 0 : 1) +
-      (props.label != null ? 1 : 0);
+  final textRows =
+      (props.showValue == false ? 0 : 1) + (props.label != null ? 1 : 0);
   final arcAreaH = chartH - textRows;
   if (arcAreaH < 2) return;
 
@@ -61,7 +57,8 @@ void renderGaugeChart(
   final thickness = math.max(3, (outerRadius * 0.2).floor()).toDouble();
   final innerRadius = math.max(0, outerRadius - thickness);
 
-  final thresholds = props.thresholds ??
+  final thresholds =
+      props.thresholds ??
       const [
         GaugeThreshold(value: 0.33, color: '#4CAF50'),
         GaugeThreshold(value: 0.66, color: '#FFC107'),
@@ -106,23 +103,9 @@ void renderGaugeChart(
 
   final offsetX = margins.left;
   final offsetY = margins.top + titleOffset;
-  unfilledCanvas.render(
-    screen,
-    area,
-    offsetX,
-    offsetY,
-    fg('#333333'),
-    bg,
-  );
+  unfilledCanvas.render(screen, area, offsetX, offsetY, fg('#333333'), bg);
   for (final entry in colorCanvasMap.entries) {
-    entry.value.render(
-      screen,
-      area,
-      offsetX,
-      offsetY,
-      fg(entry.key),
-      bg,
-    );
+    entry.value.render(screen, area, offsetX, offsetY, fg(entry.key), bg);
   }
 
   final centerTermX = margins.left + chartW ~/ 2;

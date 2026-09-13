@@ -242,8 +242,7 @@ typedef BoxContentStyleFunc = Style? Function(String line, int lineIndex);
 /// ```
 class BoxBuilder extends DisplayComponent {
   /// Creates a new empty box builder.
-  BoxBuilder({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  BoxBuilder({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

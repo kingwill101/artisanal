@@ -86,8 +86,10 @@ final class ReloadController {
 }
 
 /// Builder used by [ReloadHost].
-typedef ReloadWidgetBuilder =
-    Widget Function(BuildContext context, int revision);
+typedef ReloadWidgetBuilder = Widget Function(
+  BuildContext context,
+  int revision,
+);
 
 /// Exposes a [ReloadController] to descendant widgets.
 class ReloadScope extends InheritedWidget {

@@ -42,8 +42,7 @@ final class GithubActionPrompt {
         'Enter comma-separated label names for ${item.kind.toUpperCase()} #${item.number}.',
       GithubActionPromptKind.removeLabels =>
         'Enter comma-separated labels to remove from PR #${item.number}.',
-      GithubActionPromptKind.mergePullRequest =>
-        'Enter merge, squash, rebase, auto-merge, disable-auto, or an admin-* action.',
+      GithubActionPromptKind.mergePullRequest => 'Enter merge, squash, rebase, auto-merge, disable-auto, or an admin-* action.',
       GithubActionPromptKind.closePullRequest =>
         'Type close to close PR #${item.number}.',
     };

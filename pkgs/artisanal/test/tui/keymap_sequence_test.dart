@@ -136,9 +136,7 @@ void main() {
         tui.ShortcutSurface(
           id: 'dialog',
           exclusive: true,
-          bindings: [
-            tui.ShortcutBinding.single(id: 'confirm', key: 'y'),
-          ],
+          bindings: [tui.ShortcutBinding.single(id: 'confirm', key: 'y')],
         ),
       );
       hub.pop();

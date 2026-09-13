@@ -5,6 +5,7 @@ import 'dart:developer' as dev;
 import '../platform/platform.dart' as platform;
 
 import 'package:ultraviolet/unicode.dart' as uni_width;
+
 import 'cmd.dart';
 import 'degradation.dart';
 import 'devtools.dart';
@@ -25,10 +26,13 @@ import '../style/chars.dart';
 import '../style/color.dart' show Color;
 import 'background_color_probe.dart';
 import 'uv_capability_probe.dart';
+
 import 'package:ultraviolet/terminal.dart';
+
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 import 'hot_reload_mixin.dart';
 import 'program_devtools.dart';
+
 import 'package:ultraviolet/input.dart' as uvev;
 
 /// The TUI program runtime.
@@ -920,8 +924,9 @@ class ProgramOptions {
 /// Hosts package the terminal/backend choice separately from the model and
 /// other runtime options so callers can reuse the same launch surface across
 /// local stdio, split-TTY, embedded, or future remote backends.
-typedef ProgramHostResolver =
-    ProgramHostBinding Function(ProgramOptions options);
+typedef ProgramHostResolver = ProgramHostBinding Function(
+  ProgramOptions options,
+);
 
 /// Resolved runtime configuration produced by a [ProgramHost].
 ///
@@ -1949,9 +1954,8 @@ class Program<M extends Model> with HotReloadMixin {
   void _startMetricsTimer() {
     if (_metricsTimer != null) return;
     if (_options.metricsInterval <= Duration.zero) return;
-    if (_model case RenderMetricsModel(
-      :final wantsRenderMetrics,
-    ) when !wantsRenderMetrics) {
+    if (_model case RenderMetricsModel(:final wantsRenderMetrics)
+        when !wantsRenderMetrics) {
       return;
     }
 
@@ -1971,9 +1975,8 @@ class Program<M extends Model> with HotReloadMixin {
   void _startFrameTickTimer() {
     if (_frameTickTimer != null) return;
     if (!_options.frameTick) return;
-    if (_model case FrameTickModel(
-      :final wantsFrameTicks,
-    ) when !wantsFrameTicks) {
+    if (_model case FrameTickModel(:final wantsFrameTicks)
+        when !wantsFrameTicks) {
       return;
     }
 

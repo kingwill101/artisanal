@@ -2,6 +2,8 @@
 
 ## 0.6.2
 
+- Require Dart SDK 3.13.0 or newer.
+
 ### Added
 
 - Added the reusable interactive `TreeModel`, `TreeItem`, and projected

@@ -12,7 +12,7 @@ half-block fallback). Keep renderer concerns (diff, sync output, frame
 behavior) in this package and out of `artisanal` / `artisanal_widgets`.
 
 Part of a Dart workspace (`resolution: workspace` in the root `pubspec.yaml`).
-SDK: `>=3.10.0 <4.0.0`.
+SDK: `>=3.13.0 <4.0.0`.
 
 ## Commands
 

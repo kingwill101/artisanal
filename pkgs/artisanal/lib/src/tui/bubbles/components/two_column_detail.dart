@@ -67,8 +67,7 @@ typedef TwoColumnStyleFunc = Style? Function(String text, bool isLeft);
 /// ```
 class TwoColumnDetail extends DisplayComponent {
   /// Creates a new empty two-column detail builder.
-  TwoColumnDetail({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  TwoColumnDetail({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 
@@ -215,8 +214,7 @@ class TwoColumnDetail extends DisplayComponent {
 /// ```
 class TwoColumnDetailList extends DisplayComponent {
   /// Creates a new empty two-column detail list builder.
-  TwoColumnDetailList({RenderConfig renderConfig = const RenderConfig()})
-    : _renderConfig = renderConfig;
+  TwoColumnDetailList({this._renderConfig = const RenderConfig()});
 
   final RenderConfig _renderConfig;
 

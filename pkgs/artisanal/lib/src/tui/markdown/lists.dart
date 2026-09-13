@@ -1,7 +1,9 @@
 import 'package:markdown/markdown.dart' show Element, Text;
 
 import '../../style/style.dart';
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
 import 'render_context.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────

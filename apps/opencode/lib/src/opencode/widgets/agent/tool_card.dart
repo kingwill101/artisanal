@@ -5,12 +5,7 @@ import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 /// Lifecycle status for a [ToolCard] / [ToolCardInline].
-enum ToolCardStatus {
-  pending,
-  running,
-  completed,
-  error,
-}
+enum ToolCardStatus { pending, running, completed, error }
 
 /// Compact one-line tool invocation (OpenCode-style inline tool).
 class ToolCardInline extends w.StatelessWidget {
@@ -91,10 +86,7 @@ class ToolCardInline extends w.StatelessWidget {
                 style: theme.bodySmall.copy()..foreground(muted),
               )
             else if (isError)
-              w.Text(
-                errorGlyph,
-                style: theme.bodySmall.copy()..foreground(err),
-              )
+              w.Text(errorGlyph, style: theme.bodySmall.copy()..foreground(err))
             else
               w.Text(icon, style: theme.bodySmall.copy()..foreground(fg)),
             w.Text(

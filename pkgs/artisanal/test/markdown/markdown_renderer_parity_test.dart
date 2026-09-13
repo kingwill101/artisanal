@@ -26,12 +26,10 @@ void main() {
       test('matches legacy output for sample: ${sample.split("\n").first}', () {
         final options = AnsiRendererOptions(width: 80);
         final nodes = markdown_backend.parseMarkdownNodes(sample);
-        final legacyOutput = legacy.AnsiRenderer(
-          options: options,
-        ).render(nodes);
-        final modernOutput = modern.MarkdownRenderer(
-          options: options,
-        ).render(nodes);
+        final legacyOutput = legacy.AnsiRenderer(options: options)
+            .render(nodes);
+        final modernOutput = modern.MarkdownRenderer(options: options)
+            .render(nodes);
         expect(modernOutput, legacyOutput);
       });
     }

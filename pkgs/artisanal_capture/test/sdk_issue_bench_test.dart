@@ -31,13 +31,10 @@ void main() {
     'matches the attributed GitHub issue and keeps its external shape',
     () async {
       final file = await _fixture('dart_sdk_64170.md');
-      final metadata =
-          jsonDecode(
-                await File(
-                  '${file.parent.path}/dart_sdk_64170.source.json',
-                ).readAsString(),
-              )
-              as Map<String, dynamic>;
+      final metadata = jsonDecode(
+        await File('${file.parent.path}/dart_sdk_64170.source.json')
+            .readAsString(),
+      ) as Map<String, dynamic>;
       final source = await file.readAsString();
       expect(
         sha256.convert(await file.readAsBytes()).toString(),

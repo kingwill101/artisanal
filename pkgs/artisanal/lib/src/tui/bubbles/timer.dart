@@ -76,14 +76,11 @@ class TimerModel extends ViewComponent {
   TimerModel._({
     required this.timeout,
     required this.interval,
-    required bool running,
-    required int id,
-    required int tag,
-    required DateTime Function() nowProvider,
-  }) : _running = running,
-       _nowProvider = nowProvider,
-       _id = id,
-       _tag = tag;
+    required this._running,
+    required this._id,
+    required this._tag,
+    required this._nowProvider,
+  });
 
   /// The duration to count down from.
   final Duration timeout;

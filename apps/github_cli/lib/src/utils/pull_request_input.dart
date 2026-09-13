@@ -14,9 +14,8 @@ GithubPullRequestTarget? parseGithubPullRequestTarget(String? input) {
   final raw = input?.trim();
   if (raw == null || raw.isEmpty) return null;
 
-  final shorthand = RegExp(
-    r'^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(\d+)$',
-  ).firstMatch(raw);
+  final shorthand = RegExp(r'^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(\d+)$')
+      .firstMatch(raw);
   if (shorthand != null) {
     return _target(shorthand.group(1), shorthand.group(2));
   }

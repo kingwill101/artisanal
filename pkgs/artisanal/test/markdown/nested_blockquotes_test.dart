@@ -39,8 +39,12 @@ void main() {
 Outside
 ''';
         final lines = render(source).split('\n');
-        final innerStart = lines.indexWhere((line) => line.contains('Inner heading'));
-        final innerEnd = lines.indexWhere((line) => line.contains('Outer again'));
+        final innerStart = lines.indexWhere(
+          (line) => line.contains('Inner heading'),
+        );
+        final innerEnd = lines.indexWhere(
+          (line) => line.contains('Outer again'),
+        );
         expect(innerStart, greaterThan(0));
         expect(innerEnd, greaterThan(innerStart));
         for (final line in lines.sublist(innerStart, innerEnd)) {
@@ -48,8 +52,10 @@ Outside
           expect(line, startsWith('│'), reason: 'Escaped quote row: $line');
         }
         expect(lines, contains('Outside'));
-        expect(lines.where((line) => line.contains('Inner heading')).single,
-            startsWith('│ │ '));
+        expect(
+          lines.where((line) => line.contains('Inner heading')).single,
+          startsWith('│ │ '),
+        );
       });
 
       test('prefixes every wrapped list line without exceeding width', () {
@@ -67,9 +73,10 @@ Outside
 
       test('hard breaks preserve inline content order', () {
         for (final width in <int?>[null, 20]) {
-          final lines = render('> first **bold**  \n> second', width: width)
-              .trimRight()
-              .split('\n');
+          final lines = render(
+            '> first **bold**  \n> second',
+            width: width,
+          ).trimRight().split('\n');
           expect(lines, ['│ first bold', '│ second']);
         }
       });

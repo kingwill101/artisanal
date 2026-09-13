@@ -139,9 +139,8 @@ final class GalleryCommand extends Command<void> {
         String? ansi;
         if (source != null && markerMatcher != null) {
           try {
-            ansi = MarkdownRenderer(
-              options: AnsiRendererOptions(width: width),
-            ).renderToAnsi(source);
+            ansi = MarkdownRenderer(options: AnsiRendererOptions(width: width))
+                .renderToAnsi(source);
             final lines =
                 (ansi.endsWith('\n')
                         ? ansi.substring(0, ansi.length - 1)
@@ -197,15 +196,13 @@ final class GalleryCommand extends Command<void> {
         // Keep underlying evidence even when the strict rasterizer rejects it.
         if (ansi != null) await destination('$stem.ansi').writeAsString(ansi);
         if (capture != null) {
-          await destination(
-            '$stem.json',
-          ).writeAsString(jsonEncode(capture.toJson()));
+          await destination('$stem.json')
+              .writeAsString(jsonEncode(capture.toJson()));
         }
         if (image != null) {
           await destination('$stem.png').writeAsBytes(image.png);
-          await destination(
-            '$stem.html',
-          ).writeAsString(image.toHtml(title: '$name · $width columns'));
+          await destination('$stem.html')
+              .writeAsString(image.toHtml(title: '$name · $width columns'));
         }
         entries.add(
           GalleryEntry(

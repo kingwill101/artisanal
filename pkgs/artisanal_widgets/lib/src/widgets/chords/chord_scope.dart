@@ -12,13 +12,10 @@ import 'chord_controller.dart';
 /// Snapshots [isActive] / [prefixLabel] so [updateShouldNotify] works even
 /// though [controller] is a mutable listenable.
 class ChordScope extends InheritedWidget {
-  ChordScope({
-    required this.controller,
-    required super.child,
-    super.key,
-  })  : isActive = controller.isActive,
-        prefixLabel = controller.prefixLabel,
-        generation = controller.generation;
+  ChordScope({required this.controller, required super.child, super.key})
+    : isActive = controller.isActive,
+      prefixLabel = controller.prefixLabel,
+      generation = controller.generation;
 
   /// Live chord definitions + pending state.
   final ChordController controller;

@@ -68,17 +68,15 @@ void main() {
 
     group('SetYOffset', () {
       test('sets Y offset', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4\nline5\nline6');
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4\nline5\nline6');
         final updated = viewport.setYOffset(2);
         expect(updated.yOffset, 2);
       });
 
       test('clamps Y offset to max', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4');
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4');
         final updated = viewport.setYOffset(100);
         expect(updated.yOffset, 1); // max is lines - height = 4 - 3 = 1
       });
@@ -92,9 +90,8 @@ void main() {
 
     group('SetXOffset', () {
       test('sets X offset', () {
-        final viewport = ViewportModel(
-          width: 10,
-        ).setContent('this is a very long line that exceeds width');
+        final viewport = ViewportModel(width: 10)
+            .setContent('this is a very long line that exceeds width');
         final updated = viewport.setXOffset(5);
         expect(updated.xOffset, 5);
       });
@@ -176,34 +173,31 @@ void main() {
 
     group('ScrollDown', () {
       test('scrolls down by n lines', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4\nline5\nline6');
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4\nline5\nline6');
         final updated = viewport.scrollDown(2);
         expect(updated.yOffset, 2);
       });
 
       test('does not scroll past bottom', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4');
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4');
         final updated = viewport.scrollDown(100);
         expect(updated.yOffset, 1); // max offset
       });
 
       test('does nothing when already at bottom', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4').setYOffset(1);
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4')
+            .setYOffset(1);
         expect(viewport.atBottom, isTrue);
         final updated = viewport.scrollDown(1);
         expect(updated, viewport);
       });
 
       test('does nothing for 0 lines', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4');
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4');
         final updated = viewport.scrollDown(0);
         expect(updated, viewport);
       });
@@ -211,25 +205,24 @@ void main() {
 
     group('ScrollUp', () {
       test('scrolls up by n lines', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4\nline5\nline6').setYOffset(3);
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4\nline5\nline6')
+            .setYOffset(3);
         final updated = viewport.scrollUp(2);
         expect(updated.yOffset, 1);
       });
 
       test('does not scroll past top', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4').setYOffset(1);
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4')
+            .setYOffset(1);
         final updated = viewport.scrollUp(100);
         expect(updated.yOffset, 0);
       });
 
       test('does nothing when already at top', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4');
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4');
         expect(viewport.atTop, isTrue);
         final updated = viewport.scrollUp(1);
         expect(updated, viewport);
@@ -260,17 +253,15 @@ void main() {
 
     group('PageDown', () {
       test('scrolls down by page height', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 5)
+            .setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
         final updated = viewport.pageDown();
         expect(updated.yOffset, 5);
       });
 
       test('does nothing when at bottom', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent('line1\nline2\nline3');
+        final viewport = ViewportModel(height: 5)
+            .setContent('line1\nline2\nline3');
         expect(viewport.atBottom, isTrue);
         final updated = viewport.pageDown();
         expect(updated, viewport);
@@ -287,9 +278,8 @@ void main() {
       });
 
       test('does nothing when at top', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 5)
+            .setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
         expect(viewport.atTop, isTrue);
         final updated = viewport.pageUp();
         expect(updated, viewport);
@@ -298,9 +288,8 @@ void main() {
 
     group('HalfPageDown', () {
       test('scrolls down by half page height', () {
-        final viewport = ViewportModel(
-          height: 10,
-        ).setContent(List.generate(30, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 10)
+            .setContent(List.generate(30, (i) => 'line${i + 1}').join('\n'));
         final updated = viewport.halfPageDown();
         expect(updated.yOffset, 5);
       });
@@ -326,9 +315,8 @@ void main() {
       });
 
       test('does nothing when already at top', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 5)
+            .setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
         expect(viewport.atTop, isTrue);
         final updated = viewport.gotoTop();
         expect(updated, viewport);
@@ -337,9 +325,8 @@ void main() {
 
     group('GotoBottom', () {
       test('goes to bottom', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 5)
+            .setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
         final updated = viewport.gotoBottom();
         expect(updated.yOffset, 15); // 20 lines - 5 height = 15
       });
@@ -413,25 +400,23 @@ void main() {
 
     group('AtBottom', () {
       test('returns true when at bottom', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent('line1\nline2\nline3\nline4').setYOffset(1);
+        final viewport = ViewportModel(height: 3)
+            .setContent('line1\nline2\nline3\nline4')
+            .setYOffset(1);
         expect(viewport.atBottom, isTrue);
       });
 
       test('returns false when not at bottom', () {
-        final viewport = ViewportModel(
-          height: 3,
-        ).setContent(List.generate(10, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 3)
+            .setContent(List.generate(10, (i) => 'line${i + 1}').join('\n'));
         expect(viewport.atBottom, isFalse);
       });
     });
 
     group('ScrollPercent', () {
       test('returns 0 at top', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 5)
+            .setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
         expect(viewport.scrollPercent, 0.0);
       });
 
@@ -443,25 +428,22 @@ void main() {
       });
 
       test('returns 1 when content fits in viewport', () {
-        final viewport = ViewportModel(
-          height: 10,
-        ).setContent('line1\nline2\nline3');
+        final viewport = ViewportModel(height: 10)
+            .setContent('line1\nline2\nline3');
         expect(viewport.scrollPercent, 1.0);
       });
     });
 
     group('VisibleLineCount', () {
       test('returns visible line count', () {
-        final viewport = ViewportModel(
-          height: 5,
-        ).setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
+        final viewport = ViewportModel(height: 5)
+            .setContent(List.generate(20, (i) => 'line${i + 1}').join('\n'));
         expect(viewport.visibleLineCount, 5);
       });
 
       test('returns line count when content is shorter than viewport', () {
-        final viewport = ViewportModel(
-          height: 10,
-        ).setContent('line1\nline2\nline3');
+        final viewport = ViewportModel(height: 10)
+            .setContent('line1\nline2\nline3');
         expect(viewport.visibleLineCount, 3);
       });
     });

@@ -23,10 +23,9 @@ final class EditBuffer {
     int width = 0,
     int height = 0,
     bool softWrap = true,
-    int historyLimit = 100,
+    this._historyLimit = 100,
   }) : _document = TextDocument(text: text),
-       _view = TextView(width: width, height: height, softWrap: softWrap),
-       _historyLimit = historyLimit {
+       _view = TextView(width: width, height: height, softWrap: softWrap) {
     syncEditorStateFromOffsets(_document, _state, cursorOffset: 0);
   }
 

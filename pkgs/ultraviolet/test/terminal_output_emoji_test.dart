@@ -323,115 +323,105 @@ void main() {
       },
     );
 
-    test(
-      '_transformLine correctly updates line with placeholder at firstCell boundary',
-      () {
-        const w = 20;
-        const h = 1;
-        final out = _TestSink();
-        final r = UvTerminalRenderer(
-          out,
-          env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
-        );
-        r.setFullscreen(true);
-        r.setRelativeCursor(false);
-        r.setScrollOptim(false);
-        r.saveCursor();
-        r.erase();
-        r.resize(w, h);
+    test('_transformLine correctly updates line with placeholder at firstCell boundary', () {
+      const w = 20;
+      const h = 1;
+      final out = _TestSink();
+      final r = UvTerminalRenderer(
+        out,
+        env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+      );
+      r.setFullscreen(true);
+      r.setRelativeCursor(false);
+      r.setScrollOptim(false);
+      r.saveCursor();
+      r.erase();
+      r.resize(w, h);
 
-        // Frame 1: "AB😀EFGHIJKLMNOPQRST" — emoji at positions 2-3
-        final text1 = 'AB😀EFGHIJKLMNOPQRST';
-        var scr = drawString(text1, w, h);
-        r.render(scr.buffer);
-        r.flush();
-        out.reset();
+      // Frame 1: "AB😀EFGHIJKLMNOPQRST" — emoji at positions 2-3
+      final text1 = 'AB😀EFGHIJKLMNOPQRST';
+      var scr = drawString(text1, w, h);
+      r.render(scr.buffer);
+      r.flush();
+      out.reset();
 
-        // Frame 2: "AB-DEFGHIJKLMNOPQRST" — regular chars replace emoji
-        // Position 2 was emoji origin (width 2), now it's '-' (width 1)
-        // Position 3 was placeholder (width 0), now it's 'D' (width 1)
-        // So firstCell should be 2 (first difference)
-        final text2 = 'AB-DEFGHIJKLMNOPQRST';
-        scr = drawString(text2, w, h);
-        r.render(scr.buffer);
-        r.flush();
+      // Frame 2: "AB-DEFGHIJKLMNOPQRST" — regular chars replace emoji
+      // Position 2 was emoji origin (width 2), now it's '-' (width 1)
+      // Position 3 was placeholder (width 0), now it's 'D' (width 1)
+      // So firstCell should be 2 (first difference)
+      final text2 = 'AB-DEFGHIJKLMNOPQRST';
+      scr = drawString(text2, w, h);
+      r.render(scr.buffer);
+      r.flush();
 
-        final output = out.value;
-        // Verify the output doesn't skip any characters
-        // The terminal should show "AB-DEFGHIJKLMNOPQRST"
-        // Check that '-' and 'D' are in the output
-        expect(
-          output.contains('-D'),
-          true,
-          reason: 'Output should contain "-D" where emoji was replaced',
-        );
-      },
-    );
+      final output = out.value;
+      // Verify the output doesn't skip any characters
+      // The terminal should show "AB-DEFGHIJKLMNOPQRST"
+      // Check that '-' and 'D' are in the output
+      expect(
+        output.contains('-D'),
+        true,
+        reason: 'Output should contain "-D" where emoji was replaced',
+      );
+    });
 
-    test(
-      'differential update when only scrollbar column changes (same content, different style)',
-      () {
-        const w = 20;
-        const h = 3;
-        final out = _TestSink();
-        final r = UvTerminalRenderer(
-          out,
-          env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
-        );
-        r.setFullscreen(true);
-        r.setRelativeCursor(false);
-        r.setScrollOptim(false);
-        r.saveCursor();
-        r.erase();
-        r.resize(w, h);
+    test('differential update when only scrollbar column changes (same content, different style)', () {
+      const w = 20;
+      const h = 3;
+      final out = _TestSink();
+      final r = UvTerminalRenderer(
+        out,
+        env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+      );
+      r.setFullscreen(true);
+      r.setRelativeCursor(false);
+      r.setScrollOptim(false);
+      r.saveCursor();
+      r.erase();
+      r.resize(w, h);
 
-        // Frame 1: content with scrollbar track at last column
-        final scr1 = ScreenBuffer(w, h);
-        // Fill with content
-        final ss1 = StyledString(
-          'Hello world pad!!\nLine two padding!!\nLine three paddin!',
-        )..wrap = true;
-        ss1.draw(scr1, scr1.bounds());
+      // Frame 1: content with scrollbar track at last column
+      final scr1 = ScreenBuffer(w, h);
+      // Fill with content
+      final ss1 = StyledString(
+        'Hello world pad!!\nLine two padding!!\nLine three paddin!',
+      )..wrap = true;
+      ss1.draw(scr1, scr1.bounds());
 
-        // Put scrollbar track char at last column of each line
-        final trackStyle = UvStyle(fg: const UvColor.indexed256(8));
-        for (var y = 0; y < h; y++) {
-          scr1.setCell(
-            w - 1,
-            y,
-            Cell(content: '│', width: 1, style: trackStyle),
-          );
-        }
-        r.render(scr1.buffer);
-        r.flush();
-        out.reset();
+      // Put scrollbar track char at last column of each line
+      final trackStyle = UvStyle(fg: const UvColor.indexed256(8));
+      for (var y = 0; y < h; y++) {
+        scr1.setCell(w - 1, y, Cell(content: '│', width: 1, style: trackStyle));
+      }
+      r.render(scr1.buffer);
+      r.flush();
+      out.reset();
 
-        // Frame 2: same content, but scrollbar thumb at line 1 instead of track
-        final scr2 = ScreenBuffer(w, h);
-        final ss2 = StyledString(
-          'Hello world pad!!\nLine two padding!!\nLine three paddin!',
-        )..wrap = true;
-        ss2.draw(scr2, scr2.bounds());
+      // Frame 2: same content, but scrollbar thumb at line 1 instead of track
+      final scr2 = ScreenBuffer(w, h);
+      final ss2 = StyledString(
+        'Hello world pad!!\nLine two padding!!\nLine three paddin!',
+      )..wrap = true;
+      ss2.draw(scr2, scr2.bounds());
 
-        // Track on line 0 and 2, thumb on line 1
-        final thumbStyle = UvStyle(fg: const UvColor.indexed256(12));
-        scr2.setCell(w - 1, 0, Cell(content: '│', width: 1, style: trackStyle));
-        scr2.setCell(w - 1, 1, Cell(content: '█', width: 1, style: thumbStyle));
-        scr2.setCell(w - 1, 2, Cell(content: '│', width: 1, style: trackStyle));
+      // Track on line 0 and 2, thumb on line 1
+      final thumbStyle = UvStyle(fg: const UvColor.indexed256(12));
+      scr2.setCell(w - 1, 0, Cell(content: '│', width: 1, style: trackStyle));
+      scr2.setCell(w - 1, 1, Cell(content: '█', width: 1, style: thumbStyle));
+      scr2.setCell(w - 1, 2, Cell(content: '│', width: 1, style: trackStyle));
 
-        r.render(scr2.buffer);
-        r.flush();
+      r.render(scr2.buffer);
+      r.flush();
 
-        // The output should contain the thumb char and/or cursor movement to
-        // update just the scrollbar column
-        final output = out.value;
-        expect(
-          output.contains('█'),
-          true,
-          reason: 'Should emit the scrollbar thumb character',
-        );
-      },
-    );
+      // The output should contain the thumb char and/or cursor movement to
+      // update just the scrollbar column
+      final output = out.value;
+      expect(
+        output.contains('█'),
+        true,
+        reason: 'Should emit the scrollbar thumb character',
+      );
+    });
 
     test('multi-frame scroll simulation verifies curbuf consistency', () {
       const w = 30;

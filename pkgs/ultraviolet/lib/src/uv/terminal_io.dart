@@ -58,8 +58,7 @@ StreamSubscription<Object?>? watchSigint(void Function() handler) =>
 
 void exitProcess() => exit(0);
 
-bool isStdin(Stream<List<int>> input) =>
-    input == stdin || _usingNativeInput;
+bool isStdin(Stream<List<int>> input) => input == stdin || _usingNativeInput;
 
 bool get stdinHasTerminal => stdin.hasTerminal;
 

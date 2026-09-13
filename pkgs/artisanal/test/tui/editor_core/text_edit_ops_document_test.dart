@@ -65,40 +65,34 @@ void main() {
       },
     );
 
-    test(
-      'insertTextIntoDocument inserts text at the cursor through the string path',
-      () {
-        final document = TextDocument(text: 'ab\ncd');
+    test('insertTextIntoDocument inserts text at the cursor through the string path', () {
+      final document = TextDocument(text: 'ab\ncd');
 
-        final result = insertTextIntoDocument(document, 3, 'XY');
+      final result = insertTextIntoDocument(document, 3, 'XY');
 
-        expect(document.text, 'ab\nXYcd');
-        expect(result.cursorOffset, 5);
-        expect(
-          result.change.startPosition,
-          const TextPosition(line: 1, column: 0),
-        );
-        expect(
-          result.change.newEndPosition,
-          const TextPosition(line: 1, column: 2),
-        );
-      },
-    );
+      expect(document.text, 'ab\nXYcd');
+      expect(result.cursorOffset, 5);
+      expect(
+        result.change.startPosition,
+        const TextPosition(line: 1, column: 0),
+      );
+      expect(
+        result.change.newEndPosition,
+        const TextPosition(line: 1, column: 2),
+      );
+    });
 
-    test(
-      'deletePreviousDocumentGrapheme removes one grapheme and rewinds the cursor',
-      () {
-        final document = TextDocument(text: 'a\nb');
+    test('deletePreviousDocumentGrapheme removes one grapheme and rewinds the cursor', () {
+      final document = TextDocument(text: 'a\nb');
 
-        final result = deletePreviousDocumentGrapheme(document, 2);
+      final result = deletePreviousDocumentGrapheme(document, 2);
 
-        expect(document.text, 'ab');
-        expect(result.cursorOffset, 1);
-        expect(result.change.startOffset, 1);
-        expect(result.change.oldEndOffset, 2);
-        expect(result.change.newEndOffset, 1);
-      },
-    );
+      expect(document.text, 'ab');
+      expect(result.cursorOffset, 1);
+      expect(result.change.startOffset, 1);
+      expect(result.change.oldEndOffset, 2);
+      expect(result.change.newEndOffset, 1);
+    });
 
     test('deleteNextDocumentGrapheme is a no-op at end of document', () {
       final document = TextDocument(text: 'abc');

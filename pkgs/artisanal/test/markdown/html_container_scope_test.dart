@@ -19,11 +19,9 @@ void main() {
 After
 ''');
 
-      final quote =
-          nodes.singleWhere(
-                (node) => node is md.Element && node.tag == 'blockquote',
-              )
-              as md.Element;
+      final quote = nodes.singleWhere(
+        (node) => node is md.Element && node.tag == 'blockquote',
+      ) as md.Element;
       expect(quote.children, hasLength(1));
       expect((quote.children!.single as md.Element).tag, equals('ul'));
       expect(
@@ -56,11 +54,9 @@ After
       );
       expect(details, hasLength(1));
       final outer = details.single;
-      final inner =
-          outer.children!.singleWhere(
-                (node) => node is md.Element && node.tag == 'details',
-              )
-              as md.Element;
+      final inner = outer.children!.singleWhere(
+        (node) => node is md.Element && node.tag == 'details',
+      ) as md.Element;
       expect(
         inner.children!.whereType<md.Element>().map((node) => node.tag),
         contains('p'),
@@ -157,11 +153,8 @@ Body
     test('restores rows and cells without HTML table foster-parenting', () {
       final row = md.Element('tr', [md.Element.text('td', 'Cell')]);
       final table =
-          normalizeMarkdownNodes([
-                md.Text('<table>'),
-                row,
-                md.Text('</table>'),
-              ]).single
+          normalizeMarkdownNodes([md.Text('<table>'), row, md.Text('</table>')])
+                  .single
               as md.Element;
       expect(table.tag, 'table');
       expect((table.children!.single as md.Element).tag, 'tr');

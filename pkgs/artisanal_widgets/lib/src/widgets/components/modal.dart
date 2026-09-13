@@ -1,5 +1,7 @@
 import 'package:artisanal/runtime.dart';
+
 import '_component_foundation.dart';
+
 import 'package:artisanal/style.dart' show Color, Layout;
 
 @Deprecated(
@@ -157,7 +159,7 @@ class _FrozenBackdrop extends SingleChildRenderObjectWidget {
 }
 
 class _RenderFrozenBackdrop extends RenderBox {
-  _RenderFrozenBackdrop({required bool frozen}) : _frozen = frozen;
+  _RenderFrozenBackdrop({required this._frozen});
 
   bool _frozen;
   String? _snapshotPaint;

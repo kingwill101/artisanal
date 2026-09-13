@@ -3,6 +3,7 @@ import 'package:markdown/markdown.dart' as md;
 
 import 'theme.dart';
 import '../style/style.dart';
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
 
 /// Renders markdown to ANSI using the Glamour theme system.

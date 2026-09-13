@@ -2,7 +2,9 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../view.dart';
+
 import 'package:artisanal/style.dart';
+
 import 'key_binding.dart';
 import 'textinput.dart';
 import 'paginator.dart';
@@ -56,9 +58,9 @@ class DataTableStyles {
 /// Combines a search input, a paginated table, and fuzzy filtering.
 class DataTableModel<T> extends ViewComponent {
   DataTableModel({
-    required List<T> items,
+    required this._items,
     required List<Column> columns,
-    required List<String> Function(T) rowBuilder,
+    required this._rowBuilder,
     this.title = '',
     this.placeholder = 'Type to filter...',
     this.noResultsText = 'No matching rows found',
@@ -66,9 +68,7 @@ class DataTableModel<T> extends ViewComponent {
     this.showHelp = true,
     int pageSize = 10,
     DataTableStyles? styles,
-  }) : _items = items,
-       _rowBuilder = rowBuilder,
-       styles = styles ?? DataTableStyles() {
+  }) : styles = styles ?? DataTableStyles() {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
 
     // Compute total table width from columns (each column has 2 chars padding

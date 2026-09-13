@@ -187,12 +187,12 @@ sequenceDiagram
 '''),
     );
 
-    final shortcutBars = _cells(
-      shortcut,
-    ).where((cell) => cell.content == '┃').length;
-    final explicitBars = _cells(
-      explicit,
-    ).where((cell) => cell.content == '┃').length;
+    final shortcutBars = _cells(shortcut)
+        .where((cell) => cell.content == '┃')
+        .length;
+    final explicitBars = _cells(explicit)
+        .where((cell) => cell.content == '┃')
+        .length;
     expect(shortcutBars, greaterThanOrEqualTo(2));
     expect(explicitBars, greaterThanOrEqualTo(2));
   });

@@ -176,9 +176,9 @@ final class GithubHttpClient
     for (final error in errorList) {
       final map = ghMap(error);
       if (ghString(map['type']) == 'NOT_FOUND') {
-        final path = ghList(
-          map['path'],
-        ).map((item) => item.toString()).toList();
+        final path = ghList(map['path'])
+            .map((item) => item.toString())
+            .toList();
         if (path.length >= 2 &&
             path[0] == 'repository' &&
             path[1] == 'pullRequest') {

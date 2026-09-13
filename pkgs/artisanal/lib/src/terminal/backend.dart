@@ -431,8 +431,8 @@ class EmbeddedTerminalBackend implements TerminalBackend {
   /// Use [addInput], [notifySizeChanged], and [requestShutdown] to drive it
   /// from an external host, or provide external streams up front.
   EmbeddedTerminalBackend({
-    required void Function(String data) output,
-    Future<void> Function()? flushOutput,
+    required this._output,
+    this._flushOutput,
     Stream<List<int>>? inputStream,
     Stream<TerminalDimensions>? resizeStream,
     Stream<void>? shutdownStream,
@@ -441,9 +441,7 @@ class EmbeddedTerminalBackend implements TerminalBackend {
     this.isTerminal = true,
     this.colorProfile = ColorProfile.trueColor,
     this.movementCaps = const (useTabs: false, useBackspace: true),
-  }) : _output = output,
-       _flushOutput = flushOutput,
-       _size = initialSize {
+  }) : _size = initialSize {
     _inputStreamSubscription = inputStream?.listen(_inputController.add);
     _resizeStreamSubscription = resizeStream?.listen(_resizeController.add);
     _shutdownStreamSubscription = shutdownStream?.listen(
@@ -591,8 +589,8 @@ final class TerminalBridge {
     this.isTerminal = true,
     this.colorProfile = ColorProfile.trueColor,
     this.movementCaps = const (useTabs: false, useBackspace: true),
-    Encoding inputEncoding = utf8,
-  }) : _inputEncoding = inputEncoding {
+    this._inputEncoding = utf8,
+  }) {
     backend = EmbeddedTerminalBackend(
       output: _handleOutput,
       initialSize: initialSize,

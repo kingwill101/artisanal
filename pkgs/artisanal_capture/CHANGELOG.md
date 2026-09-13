@@ -2,6 +2,7 @@
 
 ## 0.1.0
 
+- Require Dart SDK 3.13.0 or newer.
 - Bound CLI reads before decoding and reject nonregular inputs and output aliases
   of the source, including symlinks and hardlinks.
 - Index gallery end markers once per scenario while preserving substring

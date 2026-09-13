@@ -9,11 +9,9 @@ class _OverrideTerminal extends StringTerminal {
     super.terminalWidth = 80,
     super.terminalHeight = 24,
     bool supportsAnsi = true,
-    bool isTerminal = true,
-    ({bool useTabs, bool useBackspace})? movementCaps,
-  }) : _isTerminal = isTerminal,
-       _movementCaps = movementCaps,
-       super(ansiSupport: supportsAnsi);
+    this._isTerminal = true,
+    this._movementCaps,
+  }) : super(ansiSupport: supportsAnsi);
 
   final bool _isTerminal;
   final ({bool useTabs, bool useBackspace})? _movementCaps;

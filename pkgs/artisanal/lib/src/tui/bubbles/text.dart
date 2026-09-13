@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import '../../style/ranges.dart' as ranges;
 import '../../style/style.dart';
+
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
+
 import '../cmd.dart';
 import '../msg.dart';
 import 'viewport.dart';

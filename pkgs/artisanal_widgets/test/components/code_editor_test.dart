@@ -104,77 +104,74 @@ void main() {
       },
     );
 
-    test(
-      'keeps syntax decorations while a higher-priority search layer comes and goes',
-      () async {
-        final tester = WidgetTester(screenWidth: 100, screenHeight: 40);
-        addTearDown(() => tester.dispose());
+    test('keeps syntax decorations while a higher-priority search layer comes and goes', () async {
+      final tester = WidgetTester(screenWidth: 100, screenHeight: 40);
+      addTearDown(() => tester.dispose());
 
-        final controller = TextAreaController(
-          text: 'void main() {\n  print("hi");\n}\nvoid other() {}',
-        );
-        await tester.pumpWidget(
-          FocusScope(
-            controller: focusController,
-            child: Container(
-              width: 80,
-              child: CodeEditor(
-                title: 'main.dart',
-                language: 'dart',
-                controller: controller,
-                focusController: focusController,
-                focusId: 'code',
-                autofocus: true,
-                height: 6,
-                previewHeight: 6,
-              ),
+      final controller = TextAreaController(
+        text: 'void main() {\n  print("hi");\n}\nvoid other() {}',
+      );
+      await tester.pumpWidget(
+        FocusScope(
+          controller: focusController,
+          child: Container(
+            width: 80,
+            child: CodeEditor(
+              title: 'main.dart',
+              language: 'dart',
+              controller: controller,
+              focusController: focusController,
+              focusId: 'code',
+              autofocus: true,
+              height: 6,
+              previewHeight: 6,
             ),
           ),
-        );
+        ),
+      );
 
-        expect(
-          controller.decorationsForLayer(textSyntaxDecorationLayerKey),
-          isNotEmpty,
-        );
-        expect(
-          controller.decorationsForLayer(textSearchDecorationLayerKey),
-          isEmpty,
-        );
+      expect(
+        controller.decorationsForLayer(textSyntaxDecorationLayerKey),
+        isNotEmpty,
+      );
+      expect(
+        controller.decorationsForLayer(textSearchDecorationLayerKey),
+        isEmpty,
+      );
 
-        controller.setDecorationLayer(textSearchDecorationLayerKey, const [
-          TextDecorationRange(
-            startOffset: 0,
-            endOffset: 4,
-            styleKey: textSearchMatchDecorationKey,
-          ),
-          TextDecorationRange(
-            startOffset: 29,
-            endOffset: 33,
-            styleKey: textSearchMatchDecorationKey,
-          ),
-        ], priority: textSearchDecorationLayerPriority);
+      controller.setDecorationLayer(textSearchDecorationLayerKey, const [
+        TextDecorationRange(
+          startOffset: 0,
+          endOffset: 4,
+          styleKey: textSearchMatchDecorationKey,
+        ),
+        TextDecorationRange(
+          startOffset: 29,
+          endOffset: 33,
+          styleKey: textSearchMatchDecorationKey,
+        ),
+      ], priority: textSearchDecorationLayerPriority);
 
-        expect(
-          controller.decorationsForLayer(textSyntaxDecorationLayerKey),
-          isNotEmpty,
-        );
-        expect(
-          controller.decorationsForLayer(textSearchDecorationLayerKey).length,
-          2,
-        );
+      expect(
+        controller.decorationsForLayer(textSyntaxDecorationLayerKey),
+        isNotEmpty,
+      );
+      expect(
+        controller.decorationsForLayer(textSearchDecorationLayerKey).length,
+        2,
+      );
 
-        controller.clearDecorationLayer(textSearchDecorationLayerKey);
+      controller.clearDecorationLayer(textSearchDecorationLayerKey);
 
-        expect(
-          controller.decorationsForLayer(textSearchDecorationLayerKey),
-          isEmpty,
-        );
-        expect(
-          controller.decorationsForLayer(textSyntaxDecorationLayerKey),
-          isNotEmpty,
-        );
-      },
-    );
+      expect(
+        controller.decorationsForLayer(textSearchDecorationLayerKey),
+        isEmpty,
+      );
+      expect(
+        controller.decorationsForLayer(textSyntaxDecorationLayerKey),
+        isNotEmpty,
+      );
+    });
 
     test(
       'f8 navigates typed diagnostics through the embedded editor',
@@ -235,61 +232,57 @@ void main() {
       },
     );
 
-    test(
-      'clicking a diagnostic gutter marker selects that diagnostic through CodeEditor',
-      () async {
-        final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
-        addTearDown(() => tester.dispose());
+    test('clicking a diagnostic gutter marker selects that diagnostic through CodeEditor', () async {
+      final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
+      addTearDown(() => tester.dispose());
 
-        final controller = TextAreaController(
-          text: 'void main() {}\n\nTODO fix this',
-        );
-        controller.setDiagnostics(const [
-          TextDiagnosticRange(
-            startOffset: 0,
-            endOffset: 4,
-            severity: TextDiagnosticSeverity.info,
-            code: 'BOOT001',
-            message:
-                'Bootstrap entrypoint is only informational in this sample.',
-            source: 'playground',
-          ),
-          TextDiagnosticRange(
-            startOffset: 16,
-            endOffset: 20,
-            severity: TextDiagnosticSeverity.warning,
-            code: 'TODO001',
-            message: 'Address TODO markers before shipping this sample.',
-            source: 'playground',
-          ),
-        ]);
+      final controller = TextAreaController(
+        text: 'void main() {}\n\nTODO fix this',
+      );
+      controller.setDiagnostics(const [
+        TextDiagnosticRange(
+          startOffset: 0,
+          endOffset: 4,
+          severity: TextDiagnosticSeverity.info,
+          code: 'BOOT001',
+          message: 'Bootstrap entrypoint is only informational in this sample.',
+          source: 'playground',
+        ),
+        TextDiagnosticRange(
+          startOffset: 16,
+          endOffset: 20,
+          severity: TextDiagnosticSeverity.warning,
+          code: 'TODO001',
+          message: 'Address TODO markers before shipping this sample.',
+          source: 'playground',
+        ),
+      ]);
 
-        await tester.pumpWidget(
-          FocusScope(
-            controller: focusController,
-            child: Container(
-              width: 80,
-              child: CodeEditor(
-                title: 'main.dart',
-                language: 'dart',
-                controller: controller,
-                focusController: focusController,
-                focusId: 'code',
-                autofocus: true,
-                height: 6,
-                previewHeight: 6,
-              ),
+      await tester.pumpWidget(
+        FocusScope(
+          controller: focusController,
+          child: Container(
+            width: 80,
+            child: CodeEditor(
+              title: 'main.dart',
+              language: 'dart',
+              controller: controller,
+              focusController: focusController,
+              focusId: 'code',
+              autofocus: true,
+              height: 6,
+              previewHeight: 6,
             ),
           ),
-        );
+        ),
+      );
 
-        tester.tap(tester.find.textLocation('3~'));
+      tester.tap(tester.find.textLocation('3~'));
 
-        expect(controller.selectedText, equals('TODO'));
-        expect(controller.selectionBase, equals((line: 2, column: 0)));
-        expect(tester.view, contains('warning [playground/TODO001] L3:C1'));
-      },
-    );
+      expect(controller.selectedText, equals('TODO'));
+      expect(controller.selectionBase, equals((line: 2, column: 0)));
+      expect(tester.view, contains('warning [playground/TODO001] L3:C1'));
+    });
 
     test('opening bracket inserts a matching closing delimiter', () async {
       final tester = WidgetTester(screenWidth: 100, screenHeight: 40);
@@ -854,42 +847,39 @@ void main() {
       expect(controller.column, 2);
     });
 
-    test(
-      'enter before a closing brace replaces spacer whitespace with block indentation',
-      () async {
-        final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
-        addTearDown(() => tester.dispose());
+    test('enter before a closing brace replaces spacer whitespace with block indentation', () async {
+      final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
+      addTearDown(() => tester.dispose());
 
-        final controller = TextAreaController(text: 'if (ready) {   }');
-        await tester.pumpWidget(
-          FocusScope(
-            controller: focusController,
-            child: Container(
-              width: 80,
-              child: CodeEditor(
-                title: 'main.dart',
-                language: 'dart',
-                controller: controller,
-                focusController: focusController,
-                focusId: 'code',
-                autofocus: true,
-                height: 6,
-                previewHeight: 6,
-                indentWidth: 2,
-              ),
+      final controller = TextAreaController(text: 'if (ready) {   }');
+      await tester.pumpWidget(
+        FocusScope(
+          controller: focusController,
+          child: Container(
+            width: 80,
+            child: CodeEditor(
+              title: 'main.dart',
+              language: 'dart',
+              controller: controller,
+              focusController: focusController,
+              focusId: 'code',
+              autofocus: true,
+              height: 6,
+              previewHeight: 6,
+              indentWidth: 2,
             ),
           ),
-        );
+        ),
+      );
 
-        controller.setCursor(0, controller.text.indexOf('{') + 1);
-        tester.pump();
-        tester.sendSpecialKey(tui.KeyType.enter);
+      controller.setCursor(0, controller.text.indexOf('{') + 1);
+      tester.pump();
+      tester.sendSpecialKey(tui.KeyType.enter);
 
-        expect(controller.text, 'if (ready) {\n  \n}');
-        expect(controller.line, 1);
-        expect(controller.column, 2);
-      },
-    );
+      expect(controller.text, 'if (ready) {\n  \n}');
+      expect(controller.line, 1);
+      expect(controller.column, 2);
+    });
 
     test('tab and shift+tab indent and outdent selected lines', () async {
       final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
@@ -1070,53 +1060,50 @@ void main() {
       },
     );
 
-    test(
-      'alt+shift+f cleans trailing whitespace in the selected block or whole buffer',
-      () async {
-        final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
-        addTearDown(() => tester.dispose());
+    test('alt+shift+f cleans trailing whitespace in the selected block or whole buffer', () async {
+      final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
+      addTearDown(() => tester.dispose());
 
-        final controller = TextAreaController(text: 'alpha  \nbeta\t\ngamma  ');
-        await tester.pumpWidget(
-          FocusScope(
-            controller: focusController,
-            child: Container(
-              width: 80,
-              child: CodeEditor(
-                title: 'main.dart',
-                language: 'dart',
-                controller: controller,
-                focusController: focusController,
-                focusId: 'code',
-                autofocus: true,
-                height: 6,
-                previewHeight: 6,
-              ),
+      final controller = TextAreaController(text: 'alpha  \nbeta\t\ngamma  ');
+      await tester.pumpWidget(
+        FocusScope(
+          controller: focusController,
+          child: Container(
+            width: 80,
+            child: CodeEditor(
+              title: 'main.dart',
+              language: 'dart',
+              controller: controller,
+              focusController: focusController,
+              focusId: 'code',
+              autofocus: true,
+              height: 6,
+              previewHeight: 6,
             ),
           ),
-        );
+        ),
+      );
 
-        controller.setSelection(
-          baseLine: 0,
-          baseColumn: 0,
-          extentLine: 1,
-          extentColumn: 5,
-        );
-        tester.pump();
-        tester.sendMsg(tui.KeyMsg(tui.Key.char('f', alt: true, shift: true)));
-        expect(controller.text, 'alpha\nbeta\ngamma  ');
-        expect(controller.selectionExtent, (line: 1, column: 4));
+      controller.setSelection(
+        baseLine: 0,
+        baseColumn: 0,
+        extentLine: 1,
+        extentColumn: 5,
+      );
+      tester.pump();
+      tester.sendMsg(tui.KeyMsg(tui.Key.char('f', alt: true, shift: true)));
+      expect(controller.text, 'alpha\nbeta\ngamma  ');
+      expect(controller.selectionExtent, (line: 1, column: 4));
 
-        controller.text = 'alpha  \nbeta\t\n\n';
-        controller.clearSelection();
-        controller.setCursor(3, 0);
-        tester.pump();
-        tester.sendMsg(tui.KeyMsg(tui.Key.char('f', alt: true, shift: true)));
-        expect(controller.text, 'alpha\nbeta');
-        expect(controller.line, 1);
-        expect(controller.column, 4);
-      },
-    );
+      controller.text = 'alpha  \nbeta\t\n\n';
+      controller.clearSelection();
+      controller.setCursor(3, 0);
+      tester.pump();
+      tester.sendMsg(tui.KeyMsg(tui.Key.char('f', alt: true, shift: true)));
+      expect(controller.text, 'alpha\nbeta');
+      expect(controller.line, 1);
+      expect(controller.column, 4);
+    });
 
     test('alt+shift+u transforms the current line in CodeEditor', () async {
       final tester = WidgetTester(screenWidth: 100, screenHeight: 32);

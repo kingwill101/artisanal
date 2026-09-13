@@ -77,11 +77,7 @@ List<String> _normalizeArguments(List<String> arguments) {
 }
 
 final class _EditCommand extends Command<void> {
-  _EditCommand({
-    required EditorLauncher launcher,
-    required String workingDirectory,
-  }) : _launcher = launcher,
-       _workingDirectory = workingDirectory {
+  _EditCommand({required this._launcher, required this._workingDirectory}) {
     argParser
       ..addOption(
         'workspace',
