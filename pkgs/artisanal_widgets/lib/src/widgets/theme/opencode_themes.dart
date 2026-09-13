@@ -2584,7 +2584,10 @@ class OpenCodeThemes {
         accentForeground: primary,
         markerForeground: primary,
         separatorForeground: borderSubtle,
-        selectedBackground: borderActive,
+        // Selection is a surface state, not an active-border state. Some
+        // palettes use a light active border, which can be identical to the
+        // normal text color and make selected rows unreadable.
+        selectedBackground: backgroundElement,
         selectedForeground: text,
         selectedMutedForeground: text,
         selectedAccentForeground: text,

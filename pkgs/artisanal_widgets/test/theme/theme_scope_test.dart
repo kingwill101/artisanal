@@ -196,8 +196,31 @@ void main() {
       );
       expect(
         theme.commandPaletteTheme?.selectedBackground,
-        same(theme.listRowSelectedBackground),
+        isNot(same(theme.listRowSelectedBackground)),
       );
+    });
+
+    test('OpenCode presets keep selected list row text readable', () {
+      for (final theme in <Theme>[
+        OpenCodeThemes.opencode(),
+        OpenCodeThemes.github(),
+        OpenCodeThemes.tokyonight(),
+        OpenCodeThemes.gruvbox(),
+        OpenCodeThemes.rosepine(),
+        OpenCodeThemes.matrix(),
+      ]) {
+        expect(
+          theme.listRowSelectedBackground.toHex(),
+          isNot(equals(theme.listRowSelectedForeground.toHex())),
+        );
+      }
+    });
+
+    test('Gruvbox dark pins the selected list-row contrast tokens', () {
+      final theme = OpenCodeThemes.gruvbox();
+
+      expect(theme.listRowSelectedBackground.toHex(), '#504945');
+      expect(theme.listRowSelectedForeground.toHex(), '#ebdbb2');
     });
   });
 

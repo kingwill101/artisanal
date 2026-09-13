@@ -181,6 +181,7 @@ sequenceDiagram
     test('parses deactivation marker', () {
       final diagram = parseSequenceDiagram('''
 sequenceDiagram
+  activate A
   A->>-B: Return
 ''');
       expect(diagram, isNotNull);
@@ -226,6 +227,30 @@ sequenceDiagram
       expect(notes.length, 2);
       expect(notes[0].note.over, ['A']);
       expect(notes[1].note.over, ['B']);
+      expect(notes[0].note.position, SequenceNotePosition.right);
+      expect(notes[1].note.position, SequenceNotePosition.left);
+    });
+
+    test('reports unsupported syntax instead of dropping it', () {
+      expect(
+        () => parseSequenceDiagram('''
+sequenceDiagram
+  participant A
+  mystery A
+'''),
+        throwsFormatException,
+      );
+    });
+
+    test('reports unclosed fragments', () {
+      expect(
+        () => parseSequenceDiagram('''
+sequenceDiagram
+  alt condition
+    A->>B: message
+'''),
+        throwsFormatException,
+      );
     });
 
     test('parses activation/deactivation steps', () {
@@ -280,7 +305,7 @@ sequenceDiagram
       expect(fragments[0].fragment.label, '3 times');
     });
 
-    test('parses opt fragment (as alt)', () {
+    test('parses opt fragment distinctly', () {
       final diagram = parseSequenceDiagram('''
 sequenceDiagram
   opt condition
@@ -291,7 +316,7 @@ sequenceDiagram
       final d = diagram!;
       final fragments = d.steps.whereType<SequenceStepFragment>().toList();
       expect(fragments.length, 2);
-      expect(fragments[0].fragment.kind, SequenceFragmentKind.alt);
+      expect(fragments[0].fragment.kind, SequenceFragmentKind.opt);
     });
 
     test('parses box grouping', () {
@@ -308,6 +333,34 @@ sequenceDiagram
       expect(d.groups.length, 1);
       expect(d.groups[0].label, 'Group 1');
       expect(d.groups[0].ids, ['A', 'B']);
+    });
+
+    test('parses a leading box color separately from its caption', () {
+      final diagram = parseSequenceDiagram('''
+sequenceDiagram
+  box rgb(1, 2, 3) Services
+    participant A
+  end
+''')!;
+      expect(diagram.groups.single.label, 'Services');
+      _expectRgb(diagram.groups.single.backgroundColor, 1, 2, 3);
+    });
+
+    test('rejects malformed rect colors', () {
+      expect(
+        () => parseSequenceDiagram(
+          'sequenceDiagram\n  rect rgb(300, 0, 0)\n  end',
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects unmatched deactivation but permits an open activation', () {
+      expect(
+        () => parseSequenceDiagram('sequenceDiagram\n  deactivate A'),
+        throwsFormatException,
+      );
+      expect(parseSequenceDiagram('sequenceDiagram\n  activate A'), isNotNull);
     });
 
     test('parses rect regions', () {
@@ -449,7 +502,36 @@ sequenceDiagram
       expect(diagram, isNotNull);
       final d = diagram!;
       final fragments = d.steps.whereType<SequenceStepFragment>().toList();
-      expect(fragments[0].fragment.kind, SequenceFragmentKind.alt);
+      expect(fragments[0].fragment.kind, SequenceFragmentKind.critical);
+    });
+
+    test('parses critical option branch', () {
+      final diagram = parseSequenceDiagram('''
+sequenceDiagram
+  critical must succeed
+    A->>B: Do it
+  option retry
+    A->>B: Try again
+  end
+''');
+      final fragments = diagram!.steps
+          .whereType<SequenceStepFragment>()
+          .toList();
+      expect(fragments[1].fragment.kind, SequenceFragmentKind.optionPart);
+      expect(fragments[1].fragment.label, 'retry');
+    });
+
+    test('rejects branch separators in the wrong context', () {
+      expect(
+        () => parseSequenceDiagram('sequenceDiagram\n  and branch'),
+        throwsFormatException,
+      );
+      expect(
+        () => parseSequenceDiagram(
+          'sequenceDiagram\n  critical x\n  else\n  end',
+        ),
+        throwsFormatException,
+      );
     });
 
     test('parses par fragment', () {
@@ -465,8 +547,8 @@ sequenceDiagram
       final d = diagram!;
       final fragments = d.steps.whereType<SequenceStepFragment>().toList();
       expect(fragments.length, 3);
-      expect(fragments[0].fragment.kind, SequenceFragmentKind.alt);
-      expect(fragments[1].fragment.kind, SequenceFragmentKind.elsePart);
+      expect(fragments[0].fragment.kind, SequenceFragmentKind.par);
+      expect(fragments[1].fragment.kind, SequenceFragmentKind.andPart);
     });
 
     test('parses break statement', () {
@@ -477,6 +559,7 @@ sequenceDiagram
   break failure
     A->>A: Handle error
   end
+  end
 ''');
       expect(diagram, isNotNull);
       final d = diagram!;
@@ -484,7 +567,7 @@ sequenceDiagram
       final breakFragment = fragments.firstWhere(
         (f) => f.fragment.label == 'failure',
       );
-      expect(breakFragment.fragment.kind, SequenceFragmentKind.elsePart);
+      expect(breakFragment.fragment.kind, SequenceFragmentKind.breakPart);
     });
   });
 }

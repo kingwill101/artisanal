@@ -34,6 +34,14 @@ dart analyze apps/github_cli
 dart test apps/github_cli
 ```
 
+The offline SIMD issue bench uses the attributed issue-body fixture in
+`artisanal_capture`. It tests the actual `GithubMarkdownBody` widget, including
+comment visibility, scrolling, and F12 over linked tables:
+
+```sh
+dart test apps/github_cli/test/markdown_issue_bench_test.dart
+```
+
 `lib/` contains app logic, `test/` the app tests, `web/` the browser entrypoint
 and reproduction pages, and `tool/` debugging utilities. Replay scenarios live
 in `scenarios/` and can be resolved by name from the app or repository root.

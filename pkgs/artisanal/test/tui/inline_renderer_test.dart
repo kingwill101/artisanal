@@ -248,6 +248,69 @@ void main() {
       expect(vt.scrollback.join('\n'), isNot(contains('PIN')));
     });
 
+    test(
+      'dispose drops queued and captured frames before reinitialization',
+      () async {
+        final terminal = StringTerminal(terminalWidth: 24, terminalHeight: 8);
+        final renderer = buildInlineRenderer(terminal, inlineHeight: 3);
+
+        renderer.render('stale frame');
+        terminal.clear();
+        renderer.dispose();
+        renderer.initialize();
+        await renderer.flush();
+
+        expect(terminal.output, isNot(contains('stale frame')));
+
+        renderer.render('fresh frame');
+        expect(terminal.output, contains('fresh frame'));
+      },
+    );
+
+    test(
+      'dispose preserves bottom log history for same-instance reinitialization',
+      () {
+        final terminal = StringTerminal(terminalWidth: 24, terminalHeight: 8);
+        final renderer = buildInlineRenderer(terminal, inlineHeight: 3);
+
+        renderer.render('dashboard');
+        renderer.printLine('persistent log');
+        terminal.clear();
+
+        // This is the lifecycle used when a terminal is temporarily released
+        // for an external process: the renderer is disposed and initialized
+        // again, while the renderer instance remains owned by the runtime.
+        renderer.dispose();
+        renderer.initialize();
+        terminal.clear();
+        renderer.render('dashboard restored');
+
+        expect(terminal.output, contains('persistent log'));
+        expect(terminal.output, contains('dashboard restored'));
+      },
+    );
+
+    test('dispose preserves top-anchored print lines on reinitialization', () {
+      final terminal = StringTerminal(terminalWidth: 24, terminalHeight: 8);
+      final renderer = buildInlineRenderer(
+        terminal,
+        inlineHeight: 3,
+        uiAnchor: UiAnchor.top,
+      );
+
+      renderer.render('dashboard');
+      renderer.printLine('persistent log');
+      terminal.clear();
+
+      renderer.dispose();
+      renderer.initialize();
+      terminal.clear();
+      renderer.render('dashboard restored');
+
+      expect(terminal.output, contains('persistent log'));
+      expect(terminal.output, contains('dashboard restored'));
+    });
+
     test('resize forces a clean repaint in the new bottom region', () {
       final terminal = _ResizableStringTerminal(width: 40, height: 10);
       final renderer = buildInlineRenderer(terminal, inlineHeight: 4);

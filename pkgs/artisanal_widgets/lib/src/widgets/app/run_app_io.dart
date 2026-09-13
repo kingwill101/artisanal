@@ -54,20 +54,29 @@ Future<void> runWidgetApp(
     final resolvedOptions = (options ?? defaultWidgetProgramOptions).copyWith(
       startupTitle: options?.startupTitle ?? app.title,
     );
-    return _runWithDebugCapture(
-      app,
-      () => runProgram(
-        _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
-        options: resolvedOptions,
-        host: host,
-      ),
-    );
+    return _runWithDebugCapture(app, () async {
+      try {
+        await runProgram(
+          _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
+          options: resolvedOptions,
+          host: host,
+        );
+      } finally {
+        app.dispose();
+      }
+    });
   }
-  return runProgram(
-    _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
-    options: options ?? defaultWidgetProgramOptions,
-    host: host,
-  );
+  return () async {
+    try {
+      await runProgram(
+        _configureImageAutoMode(app, imageAutoMode: imageAutoMode),
+        options: options ?? defaultWidgetProgramOptions,
+        host: host,
+      );
+    } finally {
+      app.dispose();
+    }
+  }();
 }
 
 /// Serves a [WidgetApp] over the network using the given [transport].

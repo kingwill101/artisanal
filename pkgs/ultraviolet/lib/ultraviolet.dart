@@ -50,6 +50,7 @@ export 'src/uv/cell.dart'
         UvRgb,
         Attr,
         UnderlineStyle;
+export 'src/uv/cell_paint.dart' show UvPaintPolicy, UvCellPaint;
 export 'src/uv/event.dart';
 export 'src/uv/mouse.dart' show MouseMode, MouseButton, Mouse;
 export 'src/uv/border.dart';
@@ -116,7 +117,8 @@ export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
 export 'src/uv/sixel.dart' show SixelImage;
 export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;
 export 'src/uv/terminal_graphics.dart';
-export 'src/uv/ansi_slice.dart' show cutAnsiByCells, truncateLeftAnsiByCells;
+export 'src/uv/ansi_slice.dart'
+    show cutAnsiByCells, clipAnsiByCells, truncateLeftAnsiByCells;
 export 'src/uv/key.dart';
 export 'src/uv/key_table.dart';
 export 'src/uv/ansi.dart' show UvAnsi;

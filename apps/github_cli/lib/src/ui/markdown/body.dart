@@ -26,7 +26,10 @@ final class GithubMarkdownBody extends w.StatefulWidget {
 }
 
 final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
-  final Map<int, bool> _expandedDetails = <int, bool>{};
+  // A flat segment index is not unique once a disclosure contains another
+  // disclosure. The full path also keeps sibling and nested toggles
+  // independent when their visible heights change.
+  final Map<String, bool> _expandedDetails = <String, bool>{};
   late List<GithubMarkdownSegment> _segments;
   late String _fallbackMarkdown;
 
@@ -60,7 +63,9 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
             gap: 1,
             children: [
               for (var i = 0; i < _segments.length; i++)
-                _segmentWidget(theme, hasDarkBackground, _segments[i], i),
+                _segmentWidget(theme, hasDarkBackground, _segments[i], <int>[
+                  i,
+                ], maxWidth: widget.maxWidth),
             ],
           );
     return content;
@@ -70,34 +75,54 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
     w.Theme theme,
     bool hasDarkBackground,
     GithubMarkdownSegment segment,
-    int index,
-  ) {
+    List<int> path, {
+    required int? maxWidth,
+  }) {
     switch (segment) {
       case GithubMarkdownTextSegment(:final markdown):
-        return _markdownText(theme, markdown, hasDarkBackground);
+        return _markdownText(
+          theme,
+          markdown,
+          hasDarkBackground,
+          maxWidth: maxWidth,
+        );
       case GithubMarkdownDetailsSegment(
         :final summary,
         :final markdown,
         :final initiallyExpanded,
         :final quoted,
+        :final children,
       ):
+        final key = path.join('.');
+        final bodyWidth = maxWidth == null ? null : math.max(1, maxWidth - 2);
+        final detailsBody = children.isEmpty
+            ? _markdownText(
+                theme,
+                markdown.trim().isEmpty ? '_No details provided._' : markdown,
+                hasDarkBackground,
+                maxWidth: bodyWidth,
+              )
+            : w.Column(
+                crossAxisAlignment: w.CrossAxisAlignment.stretch,
+                gap: 1,
+                children: [
+                  for (var i = 0; i < children.length; i++)
+                    _segmentWidget(theme, hasDarkBackground, children[i], <int>[
+                      ...path,
+                      i,
+                    ], maxWidth: bodyWidth),
+                ],
+              );
         final details = w.Accordion(
           title: summary,
-          expanded: _expandedDetails[index] ?? initiallyExpanded,
+          expanded: _expandedDetails[key] ?? initiallyExpanded,
           onChanged: (expanded) {
             setState(() {
-              _expandedDetails[index] = expanded;
+              _expandedDetails[key] = expanded;
             });
             return null;
           },
-          child: _markdownText(
-            theme,
-            markdown.trim().isEmpty ? '_No details provided._' : markdown,
-            hasDarkBackground,
-            maxWidth: widget.maxWidth == null
-                ? null
-                : math.max(1, widget.maxWidth! - 2),
-          ),
+          child: detailsBody,
         );
 
         if (!quoted) return details;
@@ -213,10 +238,26 @@ AnsiRendererOptions githubMarkdownOptions(
     blockHandlers: [
       (context) {
         if (context.tag != 'pre' || context.language != 'mermaid') return null;
-        return renderSequenceDiagram(
-          context.text.trim(),
-          maxWidth: context.options.width,
-        );
+        final source = context.text.trim();
+        try {
+          final rendered = renderSequenceDiagram(
+            source,
+            maxWidth: context.options.width,
+          );
+          // Other Mermaid diagram types still have a useful literal fallback.
+          return rendered.isEmpty ? null : rendered;
+        } on FormatException catch (error) {
+          // Invalid or unsupported input is comment content, not an app failure.
+          // Indented code keeps both diagnostics and source literal and cannot
+          // re-enter this Mermaid handler through a source-provided fence.
+          final literal = '${error.message}\n\n$source'
+              .split('\n')
+              .map((line) => '    $line')
+              .join('\n');
+          return context.renderMarkdown(
+            'Sequence diagram could not be rendered:\n\n$literal',
+          );
+        }
       },
     ],
     codeBlockBorderStyle: Border.rounded,

@@ -1,0 +1,54 @@
+import 'package:test/test.dart';
+import 'package:ultraviolet/src/unicode/bounded_string_int_cache.dart';
+
+void main() {
+  test('oversized keys are skipped without retaining bytes', () {
+    final cache = BoundedStringIntCache(
+      maxEntries: 2048,
+      maxKeyLength: 4096,
+      maxKeyBytes: 256 * 1024,
+    );
+    cache['a' * (256 * 1024 + 1)] = 1;
+
+    expect(cache.entryCount, 0);
+    expect(cache.retainedKeyBytes, 0);
+  });
+
+  test(
+    'unicode width cache fixture exercises FIFO eviction and byte budget',
+    () {
+      final cache = BoundedStringIntCache(
+        maxEntries: 2048,
+        maxKeyLength: 4096,
+        maxKeyBytes: 256 * 1024,
+      );
+      final keys = List<String>.generate(160, (i) => '界' * 1600 + i.toString());
+      for (var i = 0; i < keys.length; i++) {
+        cache[keys[i]] = i;
+      }
+      final retainedBytes = cache.retainedKeyBytes;
+
+      expect(cache[keys.first], isNull);
+      expect(cache.entryCount, lessThanOrEqualTo(2048));
+      expect(retainedBytes, lessThanOrEqualTo(256 * 1024));
+      expect(
+        retainedBytes,
+        cache.keys.fold<int>(0, (sum, key) => sum + key.length * 2),
+      );
+    },
+  );
+
+  test('enforces the entry cap independently of the byte budget', () {
+    final cache = BoundedStringIntCache(
+      maxEntries: 3,
+      maxKeyLength: 4096,
+      maxKeyBytes: 256 * 1024,
+    );
+    for (var i = 0; i < 4; i++) {
+      cache['key-$i'] = i;
+    }
+
+    expect(cache['key-0'], isNull);
+    expect(cache.entryCount, 3);
+  });
+}

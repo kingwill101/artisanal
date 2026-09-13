@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/dart-lang/sdk/issues/64170",
+  "api_source": "https://api.github.com/repos/dart-lang/sdk/issues/64170",
+  "issue_id": 5292087450,
+  "issue_number": 64170,
+  "title": "SIMD tracking issue.",
+  "author": "modulovalue",
+  "updated_at": "2026-09-12T14:41:21Z",
+  "sha256": "b4266a7fe6241eb93aa31fb8787b7f60638437cea601335e099e820b426d3952",
+  "normalization": {
+    "line_endings": "LF",
+    "body_bytes": "UTF-8",
+    "notes": "Copied from the public GitHub REST issue body. No END marker was inserted; the HTML comment and trailing blank lines are preserved."
+  }
+}

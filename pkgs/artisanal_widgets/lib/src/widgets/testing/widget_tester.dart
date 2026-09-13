@@ -49,9 +49,15 @@ import 'package:artisanal/runtime.dart'
         WindowSizeMsg,
         RepaintMsg,
         Program,
+        ProgramInterceptor,
         ProgramDiagnosticsOptions,
         ProgramDiagnosticsPosition,
         ProgramOptions,
+        DegradationLevel,
+        TerminalNativeFrame,
+        TerminalNativeDeltaFrame,
+        TerminalNativeCellDeltaFrame,
+        TerminalNativeSpanDelta,
         ZoneInfo;
 import 'package:artisanal_widgets/src/widgets/components/debug_overlay.dart';
 import '../app/widget_app.dart';
@@ -371,6 +377,34 @@ final class WidgetTestFrame {
   List<String> get lines => view.split('\n').map(Layout.stripAnsi).toList();
 }
 
+/// Retains only the most recent native renderer frame for capture adapters.
+///
+/// Unlike [ProgramRenderRecorder], this deliberately does not retain render
+/// snapshots or deltas. Native frames are opt-in and can be large, so a
+/// tester needs one bounded result rather than a render history.
+final class _LatestNativeFrameInterceptor extends ProgramInterceptor {
+  TerminalNativeFrame? latestFrame;
+
+  @override
+  bool get wantsNativeFrames => true;
+
+  @override
+  void onRendered({
+    required int renderGeneration,
+    required Object view,
+    required DegradationLevel degradationLevel,
+    required Duration renderDuration,
+    int? width,
+    int? height,
+    TerminalNativeFrame? nativeFrame,
+    TerminalNativeDeltaFrame? nativeDelta,
+    TerminalNativeCellDeltaFrame? nativeCellDelta,
+    List<TerminalNativeSpanDelta>? nativeSpanDelta,
+  }) {
+    latestFrame = nativeFrame;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // WidgetTester
 // ---------------------------------------------------------------------------
@@ -391,6 +425,7 @@ class WidgetTester {
     this.screenWidth = 80,
     this.screenHeight = 24,
     this.enableRenderer = false,
+    this.enableNativeFrameCapture = false,
     this.altScreen = false,
     bool enableZones = false,
   }) {
@@ -408,9 +443,16 @@ class WidgetTester {
   ///
   /// This is opt-in because the default tester intentionally disables terminal
   /// rendering for fast, deterministic widget assertions. When enabled,
-  /// [rendererOutput] exposes raw ANSI writes. Cell buffers are not currently
-  /// exposed by the production renderer API.
+  /// [rendererOutput] exposes raw ANSI writes. Enable [enableNativeFrameCapture]
+  /// as well to read final rendered cell metadata through [latestNativeFrame].
   final bool enableRenderer;
+
+  /// Whether the production renderer records its final native cell frame.
+  ///
+  /// This is opt-in because copying every cell is more expensive than the
+  /// normal view-only test path. It has no effect unless [enableRenderer] is
+  /// also enabled.
+  final bool enableNativeFrameCapture;
 
   /// Whether the production renderer targets the terminal's alternate screen.
   ///
@@ -430,6 +472,11 @@ class WidgetTester {
   bool _recordFrames = false;
   int _frameSequence = 0;
   final List<WidgetTestFrame> _recordedFrames = <WidgetTestFrame>[];
+  _LatestNativeFrameInterceptor? _nativeFrameInterceptor;
+
+  /// The latest final UV frame, when native capture was enabled.
+  TerminalNativeFrame? get latestNativeFrame =>
+      _nativeFrameInterceptor?.latestFrame;
 
   /// The underlying [WidgetApp], or `null` if [pumpWidget] hasn't been called.
   WidgetApp? get app => _app;
@@ -525,7 +572,7 @@ class WidgetTester {
     // A tester has one active Program at a time. Dispose the previous one
     // before replacing its terminal and model so that its event loop cannot
     // continue writing into resources owned by the new mount.
-    if (_program != null) {
+    if (_program != null || _app != null) {
       await dispose();
     }
     if (width != null) screenWidth = width;
@@ -544,53 +591,63 @@ class WidgetTester {
       imageAutoMode: imageAutoMode,
     );
 
-    _terminal = _TestTerminal(
-      terminalWidth: screenWidth,
-      terminalHeight: screenHeight,
-    );
+    try {
+      _terminal = _TestTerminal(
+        terminalWidth: screenWidth,
+        terminalHeight: screenHeight,
+      );
 
-    _program = Program<WidgetApp>(
-      _app!,
-      options: ProgramOptions(
-        altScreen: altScreen,
-        hideCursor: false,
-        mouse: true,
-        disableRenderer: !enableRenderer,
-        useUltravioletRenderer: enableRenderer,
-        startupProbes: false,
-        signalHandlers: false,
-        catchPanics: false,
-        diagnostics: ProgramDiagnosticsOptions(
-          initiallyVisible: debugOverlay,
-          position: switch (debugOverlayPosition ??
-              DebugOverlayPosition.topRight) {
-            DebugOverlayPosition.topLeft => ProgramDiagnosticsPosition.topLeft,
-            DebugOverlayPosition.topRight =>
-              ProgramDiagnosticsPosition.topRight,
-            DebugOverlayPosition.bottomLeft =>
-              ProgramDiagnosticsPosition.bottomLeft,
-            DebugOverlayPosition.bottomRight =>
-              ProgramDiagnosticsPosition.bottomRight,
-          },
+      _program = Program<WidgetApp>(
+        _app!,
+        options: ProgramOptions(
+          altScreen: altScreen,
+          hideCursor: false,
+          mouse: true,
+          disableRenderer: !enableRenderer,
+          useUltravioletRenderer: enableRenderer,
+          startupProbes: false,
+          signalHandlers: false,
+          catchPanics: false,
+          interceptor: enableNativeFrameCapture
+              ? (_nativeFrameInterceptor = _LatestNativeFrameInterceptor())
+              : null,
+          diagnostics: ProgramDiagnosticsOptions(
+            initiallyVisible: debugOverlay,
+            position: switch (debugOverlayPosition ??
+                DebugOverlayPosition.topRight) {
+              DebugOverlayPosition.topLeft =>
+                ProgramDiagnosticsPosition.topLeft,
+              DebugOverlayPosition.topRight =>
+                ProgramDiagnosticsPosition.topRight,
+              DebugOverlayPosition.bottomLeft =>
+                ProgramDiagnosticsPosition.bottomLeft,
+              DebugOverlayPosition.bottomRight =>
+                ProgramDiagnosticsPosition.bottomRight,
+            },
+          ),
         ),
-      ),
-      terminal: _terminal!,
-    );
+        terminal: _terminal!,
+      );
 
-    // Start the program.  run() is a long-lived future that resolves when
-    // the program quits; we keep it around for cleanup.
-    _runFuture = _program!.run();
-    print('program.run started after ${DateTime.now().difference(start)}');
+      // Start the program.  run() is a long-lived future that resolves when
+      // the program quits; we keep it around for cleanup.
+      _runFuture = _program!.run();
+      print('program.run started after ${DateTime.now().difference(start)}');
 
-    // Give the async initialisation (_setup + _initialize) a chance to
-    // complete.  With the mock terminal this resolves almost immediately.
-    await _yieldToEventLoop();
-    print('yield complete after ${DateTime.now().difference(start)}');
+      // Give the async initialisation (_setup + _initialize) a chance to
+      // complete.  With the mock terminal this resolves almost immediately.
+      await _yieldToEventLoop();
+      print('yield complete after ${DateTime.now().difference(start)}');
 
-    // Capture the initial view.
-    _syncView(trigger: 'pumpWidget');
-    print('syncView complete after ${DateTime.now().difference(start)}');
-    _pumpCount++;
+      // Capture the initial view.
+      _syncView(trigger: 'pumpWidget');
+      print('syncView complete after ${DateTime.now().difference(start)}');
+      _pumpCount++;
+    } catch (_) {
+      // A failed startup must not strand the partially mounted tree.
+      await dispose();
+      rethrow;
+    }
   }
 
   /// Triggers a render cycle — rebuilds dirty elements and captures the
@@ -637,9 +694,13 @@ class WidgetTester {
         // Swallow errors during cleanup (e.g. ProgramCancelledError).
       }
     }
+    // Program has no ownership coupling to arbitrary Models. WidgetTester
+    // owns this WidgetApp, so it must explicitly tear down the element tree.
+    _app?.dispose();
     _program = null;
     _app = null;
     _terminal = null;
+    _nativeFrameInterceptor = null;
     _runFuture = null;
   }
 

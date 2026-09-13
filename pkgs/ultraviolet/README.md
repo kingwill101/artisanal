@@ -210,6 +210,11 @@ task uv-demos   # compiles each example, then records all GIFs into assets/
   A single rendered glyph plus style/link metadata.
 - `UvStyle` / `UvColor`  
   Text attributes and color model for foreground/background styling.
+- `UvPaintPolicy`
+  Shared foreground/background, palette, reverse, faint, and conceal
+  resolution for native raster, web `CanvasTerminalRenderer`, and Flutter
+  painting. Set `foreground`, `background`, an optional 16- or 256-entry
+  `palette`, and `faintMix` once when those backends must agree.
 - `UvTerminalRenderer`  
   Diff-based renderer that minimizes terminal output between frames.
 - `KittyImage` / `ITerm2Image` / `SixelImage` — Raw protocol encoders exported
@@ -231,6 +236,24 @@ import 'package:ultraviolet/rendering.dart'; // diff renderer and effects
 import 'package:ultraviolet/terminal.dart';  // terminal lifecycle
 import 'package:ultraviolet/unicode.dart';   // graphemes and cell widths
 ```
+
+Non-ANSI backends can share one color policy:
+
+```dart
+import 'package:ultraviolet/core.dart';
+import 'package:ultraviolet/web.dart';
+
+final policy = UvPaintPolicy(
+  foreground: const UvRgb(204, 204, 204),
+  background: const UvRgb(0, 0, 0),
+);
+final canvas = CanvasTerminalRenderer(paintPolicy: policy);
+```
+
+The native raster renderer exposes the equivalent values through
+`RasterRenderOptions`; Flutter accepts the policy directly. This aligns cell
+color/attribute resolution; it does not make glyph pixels identical. Font
+hinting, antialiasing, and the selected font can still differ.
 
 All five entrypoints are browser-safe. The umbrella
 `package:ultraviolet/ultraviolet.dart` remains available when an application

@@ -2,6 +2,7 @@ library;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/uv.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 import '../testing/loose_layout_host.dart';
@@ -320,6 +321,57 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test(
+      'releases hyperlink refs from scrollbar composition canvases',
+      () async {
+        final source = Canvas(10, 1);
+        StyledString(
+          Style().hyperlink('https://scroll.example').render('Link'),
+        ).draw(source, source.bounds());
+        final probe = Cell(link: source.cellAt(0, 0)!.link);
+        source.dispose();
+        final linkId = probe.linkId!;
+        final baseline = debugLinkRefCount(linkId);
+        try {
+          for (final overlay in [false, true]) {
+            final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+            try {
+              final ctrl = ListViewController();
+              ctrl.setViewportHeight(3);
+              ctrl.setContentHeight(20);
+              await _pumpSmallRoot(
+                tester,
+                Container(
+                  width: 24,
+                  height: 3,
+                  child: Scrollbar(
+                    controller: ctrl,
+                    overlay: overlay,
+                    gap: 1,
+                    thumbChar: '#',
+                    trackChar: '.',
+                    child: Text(
+                      'Link',
+                      style: Style().hyperlink('https://scroll.example'),
+                    ),
+                  ),
+                ),
+              );
+
+              // Scrollbar composition returns rendered text; temporary cells
+              // must already be released before the tester is disposed.
+              expect(debugLinkRefCount(linkId), equals(baseline));
+            } finally {
+              await tester.dispose();
+              expect(debugLinkRefCount(linkId), equals(baseline));
+            }
+          }
+        } finally {
+          probe.dispose();
+        }
+      },
+    );
 
     test(
       'Kitty graphics controls keep non-overlay scrollbar visible',

@@ -71,7 +71,12 @@ final class ProgramRenderSnapshot {
         nativeSpanDelta: nativeSpanDelta,
       );
 
-  /// Converts this snapshot into a serialization-friendly map.
+  /// Converts diagnostic metadata into a serialization-friendly map.
+  ///
+  /// This intentionally contains text lines and change summaries only; it is
+  /// not lossless capture JSON. Use `artisanal_capture`'s
+  /// `captureProgramFrame` with a snapshot that has [nativeFrame] when a
+  /// canonical cell capture is required.
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'sequence': sequence,

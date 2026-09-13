@@ -14,6 +14,12 @@ abstract class TerminalRenderer {
   void render(Buffer newbuf);
   void flush();
 
+  /// Releases renderer-owned frame state.
+  ///
+  /// Implementations must not dispose buffers supplied to [render], which are
+  /// borrowed from the caller.
+  void dispose() {}
+
   // --- Terminal-control methods (no-ops in canvas renderer) ---
 
   void moveTo(int x, int y) {}

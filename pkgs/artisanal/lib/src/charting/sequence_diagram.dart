@@ -38,7 +38,15 @@ library;
 import 'dart:math' as math;
 
 import 'package:ultraviolet/ultraviolet.dart'
-    show Canvas, Rectangle, UvColor, UvStyle, rect;
+    show
+        Canvas,
+        Cell,
+        Rectangle,
+        UvColor,
+        UvRgb,
+        UvStyle,
+        rect,
+        wrapAnsiPreserving;
 
 import 'package:artisanal/src/charting/core.dart' show putCell, putText;
 import 'package:artisanal/style.dart';
@@ -207,6 +215,10 @@ UvColor? parseMermaidColor(String value) {
 
   if (v.startsWith('#')) {
     final hex = v.substring(1);
+    if ((hex.length == 3 || hex.length == 6 || hex.length == 8) &&
+        !RegExp(r'^[0-9a-f]+$', caseSensitive: false).hasMatch(hex)) {
+      return null;
+    }
     if (hex.length == 3) {
       final r = int.parse(hex[0] * 2, radix: 16);
       final g = int.parse(hex[1] * 2, radix: 16);
@@ -223,7 +235,7 @@ UvColor? parseMermaidColor(String value) {
       final r = int.parse(hex.substring(0, 2), radix: 16);
       final g = int.parse(hex.substring(2, 4), radix: 16);
       final b = int.parse(hex.substring(4, 6), radix: 16);
-      return UvColor.rgb(r, g, b);
+      return UvRgb(r, g, b, a: int.parse(hex.substring(6, 8), radix: 16));
     }
     return null;
   }
@@ -232,21 +244,36 @@ UvColor? parseMermaidColor(String value) {
     r'^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$',
   ).firstMatch(lower);
   if (rgbMatch != null) {
-    return UvColor.rgb(
+    final channels = [
       int.parse(rgbMatch.group(1)!),
       int.parse(rgbMatch.group(2)!),
       int.parse(rgbMatch.group(3)!),
-    );
+    ];
+    if (channels.any((channel) => channel > 255)) return null;
+    return UvColor.rgb(channels[0], channels[1], channels[2]);
   }
 
   final rgbaMatch = RegExp(
     r'^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$',
   ).firstMatch(lower);
   if (rgbaMatch != null) {
-    return UvColor.rgb(
+    final channels = [
       int.parse(rgbaMatch.group(1)!),
       int.parse(rgbaMatch.group(2)!),
       int.parse(rgbaMatch.group(3)!),
+    ];
+    final alpha = double.tryParse(rgbaMatch.group(4)!);
+    if (channels.any((channel) => channel > 255) ||
+        alpha == null ||
+        alpha < 0 ||
+        alpha > 1) {
+      return null;
+    }
+    return UvRgb(
+      channels[0],
+      channels[1],
+      channels[2],
+      a: (alpha * 255).round(),
     );
   }
 
@@ -300,6 +327,54 @@ enum SequenceFragmentKind {
       bg: UvColor.rgb(28, 43, 36),
     ),
   ),
+  opt(
+    prefix: 'opt',
+    defaultStyle: UvStyle(fg: UvColor.rgb(154, 184, 169)),
+    defaultLabelStyle: UvStyle(
+      fg: UvColor.rgb(154, 184, 169),
+      bg: UvColor.rgb(28, 43, 36),
+    ),
+  ),
+  par(
+    prefix: 'par',
+    defaultStyle: UvStyle(fg: UvColor.rgb(154, 184, 169)),
+    defaultLabelStyle: UvStyle(
+      fg: UvColor.rgb(154, 184, 169),
+      bg: UvColor.rgb(28, 43, 36),
+    ),
+  ),
+  andPart(
+    prefix: 'and',
+    defaultStyle: UvStyle(fg: UvColor.rgb(154, 184, 169)),
+    defaultLabelStyle: UvStyle(
+      fg: UvColor.rgb(154, 184, 169),
+      bg: UvColor.rgb(28, 43, 36),
+    ),
+  ),
+  critical(
+    prefix: 'critical',
+    defaultStyle: UvStyle(fg: UvColor.rgb(154, 184, 169)),
+    defaultLabelStyle: UvStyle(
+      fg: UvColor.rgb(154, 184, 169),
+      bg: UvColor.rgb(28, 43, 36),
+    ),
+  ),
+  optionPart(
+    prefix: 'option',
+    defaultStyle: UvStyle(fg: UvColor.rgb(154, 184, 169)),
+    defaultLabelStyle: UvStyle(
+      fg: UvColor.rgb(154, 184, 169),
+      bg: UvColor.rgb(28, 43, 36),
+    ),
+  ),
+  breakPart(
+    prefix: 'break',
+    defaultStyle: UvStyle(fg: UvColor.rgb(154, 184, 169)),
+    defaultLabelStyle: UvStyle(
+      fg: UvColor.rgb(154, 184, 169),
+      bg: UvColor.rgb(28, 43, 36),
+    ),
+  ),
   end;
 
   const SequenceFragmentKind({
@@ -320,10 +395,14 @@ class SequenceParticipant {
     required this.id,
     required this.label,
     this.style,
+    this.isActor = false,
   });
   final String id;
   final String label;
   final UvStyle? style;
+
+  /// Whether Mermaid declared this participant with `actor`.
+  final bool isActor;
 }
 
 /// A group/box of participants.
@@ -345,11 +424,15 @@ class SequenceRect {
     this.foregroundColor,
     required this.startIndex,
     this.endIndex,
+    this.depth = 0,
   });
   final UvColor backgroundColor;
   final UvColor? foregroundColor;
   final int startIndex;
   final int? endIndex;
+
+  /// Nesting depth, used when nested regions share the same step boundaries.
+  final int depth;
 }
 
 /// A message between participants.
@@ -364,6 +447,8 @@ class SequenceMessage {
     this.activate,
     this.deactivate,
     this.styleOverride,
+    this.bidirectional = false,
+    this.reverse = false,
   });
   final String from;
   final String to;
@@ -374,14 +459,28 @@ class SequenceMessage {
   final String? activate;
   final String? deactivate;
   final UvStyle? styleOverride;
+  final bool bidirectional;
+  final bool reverse;
 }
 
 /// A note displayed over participants.
 class SequenceNote {
-  const SequenceNote({required this.over, required this.label});
+  const SequenceNote({
+    required this.over,
+    required this.label,
+    this.position = SequenceNotePosition.over,
+  });
   final List<String> over;
   final String label;
+
+  /// Placement requested by Mermaid (`over`, `left of`, or `right of`).
+  final SequenceNotePosition position;
+
+  /// Mermaid uses `<br/>` for line breaks in notes and messages.
 }
+
+/// Placement of a sequence note.
+enum SequenceNotePosition { over, left, right }
 
 /// Activation/deactivation bar marker.
 class SequenceActivation {
@@ -392,9 +491,14 @@ class SequenceActivation {
 
 /// A fragment block (alt/else/loop/end).
 class SequenceFragment {
-  const SequenceFragment({required this.kind, required this.label});
+  const SequenceFragment({
+    required this.kind,
+    required this.label,
+    this.depth = 0,
+  });
   final SequenceFragmentKind kind;
   final String label;
+  final int depth;
 }
 
 /// A single step in the diagram timeline.
@@ -516,7 +620,7 @@ class SequenceDiagramTheme {
 // ─── Parsing ──────────────────────────────────────────────────────────────
 
 final _messageRe = RegExp(
-  r'^(.+?)\s*(-->>|->>|--x|-x|--\)|-\)|->\)|<->>|<->|<-->>|<-->|-->|->)([+-]?)\s*(.+?)\s*:\s*(.*)$',
+  r'^(.+?)\s*(<<-->>|<<->>|-->>|->>|--x|-x|--\)|-\)|->\)|<->>|<->|<-->>|<-->|-->|->)([+-]?)\s*(.+?)\s*:\s*(.*)$',
 );
 final _noteRe = RegExp(
   r'^note\s+(right|left|over)\s+(.+?)\s*:\s*(.*)$',
@@ -525,19 +629,23 @@ final _noteRe = RegExp(
 final _participantRe = RegExp(
   r'^(?:participant|actor)\s+(\S+)(?:\s+as\s+(.+))?$',
 );
-final _activationRe = RegExp(r'^(activate|deactivate)\s+(.+)$');
+final _activationRe = RegExp(
+  r'^(activate|deactivate)\s+(.+)$',
+  caseSensitive: false,
+);
 final _boxRe = RegExp(r'^box(?:\s+(.+))?$');
 final _endRe = RegExp(r'^end$', caseSensitive: false);
-final _altRe = RegExp(r'^alt\s+(.+)$');
-final _elseRe = RegExp(r'^else(?:\s+(.+))?$');
-final _loopRe = RegExp(r'^loop\s+(.+)$');
-final _optRe = RegExp(r'^opt\s+(.+)$');
-final _criticalRe = RegExp(r'^critical\s+(.+)$');
-final _breakRe = RegExp(r'^break\s+(.+)?$');
-final _parRe = RegExp(r'^par\s+(.+)?$');
-final _andRe = RegExp(r'^and(?:\s+(.+))?$');
+final _altRe = RegExp(r'^alt\s+(.+)$', caseSensitive: false);
+final _elseRe = RegExp(r'^else(?:\s+(.+))?$', caseSensitive: false);
+final _loopRe = RegExp(r'^loop\s+(.+)$', caseSensitive: false);
+final _optRe = RegExp(r'^opt\s+(.+)$', caseSensitive: false);
+final _criticalRe = RegExp(r'^critical\s+(.+)$', caseSensitive: false);
+final _breakRe = RegExp(r'^break\s+(.+)?$', caseSensitive: false);
+final _parRe = RegExp(r'^par\s+(.+)?$', caseSensitive: false);
+final _andRe = RegExp(r'^and(?:\s+(.+))?$', caseSensitive: false);
+final _optionRe = RegExp(r'^option(?:\s+(.+))?$', caseSensitive: false);
 final _autonumberRe = RegExp(r'^autonumber(?:\s+(\d+)(?:\s+(\d+))?)?$');
-final _rectRe = RegExp(r'^rect\s+(.+)$');
+final _rectRe = RegExp(r'^rect\s+(.+)$', caseSensitive: false);
 final _styleRe = RegExp(r'^style\s+(\S+)\s+(.+)$');
 final _classDefRe = RegExp(r'^classDef\s+(\S+)\s+(.+)$');
 
@@ -565,21 +673,40 @@ void _ensureParticipant(
   String id, {
   String? label,
   UvStyle? style,
+  bool isActor = false,
 }) {
   for (final p in participants) {
     if (p.id == id) return;
   }
   participants.add(
-    SequenceParticipant(id: id, label: label ?? id, style: style),
+    SequenceParticipant(
+      id: id,
+      label: label ?? id,
+      style: style,
+      isActor: isActor,
+    ),
   );
 }
 
 SequenceArrowHead? _arrowHeadForSyntax(String arrow) {
   if (arrow.contains('x')) return SequenceArrowHead.cross;
   if (arrow.contains(')')) return SequenceArrowHead.async;
-  if (arrow.contains('>')) return SequenceArrowHead.open;
+  if (arrow.contains('>>') || arrow.contains('<<')) {
+    return SequenceArrowHead.open;
+  }
   return null;
 }
+
+String? _nearestFragment(List<({String type, int stepIndex})> stack) {
+  return stack.isEmpty ? null : stack.last.type;
+}
+
+int _fragmentDepth(List<({String type, int stepIndex})> stack) =>
+    stack.where((block) => block.type != 'box' && block.type != 'rect').length -
+    1;
+
+String _decodeMermaidText(String value) =>
+    value.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
 
 /// Parses Mermaid sequence diagram content into a [SequenceDiagram] record.
 /// Returns null if content does not start with `sequenceDiagram`.
@@ -595,7 +722,10 @@ SequenceDiagram? parseSequenceDiagram(String content) {
 
   final blockStack = <({String type, int stepIndex})>[];
   final groupStack = <List<String>>[];
-  final rectStack = <int>[]; // step index where rect started
+  final rectStack = <({int stepIndex, UvColor? color})>[];
+  // Mermaid permits an activation to remain open until the implicit end of
+  // the sequence; only deactivations need a matching active bar.
+  final activationCounts = <String, int>{};
 
   int? nextMessageNumber;
   var messageNumberIncrement = 1;
@@ -656,8 +786,12 @@ SequenceDiagram? parseSequenceDiagram(String content) {
     // rect
     m = _rectRe.firstMatch(line);
     if (m != null) {
-      parseMermaidColor(m.group(1)!.trim());
-      rectStack.add(steps.length);
+      final colorToken = m.group(1)!.trim();
+      final color = parseMermaidColor(colorToken);
+      if (color == null && colorToken.toLowerCase() != 'transparent') {
+        throw FormatException('Invalid rect color: $colorToken');
+      }
+      rectStack.add((stepIndex: steps.length, color: color));
       blockStack.add((type: 'rect', stepIndex: steps.length));
       continue;
     }
@@ -666,22 +800,48 @@ SequenceDiagram? parseSequenceDiagram(String content) {
     m = _participantRe.firstMatch(line);
     if (m != null) {
       final id = _stripQuotes(m.group(1)!);
-      final label = _stripQuotes(m.group(2) ?? id);
+      if (id.contains('@{')) {
+        throw const FormatException(
+          'Participant JSON configuration is not supported',
+        );
+      }
+      final label = _decodeMermaidText(_stripQuotes(m.group(2) ?? id));
       final existingStyle = actorStyles[id];
-      _ensureParticipant(participants, id, label: label, style: existingStyle);
-      if (groupStack.isNotEmpty) groupStack.last.add(id);
+      _ensureParticipant(
+        participants,
+        id,
+        label: label,
+        style: existingStyle,
+        isActor: line.toLowerCase().startsWith('actor '),
+      );
+      if (groupStack.isNotEmpty && !groupStack.last.contains(id)) {
+        groupStack.last.add(id);
+      }
       continue;
     }
 
     // note
     m = _noteRe.firstMatch(line);
     if (m != null) {
-      final over = _parseNoteTarget(m.group(1)!, m.group(2)!);
-      final label = _stripQuotes(m.group(3)!);
+      final side = m.group(1)!.toLowerCase();
+      final over = _parseNoteTarget(side, m.group(2)!);
+      final label = _decodeMermaidText(_stripQuotes(m.group(3)!));
       for (final p in over) {
         _ensureParticipant(participants, p);
       }
-      steps.add(SequenceStepNote(SequenceNote(over: over, label: label)));
+      steps.add(
+        SequenceStepNote(
+          SequenceNote(
+            over: over,
+            label: label,
+            position: switch (side) {
+              'left' => SequenceNotePosition.left,
+              'right' => SequenceNotePosition.right,
+              _ => SequenceNotePosition.over,
+            },
+          ),
+        ),
+      );
       continue;
     }
 
@@ -690,12 +850,17 @@ SequenceDiagram? parseSequenceDiagram(String content) {
     if (m != null) {
       final participant = _stripQuotes(m.group(2)!);
       _ensureParticipant(participants, participant);
+      final active = m.group(1)!.toLowerCase() == 'activate';
+      final count = activationCounts[participant] ?? 0;
+      if (!active && count == 0) {
+        throw FormatException(
+          'Cannot deactivate inactive participant: $participant',
+        );
+      }
+      activationCounts[participant] = active ? count + 1 : count - 1;
       steps.add(
         SequenceStepActivation(
-          SequenceActivation(
-            participant: participant,
-            active: m.group(1)!.toLowerCase() == 'activate',
-          ),
+          SequenceActivation(participant: participant, active: active),
         ),
       );
       continue;
@@ -709,22 +874,24 @@ SequenceDiagram? parseSequenceDiagram(String content) {
         SequenceStepFragment(
           SequenceFragment(
             kind: SequenceFragmentKind.alt,
-            label: _stripQuotes(m.group(1)!),
+            label: _decodeMermaidText(_stripQuotes(m.group(1)!)),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
       continue;
     }
 
-    // opt → becomes alt with empty else
+    // Optional block.
     m = _optRe.firstMatch(line);
     if (m != null) {
       blockStack.add((type: 'opt', stepIndex: steps.length));
       steps.add(
         SequenceStepFragment(
           SequenceFragment(
-            kind: SequenceFragmentKind.alt,
-            label: _stripQuotes(m.group(1)!),
+            kind: SequenceFragmentKind.opt,
+            label: _decodeMermaidText(_stripQuotes(m.group(1)!)),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
@@ -739,51 +906,56 @@ SequenceDiagram? parseSequenceDiagram(String content) {
         SequenceStepFragment(
           SequenceFragment(
             kind: SequenceFragmentKind.loop,
-            label: _stripQuotes(m.group(1)!),
+            label: _decodeMermaidText(_stripQuotes(m.group(1)!)),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
       continue;
     }
 
-    // critical
+    // Critical block.
     m = _criticalRe.firstMatch(line);
     if (m != null) {
       blockStack.add((type: 'critical', stepIndex: steps.length));
       steps.add(
         SequenceStepFragment(
           SequenceFragment(
-            kind: SequenceFragmentKind.alt,
-            label: _stripQuotes(m.group(1)!),
+            kind: SequenceFragmentKind.critical,
+            label: _decodeMermaidText(_stripQuotes(m.group(1)!)),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
       continue;
     }
 
-    // par
+    // Parallel block.
     m = _parRe.firstMatch(line);
     if (m != null) {
       blockStack.add((type: 'par', stepIndex: steps.length));
       steps.add(
         SequenceStepFragment(
           SequenceFragment(
-            kind: SequenceFragmentKind.alt,
-            label: _stripQuotes(m.group(1)!),
+            kind: SequenceFragmentKind.par,
+            label: _decodeMermaidText(_stripQuotes(m.group(1)!)),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
       continue;
     }
 
-    // break
+    // Break branch.
     m = _breakRe.firstMatch(line);
     if (m != null) {
+      blockStack.add((type: 'break', stepIndex: steps.length));
       steps.add(
         SequenceStepFragment(
           SequenceFragment(
-            kind: SequenceFragmentKind.elsePart,
-            label: _stripQuotes(m.group(1)!),
+            kind: SequenceFragmentKind.breakPart,
+            label: _decodeMermaidText(_stripQuotes(m.group(1)!)),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
@@ -793,11 +965,15 @@ SequenceDiagram? parseSequenceDiagram(String content) {
     // else
     m = _elseRe.firstMatch(line);
     if (m != null) {
+      if (_nearestFragment(blockStack) != 'alt') {
+        throw FormatException('else is only valid inside an alt block');
+      }
       steps.add(
         SequenceStepFragment(
           SequenceFragment(
             kind: SequenceFragmentKind.elsePart,
-            label: _stripQuotes(m.group(1) ?? ''),
+            label: _decodeMermaidText(_stripQuotes(m.group(1) ?? '')),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
@@ -807,11 +983,33 @@ SequenceDiagram? parseSequenceDiagram(String content) {
     // and (for par)
     m = _andRe.firstMatch(line);
     if (m != null) {
+      if (_nearestFragment(blockStack) != 'par') {
+        throw FormatException('and is only valid inside a par block');
+      }
       steps.add(
         SequenceStepFragment(
           SequenceFragment(
-            kind: SequenceFragmentKind.elsePart,
-            label: _stripQuotes(m.group(1) ?? ''),
+            kind: SequenceFragmentKind.andPart,
+            label: _decodeMermaidText(_stripQuotes(m.group(1) ?? '')),
+            depth: _fragmentDepth(blockStack),
+          ),
+        ),
+      );
+      continue;
+    }
+
+    // option (for critical)
+    m = _optionRe.firstMatch(line);
+    if (m != null) {
+      if (_nearestFragment(blockStack) != 'critical') {
+        throw FormatException('option is only valid inside a critical block');
+      }
+      steps.add(
+        SequenceStepFragment(
+          SequenceFragment(
+            kind: SequenceFragmentKind.optionPart,
+            label: _decodeMermaidText(_stripQuotes(m.group(1) ?? '')),
+            depth: _fragmentDepth(blockStack),
           ),
         ),
       );
@@ -821,18 +1019,23 @@ SequenceDiagram? parseSequenceDiagram(String content) {
     // end
     if (_endRe.hasMatch(line)) {
       final block = blockStack.isEmpty ? null : blockStack.removeLast();
-      if (block == null) continue;
+      if (block == null) {
+        throw FormatException('Unexpected end without an open block');
+      }
       if (block.type == 'box') {
         groupStack.removeLast();
         continue;
       }
       if (block.type == 'rect') {
-        final startIdx = rectStack.isEmpty ? 0 : rectStack.removeLast();
+        final rect = rectStack.isEmpty
+            ? (stepIndex: 0, color: null)
+            : rectStack.removeLast();
         rects.add(
           SequenceRect(
-            backgroundColor: UvColor.rgb(40, 40, 40),
-            startIndex: startIdx,
+            backgroundColor: rect.color ?? const UvRgb(0, 0, 0, a: 0),
+            startIndex: rect.stepIndex,
             endIndex: steps.length,
+            depth: rectStack.length,
           ),
         );
         continue;
@@ -855,19 +1058,35 @@ SequenceDiagram? parseSequenceDiagram(String content) {
       final arrow = m.group(2)!;
       final activation = m.group(3)!;
       final to = _stripQuotes(m.group(4)!);
-      final label = _stripQuotes(m.group(5)!);
+      if (from.endsWith('()') || to.startsWith('()')) {
+        throw const FormatException(
+          'Central lifeline connections are not supported',
+        );
+      }
+      final label = _decodeMermaidText(_stripQuotes(m.group(5)!));
 
       _ensureParticipant(participants, from);
       _ensureParticipant(participants, to);
       if (groupStack.isNotEmpty) {
-        groupStack.last.add(from);
-        groupStack.last.add(to);
+        if (!groupStack.last.contains(from)) groupStack.last.add(from);
+        if (!groupStack.last.contains(to)) groupStack.last.add(to);
       }
 
       final style = arrow.contains('--')
           ? SequenceMessageStyle.dashed
           : SequenceMessageStyle.solid;
       final head = _arrowHeadForSyntax(arrow);
+      if (activation.contains('+')) {
+        activationCounts[to] = (activationCounts[to] ?? 0) + 1;
+      } else if (activation.contains('-')) {
+        final count = activationCounts[from] ?? 0;
+        if (count == 0) {
+          throw FormatException(
+            'Cannot deactivate inactive participant: $from',
+          );
+        }
+        activationCounts[from] = count - 1;
+      }
 
       final msg = SequenceMessage(
         from: from,
@@ -879,6 +1098,8 @@ SequenceDiagram? parseSequenceDiagram(String content) {
         activate: activation.contains('+') ? to : null,
         deactivate: activation.contains('-') ? from : null,
         styleOverride: actorStyles[from] ?? actorStyles[to],
+        bidirectional: arrow.startsWith('<'),
+        reverse: arrow.startsWith('<') && !arrow.startsWith('<->'),
       );
 
       messages.add(msg);
@@ -887,7 +1108,23 @@ SequenceDiagram? parseSequenceDiagram(String content) {
       if (nextMessageNumber != null) {
         nextMessageNumber = nextMessageNumber + messageNumberIncrement;
       }
+      continue;
     }
+
+    if (RegExp(r'^(?:create|destroy)\b', caseSensitive: false).hasMatch(line)) {
+      throw FormatException(
+        'create/destroy participant lifecycles are not supported yet',
+      );
+    }
+    // Do not silently discard syntax: a typo in a diagram must be visible to
+    // callers rather than producing a convincing but incomplete picture.
+    throw FormatException('Unsupported sequence diagram syntax: $line');
+  }
+
+  if (blockStack.isNotEmpty) {
+    throw FormatException(
+      'Unclosed sequence diagram block: ${blockStack.last.type}',
+    );
   }
 
   return (
@@ -912,31 +1149,42 @@ List<String> _parseNoteTarget(String side, String participants) {
       .map((p) => _stripQuotes(p.trim()))
       .where((p) => p.isNotEmpty)
       .toList();
-  return list.isEmpty ? [_stripQuotes(cleaned)] : list;
+  if (list.isEmpty) {
+    throw FormatException('Note must have at least one participant target');
+  }
+  return list;
 }
 
 (UvColor? color, String label) _parseBoxContent(String? raw) {
   final text = (raw ?? '').trim();
   if (text.isEmpty) return (null, '');
-
-  // Try to extract leading color
-  final color = parseMermaidColor(text);
-  if (color != null) {
-    // Check if there's a label after the color
-    final rest = text.substring(
-      text.indexOf(text.startsWith('#') ? '#' : text[0]) +
-          (text.startsWith('rgb(')
-              ? text.indexOf(')') + 1
-              : text.startsWith('rgba(')
-              ? text.indexOf(')') + 1
-              : text.split(' ').first.length),
-    );
-    final trimmedRest = rest.trim();
-    if (trimmedRest.isEmpty) return (color, '');
-    return (color, _stripQuotes(trimmedRest));
+  if (RegExp(r'^hsla?\s*\(', caseSensitive: false).hasMatch(text)) {
+    throw const FormatException('HSL box colors are not supported');
   }
-
-  return (null, _stripQuotes(text));
+  String? token;
+  var rest = '';
+  final function = RegExp(
+    r'^(rgba?|hsla?)\s*\([^)]*\)',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (function != null) {
+    token = function.group(0);
+    rest = text.substring(function.end).trim();
+  } else {
+    final first = text.split(RegExp(r'\s+')).first;
+    if (first.startsWith('#') ||
+        first.toLowerCase() == 'transparent' ||
+        _cssColorNames.containsKey(first.toLowerCase())) {
+      token = first;
+      rest = text.substring(first.length).trim();
+    }
+  }
+  if (token == null) return (null, _stripQuotes(text));
+  final color = parseMermaidColor(token);
+  if (color == null && token.toLowerCase() != 'transparent') {
+    throw FormatException('Invalid box color: $token');
+  }
+  return (color, _stripQuotes(rest));
 }
 
 UvStyle? _parseStyleDeclaration(String text) {
@@ -971,7 +1219,8 @@ int _stringWidth(String s) {
   return w;
 }
 
-int _participantWidth(String label) => math.max(5, _stringWidth(label) + 4);
+int _participantWidth(String label) =>
+    math.max(5, _labelWidth(_messageLabelLines(label)) + 4);
 
 String _noteLabelText(String label) =>
     '${' ' * _noteHPadding}$label${' ' * _noteHPadding}';
@@ -995,18 +1244,184 @@ int _labelWidth(List<String> lines) {
 int _messageWidth(SequenceMessage m) =>
     _labelWidth(_messageLabelLines(_messageLabelText(m)));
 
+int _diagramWidth(
+  List<SequenceParticipant> participants,
+  List<SequenceMessage> messages,
+  List<int> centers,
+  Map<String, int> idx,
+) {
+  var maxX = 1;
+  for (var i = 0; i < participants.length; i++) {
+    final half = _participantWidth(participants[i].label) ~/ 2;
+    maxX = math.max(maxX, centers[i] + half + 1);
+  }
+  for (final msg in messages) {
+    final fi = idx[msg.from] ?? -1;
+    final ti = idx[msg.to] ?? -1;
+    if (fi < 0 || ti < 0) continue;
+    if (fi == ti) {
+      maxX = math.max(maxX, centers[fi] + _selfMessageWidth(msg) + 1);
+    } else {
+      maxX = math.max(maxX, math.max(centers[fi], centers[ti]) + 2);
+    }
+  }
+  return maxX + 2;
+}
+
 int _selfMessageWidth(SequenceMessage m) =>
     math.max(10, _labelWidth(_messageLabelLines(_messageLabelText(m))) + 4);
 
 int _stepHeight(SequenceStep step) {
   return switch (step) {
-    SequenceStepNote() => 3,
+    SequenceStepNote(:final note) => 2 + _messageLabelLines(note.label).length,
     SequenceStepActivation() => 0,
-    SequenceStepFragment() => 2,
+    SequenceStepFragment(:final fragment) => math.max(
+      2,
+      _messageLabelLines(fragment.label).length + 1,
+    ),
     SequenceStepMessage(:final message) =>
       _messageLabelLines(_messageLabelText(message)).length +
           (message.from == message.to ? 3 : 2),
   };
+}
+
+int _headerHeight(List<SequenceParticipant> participants) {
+  var labelLines = 1;
+  var actor = false;
+  for (final participant in participants) {
+    labelLines = math.max(
+      labelLines,
+      _messageLabelLines(participant.label).length,
+    );
+    actor = actor || participant.isActor;
+  }
+  return math.max(4, labelLines + 3 + (actor ? 1 : 0));
+}
+
+({int left, int width})? _noteExtent(
+  SequenceNote note,
+  List<int> centers,
+  Map<String, int> indices,
+) {
+  final targets = [
+    for (final id in note.over)
+      if (indices.containsKey(id)) centers[indices[id]!],
+  ];
+  if (targets.isEmpty) return null;
+  final left = targets.reduce(math.min);
+  final right = targets.reduce(math.max);
+  final width = _labelWidth(_messageLabelLines(note.label)) + _noteHPadding * 2;
+  return (
+    left: switch (note.position) {
+      SequenceNotePosition.left => left - width - 2,
+      SequenceNotePosition.right => right + 2,
+      SequenceNotePosition.over => (left + right) ~/ 2 - width ~/ 2,
+    },
+    width: width,
+  );
+}
+
+({int left, int right, int last})? _groupExtent(
+  SequenceParticipantGroup group,
+  List<SequenceParticipant> participants,
+  List<int> centers,
+  Map<String, int> indices,
+) {
+  final members = [
+    for (final id in group.ids)
+      if (indices.containsKey(id)) indices[id]!,
+  ];
+  if (members.isEmpty) return null;
+  final first = members.reduce(math.min);
+  final last = members.reduce(math.max);
+  final left =
+      centers[first] - _participantWidth(participants[first].label) ~/ 2;
+  final right = math.max(
+    centers[last] + _participantWidth(participants[last].label) ~/ 2,
+    left + _labelWidth(_messageLabelLines(group.label)) + 4,
+  );
+  return (left: left, right: right, last: last);
+}
+
+/// Shared measurement for both the Canvas and string rendering paths.
+({
+  Map<String, int> indices,
+  List<int> centers,
+  int width,
+  int height,
+  int headerHeight,
+})
+_sequenceGeometry(SequenceDiagram diagram, SequenceDiagramOptions? options) {
+  final indices = <String, int>{
+    for (var i = 0; i < diagram.participants.length; i++)
+      diagram.participants[i].id: i,
+  };
+  final centers = _resolveCenters(
+    diagram.participants,
+    diagram.messages,
+    indices,
+    options?.minParticipantGap ?? _defaultMinGap,
+  );
+  for (final group in diagram.groups) {
+    final extent = _groupExtent(group, diagram.participants, centers, indices);
+    if (extent == null) continue;
+    final headerRight =
+        centers[extent.last] +
+        _participantWidth(diagram.participants[extent.last].label) ~/ 2;
+    final expansion = math.max(0, extent.right - headerRight);
+    for (var i = extent.last + 1; i < centers.length; i++) {
+      centers[i] += expansion;
+    }
+  }
+  var minLeft = 0;
+  var gutter = 0;
+  for (final step in diagram.steps) {
+    if (step case SequenceStepNote(:final note)) {
+      final extent = _noteExtent(note, centers, indices);
+      if (extent != null) minLeft = math.min(minLeft, extent.left);
+    } else if (step case SequenceStepFragment(:final fragment)) {
+      gutter = math.max(gutter, fragment.depth + 1);
+    }
+  }
+  final shift = -minLeft + gutter;
+  for (var i = 0; i < centers.length; i++) {
+    centers[i] += shift;
+  }
+  var width =
+      _diagramWidth(diagram.participants, diagram.messages, centers, indices) +
+      gutter;
+  for (final group in diagram.groups) {
+    final extent = _groupExtent(group, diagram.participants, centers, indices);
+    if (extent != null) width = math.max(width, extent.right + gutter + 2);
+  }
+  for (final step in diagram.steps) {
+    if (step case SequenceStepNote(:final note)) {
+      final extent = _noteExtent(note, centers, indices);
+      if (extent != null) {
+        width = math.max(width, extent.left + extent.width + gutter + 2);
+      }
+    } else if (step case SequenceStepFragment(:final fragment)) {
+      width = math.max(
+        width,
+        _labelWidth(_messageLabelLines(fragment.label)) +
+            fragment.kind.prefix.length +
+            6 +
+            2 * fragment.depth,
+      );
+    }
+  }
+  final headerHeight = _headerHeight(diagram.participants);
+  final height = diagram.steps.fold<int>(
+    headerHeight,
+    (height, step) => height + _stepHeight(step),
+  );
+  return (
+    indices: indices,
+    centers: centers,
+    width: width,
+    height: height,
+    headerHeight: headerHeight,
+  );
 }
 
 List<int> _resolveCenters(
@@ -1022,7 +1437,7 @@ List<int> _resolveCenters(
       minGap,
       _participantWidth(participants[i].label) ~/ 2 +
           _participantWidth(participants[i + 1].label) ~/ 2 +
-          6,
+          2,
     );
   }
   for (final msg in messages) {
@@ -1038,7 +1453,7 @@ List<int> _resolveCenters(
     } else if (fi >= 0 && ti >= 0 && (fi - ti).abs() == 1) {
       gaps[math.min(fi, ti)] = math.max(
         gaps[math.min(fi, ti)],
-        _messageWidth(msg) + 6,
+        _messageWidth(msg) + 2,
       );
     }
   }
@@ -1061,42 +1476,39 @@ void drawSequenceDiagram(
   if (diagram.participants.isEmpty) return;
 
   final participants = diagram.participants;
-  final messages = diagram.messages;
   final steps = diagram.steps;
-
-  final idx = <String, int>{};
-  for (var i = 0; i < participants.length; i++) {
-    idx[participants[i].id] = i;
-  }
-
-  final centers = _resolveCenters(
-    participants,
-    messages,
-    idx,
-    options?.minParticipantGap ?? _defaultMinGap,
-  );
+  final geometry = _sequenceGeometry(diagram, options);
+  final idx = geometry.indices;
+  final centers = geometry.centers;
 
   // Calculate width
-  var maxX = 40;
-  for (final msg in messages) {
-    final fi = idx[msg.from] ?? -1;
-    final ti = idx[msg.to] ?? -1;
-    if (fi < 0 || ti < 0) continue;
-    if (fi == ti) {
-      maxX = math.max(maxX, centers[fi] + _selfMessageWidth(msg) + 2);
-    } else {
-      final left = math.min(centers[fi], centers[ti]);
-      maxX = math.max(maxX, left + _messageWidth(msg) + 4);
-    }
+  final naturalWidth = geometry.width;
+  final availableWidth = area.maxX - area.minX;
+  if (naturalWidth > availableWidth) {
+    _drawDiagnostic(
+      canvas,
+      area,
+      'sequence diagram needs $naturalWidth columns; available $availableWidth',
+    );
+    return;
   }
-  final width = math.min(maxX + 4, area.maxX - area.minX);
+  final width = naturalWidth;
 
-  // Calculate height
-  var h = 6;
-  for (final step in steps) {
-    h += _stepHeight(step);
+  // Calculate height. Header labels may occupy several physical rows.
+  final headerHeight = geometry.headerHeight;
+  final h = geometry.height;
+  final availableHeight = area.maxY - area.minY;
+  if (h > availableHeight) {
+    _drawDiagnostic(
+      canvas,
+      area,
+      'sequence diagram needs $h rows; available $availableHeight',
+    );
+    return;
   }
-  final height = math.min(h, area.maxY - area.minY);
+  final height = h;
+  final backgrounds =
+      <({Rectangle area, UvColor color, UvColor? foreground})>[];
 
   // Render participant headers
   for (var i = 0; i < participants.length; i++) {
@@ -1107,36 +1519,265 @@ void drawSequenceDiagram(
 
     final boxStyle = p.style ?? theme.participantBox;
     final labelStyle = p.style != null ? p.style! : theme.participantLabel;
+    final labelLines = _messageLabelLines(p.label);
+    if (p.isActor) {
+      putCell(canvas, area.minX + cx, area.minY, '○', boxStyle);
+      putText(
+        canvas,
+        area,
+        area.minX + cx - 1,
+        area.minY + 1,
+        '/|\\',
+        boxStyle,
+      );
+      putText(
+        canvas,
+        area,
+        area.minX + cx - 1,
+        area.minY + 2,
+        '/ \\',
+        boxStyle,
+      );
+      for (var line = 0; line < labelLines.length; line++) {
+        putText(
+          canvas,
+          area,
+          area.minX + cx - _stringWidth(labelLines[line]) ~/ 2,
+          area.minY + 3 + line,
+          labelLines[line],
+          labelStyle,
+        );
+      }
+      for (var y = 3 + labelLines.length; y < height; y++) {
+        putCell(canvas, area.minX + cx, area.minY + y, '│', theme.lifeline);
+      }
+      continue;
+    }
+    final boxBottom = math.max(2, labelLines.length + 1);
 
     for (var x = sx; x < sx + hw; x++) {
       putCell(canvas, area.minX + x, area.minY, '─', boxStyle);
-      putCell(canvas, area.minX + x, area.minY + 2, '─', boxStyle);
+      putCell(canvas, area.minX + x, area.minY + boxBottom, '─', boxStyle);
     }
     putCell(canvas, area.minX + sx, area.minY, '┌', boxStyle);
     putCell(canvas, area.minX + sx + hw - 1, area.minY, '┐', boxStyle);
-    putCell(canvas, area.minX + sx, area.minY + 1, '│', boxStyle);
-    putCell(canvas, area.minX + sx + hw - 1, area.minY + 1, '│', boxStyle);
-    putCell(canvas, area.minX + sx, area.minY + 2, '└', boxStyle);
-    putCell(canvas, area.minX + sx + hw - 1, area.minY + 2, '┘', boxStyle);
-    putCell(canvas, area.minX + cx, area.minY + 2, '┬', boxStyle);
-
-    final labelX = cx - _stringWidth(p.label) ~/ 2;
-    putText(
+    for (var y = 1; y < boxBottom; y++) {
+      putCell(canvas, area.minX + sx, area.minY + y, '│', boxStyle);
+      putCell(canvas, area.minX + sx + hw - 1, area.minY + y, '│', boxStyle);
+    }
+    putCell(canvas, area.minX + sx, area.minY + boxBottom, '└', boxStyle);
+    putCell(
       canvas,
-      area,
-      area.minX + labelX,
-      area.minY + 1,
-      p.label,
-      labelStyle,
+      area.minX + sx + hw - 1,
+      area.minY + boxBottom,
+      '┘',
+      boxStyle,
     );
+    putCell(canvas, area.minX + cx, area.minY + boxBottom, '┬', boxStyle);
+    for (var line = 0; line < labelLines.length; line++) {
+      final labelX = cx - _stringWidth(labelLines[line]) ~/ 2;
+      putText(
+        canvas,
+        area,
+        area.minX + labelX,
+        area.minY + 1 + line,
+        labelLines[line],
+        labelStyle,
+      );
+    }
 
-    for (var y = 3; y < height - 1; y++) {
+    for (var y = boxBottom + 1; y < height; y++) {
       putCell(canvas, area.minX + cx, area.minY + y, '│', theme.lifeline);
     }
   }
 
+  // Mermaid `box` groups are part of the diagram, not parser-only metadata.
+  for (final group in diagram.groups) {
+    final extent = _groupExtent(group, participants, centers, idx);
+    if (extent == null || height <= headerHeight - 1) continue;
+    final left = extent.left;
+    final right = extent.right;
+    final groupStyle = theme.group;
+    if (group.backgroundColor != null) {
+      backgrounds.add((
+        area: rect(area.minX + left, area.minY, right - left + 1, height),
+        color: group.backgroundColor!,
+        foreground: null,
+      ));
+    }
+    for (var x = left; x <= right; x++) {
+      putCell(
+        canvas,
+        area.minX + x,
+        area.minY + headerHeight - 1,
+        '─',
+        groupStyle,
+      );
+    }
+    putCell(
+      canvas,
+      area.minX + left,
+      area.minY + headerHeight - 1,
+      '┌',
+      groupStyle,
+    );
+    putCell(
+      canvas,
+      area.minX + right,
+      area.minY + headerHeight - 1,
+      '┐',
+      groupStyle,
+    );
+    for (var y = headerHeight; y < height - 1; y++) {
+      putCell(canvas, area.minX + left, area.minY + y, '│', groupStyle);
+      putCell(canvas, area.minX + right, area.minY + y, '│', groupStyle);
+    }
+    for (var x = left + 1; x < right; x++) {
+      putCell(canvas, area.minX + x, area.minY + height - 1, '─', groupStyle);
+    }
+    putCell(canvas, area.minX + left, area.minY + height - 1, '└', groupStyle);
+    putCell(canvas, area.minX + right, area.minY + height - 1, '┘', groupStyle);
+    if (group.label.isNotEmpty) {
+      putText(
+        canvas,
+        area,
+        area.minX + left + 2,
+        area.minY + headerHeight - 1,
+        ' ${group.label} ',
+        groupStyle,
+      );
+    }
+  }
+
+  // A rect is a background layer, not a second drawing pass.  In particular,
+  // never replace an arrow, label, or lifeline with a blank cell merely to
+  // paint its background.
+  final regions = diagram.rects.toList()
+    ..sort((a, b) {
+      final startOrder = a.startIndex.compareTo(b.startIndex);
+      if (startOrder != 0) return startOrder;
+      final endOrder = (b.endIndex ?? steps.length).compareTo(
+        a.endIndex ?? steps.length,
+      );
+      return endOrder != 0 ? endOrder : a.depth.compareTo(b.depth);
+    });
+  for (final region in regions) {
+    var top = headerHeight;
+    var bottom = top;
+    for (var i = 0; i < steps.length; i++) {
+      if (i < region.startIndex) {
+        top += _stepHeight(steps[i]);
+      }
+      if (i < (region.endIndex ?? steps.length)) {
+        bottom += _stepHeight(steps[i]);
+      }
+    }
+    backgrounds.add((
+      area: rect(area.minX, area.minY + top, width, math.max(0, bottom - top)),
+      color: region.backgroundColor,
+      foreground: region.foregroundColor,
+    ));
+  }
+
+  // Fragments are regions, not unrelated header lines. Pair starts and ends
+  // here; because source order is preserved this also handles nesting.
+  final fragmentStack = <({int y, SequenceFragment fragment})>[];
+  var regionY = headerHeight;
+  for (final step in steps) {
+    if (step case SequenceStepFragment(:final fragment)) {
+      if (fragment.kind == SequenceFragmentKind.end) {
+        if (fragmentStack.isNotEmpty) {
+          final open = fragmentStack.removeLast();
+          _drawFragmentRegion(
+            canvas,
+            area,
+            open.y,
+            regionY + 1,
+            open.fragment,
+            theme,
+            width,
+          );
+        }
+      } else if (!_isBranchKind(fragment.kind)) {
+        fragmentStack.add((y: regionY, fragment: fragment));
+      }
+    }
+    regionY += _stepHeight(step);
+  }
+
   // Render steps
-  var stepY = 4;
+  // Resolve activations against physical rows before drawing messages.  This
+  // deliberately uses arrow rows (rather than the start of a message label):
+  // Mermaid's `+` starts at the initiating arrow and `-` ends at the returning
+  // arrow.  A stack per participant also makes nested bars deterministic.
+  final activationStacks = List.generate(participants.length, (_) => <int>[]);
+  final activationIntervals =
+      <({int participant, int start, int end, int depth})>[];
+  var activationY = headerHeight;
+  for (final step in steps) {
+    if (step case SequenceStepMessage(:final message)) {
+      final fi = idx[message.deactivate] ?? -1;
+      final ti = idx[message.activate] ?? -1;
+      final lines = _messageLabelLines(_messageLabelText(message));
+      final arrowY =
+          activationY + lines.length + (message.from == message.to ? 1 : 0);
+      if (message.activate != null && ti >= 0) {
+        final stack = activationStacks[ti];
+        stack.add(arrowY);
+      }
+      if (message.deactivate != null && fi >= 0) {
+        final stack = activationStacks[fi];
+        if (stack.isNotEmpty) {
+          final start = stack.removeLast();
+          activationIntervals.add((
+            participant: fi,
+            start: start,
+            end: arrowY,
+            depth: stack.length,
+          ));
+        }
+      }
+      activationY += _stepHeight(step);
+    } else if (step case SequenceStepActivation(:final activation)) {
+      final pi = idx[activation.participant] ?? -1;
+      if (pi >= 0) {
+        final stack = activationStacks[pi];
+        if (activation.active) {
+          stack.add(activationY);
+        } else if (stack.isNotEmpty) {
+          final start = stack.removeLast();
+          activationIntervals.add((
+            participant: pi,
+            start: start,
+            end: activationY,
+            depth: stack.length,
+          ));
+        }
+      }
+    } else {
+      activationY += _stepHeight(step);
+    }
+  }
+  for (var pi = 0; pi < activationStacks.length; pi++) {
+    for (var depth = 0; depth < activationStacks[pi].length; depth++) {
+      activationIntervals.add((
+        participant: pi,
+        start: activationStacks[pi][depth],
+        end: height,
+        depth: depth,
+      ));
+    }
+  }
+  for (final interval in activationIntervals) {
+    final x = centers[interval.participant] + 1 + interval.depth;
+    for (var row = interval.start; row < interval.end && row < height; row++) {
+      if (row >= headerHeight) {
+        putCell(canvas, area.minX + x, area.minY + row, '┃', theme.lifeline);
+      }
+    }
+  }
+
+  var stepY = headerHeight;
   for (final step in steps) {
     switch (step) {
       case SequenceStepMessage(:final message):
@@ -1144,14 +1785,93 @@ void drawSequenceDiagram(
         stepY += _stepHeight(step);
       case SequenceStepNote(:final note):
         _drawNote(canvas, area, note, stepY, centers, idx, theme);
-        stepY += 3;
+        stepY += _stepHeight(step);
       case SequenceStepFragment(:final fragment):
         _drawFragment(canvas, area, fragment, stepY, theme, width);
-        stepY += 2;
+        stepY += _stepHeight(step);
       case SequenceStepActivation():
-      // Activation bars not rendered in ASCII output
+      // Activation markers are resolved into intervals above.  They do not
+      // consume a row and must not overwrite the message content at this
+      // coordinate.
     }
   }
+  // Apply colors after foreground painting without rebuilding glyphs as
+  // width-one cells or erasing the background beneath labels and arrows.
+  for (final background in backgrounds) {
+    _paintSequenceBackground(
+      canvas,
+      background.area,
+      background.color,
+      background.foreground,
+    );
+  }
+}
+
+void _paintSequenceBackground(
+  Canvas canvas,
+  Rectangle area,
+  UvColor color,
+  UvColor? foreground,
+) {
+  if (color is UvRgb && color.a == 0) return;
+  for (var y = area.minY; y < area.maxY; y++) {
+    UvStyle? originStyle;
+    var originEnd = area.minX;
+    for (var x = area.minX; x < area.maxX; x++) {
+      final old = canvas.cellAt(x, y);
+      // Replacing a continuation would split the glyph. Its origin was just
+      // updated (invalidating this row), so apply the resolved background to
+      // the existing continuation metadata without replacing its content.
+      if (old != null && old.width == 0 && old.content.isEmpty) {
+        old.style = old.style.copyWith(
+          bg: x < originEnd ? originStyle?.bg : color,
+          fg: foreground ?? old.style.fg,
+        );
+        continue;
+      }
+      final cell = old?.clone() ?? Cell(content: ' ');
+      cell.style = cell.style.copyWith(
+        bg: color,
+        fg: foreground ?? cell.style.fg,
+      );
+      originEnd = x + cell.width;
+      canvas.setCellOwned(x, y, cell);
+      originStyle = canvas.cellAt(x, y)?.style;
+    }
+  }
+}
+
+void _drawDiagnostic(Canvas canvas, Rectangle area, String message) {
+  final lines = _wrapText(message, math.max(1, area.maxX - area.minX));
+  for (var i = 0; i < lines.length && area.minY + i < area.maxY; i++) {
+    putText(canvas, area, area.minX, area.minY + i, lines[i], const UvStyle());
+  }
+}
+
+void _drawFragmentRegion(
+  Canvas canvas,
+  Rectangle area,
+  int top,
+  int bottom,
+  SequenceFragment fragment,
+  SequenceDiagramTheme theme,
+  int width,
+) {
+  if (bottom <= top || width < 2) return;
+  final style = fragment.kind.defaultStyle;
+  final inset = math.min(fragment.depth, math.max(0, width ~/ 4));
+  final left = inset;
+  final right = width - 1 - inset;
+  if (right <= left) return;
+  for (var y = top + 1; y < bottom; y++) {
+    putCell(canvas, area.minX + left, area.minY + y, '│', style);
+    putCell(canvas, area.minX + right, area.minY + y, '│', style);
+  }
+  for (var x = left + 1; x < right; x++) {
+    putCell(canvas, area.minX + x, area.minY + bottom, '─', style);
+  }
+  putCell(canvas, area.minX + left, area.minY + bottom, '└', style);
+  putCell(canvas, area.minX + right, area.minY + bottom, '┘', style);
 }
 
 void _drawMessage(
@@ -1197,8 +1917,7 @@ void _drawMessage(
     );
   }
 
-  final headChar =
-      msg.head?.char ?? (toX > fromX ? Triangles.right : Triangles.left);
+  final head = msg.head;
   for (var x = left + 1; x < right; x++) {
     putCell(
       canvas,
@@ -1208,8 +1927,33 @@ void _drawMessage(
       style,
     );
   }
-  putCell(canvas, area.minX + right, area.minY + arrowY, headChar, style);
+  if (head != null) {
+    final headX = msg.reverse ? fromX : toX;
+    putCell(
+      canvas,
+      area.minX + headX,
+      area.minY + arrowY,
+      _arrowHeadGlyph(head, pointsRight: headX == right),
+      style,
+    );
+    if (msg.bidirectional) {
+      putCell(
+        canvas,
+        area.minX + (headX == right ? left : right),
+        area.minY + arrowY,
+        _arrowHeadGlyph(head, pointsRight: headX != right),
+        style,
+      );
+    }
+  }
 }
+
+String _arrowHeadGlyph(SequenceArrowHead head, {required bool pointsRight}) =>
+    switch (head) {
+      SequenceArrowHead.open => pointsRight ? '>' : '<',
+      SequenceArrowHead.async => pointsRight ? ')' : '(',
+      SequenceArrowHead.cross => head.char,
+    };
 
 void _drawSelfMessage(
   Canvas canvas,
@@ -1222,11 +1966,12 @@ void _drawSelfMessage(
 ) {
   final lines = _messageLabelLines(_messageLabelText(msg));
   final w = _selfMessageWidth(msg);
-  final arrowY = y + lines.length;
+  final arrowY = y + lines.length + 1;
+  final stroke = msg.style == SequenceMessageStyle.dashed ? '┄' : '─';
 
   putCell(canvas, area.minX + centerX, area.minY + y, '├', style);
   for (var x = centerX + 1; x < centerX + w - 1; x++) {
-    putCell(canvas, area.minX + x, area.minY + y, '─', style);
+    putCell(canvas, area.minX + x, area.minY + y, stroke, style);
   }
   putCell(canvas, area.minX + centerX + w - 1, area.minY + y, '┐', style);
 
@@ -1256,24 +2001,14 @@ void _drawSelfMessage(
   }
 
   for (var x = centerX + 1; x < centerX + w - 1; x++) {
-    putCell(canvas, area.minX + x, area.minY + arrowY, '─', theme.response);
+    putCell(canvas, area.minX + x, area.minY + arrowY, stroke, style);
   }
-  final headChar = msg.head?.char ?? Triangles.left;
-  putCell(canvas, area.minX + centerX, area.minY + arrowY, '└', theme.response);
-  putCell(
-    canvas,
-    area.minX + centerX + w - 1,
-    area.minY + arrowY,
-    '┘',
-    theme.response,
-  );
-  putCell(
-    canvas,
-    area.minX + centerX,
-    area.minY + arrowY,
-    headChar,
-    theme.response,
-  );
+  final headChar = msg.head == null
+      ? '│'
+      : _arrowHeadGlyph(msg.head!, pointsRight: false);
+  putCell(canvas, area.minX + centerX, area.minY + arrowY, '└', style);
+  putCell(canvas, area.minX + centerX + w - 1, area.minY + arrowY, '┘', style);
+  putCell(canvas, area.minX + centerX, area.minY + arrowY, headChar, style);
 }
 
 void _drawNote(
@@ -1285,26 +2020,20 @@ void _drawNote(
   Map<String, int> idx,
   SequenceDiagramTheme theme,
 ) {
-  final indexes = note.over
-      .map((p) => idx[p] ?? -1)
-      .where((i) => i >= 0)
-      .toList();
-  if (indexes.isEmpty) return;
+  final extent = _noteExtent(note, centers, idx);
+  if (extent == null) return;
+  final lines = _messageLabelLines(note.label);
 
-  final leftX = centers[indexes.reduce(math.min)];
-  final rightX = centers[indexes.reduce(math.max)];
-  final cx = (leftX + rightX) ~/ 2;
-  final text = _noteLabelText(note.label);
-  final textWidth = _stringWidth(text);
-  var tx = cx - textWidth ~/ 2;
-
-  // Clamp to area bounds
-  if (tx < 0) tx = 0;
-  if (tx + textWidth > area.maxX - area.minX) {
-    tx = math.max(0, area.maxX - area.minX - textWidth);
+  for (var i = 0; i < lines.length; i++) {
+    putText(
+      canvas,
+      area,
+      area.minX + extent.left,
+      area.minY + y + 1 + i,
+      _noteLabelText(lines[i]),
+      theme.note,
+    );
   }
-
-  putText(canvas, area, area.minX + tx, area.minY + y + 1, text, theme.note);
 }
 
 void _drawFragment(
@@ -1315,24 +2044,43 @@ void _drawFragment(
   SequenceDiagramTheme theme,
   int width,
 ) {
-  final label =
-      ' ${frag.kind.prefix}${frag.label.isNotEmpty ? ': ${frag.label}' : ''} ';
-  final borderStyle = frag.kind.defaultStyle;
-
-  putCell(canvas, area.minX, area.minY + y, '├', borderStyle);
-  for (var x = 1; x < width - 1; x++) {
-    putCell(canvas, area.minX + x, area.minY + y, '─', borderStyle);
-  }
-  putCell(canvas, area.minX + width - 1, area.minY + y, '┤', borderStyle);
-  putText(
-    canvas,
-    area,
-    area.minX + 2,
-    area.minY + y,
-    label,
-    theme.fragmentLabel,
+  if (frag.kind == SequenceFragmentKind.end) return;
+  final labels = _messageLabelLines(
+    '${frag.kind.prefix}${frag.label.isNotEmpty ? ': ${frag.label}' : ''}',
   );
+  final borderStyle = frag.kind.defaultStyle;
+  final inset = math.min(frag.depth, math.max(0, width ~/ 4));
+  final left = inset;
+  final right = width - 1 - inset;
+  if (right <= left) return;
+
+  putCell(canvas, area.minX + left, area.minY + y, '├', borderStyle);
+  for (var x = left + 1; x < right; x++) {
+    putCell(
+      canvas,
+      area.minX + x,
+      area.minY + y,
+      _isBranchKind(frag.kind) ? '┄' : '─',
+      borderStyle,
+    );
+  }
+  putCell(canvas, area.minX + right, area.minY + y, '┤', borderStyle);
+  for (var i = 0; i < labels.length; i++) {
+    putText(
+      canvas,
+      area,
+      area.minX + left + 2,
+      area.minY + y + i,
+      ' ${labels[i]} ',
+      theme.fragmentLabel,
+    );
+  }
 }
+
+bool _isBranchKind(SequenceFragmentKind kind) =>
+    kind == SequenceFragmentKind.elsePart ||
+    kind == SequenceFragmentKind.andPart ||
+    kind == SequenceFragmentKind.optionPart;
 
 /// Convenience: renders a Mermaid sequence diagram string to text.
 String renderSequenceDiagram(
@@ -1347,53 +2095,65 @@ String renderSequenceDiagram(
   SequenceDiagram renderedDiagram = diagram;
   SequenceDiagramOptions? layoutOptions = options;
   if (maxWidth != null) {
-    var fitWidth = math.max(1, maxWidth - 2);
-    final initialGap = options?.minParticipantGap ?? _defaultMinGap;
-    while (true) {
-      renderedDiagram = _fitSequenceDiagramToWidth(diagram, fitWidth);
-      layoutOptions = SequenceDiagramOptions(
-        minParticipantGap: _fitParticipantGap(
-          renderedDiagram,
-          fitWidth,
-          initialGap,
-        ),
-      );
-      final layout = layoutSequenceDiagram(
-        renderedDiagram,
-        options: layoutOptions,
-      );
+    final fitWidth = math.max(1, maxWidth);
+    layoutOptions = SequenceDiagramOptions(
+      minParticipantGap: options?.minParticipantGap ?? 1,
+    );
+    renderedDiagram = _fitSequenceDiagramToWidth(
+      diagram,
+      fitWidth,
+      layoutOptions,
+    );
+    final layout = layoutSequenceDiagram(
+      renderedDiagram,
+      options: layoutOptions,
+    );
+    if (layout.width <= maxWidth) {
+      _checkSequenceCanvasSize(layout.width, layout.height);
       final canvas = Canvas(layout.width, layout.height);
-      final resolvedTheme = theme ?? SequenceDiagramTheme.defaultTheme;
-      drawSequenceDiagram(
-        canvas,
-        rect(0, 0, layout.width, layout.height),
-        renderedDiagram,
-        theme: resolvedTheme,
-        options: layoutOptions,
-      );
-      final rendered = canvas.render();
-      if (_renderedWidth(rendered) <= maxWidth) {
-        return rendered;
+      try {
+        drawSequenceDiagram(
+          canvas,
+          rect(0, 0, layout.width, layout.height),
+          renderedDiagram,
+          theme: theme ?? SequenceDiagramTheme.defaultTheme,
+          options: layoutOptions,
+        );
+        return canvas.render();
+      } finally {
+        canvas.dispose();
       }
-      if (fitWidth <= 1) {
-        break;
-      }
-      fitWidth--;
     }
-    return _renderSequenceDiagramFallback(diagram, maxWidth);
+    return _sequenceDiagnostic(
+      'sequence diagram needs ${layout.width} columns; available $maxWidth',
+      maxWidth,
+    );
   }
   final layout = layoutSequenceDiagram(renderedDiagram, options: layoutOptions);
+  _checkSequenceCanvasSize(layout.width, layout.height);
   final canvas = Canvas(layout.width, layout.height);
-  final resolvedTheme = theme ?? SequenceDiagramTheme.defaultTheme;
-  drawSequenceDiagram(
-    canvas,
-    rect(0, 0, layout.width, layout.height),
-    renderedDiagram,
-    theme: resolvedTheme,
-    options: layoutOptions,
-  );
+  try {
+    final resolvedTheme = theme ?? SequenceDiagramTheme.defaultTheme;
+    drawSequenceDiagram(
+      canvas,
+      rect(0, 0, layout.width, layout.height),
+      renderedDiagram,
+      theme: resolvedTheme,
+      options: layoutOptions,
+    );
+    return canvas.render();
+  } finally {
+    canvas.dispose();
+  }
+}
 
-  return canvas.render();
+void _checkSequenceCanvasSize(int width, int height) {
+  const maxCells = 1000000;
+  if (height > 0 && width > maxCells ~/ height) {
+    throw const FormatException(
+      'Sequence diagram exceeds the rendering limit of 1000000 cells',
+    );
+  }
 }
 
 /// Renders a parsed diagram to text lines.
@@ -1405,183 +2165,69 @@ LayoutResult layoutSequenceDiagram(
     return (lines: <String>[], width: 0, height: 0);
   }
 
-  final participants = diagram.participants;
-  final messages = diagram.messages;
-  final steps = diagram.steps;
-  final idx = <String, int>{};
-  for (var i = 0; i < participants.length; i++) {
-    idx[participants[i].id] = i;
-  }
-
-  final centers = _resolveCenters(
-    participants,
-    messages,
-    idx,
-    options?.minParticipantGap ?? _defaultMinGap,
+  final geometry = _sequenceGeometry(diagram, options);
+  return (
+    lines: List.filled(geometry.height, ''),
+    width: geometry.width,
+    height: geometry.height,
   );
-
-  var maxX = 40;
-  for (final msg in messages) {
-    final fi = idx[msg.from] ?? -1;
-    final ti = idx[msg.to] ?? -1;
-    if (fi < 0 || ti < 0) continue;
-    if (fi == ti) {
-      maxX = math.max(maxX, centers[fi] + _selfMessageWidth(msg) + 2);
-    } else {
-      final left = math.min(centers[fi], centers[ti]);
-      maxX = math.max(maxX, left + _messageWidth(msg) + 4);
-    }
-  }
-  final width = maxX + 4;
-
-  var h = 6;
-  for (final step in steps) {
-    h += _stepHeight(step);
-  }
-
-  return (lines: List.filled(h, ''), width: width, height: h);
 }
 
 SequenceDiagram _fitSequenceDiagramToWidth(
   SequenceDiagram diagram,
   int maxWidth,
+  SequenceDiagramOptions options,
 ) {
-  if (maxWidth <= 0) return diagram;
-
-  final naturalWidth = layoutSequenceDiagram(diagram).width;
-  if (naturalWidth <= maxWidth) return diagram;
-
-  var participantBudget = math.max(
-    4,
-    maxWidth ~/ math.max(2, diagram.participants.length + 1),
-  );
-  var messageBudget = math.max(6, maxWidth ~/ 2);
-  var noteBudget = messageBudget;
-  var fragmentBudget = math.max(6, maxWidth ~/ 3);
-
-  SequenceDiagram compacted = diagram;
-  for (var i = 0; i < 12; i++) {
-    compacted = _compactSequenceDiagram(
-      diagram,
-      participantBudget: participantBudget,
-      messageBudget: messageBudget,
-      noteBudget: noteBudget,
-      fragmentBudget: fragmentBudget,
-    );
-    if (layoutSequenceDiagram(compacted).width <= maxWidth) {
-      return compacted;
-    }
-
-    if (participantBudget <= 3 && messageBudget <= 4) {
-      break;
-    }
-
-    participantBudget = math.max(3, participantBudget - 1);
-    messageBudget = math.max(4, messageBudget - 2);
-    noteBudget = math.max(4, noteBudget - 2);
-    fragmentBudget = math.max(4, fragmentBudget - 1);
-  }
-
-  return compacted;
-}
-
-int _fitParticipantGap(SequenceDiagram diagram, int maxWidth, int initialGap) {
-  for (var gap = math.max(1, initialGap); gap >= 1; gap--) {
-    final width = layoutSequenceDiagram(
-      diagram,
-      options: SequenceDiagramOptions(minParticipantGap: gap),
-    ).width;
-    if (width <= maxWidth) return gap;
-  }
-  return 1;
-}
-
-int _renderedWidth(String rendered) {
-  var widest = 0;
-  for (final line in Style.stripAnsi(rendered).split('\n')) {
-    widest = math.max(widest, _stringWidth(line));
-  }
-  return widest;
-}
-
-String _renderSequenceDiagramFallback(SequenceDiagram diagram, int maxWidth) {
-  final lines = <String>['sequenceDiagram'];
-  for (final participant in diagram.participants) {
-    final line = 'participant ${participant.id} as ${participant.label}';
-    lines.add(_truncateForWidth(line, maxWidth));
-  }
-
-  for (final step in diagram.steps) {
-    switch (step) {
-      case SequenceStepMessage(:final message):
-        lines.add(
-          _truncateForWidth(
-            '${message.from} -> ${message.to}: ${message.label}',
-            maxWidth,
-          ),
-        );
-      case SequenceStepNote(:final note):
-        lines.add(
-          _truncateForWidth(
-            'note over ${note.over.join(", ")}: ${note.label}',
-            maxWidth,
-          ),
-        );
-      case SequenceStepActivation(:final activation):
-        lines.add(
-          _truncateForWidth(
-            '${activation.active ? "activate" : "deactivate"} ${activation.participant}',
-            maxWidth,
-          ),
-        );
-      case SequenceStepFragment(:final fragment):
-        lines.add(
-          _truncateForWidth(
-            '${fragment.kind.prefix} ${fragment.label}',
-            maxWidth,
-          ),
-        );
+  if (_sequenceGeometry(diagram, options).width <= maxWidth) return diagram;
+  var best = _wrapSequenceLabels(diagram, 1, maxWidth);
+  var low = 2;
+  var high = maxWidth;
+  while (low <= high) {
+    final budget = (low + high) ~/ 2;
+    final candidate = _wrapSequenceLabels(diagram, budget, maxWidth);
+    if (_sequenceGeometry(candidate, options).width <= maxWidth) {
+      best = candidate;
+      low = budget + 1;
+    } else {
+      high = budget - 1;
     }
   }
-
-  return lines.map((line) => _truncateForWidth(line, maxWidth)).join('\n');
+  return best;
 }
 
-SequenceDiagram _compactSequenceDiagram(
-  SequenceDiagram diagram, {
-  required int participantBudget,
-  required int messageBudget,
-  required int noteBudget,
-  required int fragmentBudget,
-}) {
+SequenceDiagram _wrapSequenceLabels(
+  SequenceDiagram diagram,
+  int participantBudget,
+  int maxWidth,
+) {
+  final textBudget = participantBudget;
   final participants = [
-    for (final participant in diagram.participants)
+    for (final p in diagram.participants)
       SequenceParticipant(
-        id: participant.id,
-        label: _truncateForWidth(participant.label, participantBudget),
-        style: participant.style,
+        id: p.id,
+        label: _wrapText(p.label, participantBudget).join('\n'),
+        style: p.style,
+        isActor: p.isActor,
       ),
   ];
-
-  final messages = <SequenceMessage>[];
-  for (final message in diagram.messages) {
-    messages.add(
+  final messages = [
+    for (final m in diagram.messages)
       SequenceMessage(
-        from: message.from,
-        to: message.to,
-        label: _truncateForWidth(message.label, messageBudget),
-        style: message.style,
-        head: message.head,
-        number: message.number,
-        activate: message.activate,
-        deactivate: message.deactivate,
-        styleOverride: message.styleOverride,
+        from: m.from,
+        to: m.to,
+        label: _wrapText(m.label, textBudget).join('\n'),
+        style: m.style,
+        head: m.head,
+        number: m.number,
+        activate: m.activate,
+        deactivate: m.deactivate,
+        styleOverride: m.styleOverride,
+        bidirectional: m.bidirectional,
+        reverse: m.reverse,
       ),
-    );
-  }
-
-  final steps = <SequenceStep>[];
+  ];
   var messageIndex = 0;
+  final steps = <SequenceStep>[];
   for (final step in diagram.steps) {
     switch (step) {
       case SequenceStepMessage():
@@ -1591,24 +2237,34 @@ SequenceDiagram _compactSequenceDiagram(
           SequenceStepNote(
             SequenceNote(
               over: note.over,
-              label: _truncateForWidth(note.label, noteBudget),
+              label: _wrapText(note.label, textBudget).join('\n'),
+              position: note.position,
             ),
           ),
         );
-      case SequenceStepActivation(:final activation):
-        steps.add(SequenceStepActivation(activation));
+      case SequenceStepActivation():
+        steps.add(step);
       case SequenceStepFragment(:final fragment):
         steps.add(
           SequenceStepFragment(
             SequenceFragment(
               kind: fragment.kind,
-              label: _truncateForWidth(fragment.label, fragmentBudget),
+              depth: fragment.depth,
+              label: _wrapText(
+                fragment.label,
+                math.max(
+                  1,
+                  maxWidth -
+                      fragment.kind.prefix.length -
+                      6 -
+                      2 * fragment.depth,
+                ),
+              ).join('\n'),
             ),
           ),
         );
     }
   }
-
   return (
     participants: participants,
     messages: messages,
@@ -1619,24 +2275,13 @@ SequenceDiagram _compactSequenceDiagram(
   );
 }
 
-String _truncateForWidth(String text, int maxWidth) {
-  if (maxWidth <= 0) return '';
-  if (_stringWidth(text) <= maxWidth) return text;
-  if (maxWidth <= 1) return text.isEmpty ? '' : text.substring(0, 1);
+String _sequenceDiagnostic(String message, int maxWidth) {
+  final text = 'sequence diagram diagnostic: $message';
+  return _wrapText(text, math.max(1, maxWidth)).join('\n');
+}
 
-  final buffer = StringBuffer();
-  var used = 0;
-  for (final rune in text.runes) {
-    final char = String.fromCharCode(rune);
-    final charWidth = rune > 127 ? 2 : 1;
-    if (used + charWidth >= maxWidth) break;
-    buffer.write(char);
-    used += charWidth;
-  }
-  if (buffer.isEmpty) {
-    return text.substring(0, 1);
-  }
-  return '$buffer…';
+List<String> _wrapText(String text, int width) {
+  return wrapAnsiPreserving(text, math.max(1, width)).split('\n');
 }
 
 /// Rendering options.

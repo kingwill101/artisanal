@@ -72,6 +72,44 @@ class TerminalNativeFrame {
   /// ANSI-like textual reconstruction of the native frame.
   String get plainText => lines.map((line) => line.plainText).join('\n');
 
+  /// Rebuilds a detached UV buffer from this frame.
+  ///
+  /// Drawable payloads are not included in native metadata, so frames carrying
+  /// one are rejected rather than silently becoming lossy text captures.
+  Buffer toBuffer() {
+    if (width < 1 || height < 1 || lines.length != height) {
+      throw const FormatException('native frame does not contain every row');
+    }
+    final buffer = Buffer.create(width, height);
+    try {
+      for (var y = 0; y < height; y++) {
+        final line = lines[y];
+        if (line.index != y || line.cells.length != width) {
+          throw const FormatException('native frame is not rectangular');
+        }
+        final target = buffer.line(y)!;
+        for (var x = 0; x < width; x++) {
+          // Line.replace consumes the freshly rebuilt cell without cloning it.
+          // This also avoids applying wide-cell overwrite semantics to the
+          // explicit zero-width placeholders in a native frame.
+          final rebuilt = line.cells[x].toCell();
+          try {
+            target.replace(x, rebuilt);
+          } catch (_) {
+            rebuilt.dispose();
+            rethrow;
+          }
+        }
+      }
+      return buffer;
+    } catch (_) {
+      // A drawable or malformed row can fail after earlier cells have been
+      // installed. The buffer owns those cells and must release them here.
+      buffer.dispose();
+      rethrow;
+    }
+  }
+
   /// Returns only lines that carried dirty spans in the backing buffer.
   List<TerminalNativeLine> get dirtyLines =>
       List<TerminalNativeLine>.unmodifiable(
@@ -278,6 +316,7 @@ class TerminalNativeCell {
     required this.isEmpty,
     required this.hasDrawable,
     required this.packed,
+    this.diffOption = CellDiffOption.normal,
   });
 
   /// Grapheme content stored in the cell.
@@ -304,6 +343,9 @@ class TerminalNativeCell {
   /// Stable packed UV cell tuple for low-level inspection.
   final List<int> packed;
 
+  /// Diff policy retained from the captured UV cell.
+  final CellDiffOption diffOption;
+
   /// Builds a snapshot from a UV [cell].
   factory TerminalNativeCell.fromCell(Cell cell) {
     return TerminalNativeCell(
@@ -315,6 +357,23 @@ class TerminalNativeCell {
       isEmpty: cell.isEmpty,
       hasDrawable: cell.drawable != null,
       packed: List<int>.unmodifiable(cell.packed.words),
+      diffOption: cell.diffOption,
+    );
+  }
+
+  /// Rebuilds this metadata as a UV cell.
+  Cell toCell() {
+    if (hasDrawable) {
+      throw UnsupportedError(
+        'native frame contains a drawable without its payload',
+      );
+    }
+    return Cell(
+      content: isZero || isEmpty ? (isEmpty ? ' ' : '') : content,
+      width: width,
+      style: style.toUvStyle(),
+      link: Link(url: link.url, params: link.params),
+      diffOption: diffOption,
     );
   }
 }
@@ -627,6 +686,15 @@ class TerminalNativeStyle {
       packedKey: style.packedKey,
     );
   }
+
+  /// Rebuilds this metadata as a UV style.
+  UvStyle toUvStyle() => UvStyle(
+    fg: fg?.toUvColor(),
+    bg: bg?.toUvColor(),
+    underlineColor: underlineColor?.toUvColor(),
+    underline: underline,
+    attrs: attrs,
+  );
 }
 
 /// Snapshot of a UV color.
@@ -671,6 +739,45 @@ class TerminalNativeColor {
       UvIndexed256(:final index) => _indexed256Color(index),
       UvRgb(:final r, :final g, :final b, :final a) => _rgbColor(r, g, b, a),
     };
+  }
+
+  /// Rebuilds this metadata as a validated UV color.
+  UvColor toUvColor() {
+    switch (kind) {
+      case 'basic16':
+        final value = index;
+        if (value == null || value < 0 || value > 7) {
+          throw const FormatException('invalid basic16 color');
+        }
+        return UvColor.basic16(value, bright: bright ?? false);
+      case 'indexed256':
+        final value = index;
+        if (value == null || value < 0 || value > 255) {
+          throw const FormatException('invalid indexed256 color');
+        }
+        return UvColor.indexed256(value);
+      case 'rgb':
+        final red = r;
+        final green = g;
+        final blue = b;
+        final alpha = a ?? 255;
+        if (red == null ||
+            green == null ||
+            blue == null ||
+            red < 0 ||
+            red > 255 ||
+            green < 0 ||
+            green > 255 ||
+            blue < 0 ||
+            blue > 255 ||
+            alpha < 0 ||
+            alpha > 255) {
+          throw const FormatException('invalid RGB color');
+        }
+        return UvColor.rgb(red, green, blue, a: alpha);
+      default:
+        throw FormatException('unsupported native color kind: $kind');
+    }
   }
 }
 

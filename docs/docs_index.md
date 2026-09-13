@@ -49,6 +49,7 @@ Most applications can stay at the TUI or widget layer.
 | Render Markdown | [Markdown in the terminal](markdown.md) |
 | Draw charts or sequence diagrams | [Terminal charts](charting.md) |
 | Test a widget app | [Widget testing](testing.md) |
+| Export terminal or widget images | [Native terminal captures](capture.md) |
 | Record or replay a TUI session | [Replay and tracing](replay.md) |
 | Show terminal images | [Terminal graphics](terminal_graphics.md) |
 | Understand how the packages fit together | [Architecture](architecture.md) |
@@ -61,6 +62,8 @@ Most applications can stay at the TUI or widget layer.
   libraries.
 - `ultraviolet` contains low-level buffers, rendering, input, and terminal
   graphics.
+- `artisanal_capture` captures terminal cells and exports native PNG images
+  or self-contained HTML previews.
 
 ## Advanced and experimental topics
 

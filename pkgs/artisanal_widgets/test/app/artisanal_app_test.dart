@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:artisanal/style.dart' show Layout;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/tui.dart'
     show BackgroundColorMsg, KeyMsg, View, WindowSizeMsg;
 import 'package:artisanal/terminal.dart' show Key, KeyType;
@@ -166,6 +169,79 @@ void main() {
     final hidden = app.view() as View;
     expect(Layout.stripAnsi(hidden.content), isNot(contains('Debug Console')));
   });
+
+  test('WidgetApp catches exceptions raised while painting the tree', () {
+    final app = w.WidgetApp(_PaintFailureWidget());
+    app.update(const WindowSizeMsg(40, 12));
+
+    final view = app.view();
+
+    expect(Layout.stripAnsi(view.toString()), contains('Unhandled exception'));
+    expect(Layout.stripAnsi(view.toString()), contains('paint failure'));
+    expect(Layout.stripAnsi(view.toString()), contains('Copy'));
+    expect(Layout.stripAnsi(view.toString()), contains('Dismiss'));
+    // A successfully rendered error screen is a normal cached view. In
+    // particular, this must not turn a later update into a stale fallback.
+    expect(identical(view, app.view()), isTrue);
+
+    // Dismiss is a real retry: this failing root is restored, and its new
+    // exception must replace the old details rather than being discarded.
+    app.update(KeyMsg(const Key(KeyType.escape)));
+    final retried = Layout.stripAnsi(app.view().toString());
+    expect(retried, contains('paint failure'));
+    expect(retried, contains('Dismiss'));
+  });
+
+  test('WidgetApp dispose unmounts the root tree exactly once', () {
+    _DisposeProbeState.disposeCount = 0;
+    final app = w.WidgetApp(_DisposeProbe());
+
+    app.view();
+    app.dispose();
+    app.dispose();
+
+    expect(_DisposeProbeState.disposeCount, 1);
+    expect(app.view(), '');
+  });
+
+  test('WidgetApp renders the error boundary through Program', () async {
+    final terminal = runtime.StringTerminal();
+    final program = runtime.Program(
+      w.WidgetApp(_PaintFailureWidget()),
+      terminal: terminal,
+      options: const runtime.ProgramOptions(
+        signalHandlers: false,
+        startupProbes: false,
+        frameTick: false,
+      ),
+    );
+    final run = program.run();
+    addTearDown(() async {
+      program.send(const runtime.QuitMsg());
+      await run;
+    });
+
+    await _waitUntil(
+      () => Layout.stripAnsi(
+        program.currentModel?.view().toString() ?? '',
+      ).contains('Dismiss'),
+    );
+    final output = Layout.stripAnsi(program.currentModel!.view().toString());
+    expect(output, contains('paint failure'));
+    expect(output, contains('Copy'));
+  });
+}
+
+Future<void> _waitUntil(
+  bool Function() predicate, {
+  Duration timeout = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (predicate()) return;
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+  expect(predicate(), isTrue, reason: 'condition was not met');
 }
 
 final class _ThemeProbe extends w.StatelessWidget {
@@ -180,6 +256,34 @@ final class _ThemeProbe extends w.StatelessWidget {
         ? 'theme ok'
         : 'theme mismatch';
     return w.Text(result);
+  }
+}
+
+final class _PaintFailureWidget extends w.LeafRenderObjectWidget {
+  @override
+  w.RenderObject createRenderObject() {
+    return w.RenderDelegateBox(() => throw StateError('paint failure'));
+  }
+
+  @override
+  Object view() => 'unused';
+}
+
+final class _DisposeProbe extends w.StatefulWidget {
+  @override
+  w.State<_DisposeProbe> createState() => _DisposeProbeState();
+}
+
+final class _DisposeProbeState extends w.State<_DisposeProbe> {
+  static int disposeCount = 0;
+
+  @override
+  w.Widget build(w.BuildContext context) => w.Text('dispose probe');
+
+  @override
+  void dispose() {
+    disposeCount++;
+    super.dispose();
   }
 }
 

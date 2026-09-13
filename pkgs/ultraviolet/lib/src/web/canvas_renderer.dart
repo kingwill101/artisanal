@@ -5,6 +5,7 @@ import 'package:web/web.dart' as web;
 
 import '../uv/buffer.dart';
 import '../uv/cell.dart';
+import '../uv/cell_paint.dart';
 import '../uv/renderer/renderer.dart';
 
 /// Renders a UV [Buffer] to an HTML5 Canvas 2D context.
@@ -17,11 +18,13 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
     this.context, {
     this.fontSize = 14,
     this.fontFamily = 'monospace',
-  });
+    UvPaintPolicy? paintPolicy,
+  }) : _paintPolicy = paintPolicy ?? UvPaintPolicy();
 
   final web.CanvasRenderingContext2D context;
   final double fontSize;
   final String fontFamily;
+  final UvPaintPolicy _paintPolicy;
 
   double _cellWidth = 0;
   double _cellHeight = 0;
@@ -87,7 +90,7 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
     context.imageSmoothingEnabled = false;
     context.textAlign = 'left';
     context.textBaseline = 'alphabetic';
-    context.fillStyle = '#000'.toJS;
+    context.fillStyle = _colorToCss(_paintPolicy.background).toJS;
     context.fillRect(0, 0, canvasW, canvasH);
 
     _paintBackgroundRuns(buf, w, h, scale);
@@ -111,18 +114,15 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
         final cellHeight = bounds.bottom - bounds.top;
         final baseline = (py + (_baseline * scale)).roundToDouble();
 
-        final bg = style.bg;
-        final fg = style.fg ?? const UvRgb(204, 204, 204);
+        final paint = _paintPolicy.resolve(style);
+        final fg = paint.foreground;
         final attrs = style.attrs;
-        final isReversed = (attrs & Attr.reverse) != 0;
+        final drawFg = fg;
 
-        final drawFg = isReversed ? (bg ?? const UvRgb(0, 0, 0)) : fg;
-
-        if (c.isNotEmpty && c != ' ') {
+        if (c.isNotEmpty && c != ' ' && (attrs & Attr.conceal) == 0) {
           final isBold = (attrs & Attr.bold) != 0;
           final isItalic = (attrs & Attr.italic) != 0;
-          final isFaint = (attrs & Attr.faint) != 0;
-          final alpha = isFaint ? 0.7 : 1.0;
+          final alpha = 1.0;
           final drawFgCss = _colorToCss(drawFg);
 
           if (_paintShapeGlyph(
@@ -155,7 +155,7 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
             context.lineWidth = math.max(1.0, scale);
             context.strokeStyle =
                 (style.underlineColor != null
-                        ? _colorToCss(style.underlineColor!)
+                        ? _colorToCss(paint.underlineColor)
                         : _colorToCss(drawFg))
                     .toJS;
             context.beginPath();
@@ -206,82 +206,16 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
   }
 
   void _paintBackgroundRuns(Buffer buf, int width, int height, double scale) {
-    // Track the dominant (first non-null) background seen on each row so that
-    // an entirely-default-background row (e.g. the blank separator line inside
-    // a selected queue item) can inherit the colour from its neighbours.
-    // We keep a small look-ahead cache: dominant[y] is the first non-null
-    // effective background on row y, or null when the row is all-default.
-    // dominant[y] = the background CSS of the first non-space cell on row y,
-    // or null when the row contains only spaces / empty cells.
-    //
-    // We deliberately look at non-space cells because:
-    //  - Content rows (title, meta, separator lines) have at least one glyph
-    //    cell whose bg is explicitly set to the row highlight colour.
-    //  - Pure-space padding rows carry only the terminal default background on
-    //    every cell; those are the rows that need vertical inheritance.
-    //  - Using _cellBackgroundCss (direct, no bridge) avoids picking up the
-    //    explicit rgba(10,10,10,1) default that space cells carry, which would
-    //    falsely mark a padding row as "has a real colour".
-    final dominant = List<String?>.filled(height, null);
     for (var y = 0; y < height; y++) {
       final line = buf.line(y);
       if (line == null) continue;
-      for (var x = 0; x < width; x++) {
-        final cell = line.at(x);
-        if (cell == null) continue;
-        if (cell.content == ' ' || cell.content.isEmpty) continue;
-        final c = _cellBackgroundCss(cell);
-        if (c != null) {
-          dominant[y] = c;
-          break;
-        }
-      }
-    }
-
-    for (var y = 0; y < height; y++) {
-      final line = buf.line(y);
-      if (line == null) continue;
-
-      // If this row has no non-default background of its own, check whether
-      // the nearest non-empty row above and below agree on a colour. If they
-      // do, fill the entire row with that colour so the selected-row highlight
-      // covers padding/separator lines that only carry the terminal default bg.
-      if (dominant[y] == null) {
-        String? above;
-        for (var a = y - 1; a >= 0; a--) {
-          if (dominant[a] != null) {
-            above = dominant[a];
-            break;
-          }
-        }
-        String? below;
-        for (var b = y + 1; b < height; b++) {
-          if (dominant[b] != null) {
-            below = dominant[b];
-            break;
-          }
-        }
-        if (above != null && above == below) {
-          final top = (y * _cellHeight * scale).roundToDouble();
-          final bottom = ((y + 1) * _cellHeight * scale).roundToDouble();
-          final rowW = (width * _cellWidth * scale).roundToDouble();
-          context.fillStyle = above.toJS;
-          context.fillRect(
-            0,
-            top,
-            math.max(1, rowW).toDouble(),
-            math.max(1, bottom - top).toDouble(),
-          );
-          continue; // no per-cell run needed for this row
-        }
-      }
-
       String? runColorCss;
       var runStart = 0;
       for (var x = 0; x <= width; x++) {
-        final colorCss = x < width
-            ? _effectiveCellBackgroundCss(line, x, width)
-            : null;
+        final cell = x < width ? line.at(x) : null;
+        final colorCss = cell == null
+            ? null
+            : _colorToCss(_paintPolicy.resolve(cell.style).background);
         if (colorCss == runColorCss) continue;
 
         if (runColorCss != null) {
@@ -302,51 +236,6 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
         runStart = x;
       }
     }
-  }
-
-  String? _effectiveCellBackgroundCss(Line line, int x, int width) {
-    final cell = line.at(x);
-    final direct = _cellBackgroundCss(cell);
-    if (cell == null || !_isBackgroundBridgeSpace(cell)) {
-      return direct;
-    }
-
-    var start = x;
-    while (start > 0 && _isBackgroundBridgeSpace(line.at(start - 1))) {
-      start--;
-    }
-
-    var end = x;
-    while (end + 1 < width && _isBackgroundBridgeSpace(line.at(end + 1))) {
-      end++;
-    }
-
-    final left = start > 0 ? _cellBackgroundCss(line.at(start - 1)) : null;
-    final right = end + 1 < width ? _cellBackgroundCss(line.at(end + 1)) : null;
-    if (left != null && right != null) {
-      return left == right ? left : direct;
-    }
-    return left ?? right ?? direct;
-  }
-
-  bool _isBackgroundBridgeSpace(Cell? cell) {
-    if (cell == null) return false;
-    // Bridge through ANY cell that has no explicit background color —
-    // not just spaces. This covers dots (·), text glyphs, and separator
-    // characters that carry only a foreground style but no bg. Cells with
-    // an explicit bg (fill cells, reverse-video cells) act as anchors that
-    // stop the bridge walk.
-    return _cellBackgroundCss(cell) == null;
-  }
-
-  String? _cellBackgroundCss(Cell? cell) {
-    if (cell == null) return null;
-    final style = cell.style;
-    final fg = style.fg ?? const UvRgb(204, 204, 204);
-    final bg = style.bg;
-    final isReversed = (style.attrs & Attr.reverse) != 0;
-    final drawBg = isReversed ? fg : bg;
-    return drawBg == null ? null : _colorToCss(drawBg);
   }
 
   bool _paintShapeGlyph(

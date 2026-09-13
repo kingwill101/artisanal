@@ -13,6 +13,45 @@
 
 ### Fixed
 
+- Preserve preloaded image caches in nested quote renders, handle nonpositive
+  quote widths consistently, and scan opaque HTML closing tags without copying
+  the remaining source for each element.
+- Release transient renderer output and native-frame conversion cells on
+  disposal and error paths.
+- Corrected sequence diagram bounds and width fitting, preserving complete
+  participant/message labels through wrapping. Added actor symbols, directional
+  and bidirectional arrows, persistent activations, nested fragment regions,
+  validated branch contexts, and colored group/rect backgrounds.
+- Preserve Unicode grapheme widths in chart labels and report unsupported or
+  malformed Mermaid syntax instead of silently omitting diagram content.
+- Decode Markdown block-handler text once, so embedded-language handlers receive
+  real operators such as Mermaid arrows rather than HTML-escaped tokens.
+- Keep list continuation indentation independent of wrapping width and recognize
+  task checkboxes consistently in tight and loose list paragraphs.
+- Bounded nested GitHub disclosure segmentation and retained disclosures past
+  the interactive depth limit as literal source.
+- Preserved source order when fenced Markdown code appears inside list items,
+  keeping the preceding prose before the code and the following item after its
+  closing border while retaining code line widths and list indentation.
+- Isolated Markdown code-block backgrounds and attributes at physical
+  newlines, so code styling does not bleed into following rows or surrounding
+  content.
+- Fixed debug-overlay clipping through OSC 8 hyperlinks and wide graphemes by
+  reusing UV's exact-cell ANSI clipping and isolating pen state on both sides
+  of the opaque panel.
+- Kept GitHub disclosure extraction out of HTML comments and literal code.
+  Preserved Markdown indentation and hard breaks during display normalization,
+  and avoided a range error when a disclosure begins at the first character.
+- Kept raw HTML containers scoped across Markdown block boundaries, including
+  nested blockquotes and open/closed details. Preserved inline HTML whitespace,
+  literal code, and pre-parsed Markdown nodes through HTML normalization.
+- Constrained Markdown tables to the available width with ANSI-aware header
+  and cell wrapping, correct alignment, and quote/list indentation. Extremely
+  narrow tables use stacked labeled fields instead of clipping their contents.
+- Fixed nested blockquotes losing following list-item content when void or
+  custom elements declined child traversal. Quote containers now apply spaced
+  nesting prefixes to every child row and deduct their prefix width before
+  wrapping.
 - Fixed text decoration foreground styles being overwritten by the editor's
   base text color during rendering, restoring visible editable syntax
   highlighting and keeping configured decoration styles immutable.
