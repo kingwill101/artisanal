@@ -1,3 +1,7 @@
+import 'package:html/parser.dart' as html;
+
+import 'github_html_tags.dart';
+
 final class GithubImageReference {
   const GithubImageReference({required this.url, required this.alt});
 
@@ -30,53 +34,64 @@ final class GithubMarkdownDetailsSegment extends GithubMarkdownSegment {
 }
 
 String githubDisplayMarkdown(String input) {
-  return input
+  final lines = input
       .replaceAll('\r\n', '\n')
       .replaceAll('\r', '\n')
-      .split('\n')
-      .map((line) => line.trimRight())
-      .join('\n')
-      .trim();
+      .split('\n');
+  var start = 0;
+  var end = lines.length;
+  while (start < end && lines[start].trim().isEmpty) {
+    start++;
+  }
+  while (end > start && lines[end - 1].trim().isEmpty) {
+    end--;
+  }
+  // Indentation and trailing spaces are Markdown syntax, not display noise.
+  return lines.sublist(start, end).join('\n');
 }
 
 String githubStripBlockquoteMarkers(String input) {
-  return input
-      .replaceAll('\r\n', '\n')
-      .replaceAll('\r', '\n')
-      .split('\n')
-      .map((line) {
-        final trimmed = line.trimRight();
-        if (!trimmed.startsWith('>')) return trimmed;
-        final remainder = trimmed.substring(1);
-        return remainder.startsWith(' ') ? remainder.substring(1) : remainder;
-      })
-      .join('\n')
-      .trim();
+  return githubDisplayMarkdown(
+    input
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .split('\n')
+        .map((line) {
+          if (!line.startsWith('>')) return line;
+          final remainder = line.substring(1);
+          return remainder.startsWith(' ') ? remainder.substring(1) : remainder;
+        })
+        .join('\n'),
+  );
 }
 
 List<GithubMarkdownSegment> githubDisplayMarkdownSegments(String input) {
-  final source = input.trim();
+  final source = githubDisplayMarkdown(input);
   if (source.isEmpty) return const <GithubMarkdownSegment>[];
 
   final segments = <GithubMarkdownSegment>[];
+  final tags = githubHtmlTags(
+    source,
+  ).where((tag) => tag.group(1)!.toLowerCase() == 'details').toList();
   var cursor = 0;
-  while (cursor < source.length) {
-    final openMatch = _detailsOpenPattern.firstMatch(source.substring(cursor));
-    if (openMatch == null) {
-      _addTextSegment(segments, source.substring(cursor));
-      break;
-    }
-
-    final openStart = cursor + openMatch.start;
-    final openEnd = cursor + openMatch.end;
+  for (var index = 0; index < tags.length; index++) {
+    final openMatch = tags[index];
+    if (openMatch.group(0)!.startsWith('</')) continue;
+    final openStart = openMatch.start;
+    final openEnd = openMatch.end;
     _addTextSegment(segments, source.substring(cursor, openStart));
 
-    final closeMatch = _findClosingDetailsTag(source, openEnd);
-    if (closeMatch == null) {
-      _addTextSegment(segments, source.substring(openStart));
+    var depth = 1;
+    var closeIndex = index + 1;
+    for (; closeIndex < tags.length; closeIndex++) {
+      depth += tags[closeIndex].group(0)!.startsWith('</') ? -1 : 1;
+      if (depth == 0) break;
+    }
+    if (closeIndex == tags.length) {
+      cursor = openStart;
       break;
     }
-
+    final closeMatch = tags[closeIndex];
     final openTag = source.substring(openStart, openEnd);
     final detailsBody = source.substring(openEnd, closeMatch.start);
     segments.add(
@@ -87,8 +102,9 @@ List<GithubMarkdownSegment> githubDisplayMarkdownSegments(String input) {
       ),
     );
     cursor = closeMatch.end;
+    index = closeIndex;
   }
-
+  _addTextSegment(segments, source.substring(cursor));
   return segments;
 }
 
@@ -121,28 +137,10 @@ List<GithubImageReference> githubImageReferences(String input) {
   return images;
 }
 
-final _detailsOpenPattern = RegExp(r'<details\b[^>]*>', caseSensitive: false);
-
-final _detailsTagPattern = RegExp(r'</?details\b[^>]*>', caseSensitive: false);
-
 void _addTextSegment(List<GithubMarkdownSegment> segments, String source) {
   final markdown = githubDisplayMarkdown(source);
   if (markdown.trim().isEmpty) return;
   segments.add(GithubMarkdownTextSegment(markdown));
-}
-
-RegExpMatch? _findClosingDetailsTag(String source, int start) {
-  var depth = 1;
-  for (final match in _detailsTagPattern.allMatches(source, start)) {
-    final tag = match.group(0) ?? '';
-    if (tag.startsWith(RegExp(r'</', caseSensitive: false))) {
-      depth--;
-      if (depth == 0) return match;
-    } else {
-      depth++;
-    }
-  }
-  return null;
 }
 
 GithubMarkdownDetailsSegment _detailsSegment(
@@ -150,19 +148,36 @@ GithubMarkdownDetailsSegment _detailsSegment(
   String body, {
   required bool quoted,
 }) {
-  final summaryPattern = RegExp(
-    r'<summary\b[^>]*>(.*?)</summary>',
-    caseSensitive: false,
-    dotAll: true,
-  );
-  final summaryMatch = summaryPattern.firstMatch(body);
-  final summary = _decodeHtml(
-    _stripTags(summaryMatch?.group(1) ?? 'Details'),
-  ).trim();
+  Match? summaryStart;
+  Match? summaryEnd;
+  var nestedDetails = 0;
+  for (final tag in githubHtmlTags(body, startsInHtmlBlock: true)) {
+    final name = tag.group(1)!.toLowerCase();
+    final closing = tag.group(0)!.startsWith('</');
+    if (name == 'details') nestedDetails += closing ? -1 : 1;
+    if (nestedDetails != 0 || name != 'summary') continue;
+    if (!closing) {
+      summaryStart ??= tag;
+    } else if (summaryStart != null) {
+      summaryEnd = tag;
+      break;
+    }
+  }
+  final hasSummary = summaryStart != null && summaryEnd != null;
+  final summary =
+      html
+          .parseFragment(
+            hasSummary
+                ? body.substring(summaryStart.end, summaryEnd.start)
+                : 'Details',
+          )
+          .text
+          ?.trim() ??
+      '';
   final title = summary.isEmpty ? 'Details' : summary;
-  final content = summaryMatch == null
-      ? body
-      : body.replaceRange(summaryMatch.start, summaryMatch.end, '');
+  final content = hasSummary
+      ? body.replaceRange(summaryStart.start, summaryEnd.end, '')
+      : body;
   final markdown = quoted
       ? githubStripBlockquoteMarkers(githubDisplayMarkdown(content))
       : githubDisplayMarkdown(content);
@@ -176,6 +191,7 @@ GithubMarkdownDetailsSegment _detailsSegment(
 }
 
 bool _isQuotedDetailsTag(String source, int tagStart) {
+  if (tagStart == 0) return false;
   final lineStart = source.lastIndexOf('\n', tagStart - 1) + 1;
   final prefix = source.substring(lineStart, tagStart);
   final consumed = _consumeBlockquoteMarkersLocal(prefix);
@@ -208,15 +224,13 @@ final class _BlockquoteMarker {
   final String remainder;
 }
 
-String _stripTags(String input) {
-  return input.replaceAll(RegExp(r'<[^>]+>', dotAll: true), '');
-}
-
 bool _hasOpenAttribute(String value) {
-  return RegExp(
-    r'(^|[\s<])open(?:\s|=|>|/|$)',
-    caseSensitive: false,
-  ).hasMatch(value);
+  return html
+          .parseFragment(value)
+          .querySelector('details')
+          ?.attributes
+          .containsKey('open') ??
+      false;
 }
 
 String _decodeHtml(String input) {

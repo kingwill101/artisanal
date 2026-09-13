@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added `clipAnsiByCells` for exact-column overlay composition. Partial wide
+  glyphs and graphics payloads become styled spaces without snapping or moving
+  neighboring layers; existing whole-grapheme slicing behavior is unchanged.
 - Added the native-only `raster.dart` software UV renderer. It accepts
   caller-supplied TrueType `glyf` fonts and produces `package:image` pixels;
   no system font discovery or browser/Flutter engine is used. Blink is

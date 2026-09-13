@@ -2,6 +2,9 @@
 
 ## 0.1.0
 
+- Add an attributed, checksum-pinned snapshot of Dart SDK issue 64170 as a
+  real-world Markdown bench, including exact status-cell preservation and
+  hidden-comment checks at 32/64/80/96/120 columns.
 - Add detached, versioned terminal cell captures with validated JSON round trips.
 - Capture UV buffers, ANSI-styled views, and widgets at deterministic dimensions.
 - Export PNGs using Ultraviolet's native software raster backend and

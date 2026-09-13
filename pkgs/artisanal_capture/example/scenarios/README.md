@@ -27,6 +27,7 @@ CommonMark specification or a test runner.
 | `images.md` | Image alt text, missing destinations, and linked images without downloads. |
 | `release_notes.md` | A realistic composite of headings, lists, quotes, code, tables, links, and notes. |
 | `diagnostic_unicode.md` | **Intentional diagnostic:** combining marks, CJK, and emoji stress unsupported glyph rasterization and shaping. Do not silently assume these render correctly. |
+| `dart_sdk_64170.md` | Attributed external fixture from Dart SDK issue 64170: three SIMD tracking tables, links, styles, status emoji, and a hidden Supporting CLs HTML comment. |
 
 All URLs use `example.test` or relative paths. No fixture requires network
 access, remote images, or additional fonts.
@@ -34,7 +35,7 @@ access, remote images, or additional fonts.
 ## Generate and inspect
 
 Use the [`gallery` command](../../README.md#markdown-scenario-gallery) to render
-all 19 fixtures at the three review widths. The resulting `index.html` links
+all 20 fixtures at the three review widths. The resulting `index.html` links
 native PNGs, full HTML previews, input Markdown, ANSI output, and cell snapshots.
 Generation is not a correctness verdict; even an unflagged frame needs review.
 
@@ -48,9 +49,30 @@ Generation is not a correctness verdict; even an unflagged frame needs review.
   width, retain header alignment, and account for quote/list indentation.
   At widths too small for a grid, labeled fields preserve the cell data.
 
-The refreshed 32/64/96-column matrix generates all 57 images. Its five flagged
-renders consist of the two narrow code cases below and the three intentional
-Unicode diagnostic variants.
+The original 19-case matrix generated 57 images. Its five flagged renders
+consisted of two narrow code cases and three intentional Unicode diagnostic
+variants. The attributed SDK issue adds a real-world case with status emoji;
+raster diagnostics depend on the selected font's glyph coverage.
+
+## Dart SDK issue 64170
+
+`dart_sdk_64170.md` is the complete issue body from
+https://github.com/dart-lang/sdk/issues/64170#issue-5292087450, by
+`modulovalue`, updated `2026-09-12T14:41:21Z`. The adjacent `.source.json`
+records attribution and its SHA-256 checksum. Keep this fixture unchanged,
+including its HTML comment and trailing blank lines; it intentionally has no
+synthetic end marker.
+
+The offline bench checks three SIMD tables, the escaped `|` operator, exact
+counts of `✅`, `🚧`, and `❓` cells, links/styles, and the final Use cases
+section at 32/64/80/96/120 columns. The Supporting CLs section is inside an
+HTML comment and must not appear—not even as an accordion or a stray `-->`.
+The GitHub CLI's app-level test also toggles F12 over the real issue at
+multiple scroll offsets.
+
+Native PNGs use explicit font files. A missing emoji glyph is a raster
+diagnostic, not permission to remove or replace that status in the cell
+snapshot. Use the accompanying JSON/ANSI when inspecting unsupported glyphs.
 
 ## Remaining policy and coverage cases
 

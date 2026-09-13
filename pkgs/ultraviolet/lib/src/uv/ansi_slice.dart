@@ -7,7 +7,7 @@ library;
 
 import 'ansi.dart' as uv_ansi;
 import 'cell.dart';
-import 'color_utils.dart' as color_utils;
+import 'styled_string.dart' show SgrParam, StyleState, readStyle;
 import 'style_ops.dart' as uv_ops;
 import '../unicode/grapheme.dart' as uni;
 import '../unicode/width.dart';
@@ -18,6 +18,44 @@ import '../unicode/width.dart';
 /// This is useful for viewport-style horizontal scrolling and truncation.
 String cutAnsiByCells(String s, int start, int end) =>
     _cutAnsiByCells(s, start, end);
+
+/// Clips a styled line to the exact cell interval `[start, end)`.
+///
+/// Unlike [cutAnsiByCells], boundaries do not snap backward to whole graphemes.
+/// A partially intersected wide glyph or graphics payload becomes spaces with
+/// its active pen state, keeping overlays and following text at fixed columns.
+/// Missing text beyond the line's end is not padded. SGR and OSC 8 state is
+/// restored at the start; the caller owns resetting that state after the clip.
+///
+/// {@category Ultraviolet}
+String clipAnsiByCells(String s, int start, int end) {
+  if (start < 0) start = 0;
+  if (end <= start) return '';
+  final tokens = _tokenizeAnsi(s);
+  final length = tokens.fold<int>(0, (sum, token) => sum + token.visibleWidth);
+  if (start >= length) return '';
+  final out = StringBuffer()..write(_penStateAt(tokens, start));
+  var cell = 0;
+  for (final token in tokens) {
+    if (cell >= end) break;
+    if (token.visibleWidth == 0) {
+      if (cell >= start) out.write(token.raw);
+      continue;
+    }
+    final next = cell + token.visibleWidth;
+    if (next > start && cell < end) {
+      if (cell >= start && next <= end) {
+        out.write(token.raw);
+      } else {
+        final left = cell < start ? start : cell;
+        final right = next > end ? end : next;
+        out.write(' ' * (right - left));
+      }
+    }
+    cell = next;
+  }
+  return out.toString();
+}
 
 /// Truncates an ANSI string from the left by visible cell indices.
 String truncateLeftAnsiByCells(String s, int start) =>
@@ -207,10 +245,7 @@ List<_Token> _tokenizeAnsi(String input) {
           i = osc.endIndex;
           continue;
         }
-      } else if (next == 0x50 ||
-          next == 0x5E ||
-          next == 0x5F ||
-          next == 0x58) {
+      } else if (next == 0x50 || next == 0x5E || next == 0x5F || next == 0x58) {
         // DCS/APC/PM/SOS: ESC P|^|_|X ... ST (Kitty graphics, Sixel).
         // Tokenized whole with pixel-display width so cuts never split
         // a payload — consistent with Ansi.visibleLength's c= rule.
@@ -222,8 +257,7 @@ List<_Token> _tokenizeAnsi(String input) {
         // silently corrupt the image payload.
         if (next == 0x5F && _kittyChunkHasMore(raw)) {
           final chunks = StringBuffer()..write(raw);
-          while (end + 2 < input.length &&
-              input.startsWith('\x1b_G', end)) {
+          while (end + 2 < input.length && input.startsWith('\x1b_G', end)) {
             final chunkEnd = _findStringTerminator(input, end + 3);
             final chunk = input.substring(end, chunkEnd);
             chunks.write(chunk);
@@ -301,9 +335,7 @@ int _findStringTerminator(String s, int start) {
   while (i < s.length) {
     final c = s.codeUnitAt(i);
     if (c == 0x07) return i + 1;
-    if (c == 0x1B &&
-        i + 1 < s.length &&
-        s.codeUnitAt(i + 1) == 0x5C) {
+    if (c == 0x1B && i + 1 < s.length && s.codeUnitAt(i + 1) == 0x5C) {
       return i + 2;
     }
     i++;
@@ -417,20 +449,13 @@ Link _applyOsc8(String data) {
   return Link(url: url, params: params);
 }
 
-final class _SgrParam {
-  const _SgrParam(this.value, this.sub);
-  final int value;
-  final List<int> sub;
-  bool get hasSub => sub.isNotEmpty;
-}
-
-List<_SgrParam> _parseSgrParams(String raw) {
+List<SgrParam> _parseSgrParams(String raw) {
   if (raw.isEmpty) return const [];
   final parts = raw.split(';');
-  final out = <_SgrParam>[];
+  final out = <SgrParam>[];
   for (final part in parts) {
     if (part.isEmpty) {
-      out.add(const _SgrParam(0, []));
+      out.add(const SgrParam(0, []));
       continue;
     }
     final subParts = part.split(':');
@@ -440,129 +465,13 @@ List<_SgrParam> _parseSgrParams(String raw) {
       final s = subParts[i];
       sub.add(int.tryParse(s.isEmpty ? '0' : s) ?? 0);
     }
-    out.add(_SgrParam(value, sub));
+    out.add(SgrParam(value, sub));
   }
   return out;
 }
 
 UvStyle _applySgr(String rawParams, UvStyle style) {
-  final params = rawParams.isEmpty
-      ? const <_SgrParam>[]
-      : _parseSgrParams(rawParams);
-  if (params.isEmpty) return const UvStyle();
-
-  var out = style;
-
-  for (var i = 0; i < params.length; i++) {
-    final p = params[i];
-    final param = p.value;
-
-    switch (param) {
-      case 0:
-        out = const UvStyle();
-      case 1:
-        out = out.copyWith(attrs: out.attrs | Attr.bold);
-      case 2:
-        out = out.copyWith(attrs: out.attrs | Attr.faint);
-      case 3:
-        out = out.copyWith(attrs: out.attrs | Attr.italic);
-      case 4:
-        if (p.hasSub) {
-          final u = p.sub.first;
-          out = out.copyWith(
-            underline: switch (u) {
-              0 => UnderlineStyle.none,
-              1 => UnderlineStyle.single,
-              2 => UnderlineStyle.double,
-              3 => UnderlineStyle.curly,
-              4 => UnderlineStyle.dotted,
-              5 => UnderlineStyle.dashed,
-              _ => UnderlineStyle.single,
-            },
-          );
-        } else {
-          out = out.copyWith(underline: UnderlineStyle.single);
-        }
-      case 5:
-        out = out.copyWith(attrs: out.attrs | Attr.blink);
-      case 6:
-        out = out.copyWith(attrs: out.attrs | Attr.rapidBlink);
-      case 7:
-        out = out.copyWith(attrs: out.attrs | Attr.reverse);
-      case 8:
-        out = out.copyWith(attrs: out.attrs | Attr.conceal);
-      case 9:
-        out = out.copyWith(attrs: out.attrs | Attr.strikethrough);
-      case 22:
-        out = out.copyWith(attrs: out.attrs & ~(Attr.bold | Attr.faint));
-      case 23:
-        out = out.copyWith(attrs: out.attrs & ~Attr.italic);
-      case 24:
-        out = out.copyWith(underline: UnderlineStyle.none);
-      case 25:
-        out = out.copyWith(attrs: out.attrs & ~(Attr.blink | Attr.rapidBlink));
-      case 27:
-        out = out.copyWith(attrs: out.attrs & ~Attr.reverse);
-      case 28:
-        out = out.copyWith(attrs: out.attrs & ~Attr.conceal);
-      case 29:
-        out = out.copyWith(attrs: out.attrs & ~Attr.strikethrough);
-
-      case >= 30 && <= 37:
-        out = out.copyWith(fg: UvColor.basic16(param - 30));
-      case >= 90 && <= 97:
-        out = out.copyWith(fg: UvColor.basic16(param - 90, bright: true));
-      case >= 40 && <= 47:
-        out = out.copyWith(bg: UvColor.basic16(param - 40));
-      case >= 100 && <= 107:
-        out = out.copyWith(bg: UvColor.basic16(param - 100, bright: true));
-      case 39:
-        out = out.copyWith(clearFg: true);
-      case 49:
-        out = out.copyWith(clearBg: true);
-
-      // Extended colors (38/48): best-effort, semicolon and colon forms.
-      case 38 || 48:
-        final isFg = param == 38;
-
-        if (p.hasSub) {
-          if (p.sub.isEmpty) break;
-          final mode = p.sub[0];
-          if (mode == 5 && p.sub.length >= 2) {
-            final idx = p.sub[1];
-            out = isFg
-                ? out.copyWith(fg: UvColor.indexed256(idx))
-                : out.copyWith(bg: UvColor.indexed256(idx));
-          } else if (mode == 2 && p.sub.length >= 5) {
-            final r = color_utils.shift(p.sub[2]);
-            final g = color_utils.shift(p.sub[3]);
-            final b = color_utils.shift(p.sub[4]);
-            out = isFg
-                ? out.copyWith(fg: UvColor.rgb(r, g, b))
-                : out.copyWith(bg: UvColor.rgb(r, g, b));
-          }
-          break;
-        }
-
-        if (i + 1 >= params.length) break;
-        final mode = params[i + 1].value;
-        if (mode == 5 && i + 2 < params.length) {
-          final idx = params[i + 2].value;
-          out = isFg
-              ? out.copyWith(fg: UvColor.indexed256(idx))
-              : out.copyWith(bg: UvColor.indexed256(idx));
-          i += 2;
-        } else if (mode == 2 && i + 4 < params.length) {
-          final r = color_utils.shift(params[i + 2].value);
-          final g = color_utils.shift(params[i + 3].value);
-          final b = color_utils.shift(params[i + 4].value);
-          out = isFg
-              ? out.copyWith(fg: UvColor.rgb(r, g, b))
-              : out.copyWith(bg: UvColor.rgb(r, g, b));
-          i += 4;
-        }
-    }
-  }
-
-  return out;
+  final state = StyleState(style);
+  readStyle(_parseSgrParams(rawParams), state);
+  return state.style;
 }

@@ -25,14 +25,21 @@ void main() {
           )
           .cast<File>()
           .toList();
-      expect(fixtures.length, greaterThanOrEqualTo(19));
+      expect(fixtures.length, greaterThanOrEqualTo(20));
       for (final file in fixtures) {
+        final attributed = file.path.endsWith('dart_sdk_64170.md');
+        if (attributed) {
+          final metadata = File(
+            file.path.replaceFirst(RegExp(r'\.md$'), '.source.json'),
+          );
+          expect(await metadata.exists(), isTrue);
+        }
         final source = await file.readAsString();
         final markers = RegExp(
           r'^END_[A-Z0-9_]+$',
           multiLine: true,
         ).allMatches(source).map((match) => match.group(0)!).toList();
-        if (!file.path.endsWith('nested_quotes.md')) {
+        if (!attributed && !file.path.endsWith('nested_quotes.md')) {
           expect(markers, hasLength(1));
         }
         for (final width in [32, 64, 96]) {
@@ -58,6 +65,16 @@ void main() {
               contains(marker),
               reason: '${file.path} @ $width',
             );
+          }
+          if (attributed) {
+            expect(
+              text.toString(),
+              contains('Vectorized search over bytes'),
+              reason: '${file.path} @ $width',
+            );
+            expect(text.toString(), contains('#63821'));
+            expect(text.toString(), isNot(contains('Supporting CLs')));
+            expect(text.toString(), isNot(contains('-->')));
           }
         }
       }

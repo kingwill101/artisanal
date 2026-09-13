@@ -13,6 +13,12 @@
 
 ### Fixed
 
+- Fixed debug-overlay clipping through OSC 8 hyperlinks and wide graphemes by
+  reusing UV's exact-cell ANSI clipping and isolating pen state on both sides
+  of the opaque panel.
+- Kept GitHub disclosure extraction out of HTML comments and literal code.
+  Preserved Markdown indentation and hard breaks during display normalization,
+  and avoided a range error when a disclosure begins at the first character.
 - Kept raw HTML containers scoped across Markdown block boundaries, including
   nested blockquotes and open/closed details. Preserved inline HTML whitespace,
   literal code, and pre-parsed Markdown nodes through HTML normalization.

@@ -17,5 +17,6 @@ dependencies:
   ultraviolet: ^0.5.1
 
 dev_dependencies:
+  crypto: ^3.0.7
   lints: ^6.0.0
   test: ^1.28.0
