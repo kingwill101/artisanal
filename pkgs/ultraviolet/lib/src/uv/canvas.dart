@@ -99,6 +99,13 @@ final class Canvas
   /// Renders the canvas into a string (trimming trailing spaces per line).
   String render() => _scr.buffer.render();
 
+  /// Releases the canvas-owned backing screen buffer.
+  ///
+  /// Call this after [render] or [draw] when the canvas is a temporary
+  /// composition surface. Cells supplied through [setCell] remain borrowed;
+  /// only cells owned by this canvas are released.
+  void dispose() => _scr.dispose();
+
   /// Draws this canvas onto another [Screen] within [area].
   @override
   void draw(Screen screen, Rectangle area) => _scr.draw(screen, area);

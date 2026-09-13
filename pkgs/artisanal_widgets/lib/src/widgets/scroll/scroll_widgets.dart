@@ -2615,21 +2615,25 @@ class RenderScrollbar extends RenderBox {
     }
 
     final canvas = Canvas(stableW, stableH);
-    _drawStyledContent(canvas, content, 0, 0);
-    final barX = math.max(0, stableW - trackWidth);
-    final barOverwritesSpaces =
-        trackUsesBackground ||
-        thumbUsesBackground ||
-        (effectiveTrackGradient?.useBackground ?? false) ||
-        (effectiveThumbGradient?.useBackground ?? false);
-    _drawStyledContent(
-      canvas,
-      bar,
-      barX,
-      0,
-      treatSpacesAsTransparent: !barOverwritesSpaces,
-    );
-    return canvas.render();
+    try {
+      _drawStyledContent(canvas, content, 0, 0);
+      final barX = math.max(0, stableW - trackWidth);
+      final barOverwritesSpaces =
+          trackUsesBackground ||
+          thumbUsesBackground ||
+          (effectiveTrackGradient?.useBackground ?? false) ||
+          (effectiveThumbGradient?.useBackground ?? false);
+      _drawStyledContent(
+        canvas,
+        bar,
+        barX,
+        0,
+        treatSpacesAsTransparent: !barOverwritesSpaces,
+      );
+      return canvas.render();
+    } finally {
+      canvas.dispose();
+    }
   }
 }
 
@@ -2642,9 +2646,13 @@ String _composeScrollbarWithCanvas({
 }) {
   // Use a canvas when control sequences require real cell compositing.
   final canvas = Canvas(width, height);
-  _drawStyledContent(canvas, content, 0, 0);
-  _drawStyledContent(canvas, bar, barX, 0);
-  return canvas.render();
+  try {
+    _drawStyledContent(canvas, content, 0, 0);
+    _drawStyledContent(canvas, bar, barX, 0);
+    return canvas.render();
+  } finally {
+    canvas.dispose();
+  }
 }
 
 String _composeScrollbarBesideContent({
@@ -3039,22 +3047,26 @@ void _drawStyledContent(
   final styled = StyledString(content);
   final styledBounds = styled.bounds();
   final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
-  styled.draw(tempCanvas, tempCanvas.bounds());
+  try {
+    styled.draw(tempCanvas, tempCanvas.bounds());
 
-  for (var y = 0; y < styledBounds.height; y++) {
-    for (var x = 0; x < styledBounds.width; x++) {
-      final destX = startX + x;
-      final destY = startY + y;
+    for (var y = 0; y < styledBounds.height; y++) {
+      for (var x = 0; x < styledBounds.width; x++) {
+        final destX = startX + x;
+        final destY = startY + y;
 
-      if (destX < 0 || destY < 0) continue;
-      if (destX >= canvas.width() || destY >= canvas.height()) continue;
+        if (destX < 0 || destY < 0) continue;
+        if (destX >= canvas.width() || destY >= canvas.height()) continue;
 
-      final srcCell = tempCanvas.cellAt(x, y);
-      if (srcCell == null || srcCell.isZero) continue;
-      if (treatSpacesAsTransparent && srcCell.isEmpty) continue;
+        final srcCell = tempCanvas.cellAt(x, y);
+        if (srcCell == null || srcCell.isZero) continue;
+        if (treatSpacesAsTransparent && srcCell.isEmpty) continue;
 
-      canvas.setCell(destX, destY, srcCell.clone());
+        canvas.setCellOwned(destX, destY, srcCell.clone());
+      }
     }
+  } finally {
+    tempCanvas.dispose();
   }
 }
 

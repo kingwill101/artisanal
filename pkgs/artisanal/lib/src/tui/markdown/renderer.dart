@@ -13,7 +13,11 @@ import 'headings.dart';
 import 'lists.dart';
 import 'blockquote.dart';
 import 'code_block.dart'
-    show startCodeBlock, endCodeBlock, applyCodeBlockPrefix;
+    show
+        startCodeBlock,
+        endCodeBlock,
+        applyCodeBlockPrefix,
+        balanceCodeBlockNewlines;
 import 'hr.dart' show renderHorizontalRule;
 import 'tables.dart' show renderTable, parseTableAlign;
 import 'images.dart' show renderImage;
@@ -159,12 +163,21 @@ class MarkdownRenderer implements NodeVisitor {
     }
 
     if (_ctx.inCodeBlock) {
-      if (_shouldSyntaxHighlight(content, _ctx.codeBlockLanguage)) {
+      final highlighted = _shouldSyntaxHighlight(
+        content,
+        _ctx.codeBlockLanguage,
+      );
+      if (highlighted) {
         content = _highlighter.highlightCode(
           content,
           language: _ctx.codeBlockLanguage,
         );
       }
+      content = balanceCodeBlockNewlines(
+        _ctx,
+        content,
+        highlighted: highlighted,
+      );
       if (_ctx.options.codeBlockBorder && content.contains('\n')) {
         content = applyCodeBlockPrefix(_ctx, content);
       }

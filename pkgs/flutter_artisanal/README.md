@@ -12,6 +12,11 @@ Runs TUI programs built with the [artisanal](https://github.com/anomalousco/arti
 - **Keyboard input** — Flutter `Focus`/raw-key events translated to terminal byte sequences
 - **Desktop + Web** — works with `flutter run` on Linux/macOS/Windows and `flutter run -d chrome`
 
+`TerminalPainter` accepts the shared Ultraviolet `UvPaintPolicy`; use the same
+policy as a native raster or web canvas renderer when color and attribute
+resolution should agree. This aligns cell colors, not glyph pixels: Flutter's
+font selection, hinting, and antialiasing can differ from other backends.
+
 ## Two supported patterns
 
 ### Model pattern

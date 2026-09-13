@@ -10,6 +10,19 @@
   no system font discovery or browser/Flutter engine is used. Blink is
   deterministic (visible), unsupported glyphs and font variants are
   diagnostics and fail in strict mode.
+- Added `UvPaintPolicy`, shared by native raster, web canvas, and Flutter
+  painting, so terminal defaults, palettes, reverse/faint/conceal, and
+  underline colors resolve consistently across non-ANSI backends.
+- Expanded hyperlink registry identities to 20-bit slots and 32-bit generations,
+  preventing frequent slot reuse from hitting the former 8-bit generation
+  limit. Arithmetic encoding preserves exact identities on native and web
+  targets; exhausted generations retire safely rather than aliasing stale IDs.
+- Release hyperlink URLs and parameters when the last cell reference is
+  released, retaining only identity bookkeeping in reusable registry slots.
+- Added explicit disposal for owned lines, buffers, canvases, and renderer
+  frame state. Resizing and compositing now release discarded cells promptly.
+  `setCellOwned` consumes its input on every path, including rejected or
+  unchanged writes; callers must not read a cell after transferring ownership.
 
 ## 0.5.1
 

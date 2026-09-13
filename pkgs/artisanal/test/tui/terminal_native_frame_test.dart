@@ -39,6 +39,39 @@ void main() {
       expect(cell.packed, hasLength(4));
     });
 
+    test(
+      'detaches cells back to UV while preserving metadata and diff policy',
+      () {
+        final source = uv_buffer.Buffer.create(2, 1);
+        source.setCell(
+          0,
+          0,
+          Cell(
+            content: 'A',
+            style: const UvStyle(fg: UvColor.rgb(10, 20, 30)),
+            link: const Link(url: 'https://example.com', params: 'id=1'),
+            diffOption: CellDiffOption.alwaysUpdate,
+          ),
+        );
+        final restored = TerminalNativeFrame.fromBuffer(source).toBuffer();
+        final cell = restored.cellAt(0, 0)!;
+        expect(cell.content, 'A');
+        expect(cell.style.fg, const UvColor.rgb(10, 20, 30));
+        expect(cell.link.url, 'https://example.com');
+        expect(cell.link.params, 'id=1');
+        expect(cell.diffOption, CellDiffOption.alwaysUpdate);
+      },
+    );
+
+    test('rejects drawable cells instead of dropping their payload', () {
+      final source = uv_buffer.Buffer.create(1, 1);
+      source.setCell(0, 0, Cell(content: 'x')..drawable = Object());
+      expect(
+        () => TerminalNativeFrame.fromBuffer(source).toBuffer(),
+        throwsA(isA<UnsupportedError>()),
+      );
+    });
+
     test('reuses native color snapshots for repeated UV colors', () {
       final first = TerminalNativeStyle.fromStyle(
         const UvStyle(fg: UvColor.rgb(1, 2, 3)),

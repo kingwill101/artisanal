@@ -167,6 +167,41 @@ This uses the real widget/TEA layout pipeline, not an HTML representation.
 Async state should be awaited explicitly in `arrange`; capture does not guess
 when an app is ready using sleeps.
 
+By default `captureWidget` uses `WidgetCaptureMode.view`, which captures the
+portable `WidgetApp.view()` text. Select `WidgetCaptureMode.renderedFrame` when
+the final production UV cell frame is the subject of the capture:
+
+```dart
+final rendered = await captureWidget(
+  MyWidget(),
+  columns: 80,
+  rows: 24,
+  mode: WidgetCaptureMode.renderedFrame,
+);
+```
+
+Rendered-frame mode opts `WidgetTester` into both the production renderer and
+native-frame recording. It is more faithful to terminal cells, but costs a
+cell copy and rejects drawable/graphics payloads because native frame metadata
+does not contain their payload bytes.
+
+Runtime captures use the same boundary. A `ProgramRenderSnapshot` is a
+diagnostic record: its JSON/text lines are summaries, not a lossless cell
+format. `captureProgramFrame` therefore requires `snapshot.nativeFrame` and
+rebuilds a detached buffer:
+
+```dart
+import 'package:artisanal/runtime.dart';
+import 'package:artisanal_capture/artisanal_capture.dart';
+import 'package:artisanal_capture/runtime.dart';
+
+final TerminalCapture capture = captureProgramFrame(snapshot);
+```
+
+Record native frames in the runtime before calling this function; snapshots
+without `nativeFrame` fail rather than silently losing styles, links, or cell
+attributes.
+
 `example/widget_capture.dart` is a runnable consumer that writes a cell capture
 for later export with the CLI.
 

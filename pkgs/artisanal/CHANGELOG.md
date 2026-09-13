@@ -13,6 +13,9 @@
 
 ### Fixed
 
+- Isolated Markdown code-block backgrounds and attributes at physical
+  newlines, so code styling does not bleed into following rows or surrounding
+  content.
 - Fixed debug-overlay clipping through OSC 8 hyperlinks and wide graphemes by
   reusing UV's exact-cell ANSI clipping and isolating pen state on both sides
   of the opaque panel.

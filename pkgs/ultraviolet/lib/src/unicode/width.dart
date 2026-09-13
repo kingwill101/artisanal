@@ -33,17 +33,57 @@ void setEmojiPresentationWidth(int width) {
 /// Maximum number of entries in [_unicodeStringWidthCache].
 const _unicodeStringWidthCacheLimit = 2048;
 const _unicodeStringWidthCacheMaxLength = 4096;
+const _unicodeStringWidthCacheMaxBytes = 256 * 1024;
 
-final _unicodeStringWidthCache = <String, int>{};
+final _unicodeStringWidthCache = _BoundedStringIntCache(
+  maxEntries: _unicodeStringWidthCacheLimit,
+  maxKeyLength: _unicodeStringWidthCacheMaxLength,
+  maxKeyBytes: _unicodeStringWidthCacheMaxBytes,
+);
 
 int? _cachedStringWidth(String s) => _unicodeStringWidthCache[s];
 
 void _cacheStringWidth(String s, int width) {
-  if (s.length > _unicodeStringWidthCacheMaxLength) return;
-  if (_unicodeStringWidthCache.length >= _unicodeStringWidthCacheLimit) {
-    _unicodeStringWidthCache.clear();
-  }
   _unicodeStringWidthCache[s] = width;
+}
+
+/// FIFO string cache with independent entry-count and UTF-16 key budgets.
+final class _BoundedStringIntCache {
+  _BoundedStringIntCache({
+    required this.maxEntries,
+    required this.maxKeyLength,
+    required this.maxKeyBytes,
+  });
+
+  final int maxEntries;
+  final int maxKeyLength;
+  final int maxKeyBytes;
+  final _entries = <String, int>{};
+  int _keyBytes = 0;
+
+  int? operator [](String key) => _entries[key];
+
+  void operator []=(String key, int value) {
+    final keyBytes = key.length * 2;
+    if (key.length > maxKeyLength || keyBytes > maxKeyBytes) return;
+    if (_entries.containsKey(key)) {
+      _entries[key] = value;
+      return;
+    }
+    while (_entries.isNotEmpty &&
+        (_entries.length >= maxEntries || _keyBytes + keyBytes > maxKeyBytes)) {
+      final oldest = _entries.keys.first;
+      _entries.remove(oldest);
+      _keyBytes -= oldest.length * 2;
+    }
+    _entries[key] = value;
+    _keyBytes += keyBytes;
+  }
+
+  void clear() {
+    _entries.clear();
+    _keyBytes = 0;
+  }
 }
 
 /// Specifies the method used to calculate character display width.

@@ -46,6 +46,12 @@ widgets do not need an extra `package:artisanal/tui.dart` import.
 Keep `package:artisanal_widgets/artisanal_widgets.dart` only when you
 explicitly want the broader experimental compatibility surface.
 
+`WidgetTester` remains view-only by default. For an opt-in final production
+cell frame, pass `enableRenderer: true` and
+`enableNativeFrameCapture: true`; read the resulting
+`tester.latestNativeFrame`. Native-frame recording copies cells and does not
+include drawable payloads.
+
 Both the local runner helpers and the hosted browser/socket helpers accept an
 `imageAutoMode` override. Hosted browser/socket runners now default
 `Image(renderMode: auto)` to session-driven capability detection, while
@@ -159,6 +165,12 @@ details.
 
 Component tests are split by widget under
 `test/components/*_test.dart`.
+
+For reusable captures, `artisanal_capture` exposes
+`captureWidget(..., mode: WidgetCaptureMode.renderedFrame)`. Its default
+`WidgetCaptureMode.view` is cheaper and captures the portable view text;
+rendered-frame mode exercises the production UV renderer and requires native
+frame capture. This distinction matters for styled-cell fidelity.
 
 Useful commands:
 

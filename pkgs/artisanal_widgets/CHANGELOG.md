@@ -9,8 +9,10 @@
 - Added opt-in production UV renderer capture to `WidgetTester` via
   `enableRenderer: true`, exposing raw ANSI output through `rendererOutput`.
   Use `altScreen: true` for full-viewport capture instead of inline rendering.
-  The default renderer-disabled test behavior is unchanged; structured cell
-  snapshots are not yet exposed.
+  The default renderer-disabled test behavior is unchanged.
+- Added opt-in `enableNativeFrameCapture` and `latestNativeFrame` for structured
+  final UV cell snapshots. `artisanal_capture` uses this through
+  `WidgetCaptureMode.renderedFrame`; drawable payloads are not represented.
 - Added a model-backed interactive `TreeView.model` surface for Artisanal's
   shared `TreeModel`, including focus-aware keyboard navigation, pointer
   expansion and activation, custom row builders, bounded scrolling, and
@@ -23,6 +25,10 @@
 
 ### Changed
 
+- Added idempotent `WidgetApp.dispose()` teardown for mounted element trees.
+  `WidgetTester` and `runWidgetApp` now explicitly release widget state and
+  inherited dependencies without coupling the core `Program` model contract
+  to arbitrary model disposal.
 - `LayoutBuilder` now builds from incoming parent layout constraints rather than
   `MediaQuery` viewport dimensions. Use `MediaQuery` directly for viewport-based
   decisions; unbounded parent axes remain unbounded.
@@ -37,6 +43,8 @@
   already provide tabs and status bars can use an unboxed editor surface.
 - Added `showDiagnosticBanner` so unchromed editors retain reusable diagnostic
   feedback by default while application workbenches can provide their own.
+- Updated OpenCode theme selected-row colors to retain readable text contrast
+  instead of using the active border color as a row background.
 
 ### Fixed
 
@@ -63,6 +71,13 @@
 - Preserve the caller's `ThemeScope` when opening dialogs through
   `NavigatorState.showDialog`, and keep the default modal barrier transparent
   as documented instead of painting over the application.
+- Catch render failures in the diagnostic error screen, preserving Copy and
+  Dismiss/retry behavior. If recovery fails too, report both errors in a bounded
+  fallback with a handled Ctrl+C quit path.
+- Unregister inherited-widget dependents on unmount, preventing providers from
+  retaining removed modal/input subtrees or re-dirtying them on later updates.
+- Dispose temporary container, stack, and scrollbar composition canvases,
+  releasing owned cell references without waiting for garbage collection.
 
 ## 0.4.1
 

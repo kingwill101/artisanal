@@ -6,6 +6,7 @@ import 'package:pure_ui/pure_ui.dart' as ui;
 
 import '../uv/buffer.dart';
 import '../uv/cell.dart';
+import '../uv/cell_paint.dart';
 import '../uv/renderer/renderer.dart';
 
 part 'glyph_mask.dart';
@@ -216,6 +217,11 @@ final class RasterTerminalRenderer extends TerminalRenderer {
   final RasterRenderOptions options;
 
   final List<UvRgb>? _palette;
+  late final UvPaintPolicy _paintPolicy = UvPaintPolicy(
+    foreground: options.foreground,
+    background: options.background,
+    palette: _palette,
+  );
   late final int _cellWidth;
   late final int _cellHeight;
   late final int _baseline;
@@ -283,7 +289,7 @@ final class RasterTerminalRenderer extends TerminalRenderer {
           _top(y),
           _cellWidth,
           _cellHeight,
-          _colors(style).$2,
+          _paintPolicy.resolve(style).background,
         );
       }
     }
@@ -323,7 +329,8 @@ final class RasterTerminalRenderer extends TerminalRenderer {
           continue;
         }
         if ((style.attrs & Attr.conceal) != 0 || cell.width == 0) continue;
-        final fg = _colors(style).$1;
+        final paint = _paintPolicy.resolve(style);
+        final fg = paint.foreground;
         if (cell.content.isNotEmpty && cell.content != ' ') {
           final runes = cell.content.runes.toList();
           if (runes.length != 1) {
@@ -387,7 +394,7 @@ final class RasterTerminalRenderer extends TerminalRenderer {
             }
           }
         }
-        _decorations(image, x, y, span, style, fg);
+        _decorations(image, x, y, span, style, paint);
       }
     }
     if (_omittedDiagnostics > 0) {
@@ -440,44 +447,6 @@ final class RasterTerminalRenderer extends TerminalRenderer {
         _ => font._regular,
       };
 
-  (UvRgb, UvRgb) _colors(UvStyle style) {
-    var fg = _color(style.fg, options.foreground);
-    var bg = _color(style.bg, options.background);
-    if ((style.attrs & Attr.reverse) != 0) (fg, bg) = (bg, fg);
-    if ((style.attrs & Attr.faint) != 0) {
-      fg = UvRgb(
-        ((fg.r + bg.r) / 2).round(),
-        ((fg.g + bg.g) / 2).round(),
-        ((fg.b + bg.b) / 2).round(),
-        a: fg.a,
-      );
-    }
-    return (fg, bg);
-  }
-
-  UvRgb _color(UvColor? color, UvRgb fallback) {
-    if (color == null) return fallback;
-    if (color is UvRgb) {
-      _validateRgb(color);
-      return color;
-    }
-    final index = switch (color) {
-      UvBasic16 c when c.index >= 0 && c.index <= 7 =>
-        c.index + (c.bright ? 8 : 0),
-      UvIndexed256 c when c.index >= 0 && c.index <= 255 => c.index,
-      _ => throw ArgumentError('Invalid terminal palette color'),
-    };
-    if (_palette != null && index < _palette.length) return _palette[index];
-    if (index < 16) return _ansiPalette[index];
-    if (index >= 232) {
-      final v = 8 + (index - 232) * 10;
-      return UvRgb(v, v, v);
-    }
-    final n = index - 16;
-    int level(int v) => v == 0 ? 0 : 55 + v * 40;
-    return UvRgb(level(n ~/ 36), level((n ~/ 6) % 6), level(n % 6));
-  }
-
   void _diagnose(String message, int x, int y, String code) {
     if (_diagnostics.length >= 1024) {
       _omittedDiagnostics++;
@@ -513,11 +482,11 @@ final class RasterTerminalRenderer extends TerminalRenderer {
     int y,
     int span,
     UvStyle style,
-    UvRgb fg,
+    UvCellPaint paint,
   ) {
     final left = _left(x), top = _top(y);
     final length = span * _cellWidth, bottom = top + _cellHeight - 1;
-    final ul = _color(style.underlineColor, fg);
+    final ul = paint.underlineColor;
     void pixel(int dx, int dy, UvRgb color) {
       final px = left + dx;
       if (px < image.width && dy >= top && dy <= bottom) {
@@ -542,7 +511,7 @@ final class RasterTerminalRenderer extends TerminalRenderer {
           pixel(i, bottom - const [0, 1, 2, 1][i % 4], ul);
       }
       if ((style.attrs & Attr.strikethrough) != 0) {
-        pixel(i, top + _cellHeight ~/ 2, fg);
+        pixel(i, top + _cellHeight ~/ 2, paint.foreground);
       }
     }
   }
@@ -581,22 +550,3 @@ void _blend(img.Image image, int x, int y, UvRgb color, double coverage) {
     (outAlpha * 255).round(),
   );
 }
-
-const _ansiPalette = <UvRgb>[
-  UvRgb(0, 0, 0),
-  UvRgb(128, 0, 0),
-  UvRgb(0, 128, 0),
-  UvRgb(128, 128, 0),
-  UvRgb(0, 0, 128),
-  UvRgb(128, 0, 128),
-  UvRgb(0, 128, 128),
-  UvRgb(192, 192, 192),
-  UvRgb(128, 128, 128),
-  UvRgb(255, 0, 0),
-  UvRgb(0, 255, 0),
-  UvRgb(255, 255, 0),
-  UvRgb(0, 0, 255),
-  UvRgb(255, 0, 255),
-  UvRgb(0, 255, 255),
-  UvRgb(255, 255, 255),
-];

@@ -1052,6 +1052,9 @@ class UltravioletTuiRenderer
     _inlineTerminalHeight = isBounded ? h : null;
     final renderWidth = geometry?.width ?? w;
     final renderHeight = geometry?.height ?? h;
+    // A renderer can be reinitialized after dispose(). Do not retain the
+    // previous frame's cells across that lifecycle boundary.
+    _screen?.dispose();
     _screen = uv_buffer.ScreenBuffer(renderWidth, renderHeight);
 
     final envMap = environment;
@@ -1716,6 +1719,14 @@ class UltravioletTuiRenderer
     if (!isBounded && _options.altScreen) {
       terminal.exitAltScreen();
     }
+    _renderer?.dispose();
+    _renderer = null;
+    _screen?.dispose();
+    _screen = null;
+    _nativeFrameCache = null;
+    _nativeDeltaCache = null;
+    _nativeCellDeltaCache = null;
+    _previousNativeFrameForCellDelta = null;
     _initialized = false;
   }
 

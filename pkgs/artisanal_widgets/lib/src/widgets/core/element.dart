@@ -103,6 +103,11 @@ abstract class Element {
   BuildOwner? _owner;
   bool _dirty = false;
   bool _isRebuilding = false;
+  // Inherited elements retain their dependents so they can invalidate them
+  // when their value changes. Keep the reverse edge as well: without it,
+  // unmounted subtrees remain strongly reachable from every inherited
+  // provider they read (ThemeScope, FocusScope, etc.).
+  final Set<InheritedElement> _inheritedDependencies = <InheritedElement>{};
   int _subtreeFocusCacheEpoch = -1;
   bool _subtreeFocusCacheValue = false;
 
@@ -518,6 +523,10 @@ abstract class Element {
     // Avoid retaining unmounted elements in the dirty set.
     _owner?.unscheduleBuildFor(this);
     _owner?.releaseMouse(this);
+    for (final inherited in _inheritedDependencies) {
+      inherited.unregisterDependent(this);
+    }
+    _inheritedDependencies.clear();
     for (final child in _children) {
       child.unmount();
     }
@@ -876,6 +885,24 @@ class InheritedElement extends Element {
   /// Registers [element] as dependent on this inherited widget.
   void registerDependent(Element element) {
     _dependents.add(element);
+    element._inheritedDependencies.add(this);
+  }
+
+  /// Removes [element] when it leaves the tree.
+  void unregisterDependent(Element element) {
+    _dependents.remove(element);
+  }
+
+  @override
+  void unmount() {
+    // Normally descendants remove themselves while unmounting. Clear both
+    // sides here as well so a provider removed before a consumer cannot leave
+    // a stale reverse edge (for example after an interrupted reconciliation).
+    for (final dependent in _dependents) {
+      dependent._inheritedDependencies.remove(this);
+    }
+    _dependents.clear();
+    super.unmount();
   }
 
   @override
@@ -993,9 +1020,17 @@ class StatefulElement extends Element implements StateSetter {
 
   @override
   void unmount() {
-    state.dispose();
-    state.detach();
-    super.unmount();
+    // Descendants may still need controllers owned by this state while they
+    // detach listeners or clear decorations. Release them before their owner.
+    try {
+      super.unmount();
+    } finally {
+      try {
+        state.dispose();
+      } finally {
+        state.detach();
+      }
+    }
   }
 }
 

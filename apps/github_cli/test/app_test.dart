@@ -672,6 +672,61 @@ void main() {
     expect(tester.view, contains('tokyonight'));
   });
 
+  test(
+    'selected queue row uses gruvbox colors for title, label, and padding',
+    () async {
+      final tester = WidgetTester(
+        screenWidth: 110,
+        screenHeight: 34,
+        enableRenderer: true,
+        enableNativeFrameCapture: true,
+        altScreen: true,
+      );
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        GithubCliDashboard(
+          client: _FakeGithubClient(_sampleDashboard()),
+          repository: 'kingwill101/artisanal',
+        ),
+      );
+      await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
+
+      // The dashboard's public theme-cycle action reaches the real gruvbox
+      // theme; do not duplicate the queue implementation in this test.
+      tester.sendKey('t');
+      tester.pump();
+      tester.sendKey('t');
+      tester.pump();
+      tester.sendKey('t');
+      tester.pump();
+      tester.sendKey('2');
+      tester.pump();
+
+      final frame = tester.latestNativeFrame;
+      expect(frame, isNotNull);
+      final selectedTitle = _nativeQueueSpan(frame!, '#7 Wire dashboard');
+      // The detail pane also renders the issue's labels. Inspect the label
+      // line immediately below the selected queue title so this assertion
+      // covers the queue row rather than the first matching span globally.
+      final selectedLabel = _nativeSpanOnLine(
+        frame,
+        selectedTitle.lineIndex + 1,
+        'feature',
+      );
+      expect(selectedTitle.style.fg, isNotNull);
+      expect(selectedLabel.style.fg, isNotNull);
+      _expectNativeRgb(selectedTitle.style.fg!, 0xeb, 0xdb, 0xb2);
+      _expectNativeRgb(selectedLabel.style.fg!, 0xeb, 0xdb, 0xb2);
+
+      final titleLine = frame.lines[selectedTitle.lineIndex];
+      final leftPadding = titleLine.cells[selectedTitle.startColumn - 1];
+      final rightPadding = titleLine.cells[selectedTitle.endColumn];
+      _expectNativeRgb(leftPadding.style.bg!, 0x50, 0x49, 0x45);
+      _expectNativeRgb(rightPadding.style.bg!, 0x50, 0x49, 0x45);
+    },
+  );
+
   test('enter focuses issue and pull request details', () async {
     final tester = WidgetTester(screenWidth: 110, screenHeight: 34);
     addTearDown(() => tester.dispose());
@@ -2114,6 +2169,34 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
     expect(client.calls, 2);
   });
+}
+
+dynamic _nativeSpanOnLine(dynamic frame, int lineIndex, String text) {
+  if (lineIndex >= 0 && lineIndex < frame.lines.length) {
+    for (final span in frame.lines[lineIndex].spans) {
+      if (span.text == text) return span;
+    }
+  }
+  fail(
+    'Native frame line $lineIndex did not contain span "$text".\n'
+    '${frame.plainText}',
+  );
+}
+
+dynamic _nativeQueueSpan(dynamic frame, String text) {
+  for (var lineIndex = 0; lineIndex < frame.lines.length; lineIndex++) {
+    final line = frame.lines[lineIndex];
+    final isSelectedQueueRow = line.spans.any((span) => span.text == '┃');
+    if (!isSelectedQueueRow) continue;
+    for (final span in line.spans) {
+      if (span.text == text) return span;
+    }
+  }
+  fail('Native frame did not contain queue span "$text".\n${frame.plainText}');
+}
+
+void _expectNativeRgb(dynamic color, int r, int g, int b) {
+  expect([color.kind, color.r, color.g, color.b], ['rgb', r, g, b]);
 }
 
 GithubDashboardData _sampleDashboard([

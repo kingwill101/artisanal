@@ -20,6 +20,7 @@ import 'package:artisanal/runtime.dart'
         FrameTickModel,
         FrameTickMsg,
         HitTestMouseMsg,
+        InterruptMsg,
         KeyMsg,
         Model,
         ModeReportMsg,
@@ -111,8 +112,8 @@ class WidgetApp
 
   Widget root;
 
-  Object? _lastError;
   Widget? _savedRootBeforeError;
+  bool _fatalRenderFailure = false;
 
   /// Optional terminal background color.
   ///
@@ -165,6 +166,7 @@ class WidgetApp
   final bool enableRenderMetricsInjection;
 
   late final ElementTree _tree;
+  bool _disposed = false;
   static const Key _mediaQueryKey = ValueKey<String>('_media_query_host');
   MediaQueryData _mediaQueryData;
   String? _cachedView;
@@ -196,6 +198,25 @@ class WidgetApp
   final List<int> _keyRenderLatencyUs = <int>[];
   static const int _maxPendingKeySamples = 512;
   static const int _maxKeyRenderSamples = 240;
+
+  /// Releases the mounted widget tree and all resources owned by this app.
+  ///
+  /// [WidgetApp] owns its element tree, even though the [Program] runtime
+  /// deliberately has no knowledge of widget lifecycle. This method is safe
+  /// to call more than once, which lets app-specific runners and test
+  /// harnesses use the same teardown path.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _tree.unmount();
+    _cachedView = null;
+    _cachedViewObject = null;
+    _cachedBackgroundColor = null;
+    _savedRootBeforeError = null;
+    _lastMouseMotionTargets.clear();
+    _latestRenderMetrics = null;
+    _dirty = false;
+  }
 
   @override
   bool get wantsFrameTicks => handleFrameTick;
@@ -357,6 +378,17 @@ class WidgetApp
 
     if (TuiTrace.captureDispatchEnabled) {
       TuiTrace.log('widget_app.update start ${msg.runtimeType}');
+    }
+
+    if (_fatalRenderFailure) {
+      if (msg is InterruptMsg ||
+          (msg is KeyMsg &&
+              msg.key.type == KeyType.runes &&
+              msg.key.runes.length == 1 &&
+              msg.key.runes.single == 0x03)) {
+        return (this, Cmd.quit());
+      }
+      return (this, null);
     }
 
     if (msg is KeyMsg) {
@@ -656,21 +688,28 @@ class WidgetApp
   }
 
   void _showErrorScreen(Object error, StackTrace stackTrace) {
-    if (_lastError != null) return;
-    _savedRootBeforeError = _currentRoot();
-    _lastError = error;
+    _savedRootBeforeError ??= _currentRoot();
+    _cachedView = null;
+    _cachedViewObject = null;
     _tree.update(
-      _ErrorScreen(
-        error: error.toString(),
-        stackTrace: stackTrace.toString(),
-        onDismiss: _clearError,
+      _MediaQueryHost(
+        key: _mediaQueryKey,
+        data: _mediaQueryData,
+        metricsHolder: _metricsHolder,
+        child: _ErrorScreen(
+          error: error.toString(),
+          stackTrace: stackTrace.toString(),
+          onDismiss: _clearError,
+        ),
       ),
     );
     _dirty = true;
   }
 
   Cmd? _clearError() {
-    _lastError = null;
+    _fatalRenderFailure = false;
+    _cachedView = null;
+    _cachedViewObject = null;
     if (_savedRootBeforeError != null) {
       _tree.update(
         _MediaQueryHost(
@@ -686,8 +725,65 @@ class WidgetApp
     return null;
   }
 
+  String _renderWithErrorBoundary() {
+    try {
+      return _renderTree();
+    } catch (error, stackTrace) {
+      try {
+        // Always replace the details, including while the error screen is
+        // already visible. A second exception must not be silently dropped.
+        _showErrorScreen(error, stackTrace);
+      } catch (errorScreenUpdateError, errorScreenUpdateStack) {
+        return _fatalRenderFallback(
+          error,
+          stackTrace,
+          secondaryError: errorScreenUpdateError,
+          secondaryStackTrace: errorScreenUpdateStack,
+        );
+      }
+
+      try {
+        return _renderTree();
+      } catch (secondaryError, secondaryStackTrace) {
+        return _fatalRenderFallback(
+          error,
+          stackTrace,
+          secondaryError: secondaryError,
+          secondaryStackTrace: secondaryStackTrace,
+        );
+      }
+    }
+  }
+
+  String _renderTree() {
+    return withImageAutoConfiguration(
+      mode: imageAutoMode,
+      capabilities: _sessionImageCapabilities,
+      cellPixelWidth: _sessionImageCellPixelWidth,
+      cellPixelHeight: _sessionImageCellPixelHeight,
+      callback: _tree.render,
+    );
+  }
+
+  String _fatalRenderFallback(
+    Object error,
+    StackTrace stackTrace, {
+    Object? secondaryError,
+    StackTrace? secondaryStackTrace,
+  }) {
+    _fatalRenderFailure = true;
+    final secondary = secondaryError == null
+        ? ''
+        : '\n\nError screen also failed\n$secondaryError'
+              '\n$secondaryStackTrace';
+    return 'Fatal render failure (restart required)\n'
+        'Press Ctrl+C to exit.\n'
+        'Unhandled exception\n$error\n$stackTrace$secondary';
+  }
+
   @override
   Object view() {
+    if (_disposed) return '';
     final preRenderBackgroundColor = _resolveTerminalBackgroundColor(
       backgroundColorBuilder?.call() ?? backgroundColor,
     );
@@ -717,13 +813,7 @@ class WidgetApp
     } else {
       final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
       sw?.start();
-      baseContent = withImageAutoConfiguration(
-        mode: imageAutoMode,
-        capabilities: _sessionImageCapabilities,
-        cellPixelWidth: _sessionImageCellPixelWidth,
-        cellPixelHeight: _sessionImageCellPixelHeight,
-        callback: _tree.render,
-      );
+      baseContent = _renderWithErrorBoundary();
       sw?.stop();
       if (sw != null &&
           sw.elapsedMicroseconds >= _widgetRenderTraceThresholdUs) {
@@ -734,6 +824,10 @@ class WidgetApp
       }
 
       _cachedView = baseContent;
+      // A fatal fallback is deliberately cached: there is no widget tree left
+      // capable of handling Dismiss/Copy, and retrying each frame would spin.
+      // The normal (structured) error screen remains dismissible and is
+      // cached only after it renders successfully.
       _dirty = false;
     }
 

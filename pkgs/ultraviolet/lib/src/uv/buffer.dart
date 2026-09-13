@@ -183,7 +183,21 @@ final class Line {
   }
 
   final List<Cell> _cells;
+  bool _disposed = false;
   int? _renderHash;
+
+  /// Releases all cells owned by this line.
+  ///
+  /// Disposal is idempotent. A disposed line must not be used again.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    for (final cell in _cells) {
+      cell.dispose();
+    }
+    _cells.clear();
+    _renderHash = null;
+  }
 
   /// The number of cells in this line.
   int get length => _cells.length;
@@ -250,7 +264,8 @@ final class Line {
   /// Sets the cell at [x], taking ownership of [cell] if provided.
   ///
   /// Callers should use this only when they know [cell] is a freshly created
-  /// instance that will not be reused elsewhere.
+  /// instance that will not be reused elsewhere. Ownership is consumed even
+  /// when [x] is outside this line.
   void setOwned(int x, Cell? cell) =>
       _setInternal(x, cell, takeOwnership: true);
 
@@ -261,16 +276,21 @@ final class Line {
     const maxCellWidth = 5;
 
     final lineWidth = _cells.length;
-    if (x < 0 || x >= lineWidth) return;
+    if (x < 0 || x >= lineWidth) {
+      if (takeOwnership) cell?.dispose();
+      return;
+    }
 
     // Wide-cell overwrite clearing (port of `buffer.go:Line.Set`).
     final prev = at(x);
     if (prev != null) {
       final pw = prev.width;
       if (pw > 1) {
+        final template = prev.cloneEmpty();
         for (var j = 0; j < pw && x + j < lineWidth; j++) {
-          replace(x + j, prev.cloneEmpty());
+          replace(x + j, template.clone());
         }
+        template.dispose();
       } else if (pw == 0) {
         // Placeholder overwrite: scan left for the wide cell origin.
         for (var j = 1; j < maxCellWidth && x - j >= 0; j++) {
@@ -278,9 +298,11 @@ final class Line {
           if (wide == null) continue;
           final ww = wide.width;
           if (ww > 1 && j < ww) {
+            final template = wide.cloneEmpty();
             for (var k = 0; k < ww && x - j + k < lineWidth; k++) {
-              replace(x - j + k, wide.cloneEmpty());
+              replace(x - j + k, template.clone());
             }
+            template.dispose();
             break;
           }
         }
@@ -292,6 +314,9 @@ final class Line {
       return;
     }
 
+    final overflowTemplate = x + cell.width > lineWidth
+        ? cell.cloneEmpty()
+        : null;
     if (takeOwnership) {
       replace(x, cell);
     } else {
@@ -301,8 +326,9 @@ final class Line {
 
     if (x + cw > lineWidth) {
       for (var i = 0; i < cw && x + i < lineWidth; i++) {
-        replace(x + i, cell.cloneEmpty());
+        replace(x + i, overflowTemplate!.clone());
       }
+      overflowTemplate!.dispose();
       return;
     }
 
@@ -390,6 +416,26 @@ final class Buffer {
   List<Uint32List> dirtyBits;
   final List<Rectangle> _scissorStack = <Rectangle>[];
   final List<double> _opacityStack = <double>[1];
+  bool _disposed = false;
+
+  /// Releases all rows and cells owned by this buffer.
+  ///
+  /// Disposal is idempotent. A disposed buffer must not be used again.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    for (final line in lines) {
+      line.dispose();
+    }
+    lines.clear();
+    touched = <LineData?>[];
+    dirtyRows = <bool>[];
+    dirtyBits = <Uint32List>[];
+    _scissorStack.clear();
+    _opacityStack
+      ..clear()
+      ..add(1);
+  }
 
   /// The buffer width in cells.
   int width() => lines.isEmpty ? 0 : lines[0].length;
@@ -457,16 +503,29 @@ final class Buffer {
   void setCell(int x, int y, Cell? cell) =>
       _setCell(x, y, cell, takeOwnership: false);
 
-  /// Sets the cell at ([x], [y]) and may take ownership of [cell].
+  /// Sets the cell at ([x], [y]) and consumes ownership of [cell].
+  ///
+  /// The cell is disposed when the write is rejected because it is out of
+  /// bounds, outside the active scissor, or equal to the existing cell.
+  /// Call [setCell] when the cell is borrowed or may be reused.
   void setCellOwned(int x, int y, Cell? cell) =>
       _setCell(x, y, cell, takeOwnership: true);
 
   void _setCell(int x, int y, Cell? cell, {required bool takeOwnership}) {
-    if (y < 0 || y >= lines.length) return;
+    if (y < 0 || y >= lines.length) {
+      if (takeOwnership) cell?.dispose();
+      return;
+    }
     final line = lines[y];
-    if (x < 0 || x >= line.length) return;
+    if (x < 0 || x >= line.length) {
+      if (takeOwnership) cell?.dispose();
+      return;
+    }
     final rawNext = cell ?? Cell.emptyCell();
-    if (_isOutsideScissor(x, y, rawNext.width)) return;
+    if (_isOutsideScissor(x, y, rawNext.width)) {
+      if (takeOwnership || cell == null) rawNext.dispose();
+      return;
+    }
 
     final current = line._cells[x];
     final opacity = _opacityStack.isEmpty ? 1.0 : _opacityStack.last;
@@ -476,13 +535,25 @@ final class Buffer {
       opacityNext = rawNext;
     } else {
       opacityNext = _applyOpacity(rawNext);
+      if (takeOwnership || cell == null) rawNext.dispose();
       ownsNext = true;
     }
 
     final next = _hasTranslucentOverlay(opacityNext.style)
         ? _compositeCell(current, opacityNext)
         : opacityNext;
-    if (current == next) return;
+    if (!identical(next, opacityNext)) {
+      // Compositing returns a newly owned clone.
+      opacityNext.dispose();
+    }
+    if (current == next) {
+      if (identical(next, rawNext) && (takeOwnership || cell == null)) {
+        next.dispose();
+      } else if (!identical(next, rawNext)) {
+        next.dispose();
+      }
+      return;
+    }
 
     final w = next.width > 0 ? next.width : 1;
     touchLine(x, y, w);
@@ -498,6 +569,9 @@ final class Buffer {
   /// Resizes the buffer to [width] × [height], preserving content where possible.
   void resize(int width, int height) {
     if (width < 0 || height <= 0) {
+      for (final line in lines) {
+        line.dispose();
+      }
       lines.clear();
       touched = <LineData?>[];
       dirtyRows = <bool>[];
@@ -514,17 +588,22 @@ final class Buffer {
         lines.add(Line.filled(width));
       }
     } else if (height < oldHeight) {
+      for (var i = height; i < oldHeight; i++) {
+        lines[i].dispose();
+      }
       lines.removeRange(height, oldHeight);
     }
 
     // Resize width (rebuild lines to keep wide-placeholder invariants simple).
     if (width != oldWidth && lines.isNotEmpty) {
       for (var y = 0; y < lines.length; y++) {
+        final oldLine = lines[y];
         final newLine = Line.filled(width);
         final copyWidth = width < oldWidth ? width : oldWidth;
         for (var x = 0; x < copyWidth; x++) {
-          newLine.replaceWithClone(x, lines[y].cells[x]);
+          newLine.replaceWithClone(x, oldLine.cells[x]);
         }
+        oldLine.dispose();
         lines[y] = newLine;
       }
     }
@@ -1217,6 +1296,11 @@ final class ScreenBuffer
 
   WidthMethod method;
   final Buffer buffer;
+
+  /// Releases the cells owned by this screen buffer.
+  ///
+  /// Disposal is idempotent. A disposed screen buffer must not be used again.
+  void dispose() => buffer.dispose();
 
   int width() => buffer.width();
   int height() => buffer.height();

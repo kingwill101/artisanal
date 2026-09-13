@@ -5,6 +5,15 @@ import 'package:artisanal_widgets/widgets.dart';
 
 import 'capture.dart';
 
+/// Selects the source used by [captureWidget].
+enum WidgetCaptureMode {
+  /// Captures the portable, canonical `WidgetApp.view()` output.
+  view,
+
+  /// Captures the final UV cell frame produced by the production renderer.
+  renderedFrame,
+}
+
 /// Captures [widget] after layout and optional deterministic interactions.
 ///
 /// The widget runs through [WidgetTester]'s real widget app and TEA runtime;
@@ -22,6 +31,7 @@ Future<TerminalCapture> captureWidget(
   int columns = 80,
   int rows = 24,
   FutureOr<void> Function(WidgetTester tester)? arrange,
+  WidgetCaptureMode mode = WidgetCaptureMode.view,
 }) async {
   if (columns <= 0 ||
       rows <= 0 ||
@@ -32,11 +42,24 @@ Future<TerminalCapture> captureWidget(
       'Widget capture dimensions must be positive and bounded.',
     );
   }
-  final tester = WidgetTester(screenWidth: columns, screenHeight: rows);
+  final renderedFrame = mode == WidgetCaptureMode.renderedFrame;
+  final tester = WidgetTester(
+    screenWidth: columns,
+    screenHeight: rows,
+    enableRenderer: renderedFrame,
+    enableNativeFrameCapture: renderedFrame,
+  );
   try {
     await tester.pumpWidget(widget, width: columns, height: rows);
     if (arrange != null) await arrange(tester);
     tester.pump();
+    if (renderedFrame) {
+      final frame = tester.latestNativeFrame;
+      if (frame == null) {
+        throw StateError('rendered widget capture produced no native frame');
+      }
+      return TerminalCapture.fromBuffer(frame.toBuffer());
+    }
     return TerminalCapture.fromAnsi(tester.view, columns: columns, rows: rows);
   } finally {
     await tester.dispose();

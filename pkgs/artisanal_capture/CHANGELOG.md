@@ -17,3 +17,9 @@
 - Accept both standard BEL and ST OSC 8 terminators; wrapped hyperlinks no
   longer fail capture validation. Raw BEL and unsafe hyperlink payloads remain
   rejected.
+- Consolidate widget and runtime capture on detached UV cell buffers:
+  `captureWidget` supports `WidgetCaptureMode.renderedFrame`, and
+  `captureProgramFrame` requires a recorded `nativeFrame` instead of treating
+  diagnostic snapshot JSON as lossless.
+- Reject native-frame captures containing drawable payloads rather than
+  silently replacing terminal graphics with text.

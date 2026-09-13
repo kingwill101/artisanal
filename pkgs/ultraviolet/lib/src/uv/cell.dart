@@ -966,25 +966,43 @@ final class _LinkRegistry {
     }
 
     _validateLinkText(link);
-    final slotIndex = _freeSlots.isEmpty
-        ? _allocateSlot()
-        : _freeSlots.removeLast();
-    if (slotIndex >= _linkSlotMask) {
-      throw StateError('Link registry exhausted');
+    // A generation is part of the packed id, so a slot that has exhausted its
+    // generation space must never be reused. Retire such slots and continue
+    // with a fresh slot; wrapping the generation would make an old packed id
+    // alias a new live link. The generation is deliberately wide enough that
+    // ordinary transient links cannot exhaust an isolate during its lifetime.
+    var slotIndex = -1;
+    _LinkEntry? previous;
+    while (_freeSlots.isNotEmpty) {
+      final candidate = _freeSlots.removeLast();
+      final candidateEntry = _slots[candidate];
+      if (candidateEntry != null &&
+          candidateEntry.generation >= _linkGenerationMask) {
+        // A retired slot is permanently unreachable by allocation; make the
+        // payload invariant explicit even if retirement is reached through a
+        // future release path.
+        candidateEntry.payload = null;
+        continue;
+      }
+      slotIndex = candidate;
+      previous = candidateEntry;
+      break;
+    }
+    if (slotIndex < 0) {
+      if (_slots.length >= _linkSlotMask) {
+        throw StateError('Link registry exhausted');
+      }
+      slotIndex = _allocateSlot();
+      previous = null;
     }
 
-    final previous = _slots[slotIndex];
     final generation = previous == null ? 0 : previous.generation + 1;
-    if (previous != null && generation > _linkGenerationMask) {
-      throw StateError('Link generation overflow');
-    }
     final id = _encodeId(slotIndex, generation);
     final entry = _LinkEntry(
       id: id,
-      url: link.url,
-      params: link.params,
       generation: generation,
       refCount: 1,
+      payload: _LinkPayload(url: link.url, params: link.params),
     );
     _slots[slotIndex] = entry;
     _idsByKey[key] = id;
@@ -1003,10 +1021,14 @@ final class _LinkRegistry {
     if (entry == null) return;
     entry.refCount--;
     if (entry.refCount > 0) return;
-    final key = (url: entry.url, params: entry.params);
+    final payload = entry.payload!;
+    final key = (url: payload.url, params: payload.params);
     _idsByKey.remove(key);
     if (_lastId == id) _clearLast();
     final slotIndex = _decodeSlotIndex(id);
+    // Keep only the identity needed to reject stale packed ids. The strings
+    // can be large and must not remain reachable through an idle slot.
+    entry.payload = null;
     _freeSlots.add(slotIndex);
   }
 
@@ -1014,12 +1036,54 @@ final class _LinkRegistry {
 
   int slot(int id) => _decodeSlotIndex(id);
 
-  int generation(int id) => id >> _linkSlotBits;
+  int generation(int id) => id ~/ _linkSlotBase;
+
+  int encodeForTesting(int slotIndex, int generation) {
+    if (slotIndex < 0 || slotIndex >= _linkSlotMask) {
+      throw ArgumentError.value(slotIndex, 'slotIndex');
+    }
+    if (generation < 0 || generation > _linkGenerationMask) {
+      throw ArgumentError.value(generation, 'generation');
+    }
+    return _encodeId(slotIndex, generation);
+  }
+
+  int decodeSlotForTesting(int id) => _decodeSlotIndex(id);
+
+  int decodeGenerationForTesting(int id) => generation(id);
 
   Link resolve(int id) {
     final entry = _entryForId(id);
-    if (entry == null) return const Link();
-    return Link(url: entry.url, params: entry.params);
+    final payload = entry?.payload;
+    if (payload == null) return const Link();
+    return Link(url: payload.url, params: payload.params);
+  }
+
+  Cell debugCellAtGeneration(Link link, int generation) {
+    _validateLinkText(link);
+    if (generation < 0 || generation > _linkGenerationMask) {
+      throw ArgumentError.value(generation, 'generation');
+    }
+    final slotIndex = _allocateSlot();
+    final id = _encodeId(slotIndex, generation);
+    final entry = _LinkEntry(
+      id: id,
+      generation: generation,
+      refCount: 1,
+      payload: _LinkPayload(url: link.url, params: link.params),
+    );
+    _slots[slotIndex] = entry;
+    _idsByKey[(url: link.url, params: link.params)] = id;
+    _cacheLast(entry);
+    return Cell._packed(
+      style: const UvStyle(),
+      link: link,
+      width: 1,
+      contentKind: _CellContentKind.singleScalar,
+      contentValue: 65,
+      styleId: 0,
+      linkId: id,
+    );
   }
 
   _LinkEntry? _entryForId(int id) {
@@ -1038,15 +1102,16 @@ final class _LinkRegistry {
     return slotIndex;
   }
 
-  int _decodeSlotIndex(int id) => (id & _linkSlotMask) - 1;
+  int _decodeSlotIndex(int id) => (id % _linkSlotBase) - 1;
 
   int _encodeId(int slotIndex, int generation) =>
-      (generation << _linkSlotBits) | ((slotIndex + 1) & _linkSlotMask);
+      generation * _linkSlotBase + slotIndex + 1;
 
   void _cacheLast(_LinkEntry entry) {
     _lastId = entry.id;
-    _lastUrl = entry.url;
-    _lastParams = entry.params;
+    final payload = entry.payload!;
+    _lastUrl = payload.url;
+    _lastParams = payload.params;
   }
 
   void _clearLast() {
@@ -1067,17 +1132,22 @@ final class _LinkRegistry {
 final class _LinkEntry {
   _LinkEntry({
     required this.id,
-    required this.url,
-    required this.params,
     required this.generation,
     required this.refCount,
+    required this.payload,
   });
 
   final int id;
-  final String url;
-  final String params;
   final int generation;
   int refCount;
+  _LinkPayload? payload;
+}
+
+final class _LinkPayload {
+  _LinkPayload({required this.url, required this.params});
+
+  final String url;
+  final String params;
 }
 
 void _validateLinkText(Link link) {
@@ -1125,12 +1195,55 @@ int debugLinkSlot(int id) => _linkRegistry.slot(id);
 /// This is exposed for targeted regression tests.
 int debugLinkGeneration(int id) => _linkRegistry.generation(id);
 
+/// Returns the payload still held by the slot for [id], or an empty link.
+///
+/// Unlike live link resolution, this inspects zero-reference entries too, so
+/// regression tests can detect payloads retained after the last release.
+Link debugLinkPayload(int id) {
+  final slot = _linkRegistry.slot(id);
+  if (slot < 0 || slot >= _linkRegistry._slots.length) return const Link();
+  final entry = _linkRegistry._slots[slot];
+  if (entry == null || entry.id != id) return const Link();
+  final payload = entry.payload;
+  return payload == null
+      ? const Link()
+      : Link(url: payload.url, params: payload.params);
+}
+
+/// Encodes a link registry id using the production codec.
+///
+/// This is intentionally exposed for codec boundary tests; applications
+/// should treat link ids as opaque.
+int debugEncodeLinkId({required int slot, required int generation}) =>
+    _linkRegistry.encodeForTesting(slot, generation);
+
+/// Decodes the slot component of a link registry id using the production
+/// codec.
+int debugDecodeLinkSlot(int id) => _linkRegistry.decodeSlotForTesting(id);
+
+/// Decodes the generation component of a link registry id using the
+/// production codec.
+int debugDecodeLinkGeneration(int id) =>
+    _linkRegistry.decodeGenerationForTesting(id);
+
+/// Creates a linked cell at a chosen generation for codec boundary tests.
+///
+/// This is a test seam, not a stable way to construct link identities.
+Cell debugCellWithLinkGeneration(Link link, int generation) =>
+    _linkRegistry.debugCellAtGeneration(link, generation);
+
 const int _slotBits = 16;
 const int _widthBits = 16;
 const int _slotMask = (1 << _slotBits) - 1;
 const int _widthMask = (1 << _widthBits) - 1;
-const int _linkSlotBits = 16;
-const int _linkGenerationBits = 8;
+// Link ids are stored in PackedCell.word3 and are also passed through the web
+// compiler. Keep the complete id below 2^53, where an IEEE-754 number can
+// represent every integer exactly. Twenty slot bits and 32 generation bits
+// provide up to 1,048,575 concurrent slots and over four billion safe
+// retire/reuse cycles per slot without changing PackedCell's public shape.
+const int _linkSlotBits = 20;
+const int _linkGenerationBits = 32;
+const int _linkSlotBase = 1 << _linkSlotBits;
 const int _linkSlotMask = (1 << _linkSlotBits) - 1;
 const int _linkGenerationMask = (1 << _linkGenerationBits) - 1;
 const int _cellWidthBits = 4;

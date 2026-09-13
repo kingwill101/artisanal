@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart' hide Align;
+import 'package:artisanal/uv.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
@@ -16,6 +17,43 @@ extension on WidgetTester {
 
 void main() {
   group('Container', () {
+    test(
+      'releases hyperlink refs from temporary composition canvases',
+      () async {
+        final source = Canvas(10, 1);
+        StyledString(
+          Style().hyperlink('https://container.example').render('linked'),
+        ).draw(source, source.bounds());
+        final probe = Cell(link: source.cellAt(0, 0)!.link);
+        source.dispose();
+        final linkId = probe.linkId!;
+        final baseline = debugLinkRefCount(linkId);
+        final tester = WidgetTester(screenWidth: 30, screenHeight: 5);
+        try {
+          await tester.pumpLoose(
+            Container(
+              width: 20,
+              height: 2,
+              color: Colors.black,
+              child: Text(
+                'linked',
+                style: Style().hyperlink('https://container.example'),
+              ),
+            ),
+          );
+
+          expect(tester.view, contains('https://container.example'));
+          // The rendered view is a string, so no caller-owned cell remains after
+          // the temporary composition canvas is rendered.
+          expect(debugLinkRefCount(linkId), equals(baseline));
+        } finally {
+          await tester.dispose();
+          expect(debugLinkRefCount(linkId), equals(baseline));
+          probe.dispose();
+        }
+      },
+    );
+
     test('renders child', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());

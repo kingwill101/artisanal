@@ -50,6 +50,7 @@ export 'src/uv/cell.dart'
         UvRgb,
         Attr,
         UnderlineStyle;
+export 'src/uv/cell_paint.dart' show UvPaintPolicy, UvCellPaint;
 export 'src/uv/event.dart';
 export 'src/uv/mouse.dart' show MouseMode, MouseButton, Mouse;
 export 'src/uv/border.dart';

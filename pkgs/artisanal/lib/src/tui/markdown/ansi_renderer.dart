@@ -35,6 +35,7 @@ import 'renderer.dart' show MarkdownRenderer;
 import 'syntax_highlighter.dart';
 import 'options.dart';
 import 'blockquote.dart';
+import 'code_block.dart' show balanceAnsiNewlines;
 import 'tables.dart' show renderTableContent, parseTableAlign;
 import 'html_context.dart';
 import 'image_renderer.dart'
@@ -283,13 +284,24 @@ class AnsiRenderer implements NodeVisitor {
 
     // Apply syntax highlighting for code blocks
     if (_inCodeBlock) {
-      if (_shouldSyntaxHighlight(content, _codeBlockLanguage)) {
+      final highlighted = _shouldSyntaxHighlight(content, _codeBlockLanguage);
+      if (highlighted) {
         // Apply syntax highlighting
         content = _highlighter.highlightCode(
           content,
           language: _codeBlockLanguage,
         );
       }
+
+      // Keep syntax state across physical lines while isolating each gutter.
+      content = balanceAnsiNewlines(
+        content,
+        initialStyle: !highlighted
+            ? _styleToAnsiOpen(
+                options.codeBlockStyle ?? _defaultCodeBlockStyle(),
+              )
+            : '',
+      );
 
       // Apply code block border prefix for each line (after highlighting)
       if (options.codeBlockBorder && content.contains('\n')) {
@@ -895,10 +907,8 @@ class AnsiRenderer implements NodeVisitor {
   }
 
   void _endCodeBlock() {
-    // Only close style if we opened it (no syntax highlighting)
-    if (!options.syntaxHighlighting || _codeBlockLanguage == null) {
-      _buffer.write(_ansiReset);
-    }
+    // Highlighted tokens can span the final physical line too.
+    _buffer.write(_ansiReset);
     _inCodeBlock = false;
     _codeBlockLanguage = null;
 
