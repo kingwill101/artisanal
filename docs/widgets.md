@@ -270,7 +270,7 @@ await runWatchedArtisanalApp(
 
 To expose the same reload flow through the browser host, use
 `serveWatchedArtisanalAppInBrowser(...)`. See
-[`pkgs/artisanal_widgets/example/browser_host/main.dart`](../pkgs/artisanal_widgets/example/browser_host/main.dart)
+[`pkgs/artisanal_widgets/example/browser_host/main.dart`](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal_widgets/example/browser_host/main.dart)
 for a complete example.
 
 The watched browser/socket host wrappers also expose `close(force: true)` when

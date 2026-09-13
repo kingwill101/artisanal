@@ -1700,15 +1700,21 @@ class UltravioletTuiRenderer
 
   @override
   void dispose() {
-    // The renderer can be retained and initialized again. Do not keep a
-    // pending frame or captured output alive across that lifecycle boundary.
+    // Release transient frame storage. Logical print history is different:
+    // both log queues are bounded by _maxPrintLines and survive same-instance
+    // terminal release/restore so user-visible logs are not lost.
     _pendingView = '';
     _dirty = false;
     _inlineCapture.clear();
     _fullscreenCapture.clear();
     _inlineSink = null;
     _inlineNeedsFullClear = false;
-    _inlineNeedsLogReplay = false;
+    // The inline log history is persistent across renderer teardown. A
+    // dispose clears the visible region, so a same-instance reinitialization
+    // (used by terminal release/restore) must replay that history on its first
+    // frame rather than treating it as already present.
+    _inlineNeedsLogReplay =
+        _options.isInline && _options.uiAnchor == UiAnchor.bottom;
     if (!_initialized) return;
 
     final isInline = _options.isInline;

@@ -47,7 +47,8 @@ void main() {
     final bytes = ByteData.sublistView(font);
     final end = bytes.getUint32(loca + 3 * 4);
     bytes.setUint32(loca + 3 * 4, end - 1);
-    expect(glyph.end, greaterThan(end));
+    // Compare absolute positions, not a glyph-file offset to a loca-relative one.
+    expect(_glyphRange(font, 2).end, glyph.end - 1);
     _expectFormatError(font, 'Truncated glyph coordinates');
   });
 

@@ -39,7 +39,7 @@ For batch review, use `gallery <scenario-directory> --widths 32,64,96
 includes an HTML index, native PNGs, full previews, Markdown/ANSI/cell evidence,
 and a JSON manifest. Overflow and unsupported raster features are visible
 diagnostics rather than silently successful screenshots. See the
-[gallery instructions](../pkgs/artisanal_capture/README.md#markdown-scenario-gallery).
+[gallery instructions](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal_capture/README.md#markdown-scenario-gallery).
 
 ## Choose the right input
 
@@ -57,5 +57,5 @@ For repeatable pixel comparisons, retain the same font files, font size,
 cell dimensions, palette, and renderer version. The initial JSON schema stores
 cell data; it does not bundle the raster profile or font assets.
 
-See the [package guide](../pkgs/artisanal_capture/README.md) for complete API
+See the [package guide](https://github.com/kingwill101/artisanal/blob/artisanal/pkgs/artisanal_capture/README.md) for complete API
 examples, supported styles, strict diagnostics, and current limitations.
