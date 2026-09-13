@@ -81,6 +81,44 @@ void main() {
       expect(debugGraphemeRefCount(pooledId), 0);
     });
 
+    test('plain cells can attach and reuse independent pooled resources', () {
+      final source = Cell(content: 'x');
+      final plain = source.clone();
+      plain.dispose();
+      plain.dispose();
+
+      source.content = '\u0076\u0323\u0305';
+      source.link = const Link(url: 'https://late-cell-tokens.example');
+      final graphemeId = source.pooledContentId!;
+      final linkId = source.linkId!;
+      final clone = source.clone();
+      addTearDown(source.dispose);
+      addTearDown(clone.dispose);
+      expect(debugGraphemeRefCount(graphemeId), 2);
+      expect(debugLinkRefCount(linkId), 2);
+
+      source.empty();
+      expect(debugGraphemeRefCount(graphemeId), 1);
+      expect(debugLinkRefCount(linkId), 2);
+      source.link = const Link();
+      expect(debugLinkRefCount(linkId), 1);
+
+      source.copyFrom(clone);
+      expect(debugGraphemeRefCount(graphemeId), 2);
+      expect(debugLinkRefCount(linkId), 2);
+      source.resetToEmptyCell();
+      expect(debugGraphemeRefCount(graphemeId), 1);
+      expect(debugLinkRefCount(linkId), 1);
+
+      source.copyEmptyFrom(clone);
+      expect(debugGraphemeRefCount(graphemeId), 1);
+      expect(debugLinkRefCount(linkId), 2);
+      source.dispose();
+      clone.dispose();
+      expect(debugGraphemeRefCount(graphemeId), 0);
+      expect(debugLinkRefCount(linkId), 0);
+    });
+
     test('mutating complex content releases the previous pooled grapheme', () {
       final cell = Cell(content: '\u0071\u0323', width: 1);
       final oldId = cell.pooledContentId!;

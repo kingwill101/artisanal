@@ -336,8 +336,10 @@ final class Cell {
   int _styleId = 0;
   int _linkId = 0;
   CellDiffOption diffOption;
-  final Object _pooledContentToken = Object();
-  final Object _linkFinalizerToken = Object();
+  // Most cells need neither finalizer. Allocate detach tokens only when a
+  // pooled grapheme or hyperlink is first attached, then reuse them.
+  late final Object _pooledContentToken = Object();
+  late final Object _linkFinalizerToken = Object();
 
   static final Finalizer<int> _pooledContentFinalizer = Finalizer<int>((id) {
     _graphemePool.release(id);

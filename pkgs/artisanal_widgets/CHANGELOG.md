@@ -27,6 +27,9 @@
 
 ### Changed
 
+- Stream eligible full-size styled container content directly into its target
+  canvas, avoiding a temporary cell grid and copy. Reusable background and
+  gradient fill templates now update destination cells without cloning.
 - Added idempotent `WidgetApp.dispose()` teardown for mounted element trees.
   `WidgetTester` and `runWidgetApp` now explicitly release widget state and
   inherited dependencies without coupling the core `Program` model contract
@@ -50,6 +53,9 @@
 
 ### Fixed
 
+- Reuse document layout and the allocated scrollbar gutter during offset-only
+  scrolling, avoiding repeated width reflow while preserving paint-wrapper
+  updates, resize handling, and content invalidation.
 - Prevent layout-example failures on unbounded constraints, provide a narrow-pane
   hint for effect scenes, and bound the vertical split-view showcase inside its
   scrollable page. Add startup, keyboard, and resize smoke coverage for examples.

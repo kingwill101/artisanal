@@ -1213,7 +1213,11 @@ class RenderSingleChildViewport extends RenderBox {
       minHeight: 0,
       maxHeight: double.infinity,
     );
-    child.layout(childConstraints);
+    // Scrolling changes the viewport slice, not the static document. Generic
+    // descendant changes still mark the child dirty and require fresh layout.
+    if (child.paintDirty || child.constraints != childConstraints) {
+      child.layout(childConstraints);
+    }
 
     // Invalidate paint cache if child constraints or size changed.
     if (_cachedChildConstraints != childConstraints ||
@@ -2472,6 +2476,17 @@ class RenderScrollbar extends RenderBox {
 
   @override
   void layout(BoxConstraints constraints) {
+    // Repeating the full-width/gutter-width measurement on every offset
+    // change reflows the document twice and invalidates its line cache.
+    // Keep the existing allocation, but still lay out wrappers above the
+    // viewport: some compute their paint output during layout.
+    if (paintOnlyDirty &&
+        this.constraints == constraints &&
+        children.isNotEmpty) {
+      final child = children.first;
+      child.layout(child.constraints);
+      return;
+    }
     super.layout(constraints);
     if (children.isNotEmpty) {
       final child = children.first;

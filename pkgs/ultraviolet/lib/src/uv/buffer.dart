@@ -862,6 +862,23 @@ final class Buffer {
     final last = x + width;
     dirtyRows[y] = true;
     _markDirtyBits(y, first, last);
+    if (ch != null &&
+        ch.firstCell != -1 &&
+        ch.lastCell != -1 &&
+        first >= ch.firstCell &&
+        last <= ch.lastCell) {
+      var isCovered = ch.overflowed;
+      if (!isCovered) {
+        for (var i = 0; i < ch.spans.length; i++) {
+          final span = ch.spans[i];
+          if (first >= span.start && last <= span.end) {
+            isCovered = true;
+            break;
+          }
+        }
+      }
+      if (isCovered) return;
+    }
     if (ch == null) {
       touched[y] = LineData._tracked(
         firstCell: first,

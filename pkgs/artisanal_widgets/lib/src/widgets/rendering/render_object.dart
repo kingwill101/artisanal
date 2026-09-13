@@ -26,9 +26,16 @@ abstract class RenderObject {
   Object? element;
   Object? parentData;
   bool _paintDirty = true;
+  bool _paintOnlyDirty = false;
 
   /// Whether this render object (or a descendant in its subtree) needs paint.
   bool get paintDirty => _paintDirty;
+
+  /// Whether all pending invalidations explicitly preserve layout geometry.
+  ///
+  /// A generic invalidation takes precedence over a later paint-only request.
+  /// Initial layout and clean render objects are never paint-only.
+  bool get paintOnlyDirty => _paintDirty && _paintOnlyDirty;
 
   void attach(RenderObject child) {
     children.add(child);
@@ -105,6 +112,7 @@ abstract class RenderObject {
   /// so the next [paint] call re-renders the child subtree.
   void markDescendantNeedsPaint() {
     _paintDirty = true;
+    _paintOnlyDirty = false;
   }
 
   /// Marks this render object as needing paint without invalidating
@@ -113,6 +121,7 @@ abstract class RenderObject {
   /// Use this for scroll-offset-only updates where content is unchanged but
   /// parent render caches must re-read this subtree's paint output.
   void markNeedsPaintOnly() {
+    if (!_paintDirty) _paintOnlyDirty = true;
     _paintDirty = true;
   }
 
@@ -121,11 +130,12 @@ abstract class RenderObject {
   /// Call this after consuming the latest [paint] output.
   void clearPaintDirty() {
     _paintDirty = false;
+    _paintOnlyDirty = false;
   }
 
   /// Marks this render object and all descendants as paint-clean.
   void clearPaintDirtySubtree() {
-    _paintDirty = false;
+    clearPaintDirty();
     for (final child in children) {
       child.clearPaintDirtySubtree();
     }

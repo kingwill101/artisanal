@@ -6,10 +6,16 @@ import 'package:artisanal/uv.dart'
     show
         Canvas,
         Cell,
+        ClearAreaScreen,
+        OwnedCellScreen,
+        Rectangle,
+        Screen,
         StyledString,
         UvStyle,
         UvColor,
         UnderlineStyle,
+        WidthMethod,
+        runeWidth,
         mayContainTerminalGraphics;
 
 import '../core/element.dart' show elementOf;
@@ -374,6 +380,182 @@ void drawStyledContent(
   span.end(extra: 'bounds=${styledWidth}x$styledHeight');
 }
 
+/// Draws the common full-size container case without making a second grid.
+///
+/// [StyledString.draw] normally clears its area and writes into a temporary
+/// canvas so that transparent cells can be skipped during composition.  This
+/// adapter applies that filtering while the parser writes directly to the
+/// already-filled destination canvas.
+void _drawFullSizeStyledContent(
+  Canvas canvas,
+  String content,
+  UvStyle bgStyle,
+) {
+  final screen = _ContainerContentScreen(canvas, bgStyle);
+  StyledString(content).draw(screen, canvas.bounds());
+}
+
+final class _ContainerContentScreen
+    implements Screen, OwnedCellScreen, ClearAreaScreen {
+  _ContainerContentScreen(this._target, this._bgStyle);
+
+  final Canvas _target;
+  final UvStyle _bgStyle;
+
+  @override
+  Rectangle bounds() => _target.bounds();
+
+  @override
+  Cell? cellAt(int x, int y) => _target.cellAt(x, y);
+
+  @override
+  WidthMethod widthMethod() => _target.widthMethod();
+
+  // The target was freshly filled by renderContainerContent. Clearing here
+  // would erase that background before the parser starts writing.
+  @override
+  void clearArea(Rectangle area) {}
+
+  @override
+  void setCell(int x, int y, Cell? cell) {
+    if (cell == null) return;
+    _write(x, y, cell.clone());
+  }
+
+  @override
+  void setCellOwned(int x, int y, Cell? cell) {
+    if (cell == null) return;
+    _write(x, y, cell);
+  }
+
+  void _write(int x, int y, Cell cell) {
+    final style = cell.style;
+    final isTransparentSpace =
+        cell.content == ' ' &&
+        cell.width == 1 &&
+        style.fg == null &&
+        style.bg == null &&
+        style.underlineColor == null &&
+        style.underline == UnderlineStyle.none &&
+        (style.attrs & 32) == 0 &&
+        cell.link.isZero;
+    if (cell.isEmpty || isTransparentSpace) {
+      cell.dispose();
+      return;
+    }
+
+    if (style.bg == null && _bgStyle.bg != null) {
+      cell.style = style.copyWith(bg: _bgStyle.bg);
+    }
+    _target.setCellOwned(x, y, cell);
+  }
+}
+
+bool _supportsFullSizeStyledFastPath(String content) {
+  if (mayContainTerminalGraphics(content)) return false;
+  for (var i = 0; i < content.length;) {
+    final code = content.codeUnitAt(i);
+    if (code == 0x0a || code == 0x09) {
+      i++;
+      continue;
+    }
+    if (code == 0x1b) {
+      if (i + 1 >= content.length) return false;
+      final next = content.codeUnitAt(i + 1);
+      if (next == 0x5b) {
+        final end = _findSequenceFinal(content, i + 2);
+        if (end < 0 ||
+            content.codeUnitAt(end) != 0x6d ||
+            !_isSafeSgrParams(content, i + 2, end)) {
+          return false;
+        }
+        i = end + 1;
+        continue;
+      }
+      if (next == 0x5d) {
+        final end = _findOscEnd(content, i + 2);
+        if (end < 0) return false;
+        final commandEnd = content.indexOf(';', i + 2);
+        final terminatorLength = end >= 2 && content.codeUnitAt(end - 2) == 0x1b
+            ? 2
+            : 1;
+        if (commandEnd < 0 ||
+            commandEnd >= end ||
+            content.substring(i + 2, commandEnd) != '8' ||
+            !_isSafeOsc8(content, commandEnd + 1, end - terminatorLength)) {
+          return false;
+        }
+        i = end;
+        continue;
+      }
+      return false;
+    }
+    if (code == 0x0d ||
+        code < 0x20 ||
+        code == 0x7f ||
+        (code >= 0x80 && code <= 0x9f)) {
+      return false;
+    }
+    // Combining marks and format controls are not append-only cells.  Keep
+    // these on the established temporary-canvas path.
+    var codePoint = code;
+    if (code >= 0xd800 && code <= 0xdbff) {
+      if (i + 1 >= content.length) return false;
+      final low = content.codeUnitAt(i + 1);
+      if (low < 0xdc00 || low > 0xdfff) return false;
+      codePoint = 0x10000 + ((code - 0xd800) << 10) + low - 0xdc00;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return false;
+    }
+    if (runeWidth(codePoint) == 0) return false;
+    i += codePoint > 0xffff ? 2 : 1;
+  }
+  return true;
+}
+
+bool _isSafeSgrParams(String text, int start, int end) {
+  for (var i = start; i < end; i++) {
+    final code = text.codeUnitAt(i);
+    if (!((code >= 0x30 && code <= 0x39) ||
+        code == 0x3b ||
+        code == 0x3a ||
+        code == 0x3f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _isSafeOsc8(String text, int start, int end) {
+  for (var i = start; i < end; i++) {
+    final code = text.codeUnitAt(i);
+    if (code < 0x20 || code == 0x7f || (code >= 0x80 && code <= 0x9f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int _findSequenceFinal(String text, int start) {
+  for (var i = start; i < text.length; i++) {
+    final code = text.codeUnitAt(i);
+    if (code >= 0x40 && code <= 0x7e) return i;
+  }
+  return -1;
+}
+
+int _findOscEnd(String text, int start) {
+  for (var i = start; i < text.length; i++) {
+    if (text.codeUnitAt(i) == 0x07) return i + 1;
+    if (text.codeUnitAt(i) == 0x1b &&
+        i + 1 < text.length &&
+        text.codeUnitAt(i + 1) == 0x5c) {
+      return i + 2;
+    }
+  }
+  return -1;
+}
+
 String renderContainerContent({
   required String contentStr,
   EdgeInsets? padding,
@@ -520,7 +702,9 @@ String renderContainerContent({
       try {
         for (var y = marginTop; y < marginTop + innerHeight; y++) {
           for (var x = marginLeft; x < marginLeft + innerWidth; x++) {
-            canvas.setCellOwned(x, y, bgCell.clone());
+            // This is a reusable template, not a transferred cell. The
+            // borrowed setter copies into the destination's existing cell.
+            canvas.setCell(x, y, bgCell);
           }
         }
       } finally {
@@ -549,7 +733,7 @@ String renderContainerContent({
               x < marginLeft + innerWidth - borderRight;
               x++
             ) {
-              canvas.setCellOwned(x, y, rowCell.clone());
+              canvas.setCell(x, y, rowCell);
             }
           } finally {
             rowCell.dispose();
@@ -560,20 +744,32 @@ String renderContainerContent({
 
     // Draw content.
     if (contentStr.isNotEmpty) {
-      // Use the gradient-aware bg style for the content area: if gradient is
-      // active, the row-specific bg is already on the canvas cells and
-      // _drawStyledContent merges bg from bgStyle only when the source cell
-      // has no bg. We pass the base bgStyle here; for gradient containers the
-      // canvas already has per-row bg so the merge is harmless.
-      drawStyledContent(
-        canvas,
-        contentStr,
-        offsetX,
-        offsetY,
-        bgStyle,
-        contentWidth: contentWidth,
-        contentHeight: contentHeight,
-      );
+      final canDrawDirectly =
+          !hasBorder &&
+          !hasGradient &&
+          offsetX == 0 &&
+          offsetY == 0 &&
+          contentWidth == targetWidth &&
+          contentHeight == targetHeight &&
+          _supportsFullSizeStyledFastPath(contentStr);
+      if (canDrawDirectly) {
+        _drawFullSizeStyledContent(canvas, contentStr, bgStyle);
+      } else {
+        // Use the gradient-aware bg style for the content area: if gradient is
+        // active, the row-specific bg is already on the canvas cells and
+        // _drawStyledContent merges bg from bgStyle only when the source cell
+        // has no bg. We pass the base bgStyle here; for gradient containers
+        // the canvas already has per-row bg so the merge is harmless.
+        drawStyledContent(
+          canvas,
+          contentStr,
+          offsetX,
+          offsetY,
+          bgStyle,
+          contentWidth: contentWidth,
+          contentHeight: contentHeight,
+        );
+      }
     }
 
     // Draw border characters onto the canvas.

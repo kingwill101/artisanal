@@ -3,6 +3,10 @@
 ## 0.5.1
 
 - Require Dart SDK 3.13.0 or newer.
+- Allocate cell finalizer detach tokens lazily, avoiding two auxiliary objects
+  for cells without pooled graphemes or hyperlinks.
+- Reuse dirty-line metadata for touches already covered by a dirty span,
+  avoiding redundant allocations while preserving per-cell dirty bits.
 - Added `clipAnsiByCells` for exact-column overlay composition. Partial wide
   glyphs and graphics payloads become styled spaces without snapping or moving
   neighboring layers; existing whole-grapheme slicing behavior is unchanged.
