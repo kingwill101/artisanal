@@ -1668,6 +1668,14 @@ final class UvTerminalRenderer extends TerminalRenderer {
     if (newbuf.width() < 32 || nonEmpty < 8) return null;
     if (touchedLines < 4) return null;
     final maxY = nonEmpty < newbuf.height() ? nonEmpty : newbuf.height();
+    final totalCells = newbuf.width() * maxY;
+    if (totalCells <= 0) return null;
+    // Building the summed-area table costs one visit per cell. Avoid that
+    // scan when the packed dirty rows already prove the frame is too dense
+    // for tile traversal to help.
+    if (_hasAtLeastDirtyCells(newbuf, maxY, (totalCells + 3) ~/ 4)) {
+      return null;
+    }
     final density = DirtyDensityMap.fromBuffer(
       newbuf,
       scratch: _arena.acquireInt32List(
@@ -1675,11 +1683,35 @@ final class UvTerminalRenderer extends TerminalRenderer {
       ),
     );
     final dirtyCells = density.count(rect(0, 0, newbuf.width(), maxY));
-    final totalCells = newbuf.width() * maxY;
-    if (dirtyCells <= 0 || totalCells <= 0) return null;
+    if (dirtyCells <= 0) return null;
     // Tile traversal only helps when the dirty surface is sparse.
     if (dirtyCells * 4 >= totalCells) return null;
     return density;
+  }
+
+  bool _hasAtLeastDirtyCells(Buffer buffer, int maxY, int threshold) {
+    var count = 0;
+    final rowCount = maxY < buffer.dirtyBits.length
+        ? maxY
+        : buffer.dirtyBits.length;
+    for (var y = 0; y < rowCount; y++) {
+      if (y < buffer.dirtyRows.length && !buffer.dirtyRows[y]) continue;
+      for (final word in buffer.dirtyBits[y]) {
+        count += _countBits32(word);
+        if (count >= threshold) return true;
+      }
+    }
+    return false;
+  }
+
+  int _countBits32(int bits) {
+    var value = bits & 0xffffffff;
+    value -= (value >> 1) & 0x55555555;
+    value = (value & 0x33333333) + ((value >> 2) & 0x33333333);
+    value = (value + (value >> 4)) & 0x0f0f0f0f;
+    value += value >> 8;
+    value += value >> 16;
+    return value & 0x3f;
   }
 
   void _transformDirtyTiles(

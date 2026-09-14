@@ -8,6 +8,8 @@
   numeric FPS behavior for idle applications.
 - Compare canonical cell style identifiers while rendering buffer lines,
   avoiding repeated style hashing and equality checks.
+- Skip building the tile-density map when packed dirty bits already show that
+  a frame is too dense for sparse tile traversal.
 - Allocate cell finalizer detach tokens lazily, avoiding two auxiliary objects
   for cells without pooled graphemes or hyperlinks.
 - Reuse dirty-line metadata for touches already covered by a dirty span,
