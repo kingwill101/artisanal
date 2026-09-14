@@ -35,6 +35,27 @@ ARTISANAL_TUI_TRACE_PATH=.dart_tool/traces/editor-scroll.log \
 dart run bin/artisanal_editor.dart edit --no-lsp --workspace .
 ```
 
+That full trace is intended for replay and event-by-event diagnosis. It writes
+high-volume layout and paint records synchronously, so do not use it as the
+CPU-performance baseline. In particular, `ARTISANAL_TUI_TRACE_CAPTURE=1` adds
+dispatch-capture instrumentation, and leaving `ARTISANAL_TUI_TRACE_TAGS`
+unset enables every trace category.
+
+Run `devtools-profiler` without tracing for clean CPU comparisons. When a
+correlated trace is necessary, keep capture disabled and restrict the output
+to the pipeline boundaries:
+
+```sh
+ARTISANAL_TUI_TRACE=1 \
+ARTISANAL_TUI_TRACE_TAGS=input,dispatch,render,flush \
+ARTISANAL_TUI_TRACE_PATH=.dart_tool/traces/editor-profile.log \
+devtools-profiler run --terminal -- dart run bin/artisanal_editor.dart
+```
+
+Compare trace-enabled profiles only with runs using the same trace and capture
+settings. Use the full trace command separately when layout, paint, queue, or
+replay evidence is the goal.
+
 Use the offline workload for repeatable measurements. It mounts the real
 `EditorScreen` with the production Ultraviolet renderer, generates a fixed
 2,000-line Dart document outside the timed section, warms up, and checks that
