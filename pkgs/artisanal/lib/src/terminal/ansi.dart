@@ -651,10 +651,27 @@ abstract final class Ansi {
   }
 
   static int _displayControlWidth(String sequence) {
-    final kittyWidth = _kittyGraphicsDisplayWidth(sequence);
-    if (kittyWidth > 0) return kittyWidth;
-    final sixelWidth = _sixelDisplayWidth(sequence);
-    if (sixelWidth > 0) return sixelWidth;
+    if (sequence.length < 2) return 0;
+
+    final first = sequence.codeUnitAt(0);
+    final second = sequence.codeUnitAt(1);
+    if (first == 0x1b) {
+      if (sequence.length < 3) return 0;
+      final third = sequence.codeUnitAt(2);
+      if (second == 0x5f && third == 0x47) {
+        return _kittyGraphicsDisplayWidth(sequence);
+      }
+      if (second == 0x50 && third == 0x71) {
+        return _sixelDisplayWidth(sequence);
+      }
+      return 0;
+    }
+    if (first == 0x9f && second == 0x47) {
+      return _kittyGraphicsDisplayWidth(sequence);
+    }
+    if (first == 0x90 && second == 0x71) {
+      return _sixelDisplayWidth(sequence);
+    }
     return 0;
   }
 
