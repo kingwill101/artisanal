@@ -18,6 +18,7 @@ dependencies:
   tree_sitter_language_pack: ^1.16.1
 
 dev_dependencies:
+  devtools_region_profiler: ^0.1.0
   lints: ^6.0.0
   test: ^1.28.0
 

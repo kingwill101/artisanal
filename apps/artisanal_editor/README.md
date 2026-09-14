@@ -20,6 +20,87 @@ The executable also accepts a file directly:
 dart run artisanal_editor README.md
 ```
 
+## Trace and profile editor scrolling
+
+Artisanal's structured TUI tracer is already connected to the editor's input,
+widget, layout, paint, render, and Ultraviolet flush pipeline. The editor also
+records an `editor_scroll` span with the file and cursor-line transition for
+each successful scroll. Capture a manual scroll session from this directory:
+
+```sh
+ARTISANAL_TUI_TRACE=1 \
+ARTISANAL_TUI_TRACE_CAPTURE=1 \
+ARTISANAL_TUI_TRACE_TAGS=input,queue,dispatch,rebuild,layout,paint,render,flush,scroll \
+ARTISANAL_TUI_TRACE_PATH=.dart_tool/traces/editor-scroll.log \
+dart run bin/artisanal_editor.dart edit --no-lsp --workspace .
+```
+
+Use the offline workload for repeatable measurements. It mounts the real
+`EditorScreen` with the production Ultraviolet renderer, generates a fixed
+2,000-line Dart document outside the timed section, warms up, and checks that
+every down/up round restores the starting viewport:
+
+```sh
+dart run tool/editor_scroll_profile.dart \
+  --rounds=10 --warmup=3 --steps=40 \
+  --out=.dart_tool/benchmarks/editor-scroll.json
+```
+
+The JSON report contains per-round timings plus p50, p95, p99, and maximum
+latency for individual wheel events. Keep the terminal dimensions, warmup,
+round count, and step count identical when comparing revisions.
+
+Capture only the measured rounds in the named CPU region
+`artisanal_editor.scroll`:
+
+```sh
+devtools-profiler run \
+  --artifact-dir=.dart_tool/devtools_profiler/editor-scroll \
+  -- dart run tool/editor_scroll_profile.dart \
+  --rounds=10 --warmup=3 --steps=40 --profile \
+  --out=.dart_tool/benchmarks/editor-scroll-profiled.json
+```
+
+Inspect the result from the app directory with both top-down and bottom-up
+views:
+
+```sh
+devtools-profiler summarize --call-tree --bottom-up --hide-sdk \
+  .dart_tool/devtools_profiler/editor-scroll
+```
+
+For scrollbar-thumb work, use the separate drag workload. It opens a fixed
+Markdown document with both the source editor and rendered preview visible,
+drags each thumb down and back to the top, and reports p50, p95, p99, and
+maximum motion latency for each surface:
+
+```sh
+dart run tool/editor_scrollbar_drag_profile.dart \
+  --rounds=8 --warmup=2 --steps=12 --document-lines=1000 \
+  --out=.dart_tool/benchmarks/editor-scrollbar-drag.json
+```
+
+Add `--profile` under `devtools-profiler run` to capture the two measured
+regions independently:
+
+```sh
+devtools-profiler run \
+  --artifact-dir=.dart_tool/devtools_profiler/editor-scrollbar-drag \
+  -- dart run tool/editor_scrollbar_drag_profile.dart \
+  --rounds=8 --warmup=2 --steps=12 --document-lines=1000 --profile \
+  --out=.dart_tool/benchmarks/editor-scrollbar-drag-profiled.json
+```
+
+The region names are `artisanal_editor.markdown_scrollbar_drag` and
+`artisanal_editor.editor_scrollbar_drag`. Compare those regions separately;
+the whole-session summary also includes startup, Markdown parsing, warmup, and
+profiler finalization.
+
+Profiler overhead changes absolute timing, so compare profiled runs only with
+other profiled runs. The workspace guides document the reusable setup in
+[`docs/tui.md`](../../docs/tui.md#tui-runtime-instrumentation) and
+[`docs/replay.md`](../../docs/replay.md#replay-harness-mixin).
+
 ## Current milestone
 
 - explicitly expandable workspace file tree with all directories collapsed by
