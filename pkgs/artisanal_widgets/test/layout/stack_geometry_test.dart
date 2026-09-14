@@ -94,6 +94,31 @@ void main() {
     expect(child.constraints, constraints);
   });
 
+  test('reuses clean positioned siblings during a subtree repaint', () {
+    final changing = _CountingBox('A');
+    final overlay = _CountingBox(
+      'B',
+    )..parentData = const StackParentData(left: 0, top: 0, width: 1, height: 1);
+    final stack = RenderStack(width: 4, height: 2)
+      ..attach(changing)
+      ..attach(overlay);
+    final constraints = BoxConstraints(maxWidth: 4, maxHeight: 2);
+
+    stack.layout(constraints);
+    stack.paint();
+    stack.clearPaintDirtySubtree();
+
+    changing.markNeedsPaintOnly();
+    stack.markNeedsPaintOnly();
+    stack.layout(constraints);
+    stack.paint();
+
+    expect(changing.layoutCount, 2);
+    expect(changing.paintCount, 2);
+    expect(overlay.layoutCount, 1);
+    expect(overlay.paintCount, 1);
+  });
+
   test(
     'negative opposite insets enlarge the child but not the clip region',
     () {
@@ -163,4 +188,25 @@ void main() {
     tester.tapAt(4, 0);
     expect(taps, 1);
   });
+}
+
+final class _CountingBox extends RenderBox {
+  _CountingBox(this.text);
+
+  final String text;
+  int layoutCount = 0;
+  int paintCount = 0;
+
+  @override
+  void layout(BoxConstraints constraints) {
+    layoutCount++;
+    super.layout(constraints);
+    size = constraints.constrain(const Size(1, 1));
+  }
+
+  @override
+  String paint() {
+    paintCount++;
+    return text;
+  }
 }

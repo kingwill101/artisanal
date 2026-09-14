@@ -27,6 +27,8 @@
 
 ### Changed
 
+- `Stack` now reuses clean child layout and paint output during subtree-only
+  repaints, reducing work for scrollbars and other frequently updated overlays.
 - Stream eligible full-size styled container content directly into its target
   canvas, avoiding a temporary cell grid and copy. Reusable background and
   gradient fill templates now update destination cells without cloning.

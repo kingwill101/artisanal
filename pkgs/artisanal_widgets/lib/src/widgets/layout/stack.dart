@@ -72,6 +72,26 @@ class RenderStack extends RenderBox {
   Alignment alignment;
   StackFit fit;
   Overflow _clipBehavior;
+  final Map<RenderObject, ({String text, Size size})> _childPaintCache = {};
+
+  bool _shouldLayoutChild(RenderObject child, BoxConstraints constraints) =>
+      child.paintDirty || child.constraints != constraints;
+
+  String _paintChild(RenderObject child) {
+    final cached = _childPaintCache[child];
+    if (cached != null && !child.paintDirty && cached.size == child.size) {
+      return cached.text;
+    }
+    final text = child.paint();
+    _childPaintCache[child] = (text: text, size: child.size);
+    return text;
+  }
+
+  void _pruneChildPaintCache() {
+    if (_childPaintCache.isEmpty) return;
+    final live = children.toSet();
+    _childPaintCache.removeWhere((child, _) => !live.contains(child));
+  }
 
   /// Clipping policy. Visible overflow requires an ancestor Overlay instead.
   Overflow get clipBehavior => _clipBehavior;
@@ -152,7 +172,9 @@ class RenderStack extends RenderBox {
       if (data != null && data.isPositioned) {
         continue;
       }
-      child.layout(nonPositionedConstraints);
+      if (_shouldLayoutChild(child, nonPositionedConstraints)) {
+        child.layout(nonPositionedConstraints);
+      }
       hasNonPositionedChild = true;
       maxWidth = math.max(maxWidth, child.size.width);
       maxHeight = math.max(maxHeight, child.size.height);
@@ -214,7 +236,9 @@ class RenderStack extends RenderBox {
           minHeight: childHeight ?? 0,
           maxHeight: childHeight ?? resolvedHeight,
         );
-        child.layout(childConstraints);
+        if (_shouldLayoutChild(child, childConstraints)) {
+          child.layout(childConstraints);
+        }
       }
     }
 
@@ -241,10 +265,11 @@ class RenderStack extends RenderBox {
     final canvas = Canvas(targetWidth, targetHeight);
     try {
       final bgStyle = const UvStyle();
+      _pruneChildPaintCache();
 
       var isFirstChild = true;
       for (final child in children) {
-        final content = child.paint();
+        final content = _paintChild(child);
         final childWidth = child.size.width.toInt();
         final childHeight = child.size.height.toInt();
         final x = child.offset.dx.toInt();
