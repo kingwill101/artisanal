@@ -44,11 +44,41 @@ void main() {
       );
     },
   );
+
+  test('disposing after the LSP input pipe breaks is safe', () async {
+    final process = _FakeLanguageServerProcess();
+    final service = DartLanguageService(
+      workspaceRoot: Directory.current.path,
+      startProcess: () async => process,
+    );
+    addTearDown(service.dispose);
+
+    final ready = Completer<void>();
+    final subscription = service.events.listen((event) {
+      if (event is EditorLanguageStatus &&
+          event.ready == true &&
+          !ready.isCompleted) {
+        ready.complete();
+      }
+    });
+    addTearDown(subscription.cancel);
+
+    service.openDocument(
+      path: '${Directory.current.path}/main.dart',
+      languageId: 'dart',
+      text: 'void main() {}',
+    );
+    await ready.future;
+
+    process.rejectWrites();
+    await expectLater(service.dispose(), completes);
+  });
 }
 
 final class _FakeLanguageServerProcess implements Process {
   final StreamController<List<int>> _stdout = StreamController();
-  late final IOSink _stdin = IOSink(_LanguageServerConsumer(_stdout));
+  late final _languageServer = _LanguageServerConsumer(_stdout);
+  late final IOSink _stdin = IOSink(_languageServer);
   final StreamController<List<int>> _stderr = StreamController();
   final Completer<int> _exitCode = Completer();
 
@@ -72,6 +102,8 @@ final class _FakeLanguageServerProcess implements Process {
     _stderr.close();
   }
 
+  void rejectWrites() => _languageServer.rejectWrites = true;
+
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     if (!_exitCode.isCompleted) _exitCode.complete(0);
@@ -85,10 +117,14 @@ final class _LanguageServerConsumer implements StreamConsumer<List<int>> {
 
   final StreamController<List<int>> output;
   var _respondedToInitialize = false;
+  var rejectWrites = false;
 
   @override
   Future<bool> addStream(Stream<List<int>> stream) async {
     await for (final _ in stream) {
+      if (rejectWrites) {
+        throw const SocketException('Write failed: broken pipe');
+      }
       if (_respondedToInitialize) continue;
       _respondedToInitialize = true;
       final response = jsonEncode({

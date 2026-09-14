@@ -415,15 +415,14 @@ final class DartLanguageService implements EditorLanguageService {
 
     final client = _client;
     if (client != null) {
+      // Closing an owned language server is inherently racy: the child can
+      // close stdin between a lifecycle check and an LSP shutdown write. Close
+      // our transport without another write, then terminate the owned process.
       try {
-        await client.server.general.shutdown(
-          timeout: const Duration(seconds: 1),
-        );
-        client.server.general.exit();
+        await client.close();
       } on Object {
-        // The process may already have exited; transport cleanup still runs.
+        // The process may already have closed the transport.
       }
-      await client.close();
     }
     _process?.kill();
     await _stderrSubscription?.cancel();
