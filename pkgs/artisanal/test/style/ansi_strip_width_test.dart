@@ -50,5 +50,20 @@ void main() {
       expect(Style.stripAnsi(s), equals('Hello'));
       expect(Style.visibleLength(s), equals(5));
     });
+
+    test('visible width handles adjacent 7-bit and 8-bit controls', () {
+      const s =
+          'A\x1b[31mB\x1b[0m'
+          '\x9b1mC\x9b0m'
+          '\x1b]8;;https://example.com\x07D\x1b]8;;\x1b\\'
+          '\x9d8;;https://example.com\x9cE\x9d8;;\x9c'
+          '\x1b(0F\x1b(B';
+      expect(Layout.visibleLength(s), equals(6));
+    });
+
+    test('visible width leaves unterminated control strings measurable', () {
+      const s = 'before\x1b]unterminated after';
+      expect(Layout.visibleLength(s), equals(s.length - 1));
+    });
   });
 }

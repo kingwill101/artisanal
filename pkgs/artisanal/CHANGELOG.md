@@ -23,6 +23,8 @@
 
 ### Fixed
 
+- Scan ANSI controls directly when measuring styled text, avoiding regular
+  expression replacement work on render-time width cache misses.
 - Preserve preloaded image caches in nested quote renders, handle nonpositive
   quote widths consistently, and scan opaque HTML closing tags without copying
   the remaining source for each element.

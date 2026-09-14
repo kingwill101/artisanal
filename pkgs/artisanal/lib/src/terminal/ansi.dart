@@ -642,12 +642,143 @@ abstract final class Ansi {
   }
 
   static String _stringForVisibleMeasurement(String text) {
-    return text.replaceAllMapped(ansiPattern, (match) {
-      final sequence = match.group(0);
-      if (sequence == null || sequence.isEmpty) return '';
-      final displayWidth = _displayControlWidth(sequence);
-      return displayWidth > 0 ? ' ' * displayWidth : '';
-    });
+    final out = StringBuffer();
+    var visibleStart = 0;
+    var index = 0;
+
+    void consume(int end, {int displayWidth = 0}) {
+      if (visibleStart < index) {
+        out.write(text.substring(visibleStart, index));
+      }
+      if (displayWidth > 0) out.write(' ' * displayWidth);
+      index = end;
+      visibleStart = end;
+    }
+
+    while (index < text.length) {
+      final codeUnit = text.codeUnitAt(index);
+      if (codeUnit == 0x1b && index + 1 < text.length) {
+        final next = text.codeUnitAt(index + 1);
+        if (next == 0x5b) {
+          final end = _consumeCsi(text, index + 2);
+          if (end != index + 2) {
+            consume(end);
+            continue;
+          }
+        } else if (next == 0x5d) {
+          final end = _consumeSevenBitOsc(text, index + 2);
+          if (end != index + 2) {
+            consume(end);
+            continue;
+          }
+        } else if (next == 0x50 ||
+            next == 0x58 ||
+            next == 0x5e ||
+            next == 0x5f) {
+          final end = _consumeSevenBitControlString(text, index + 2);
+          if (end != index + 2) {
+            final width = (next == 0x50 || next == 0x5f)
+                ? _displayControlWidth(text.substring(index, end))
+                : 0;
+            consume(end, displayWidth: width);
+            continue;
+          }
+        } else if ((next == 0x28 || next == 0x29) &&
+            index + 2 < text.length &&
+            _isCharacterSetDesignator(text.codeUnitAt(index + 2))) {
+          consume(index + 3);
+          continue;
+        } else if (next == 0x37 || next == 0x38) {
+          consume(index + 2);
+          continue;
+        }
+      } else if (codeUnit == 0x9b) {
+        final end = _consumeCsi(text, index + 1);
+        if (end != index + 1) {
+          consume(end);
+          continue;
+        }
+      } else if (codeUnit == 0x9d) {
+        final end = _consumeEightBitOsc(text, index + 1);
+        if (end != index + 1) {
+          consume(end);
+          continue;
+        }
+      } else if (codeUnit == 0x90 ||
+          codeUnit == 0x98 ||
+          codeUnit == 0x9e ||
+          codeUnit == 0x9f) {
+        final end = _consumeEightBitControlString(text, index + 1);
+        if (end != index + 1) {
+          final width = (codeUnit == 0x90 || codeUnit == 0x9f)
+              ? _displayControlWidth(text.substring(index, end))
+              : 0;
+          consume(end, displayWidth: width);
+          continue;
+        }
+      }
+      index++;
+    }
+
+    if (visibleStart == 0) return text;
+    if (visibleStart < text.length) {
+      out.write(text.substring(visibleStart));
+    }
+    return out.toString();
+  }
+
+  static int _consumeCsi(String text, int start) {
+    for (var index = start; index < text.length; index++) {
+      final codeUnit = text.codeUnitAt(index);
+      if (codeUnit >= 0x40 && codeUnit <= 0x7e) return index + 1;
+    }
+    return start;
+  }
+
+  static int _consumeSevenBitOsc(String text, int start) {
+    for (var index = start; index < text.length; index++) {
+      final codeUnit = text.codeUnitAt(index);
+      if (codeUnit == 0x07) return index + 1;
+      if (codeUnit == 0x1b &&
+          index + 1 < text.length &&
+          text.codeUnitAt(index + 1) == 0x5c) {
+        return index + 2;
+      }
+    }
+    return start;
+  }
+
+  static int _consumeEightBitOsc(String text, int start) {
+    for (var index = start; index < text.length; index++) {
+      final codeUnit = text.codeUnitAt(index);
+      if (codeUnit == 0x07 || codeUnit == 0x9c) return index + 1;
+    }
+    return start;
+  }
+
+  static int _consumeSevenBitControlString(String text, int start) {
+    for (var index = start; index + 1 < text.length; index++) {
+      if (text.codeUnitAt(index) == 0x1b &&
+          text.codeUnitAt(index + 1) == 0x5c) {
+        return index + 2;
+      }
+    }
+    return start;
+  }
+
+  static int _consumeEightBitControlString(String text, int start) {
+    for (var index = start; index < text.length; index++) {
+      if (text.codeUnitAt(index) == 0x9c) return index + 1;
+    }
+    return start;
+  }
+
+  static bool _isCharacterSetDesignator(int codeUnit) {
+    return codeUnit == 0x41 ||
+        codeUnit == 0x42 ||
+        codeUnit == 0x30 ||
+        codeUnit == 0x31 ||
+        codeUnit == 0x32;
   }
 
   static int _displayControlWidth(String sequence) {
