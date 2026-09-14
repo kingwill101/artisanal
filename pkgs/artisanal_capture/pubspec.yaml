@@ -14,7 +14,7 @@ dependencies:
   artisanal: ^0.6.2
   artisanal_widgets: ^0.4.2
   image: ^4.7.1
-  ultraviolet: ^0.5.1
+  ultraviolet: ^0.6.0
 
 dev_dependencies:
   crypto: ^3.0.7

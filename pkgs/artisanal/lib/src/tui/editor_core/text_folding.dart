@@ -59,9 +59,15 @@ final class FoldState {
 
   final List<FoldRange> _ranges;
   final Set<int> _collapsed = <int>{};
+  var _revision = 0;
 
   List<FoldRange> get ranges => List<FoldRange>.unmodifiable(_ranges);
   Set<int> get collapsedStarts => Set<int>.unmodifiable(_collapsed);
+
+  /// Monotonically increasing version of the collapsed state.
+  ///
+  /// Views can use this to invalidate cached projections after a fold change.
+  int get revision => _revision;
 
   FoldRange? foldStartingAt(int line) {
     for (final range in _ranges) {
@@ -109,14 +115,21 @@ final class FoldState {
     } else {
       _collapsed.add(line);
     }
+    _revision++;
     return true;
   }
 
   void collapseAll() {
+    final before = _collapsed.length;
     _collapsed.addAll(_ranges.map((range) => range.startLine));
+    if (_collapsed.length != before) _revision++;
   }
 
-  void expandAll() => _collapsed.clear();
+  void expandAll() {
+    if (_collapsed.isEmpty) return;
+    _collapsed.clear();
+    _revision++;
+  }
 
   /// Visible (non-hidden) line indexes in `[0, lineCount)`.
   List<int> visibleLines(int lineCount) {

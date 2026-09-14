@@ -1810,10 +1810,32 @@ The overlay shows render metrics, recent runtime messages (including
 it automatically captures program output. The toggle is consumed by the
 runtime and is not forwarded to the application model.
 
-While visible, use **Tab** / **Shift+Tab** to switch between Metrics, Messages,
-and Captured Output. Scroll message and output history with **Up**,
-**Down**, **Page Up**, **Page Down**, **Home**, and **End**. These navigation
-keys are consumed only while the diagnostics overlay is visible.
+The overlay is keyboard-passive by default: typing, **Tab**, arrows, paging,
+**Home**, and **End** continue to the application even while it is visible.
+Click **Metrics**, **Messages**, or **Output** to select a tab. Drag the
+title bar to move the panel without taking keyboard focus. The dragged
+position is retained across tab changes and F12 toggles, and clamped on
+resize. The configured initial corner is used until the panel is dragged.
+Use the mouse wheel over message/output history to scroll that panel;
+wheel events elsewhere continue to the application.
+
+To explicitly give the visible diagnostics panel keyboard navigation, use:
+
+```dart
+ProgramDiagnosticsOptions(keyboardNavigation: true)
+```
+
+With that option enabled, **Tab** / **Shift+Tab** switch between Metrics,
+Messages, and Captured Output. **Up**, **Down**, **Page Up**, **Page Down**,
+**Home**, and **End** scroll its history. Only this opted-in, visible mode
+consumes those navigation keys.
+
+FPS measures actual frame cadence, not the configured maximum frame rate.
+An event-driven TUI does not redraw continuously when idle. The panel shows
+`idle` after two seconds without a real frame, or `pending` before enough
+metrics arrive; the timing range remains historical. Metrics-only refreshes
+and custom diagnostic metric updates do not count as activity and cannot
+suppress the next application frame.
 
 Applications can publish metrics without depending on the widget framework:
 

@@ -95,11 +95,12 @@ final class TuiTrace {
   static DateTime Function()? _testNowProvider;
   static bool _testOverride = false;
   static String? _path;
-  static io.File? _file;
+  static io.RandomAccessFile? _output;
   static bool _headerWritten = false;
   static bool? _captureEnabled;
   static Set<TraceTag>? _enabledTags;
   static bool _resolved = false;
+  static bool _closed = false;
   static bool _clearOnOpen = false;
   static final Stopwatch _traceClock = Stopwatch();
   static final Map<String, TraceTag> _traceTagByName = <String, TraceTag>{
@@ -107,11 +108,13 @@ final class TuiTrace {
   };
 
   static bool get enabled {
+    if (_closed) return false;
     if (!_resolved) _resolve();
     return _path != null;
   }
 
   static bool get captureEnabled {
+    if (_closed) return false;
     if (!_resolved) _resolve();
     return _captureEnabled ?? false;
   }
@@ -134,6 +137,7 @@ final class TuiTrace {
     _testCaptureEnabled = captureEnabled ? true : null;
     _testTagsRaw = tagsRaw;
     _testNowProvider = nowProvider;
+    _closed = false;
     _resetResolvedState();
     _clearOnOpen = clear;
   }
@@ -146,6 +150,7 @@ final class TuiTrace {
     _testCaptureEnabled = null;
     _testTagsRaw = null;
     _testNowProvider = null;
+    _closed = false;
     _resetResolvedState();
     _clearOnOpen = false;
   }
@@ -262,13 +267,35 @@ final class TuiTrace {
   static TraceEventRecord? tryParseEventLine(String line) =>
       parseEventLine(line);
 
+  /// Opens tracing for a new program run after an earlier session was closed.
+  ///
+  /// Calling this while a trace is active has no effect.
+  static void startSession() {
+    if (!_closed) return;
+    _closed = false;
+  }
+
   static void close() {
     _resetResolvedState();
+    _closed = true;
   }
 
   static void _resetResolvedState() {
+    final output = _output;
+    if (output != null) {
+      try {
+        output.flushSync();
+      } on io.FileSystemException {
+        // Tracing cleanup must not interfere with application shutdown.
+      }
+      try {
+        output.closeSync();
+      } on io.FileSystemException {
+        // The handle may already have been closed after an earlier failure.
+      }
+    }
     _path = null;
-    _file = null;
+    _output = null;
     _headerWritten = false;
     _captureEnabled = null;
     _enabledTags = null;
@@ -329,7 +356,7 @@ final class TuiTrace {
     return _enabledTags;
   }
 
-  static io.File _openFile() {
+  static io.RandomAccessFile _openFile() {
     final file = io.File(_path!);
     if (!file.parent.existsSync()) file.parent.createSync(recursive: true);
     if (_clearOnOpen && file.existsSync()) {
@@ -339,15 +366,14 @@ final class TuiTrace {
     _traceClock
       ..reset()
       ..start();
-    _file = file;
-    return file;
+    return _output = file.openSync(mode: io.FileMode.append);
   }
 
   static void _writeRaw(String message, {bool structuredEvent = false}) {
     try {
-      final file = _file ?? _openFile();
+      final output = _output ?? _openFile();
       if (!_headerWritten) {
-        _writeHeaderSync(file);
+        _writeHeaderSync(output);
         _headerWritten = true;
       }
       final singleLineMessage = message
@@ -357,21 +383,25 @@ final class TuiTrace {
             _eventMarker,
             structuredEvent ? _eventMarker : '@event\\x20',
           );
-      file.writeAsStringSync(
+      output.writeStringSync(
         '[+${_traceClock.elapsedMicroseconds}us] $singleLineMessage\n',
-        mode: io.FileMode.append,
       );
     } on io.FileSystemException {
       // Tracing is diagnostic and must never terminate the application. Disable
       // it for the rest of this configuration after an output failure so hot
       // paths do not repeatedly attempt the same failing filesystem operation.
       _path = null;
-      _file = null;
+      try {
+        _output?.closeSync();
+      } on io.FileSystemException {
+        // Ignore cleanup failures after disabling tracing.
+      }
+      _output = null;
       _traceClock.stop();
     }
   }
 
-  static void _writeHeaderSync(io.File file) {
+  static void _writeHeaderSync(io.RandomAccessFile output) {
     final now = _testNowProvider != null ? _testNowProvider!() : DateTime.now();
     final buffer = StringBuffer();
     final header = <String>[
@@ -388,7 +418,7 @@ final class TuiTrace {
     for (final line in header) {
       buffer.writeln(line);
     }
-    file.writeAsStringSync(buffer.toString(), mode: io.FileMode.append);
+    output.writeStringSync(buffer.toString());
   }
 
   static String _describeEnabledTags() {

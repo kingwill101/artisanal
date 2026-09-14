@@ -1243,6 +1243,7 @@ int _bitMask(int from, int to) {
 
 void _renderLine(StringSink out, Line line) {
   var pen = const UvStyle();
+  var penStyleId = 0;
   var link = const Link();
   final pending = StringBuffer();
 
@@ -1250,9 +1251,10 @@ void _renderLine(StringSink out, Line line) {
     if (c.isZero) continue;
 
     if (c.isEmpty) {
-      if (!pen.isZero) {
+      if (penStyleId != 0) {
         out.write(UvAnsi.resetStyle);
         pen = const UvStyle();
+        penStyleId = 0;
       }
       if (!link.isZero) {
         out.write(UvAnsi.resetHyperlink());
@@ -1267,13 +1269,16 @@ void _renderLine(StringSink out, Line line) {
       pending.clear();
     }
 
-    if (c.style.isZero && !pen.isZero) {
+    final cellStyleId = c.styleId;
+    if (cellStyleId == 0 && penStyleId != 0) {
       out.write(UvAnsi.resetStyle);
       pen = const UvStyle();
+      penStyleId = 0;
     }
-    if (c.style != pen) {
-      out.write(style_ops.styleDiff(pen, c.style));
+    if (cellStyleId != penStyleId) {
+      out.write(_cachedLineStyleDiff(penStyleId, pen, cellStyleId, c.style));
       pen = c.style;
+      penStyleId = cellStyleId;
     }
 
     if (c.link != link && link.url.isNotEmpty) {
@@ -1291,9 +1296,28 @@ void _renderLine(StringSink out, Line line) {
   if (link.url.isNotEmpty) {
     out.write(UvAnsi.resetHyperlink());
   }
-  if (!pen.isZero) {
+  if (penStyleId != 0) {
     out.write(UvAnsi.resetStyle);
   }
+}
+
+const _lineStyleDiffCacheMax = 256;
+final Map<int, Map<int, String>> _lineStyleDiffCache =
+    <int, Map<int, String>>{};
+var _lineStyleDiffCacheEntries = 0;
+
+String _cachedLineStyleDiff(int fromId, UvStyle from, int toId, UvStyle to) {
+  final cached = _lineStyleDiffCache[fromId]?[toId];
+  if (cached != null) return cached;
+
+  final diff = style_ops.styleDiff(from, to);
+  if (_lineStyleDiffCacheEntries >= _lineStyleDiffCacheMax) {
+    _lineStyleDiffCache.clear();
+    _lineStyleDiffCacheEntries = 0;
+  }
+  (_lineStyleDiffCache[fromId] ??= <int, String>{})[toId] = diff;
+  _lineStyleDiffCacheEntries++;
+  return diff;
 }
 
 /// A screen buffer that implements `Screen` operations and carries a width
@@ -1382,6 +1406,8 @@ Rectangle styledStringBounds(String text, WidthMethod method) {
 int _visibleStringWidth(String line, WidthMethod method) {
   final stripped = term_ansi.Ansi.stripAnsi(line);
   final expanded = term_ansi.Ansi.expandTabs(stripped);
-  return method.stringWidth(expanded) +
-      terminal_graphics.terminalGraphicsCellWidth(line);
+  final graphicsWidth = terminal_graphics.mayContainTerminalGraphics(line)
+      ? terminal_graphics.terminalGraphicsCellWidth(line)
+      : 0;
+  return method.stringWidth(expanded) + graphicsWidth;
 }

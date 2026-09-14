@@ -1,8 +1,15 @@
 # Changelog
 
-## 0.5.1
+## 0.6.0
 
 - Require Dart SDK 3.13.0 or newer.
+- Skip terminal-graphics parsing when measuring ordinary styled text bounds.
+- Expose `RenderMetrics.isIdle` for diagnostic displays without changing the
+  numeric FPS behavior for idle applications.
+- Compare canonical cell style identifiers while rendering buffer lines,
+  avoiding repeated style hashing and equality checks.
+- Skip building the tile-density map when packed dirty bits already show that
+  a frame is too dense for sparse tile traversal.
 - Allocate cell finalizer detach tokens lazily, avoiding two auxiliary objects
   for cells without pooled graphemes or hyperlinks.
 - Reuse dirty-line metadata for touches already covered by a dirty span,
@@ -28,6 +35,8 @@
   frame state. Resizing and compositing now release discarded cells promptly.
   `setCellOwned` consumes its input on every path, including rejected or
   unchanged writes; callers must not read a cell after transferring ownership.
+
+## 0.5.1
 
 ### Changed
 

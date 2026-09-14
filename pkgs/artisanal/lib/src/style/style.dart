@@ -2092,12 +2092,20 @@ class Style {
         ? Stopwatch()
         : null;
     sw?.start();
-    text = _applyConsoleTags(text);
+    // Most render calls contain already-styled or plain text. Avoid creating a
+    // ConsoleTagParser (and its default Style table) when no tag can exist.
+    if (text.contains('<')) {
+      text = _applyConsoleTags(text);
+    }
 
     // Potentially convert tabs to spaces
-    text = _maybeConvertTabs(text);
+    if (text.contains('\t')) {
+      text = _maybeConvertTabs(text);
+    }
     // carriage returns can cause strange behaviour when rendering.
-    text = text.replaceAll('\r\n', '\n');
+    if (text.contains('\r')) {
+      text = text.replaceAll('\r\n', '\n');
+    }
 
     // If this style has no active properties, return the string unchanged.
     // This matches lipgloss' early return when a style is effectively empty.

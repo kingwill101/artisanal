@@ -132,5 +132,7 @@ final class TuiTrace {
   static TraceEventRecord? tryParseEventLine(String line) =>
       parseEventLine(line);
 
+  static void startSession() {}
+
   static void close() {}
 }

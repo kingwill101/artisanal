@@ -8,6 +8,7 @@ import 'package:artisanal_editor/src/lsp/editor_language_service.dart';
 import 'package:artisanal_editor/src/workspace/editor_file_repository.dart';
 import 'package:artisanal_editor/src/workspace/editor_workspace.dart';
 import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/style.dart' show Layout;
 import 'package:artisanal/terminal.dart' show Key, KeyType;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:artisanal_widgets/widgets.dart'
@@ -194,6 +195,109 @@ void main() {
       expect(thirdTerminal.killed, isTrue);
     },
   );
+
+  test('keeps editor navigation and typing active under the F12 diagnostics overlay', () async {
+    final sandbox = await Directory.systemTemp.createTemp(
+      'editor-f12-navigation-',
+    );
+    addTearDown(() async => sandbox.delete(recursive: true));
+    final file = File(p.join(sandbox.path, 'main.dart'));
+    await file.writeAsString('one\ntwo\n');
+    const repository = EditorFileRepository();
+    final files = await repository.discover(sandbox.path);
+    final workspace = EditorWorkspace(
+      root: sandbox.path,
+      files: files,
+      repository: repository,
+    );
+    final buffer = await workspace.open(files.single);
+    buffer.controller.setCursor(0, 0);
+
+    // Use the production UV renderer here: the complaint is about the
+    // overlay being visible while input is still delivered to the editor.
+    final tester = WidgetTester(
+      screenWidth: 110,
+      screenHeight: 34,
+      enableRenderer: true,
+      enableNativeFrameCapture: true,
+      altScreen: true,
+    );
+    addTearDown(tester.dispose);
+    await tester.pumpWidget(EditorScreen(workspace: workspace));
+
+    tester.sendKey('i');
+    expect(tester.view, contains('INSERT'));
+    tester.typeText('abc');
+    expect(buffer.controller.text, 'abcone\ntwo\n');
+    expect(buffer.controller.line, 0);
+    expect(buffer.controller.column, 3);
+
+    tester.sendSpecialKey(KeyType.left);
+    expect(buffer.controller.column, 2);
+    tester.sendSpecialKey(KeyType.right);
+    expect(buffer.controller.column, 3);
+
+    // Toggle the actual Program-owned overlay, rather than invoking its
+    // controller directly, before exercising the rest of the editor input.
+    tester.sendSpecialKey(KeyType.f12);
+    expect(tester.rendererOutput, contains('Artisanal DevTools'));
+
+    tester.sendSpecialKey(KeyType.home);
+    expect(buffer.controller.column, 0);
+    tester.sendSpecialKey(KeyType.end);
+    expect(buffer.controller.column, 6);
+    tester.sendSpecialKey(KeyType.backspace);
+    expect(buffer.controller.text, 'abcon\ntwo\n');
+    expect(buffer.controller.column, 5);
+
+    tester.sendSpecialKey(KeyType.tab);
+    expect(buffer.controller.text, 'abcon  \ntwo\n');
+    expect(buffer.controller.column, 7);
+
+    tester.typeText('xyz');
+    expect(buffer.controller.text, 'abcon  xyz\ntwo\n');
+    expect(buffer.controller.column, 10);
+    tester.sendSpecialKey(KeyType.left);
+    expect(buffer.controller.column, 9);
+    tester.sendSpecialKey(KeyType.right);
+    expect(buffer.controller.column, 10);
+
+    ({int x, int y}) overlayPoint(String text) {
+      final lines = tester.latestNativeFrame!.plainText.split('\n');
+      for (var y = 0; y < lines.length; y++) {
+        final index = lines[y].indexOf(text);
+        if (index >= 0) {
+          return (x: Layout.visibleLength(lines[y].substring(0, index)), y: y);
+        }
+      }
+      fail('Missing overlay text: $text');
+    }
+
+    final messages = overlayPoint('messages');
+    tester.tapAt(messages.x, messages.y);
+    expect(tester.latestNativeFrame!.plainText, contains('[messages]'));
+    final output = overlayPoint('output');
+    tester.tapAt(output.x, output.y);
+    expect(tester.latestNativeFrame!.plainText, contains('[output]'));
+
+    final title = overlayPoint('Captured Output');
+    tester.mouseDown(title.x, title.y);
+    tester.mouseMove(20, 12);
+    tester.mouseUp(20, 12);
+    expect(overlayPoint('Captured Output'), (x: 20, y: 12));
+    final metrics = overlayPoint('metrics');
+    tester.tapAt(metrics.x, metrics.y);
+    expect(overlayPoint('Artisanal DevTools'), (x: 20, y: 12));
+
+    // Clicking tabs and dragging the HUD must not transfer keyboard focus.
+    tester.typeText('!');
+    expect(buffer.controller.text, 'abcon  xyz!\ntwo\n');
+
+    // Rendering the changed frame must not make the diagnostics layer
+    // disappear, and all editor keys above must have reached the buffer.
+    expect(tester.latestNativeFrame!.plainText, contains('Artisanal DevTools'));
+    expect(tester.view, contains('abcon'));
+  });
 
   test('shows a resizable Markdown preview that can be toggled', () async {
     final sandbox = await Directory.systemTemp.createTemp(

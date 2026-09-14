@@ -2289,13 +2289,27 @@ final class _EditorScrollController implements w.ScrollController {
   bool jumpTo(int offset) {
     final target = offset.clamp(0, maxOffset);
     if (target == buffer.controller.line) return false;
+    final previous = buffer.controller.line;
+    final trace =
+        runtime.TuiTrace.enabled &&
+            runtime.TuiTrace.isTagEnabled(runtime.TraceTag.scroll)
+        ? runtime.TuiTrace.begin(
+            'editor_scroll',
+            tag: runtime.TraceTag.scroll,
+            extra: 'path=${buffer.file.relativePath} from=$previous to=$target',
+          )
+        : null;
     final column = buffer.controller.column.clamp(
       0,
       buffer.controller.document.lineLength(target),
     );
-    buffer.controller.setCursor(target, column);
-    for (final listener in _listeners.toList(growable: false)) {
-      listener();
+    try {
+      buffer.controller.setCursor(target, column);
+      for (final listener in _listeners.toList(growable: false)) {
+        listener();
+      }
+    } finally {
+      trace?.end();
     }
     return true;
   }

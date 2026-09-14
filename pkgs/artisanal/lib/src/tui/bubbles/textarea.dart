@@ -5232,7 +5232,28 @@ class TextAreaModel extends ViewComponent {
             ? (_col - displayLine.charOffset)
             : -1;
 
-        var renderedBody = '';
+        final renderedBody = StringBuffer();
+        final run = StringBuffer();
+        String? runDecorationStyleKey;
+        var runSelected = false;
+        var runUsesCursorStyle = false;
+
+        void flushRun() {
+          if (run.isEmpty) return;
+          final decorationStyle = runDecorationStyleKey == null
+              ? null
+              : style.computedDecorationStyle(runDecorationStyleKey);
+          final partStyle = _textCellStyle(
+            style,
+            lineDecorationStyle: lineDecorationStyle,
+            decorationStyle: decorationStyle,
+            isSelected: runSelected,
+            useCursorStyle: runUsesCursorStyle,
+          );
+          renderedBody.write(partStyle.render(run.toString()));
+          run.clear();
+        }
+
         for (var j = 0; j < gs.length; j++) {
           final documentOffset = segmentStart + j;
           final isSelected =
@@ -5251,19 +5272,23 @@ class TextAreaModel extends ViewComponent {
             decorationRanges,
             j,
           );
-          final decorationStyle = decorationStyleKey == null
-              ? null
-              : style.computedDecorationStyle(decorationStyleKey);
-          final partStyle = _textCellStyle(
-            style,
-            lineDecorationStyle: lineDecorationStyle,
-            decorationStyle: decorationStyle,
-            isSelected: isSelected,
-            useCursorStyle: useVirtualCursor && isCursor,
-          );
-          final part = partStyle.render(gs[j]);
-          renderedBody += part;
+          final usesCursorStyle = useVirtualCursor && isCursor;
+          final grapheme = gs[j];
+          final mustRenderAlone = grapheme == '<' || grapheme == '\t';
+          if (run.isNotEmpty &&
+              (runDecorationStyleKey != decorationStyleKey ||
+                  runSelected != isSelected ||
+                  runUsesCursorStyle != usesCursorStyle ||
+                  mustRenderAlone)) {
+            flushRun();
+          }
+          runDecorationStyleKey = decorationStyleKey;
+          runSelected = isSelected;
+          runUsesCursorStyle = usesCursorStyle;
+          run.write(grapheme);
+          if (mustRenderAlone) flushRun();
         }
+        flushRun();
 
         final hasCursorAtEnd =
             (displayLine.hasCursor && cursorCol >= gs.length) ||
@@ -5275,11 +5300,11 @@ class TextAreaModel extends ViewComponent {
             isSelected: false,
             useCursorStyle: true,
           );
-          renderedBody += partStyle.render(' ');
+          renderedBody.write(partStyle.render(' '));
         }
 
         buffer.writeln(
-          '${style.computedPrompt.render(p)}$lnNumber$renderedBody',
+          '${style.computedPrompt.render(p)}$lnNumber${renderedBody.toString()}',
         );
       }
 

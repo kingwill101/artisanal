@@ -97,6 +97,30 @@ void main() {
       },
     );
 
+    test('close prevents teardown logs from reopening the trace', () async {
+      final tempDir = await Directory.systemTemp.createTemp('tui-trace-');
+      addTearDown(() async {
+        TuiTrace.clearTestOverrides();
+        await tempDir.delete(recursive: true);
+      });
+      final path = '${tempDir.path}/trace.log';
+      TuiTrace.configureForTest(enabled: true, path: path);
+
+      TuiTrace.log('before close');
+      TuiTrace.close();
+      TuiTrace.log('after close');
+
+      final contents = await File(path).readAsString();
+      expect(contents, contains('before close'));
+      expect(contents, isNot(contains('after close')));
+      expect('# trace start:'.allMatches(contents), hasLength(1));
+
+      TuiTrace.startSession();
+      TuiTrace.log('next session');
+      TuiTrace.close();
+      expect(await File(path).readAsString(), contains('next session'));
+    });
+
     test(
       'clear replaces an existing trace and event uses injected time',
       () async {

@@ -48,7 +48,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating others.
   flutter_lints: ^6.0.0
-  ultraviolet:
+  ultraviolet: ^0.6.0
 
 dependency_overrides:
   ultraviolet:

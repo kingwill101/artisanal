@@ -45,6 +45,7 @@ final class Canvas
   }
 
   final ScreenBuffer _scr;
+  var _pristine = true;
 
   /// The mutable backing buffer.
   Buffer get buffer => _scr.buffer;
@@ -54,16 +55,30 @@ final class Canvas
 
   /// Clears the entire canvas to empty cells.
   @override
-  void clear() => _scr.clear();
+  void clear() {
+    if (_pristine) return;
+    _scr.clear();
+  }
 
   @override
-  void clearArea(Rectangle area) => _scr.clearArea(area);
+  void clearArea(Rectangle area) {
+    if (_pristine) return;
+    _scr.clearArea(area);
+  }
 
   @override
-  void fill(Cell? cell) => _scr.fill(cell);
+  void fill(Cell? cell) {
+    if (_pristine && cell == null) return;
+    _pristine = false;
+    _scr.fill(cell);
+  }
 
   @override
-  void fillArea(Cell? cell, Rectangle area) => _scr.fillArea(cell, area);
+  void fillArea(Cell? cell, Rectangle area) {
+    if (_pristine && cell == null) return;
+    _pristine = false;
+    _scr.fillArea(cell, area);
+  }
 
   /// The current canvas width in cells.
   int width() => _scr.width();
@@ -85,10 +100,16 @@ final class Canvas
 
   /// Sets the cell at ([x], [y]) in the backing buffer.
   @override
-  void setCell(int x, int y, Cell? cell) => _scr.setCell(x, y, cell);
+  void setCell(int x, int y, Cell? cell) {
+    _pristine = false;
+    _scr.setCell(x, y, cell);
+  }
 
   @override
-  void setCellOwned(int x, int y, Cell? cell) => _scr.setCellOwned(x, y, cell);
+  void setCellOwned(int x, int y, Cell? cell) {
+    _pristine = false;
+    _scr.setCellOwned(x, y, cell);
+  }
 
   /// Composes a [Drawable] onto this canvas.
   Canvas compose(Drawable drawer) {
