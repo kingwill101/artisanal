@@ -823,6 +823,66 @@ void main() {
       expect(lines[1].hasCursor, isTrue);
     });
 
+    test('invalidates cached visual lines after document edits', () {
+      final document = TextDocument(text: 'abcd');
+      final state = EditorState(line: 0, column: 0);
+      final view = TextView(width: 2, height: 4, softWrap: true);
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'ab',
+        'cd',
+      ]);
+
+      document.replaceText('abcdef');
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'ab',
+        'cd',
+        'ef',
+      ]);
+    });
+
+    test('invalidates cached visual lines after width changes', () {
+      final document = TextDocument(text: 'abcdef');
+      final state = EditorState(line: 0, column: 0);
+      final view = TextView(width: 3, height: 4, softWrap: true);
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'abc',
+        'def',
+      ]);
+
+      view.width = 2;
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'ab',
+        'cd',
+        'ef',
+      ]);
+    });
+
+    test('invalidates cached visual lines after fold changes', () {
+      final document = TextDocument(text: 'header\n  inner\nnext');
+      final folds = FoldState(
+        ranges: const [FoldRange(startLine: 0, endLine: 1)],
+      );
+      final state = EditorState(line: 0, column: 0);
+      final view = TextView(width: 20, height: 4, softWrap: true, folds: folds);
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'header',
+        '  inner',
+        'next',
+      ]);
+
+      folds.toggle(0);
+
+      expect(view.buildLines(document, state).map((line) => line.text), [
+        'header',
+        'next',
+      ]);
+    });
+
     test('hit testing maps visual rows back to logical coordinates', () {
       final document = TextDocument(text: 'abcdef');
       final state = EditorState(line: 0, column: 0);

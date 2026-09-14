@@ -47,18 +47,26 @@ void main() {
       });
 
       test('can reserve a stable minimum line-number gutter', () {
-        final textarea = TextAreaModel(
-          showLineNumbers: true,
-          minimumLineNumberDigits: 3,
-          width: 30,
-        )..setText('one\ntwo\nthree', recordHistory: false);
+        final textarea =
+            TextAreaModel(
+                showLineNumbers: true,
+                minimumLineNumberDigits: 3,
+                width: 30,
+              )
+              ..setText('one\ntwo\nthree', recordHistory: false)
+              ..setCursor(0, 0);
 
-        final before = textarea.view().toString().split('\n').first;
+        final before = Layout.stripAnsi(
+          textarea.view().toString().split('\n').first,
+        );
         textarea.setText(
           List<String>.generate(10, (index) => 'line ${index + 1}').join('\n'),
           recordHistory: false,
         );
-        final after = textarea.view().toString().split('\n').first;
+        textarea.setCursor(0, 0);
+        final after = Layout.stripAnsi(
+          textarea.view().toString().split('\n').first,
+        );
 
         expect(before.indexOf('one'), after.indexOf('line 1'));
       });

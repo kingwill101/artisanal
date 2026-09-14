@@ -19,6 +19,7 @@ final class VisualLine {
     required this.charOffset,
     required this.text,
     required this.graphemeCount,
+    required this.displayWidth,
   });
 
   /// Index of the underlying (unwrapped) line.
@@ -32,6 +33,9 @@ final class VisualLine {
 
   /// Grapheme count in [text].
   final int graphemeCount;
+
+  /// Terminal-cell width calculated while laying out [text].
+  final int displayWidth;
 
   bool get isContinuation => charOffset > 0;
 }
@@ -73,6 +77,7 @@ List<VisualLine> buildVisualLinesFromReader({
           charOffset: 0,
           text: text,
           graphemeCount: lineLengthAt(rowIndex),
+          displayWidth: _displayWidth(text),
         ),
       );
       continue;
@@ -100,6 +105,7 @@ List<VisualLine> buildVisualLinesFromReader({
           charOffset: start,
           text: segment,
           graphemeCount: end - start,
+          displayWidth: width,
         ),
       );
 
@@ -113,12 +119,21 @@ List<VisualLine> buildVisualLinesFromReader({
           charOffset: 0,
           text: '',
           graphemeCount: 0,
+          displayWidth: 0,
         ),
       );
     }
   }
 
   return out;
+}
+
+int _displayWidth(String text) {
+  var width = 0;
+  for (final grapheme in uni.graphemes(text)) {
+    width += runeWidth(uni.firstCodePoint(grapheme));
+  }
+  return width;
 }
 
 /// Maps a local X position (cells within a visual segment) to a grapheme index.

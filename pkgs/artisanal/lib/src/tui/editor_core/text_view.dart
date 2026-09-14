@@ -17,6 +17,7 @@ final class TextViewLine {
     required this.charOffset,
     required this.text,
     required this.graphemeCount,
+    required this.displayWidth,
     required this.hasCursor,
   });
 
@@ -25,6 +26,7 @@ final class TextViewLine {
   final int charOffset;
   final String text;
   final int graphemeCount;
+  final int displayWidth;
   final bool hasCursor;
 }
 
@@ -97,6 +99,14 @@ final class TextView {
   /// Optional fold projection. Hidden lines are skipped; headers remain.
   FoldState? folds;
 
+  List<layout.VisualLine>? _cachedVisualLines;
+  Object? _cachedDocumentIdentity;
+  int? _cachedDocumentRevision;
+  int? _cachedWidth;
+  bool? _cachedSoftWrap;
+  FoldState? _cachedFolds;
+  int? _cachedFoldRevision;
+
   int effectiveContentWidth() {
     if (width <= 0) {
       return 0;
@@ -135,6 +145,7 @@ final class TextView {
           charOffset: line.charOffset,
           text: line.text,
           graphemeCount: line.graphemeCount,
+          displayWidth: line.displayWidth,
           hasCursor: hasCursor,
         ),
       );
@@ -157,10 +168,7 @@ final class TextView {
 
   int totalVisualColumns(TextDocument document, EditorState state) {
     final lines = buildLines(document, state);
-    if (lines.isEmpty) {
-      return 0;
-    }
-    return lines.map((line) => _displayWidth(line.text)).fold<int>(0, math.max);
+    return _totalVisualColumnsFromLines(lines);
   }
 
   int maxViewportStartColumn(TextDocument document, EditorState state) {
@@ -232,10 +240,22 @@ final class TextView {
 
   TextViewport resolveViewport(TextDocument document, EditorState state) {
     final lines = buildLines(document, state);
+    return _resolveViewportFromLines(document, state, lines);
+  }
+
+  TextViewport _resolveViewportFromLines(
+    TextDocument document,
+    EditorState state,
+    List<TextViewLine> lines,
+  ) {
     final totalRows = lines.length;
-    final totalColumns = totalVisualColumns(document, state);
+    final totalColumns = _totalVisualColumnsFromLines(lines);
     final viewportWidth = effectiveContentWidth();
-    final cursor = resolveCursorVisualPosition(document, state);
+    final cursor = _resolveCursorVisualPositionFromLines(
+      document,
+      state,
+      lines,
+    );
     final cursorRow = cursor?.visualRow ?? 0;
     final cursorColumn = cursor?.displayColumn ?? 0;
     final verticalMargin = _resolvedScrollMargin(height);
@@ -292,7 +312,7 @@ final class TextView {
     EditorState state,
   ) {
     final lines = buildLines(document, state);
-    final viewport = resolveViewport(document, state);
+    final viewport = _resolveViewportFromLines(document, state, lines);
     viewportStartRow = viewport.startRow;
     viewportStartColumn = viewport.startColumn;
     return lines
@@ -306,7 +326,7 @@ final class TextView {
     EditorState state,
   ) {
     final lines = buildLines(document, state);
-    final viewport = _resolveCurrentViewport(document, state);
+    final viewport = _resolveCurrentViewportFromLines(document, state, lines);
     viewportStartRow = viewport.startRow;
     viewportStartColumn = viewport.startColumn;
     return lines
@@ -321,6 +341,20 @@ final class TextView {
     TextPosition? cursor,
   }) {
     final lines = buildLines(document, state);
+    return _resolveCursorVisualPositionFromLines(
+      document,
+      state,
+      lines,
+      cursor: cursor,
+    );
+  }
+
+  TextVisualCursorPosition? _resolveCursorVisualPositionFromLines(
+    TextDocument document,
+    EditorState state,
+    List<TextViewLine> lines, {
+    TextPosition? cursor,
+  }) {
     if (lines.isEmpty) {
       return null;
     }
@@ -546,11 +580,13 @@ final class TextView {
       charOffset: line.charOffset + clipped.skippedGraphemes,
       text: clipped.text,
       graphemeCount: clipped.graphemeCount,
+      displayWidth: clipped.displayWidth,
       hasCursor: line.hasCursor,
     );
   }
 
-  ({String text, int skippedGraphemes, int graphemeCount}) _clipLineToViewport(
+  ({String text, int skippedGraphemes, int graphemeCount, int displayWidth})
+  _clipLineToViewport(
     String text, {
     required int startColumn,
     required int width,
@@ -561,6 +597,7 @@ final class TextView {
         text: width <= 0 ? '' : text,
         skippedGraphemes: 0,
         graphemeCount: width <= 0 ? 0 : graphemes.length,
+        displayWidth: width <= 0 ? 0 : _displayWidth(text),
       );
     }
 
@@ -594,6 +631,7 @@ final class TextView {
       text: visible.join(),
       skippedGraphemes: skippedGraphemes,
       graphemeCount: visible.length,
+      displayWidth: visibleColumns,
     );
   }
 
@@ -601,6 +639,14 @@ final class TextView {
     var width = 0;
     for (final grapheme in uni.graphemes(text)) {
       width += runeWidth(uni.firstCodePoint(grapheme));
+    }
+    return width;
+  }
+
+  int _totalVisualColumnsFromLines(List<TextViewLine> lines) {
+    var width = 0;
+    for (final line in lines) {
+      width = math.max(width, line.displayWidth);
     }
     return width;
   }
@@ -638,17 +684,17 @@ final class TextView {
     return clampedStart;
   }
 
-  TextViewport _resolveCurrentViewport(
+  TextViewport _resolveCurrentViewportFromLines(
     TextDocument document,
     EditorState state,
+    List<TextViewLine> lines,
   ) {
-    final lines = buildLines(document, state);
     final totalRows = lines.length;
-    final totalColumns = totalVisualColumns(document, state);
+    final totalColumns = _totalVisualColumnsFromLines(lines);
     final viewportWidth = effectiveContentWidth();
     final startRow = height <= 0 || totalRows <= height
         ? 0
-        : viewportStartRow.clamp(0, maxViewportStartRow(document));
+        : viewportStartRow.clamp(0, totalRows - height);
     final endRow = height <= 0 || totalRows <= height
         ? totalRows
         : (startRow + height).clamp(0, totalRows);
@@ -656,13 +702,13 @@ final class TextView {
       (true, _) || (_, false) => 0,
       _ => viewportStartColumn.clamp(
         0,
-        maxViewportStartColumn(document, state),
+        math.max(0, totalColumns - viewportWidth),
       ),
-    };
+    }.toInt();
     final endColumn = switch ((softWrap, viewportWidth > 0)) {
       (true, _) || (_, false) => totalColumns,
       _ => (startColumn + viewportWidth).clamp(0, totalColumns),
-    };
+    }.toInt();
 
     return TextViewport(
       startRow: startRow,
@@ -675,6 +721,18 @@ final class TextView {
   }
 
   List<layout.VisualLine> _buildVisualLines(TextDocument document) {
+    final foldRevision = folds?.revision;
+    final cached = _cachedVisualLines;
+    if (cached != null &&
+        identical(_cachedDocumentIdentity, document.storageIdentity) &&
+        _cachedDocumentRevision == document.revision &&
+        _cachedWidth == effectiveWrapWidth() &&
+        _cachedSoftWrap == softWrap &&
+        identical(_cachedFolds, folds) &&
+        _cachedFoldRevision == foldRevision) {
+      return cached;
+    }
+
     final visual = layout.buildVisualLinesFromReader(
       lineCount: document.lineCount,
       lineTextAt: document.lineAt,
@@ -684,10 +742,19 @@ final class TextView {
       wrapWidthCells: effectiveWrapWidth(),
     );
     final hidden = folds;
-    if (hidden == null) return visual;
-    return [
-      for (final line in visual)
-        if (!hidden.isLineHidden(line.rowIndex)) line,
-    ];
+    final projected = hidden == null
+        ? visual
+        : <layout.VisualLine>[
+            for (final line in visual)
+              if (!hidden.isLineHidden(line.rowIndex)) line,
+          ];
+    _cachedVisualLines = projected;
+    _cachedDocumentIdentity = document.storageIdentity;
+    _cachedDocumentRevision = document.revision;
+    _cachedWidth = effectiveWrapWidth();
+    _cachedSoftWrap = softWrap;
+    _cachedFolds = folds;
+    _cachedFoldRevision = foldRevision;
+    return projected;
   }
 }
