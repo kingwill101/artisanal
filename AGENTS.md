@@ -17,7 +17,7 @@ SDK: `>=3.13.0 <4.0.0`.
 
 | Path | Package | Role |
 |---|---|---|
-| `pkgs/ultraviolet` | `ultraviolet` 0.5.x | Low-level renderer: cells, buffers, diff-based `UvTerminalRenderer`, typed input decoding, terminal capabilities, image protocols (Kitty/iTerm2/Sixel/half-block). |
+| `pkgs/ultraviolet` | `ultraviolet` 0.6.x | Low-level renderer: cells, buffers, diff-based `UvTerminalRenderer`, typed input decoding, terminal capabilities, image protocols (Kitty/iTerm2/Sixel/half-block). |
 | `pkgs/artisanal` | `artisanal` 0.6.x | Core toolkit: `Console` I/O, `Style` system, TEA runtime (`Program`/`Model`/`Msg`/`Cmd`), Bubbles widgets, `CommandRunner`, markdown/glamour, charting, and editor core. |
 | `pkgs/artisanal_widgets` | `artisanal_widgets` 0.4.x | Flutter-inspired widget framework (`Widget`/`Element`/`State`, layout, gestures, scroll, navigation, components). Primary package for widget-first apps. |
 | `pkgs/flutter_artisanal` | `flutter_artisanal` 0.2.x | Flutter rendering, input bridge, and app shell for UV terminal buffers (Flutter package, `publish_to: none`). |

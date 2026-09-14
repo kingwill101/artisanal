@@ -24,4 +24,4 @@ dev_dependencies:
   image: ^4.7.1
   lints: ^6.0.0
   test: ^1.28.0
-  ultraviolet: ^0.5.0
+  ultraviolet: ^0.6.0

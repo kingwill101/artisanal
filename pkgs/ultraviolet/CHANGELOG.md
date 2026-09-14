@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.5.1
+## 0.6.0
 
 - Require Dart SDK 3.13.0 or newer.
+- Expose `RenderMetrics.isIdle` for diagnostic displays without changing the
+  numeric FPS behavior for idle applications.
 - Allocate cell finalizer detach tokens lazily, avoiding two auxiliary objects
   for cells without pooled graphemes or hyperlinks.
 - Reuse dirty-line metadata for touches already covered by a dirty span,
@@ -28,6 +30,8 @@
   frame state. Resizing and compositing now release discarded cells promptly.
   `setCellOwned` consumes its input on every path, including rejected or
   unchanged writes; callers must not read a cell after transferring ownership.
+
+## 0.5.1
 
 ### Changed
 

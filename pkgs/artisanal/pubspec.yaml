@@ -16,7 +16,7 @@ environment:
   sdk: ">=3.13.0 <4.0.0"
 
 dependencies:
-  ultraviolet: ^0.5.1
+  ultraviolet: ^0.6.0
   acanthis: ^1.5.1
   args: ^2.7.0
   liquify: ^1.5.1
