@@ -206,8 +206,8 @@ void _sendScroll(
   required bool overlay,
 }) {
   if (overlay) {
-    // DevTools reserves arrow keys for its own message list. Use the app's
-    // equivalent scrolling bindings so this still measures the conversation.
+    // Use bindings that also work with older or keyboard-interactive DevTools
+    // overlays, keeping before/after conversation benchmarks comparable.
     tester.sendKey(down ? 'j' : 'k');
   } else {
     tester.sendSpecialKey(down ? tui.KeyType.down : tui.KeyType.up);

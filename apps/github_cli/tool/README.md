@@ -36,9 +36,10 @@ dart run tool/github_pull_request_scroll_benchmark.dart \
   --out=../../build/benchmarks/github-cli-scroll/wide-overlay.json
 ```
 
-`--overlay` toggles the real Program DevTools overlay. Since that overlay
-consumes arrow keys, this mode uses the app's equivalent `j`/`k` bindings
-and still verifies that the conversation moves and returns to its starting
+`--overlay` toggles the real Program DevTools overlay. This mode uses the
+app's equivalent `j`/`k` bindings to remain comparable with older overlays
+that consumed arrow keys (current overlays are keyboard-passive by default).
+It still verifies that the conversation moves and returns to its starting
 position. The JSON records which keys were used. Also run without the overlay
 to separate app costs from diagnostics composition.
 
