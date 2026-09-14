@@ -38,6 +38,9 @@ final class DartLanguageService implements EditorLanguageService {
 
   Future<LspClient>? _startingClient;
   LspClient? _client;
+  // Stop sending on local disposal, process exit, or an observed closed-client
+  // error. The send guard also covers transport closure before process exit.
+  bool _clientCanSendNotifications = false;
   Process? _process;
   StreamSubscription<String>? _stderrSubscription;
   bool _disposed = false;
@@ -68,16 +71,19 @@ final class DartLanguageService implements EditorLanguageService {
     try {
       final client = await _ensureClient();
       if (_disposed || !_documents.containsKey(document.path)) return;
-      client.server.textDocument.didOpen(
-        DidOpenTextDocumentParams(
-          textDocument: TextDocumentItem(
-            uri: document.uri,
-            languageId: LanguageKind.dart,
-            version: document.version,
-            text: document.text,
+      final sent = _trySendNotification(client, () {
+        client.server.textDocument.didOpen(
+          DidOpenTextDocumentParams(
+            textDocument: TextDocumentItem(
+              uri: document.uri,
+              languageId: LanguageKind.dart,
+              version: document.version,
+              text: document.text,
+            ),
           ),
-        ),
-      );
+        );
+      });
+      if (!sent) return;
       document.opened = true;
       document.lastSentVersion = document.version;
     } catch (error) {
@@ -104,20 +110,22 @@ final class DartLanguageService implements EditorLanguageService {
         document.lastSentVersion == document.version) {
       return;
     }
-    client.server.textDocument.didChange(
-      DidChangeTextDocumentParams(
-        textDocument: VersionedTextDocumentIdentifier(
-          uri: document.uri,
-          version: document.version,
-        ),
-        contentChanges: [
-          TextDocumentContentChangeEvent.textDocumentContentChangeWholeDocument(
-            TextDocumentContentChangeWholeDocument(text: document.text),
+    final sent = _trySendNotification(client, () {
+      client.server.textDocument.didChange(
+        DidChangeTextDocumentParams(
+          textDocument: VersionedTextDocumentIdentifier(
+            uri: document.uri,
+            version: document.version,
           ),
-        ],
-      ),
-    );
-    document.lastSentVersion = document.version;
+          contentChanges: [
+            TextDocumentContentChangeEvent.textDocumentContentChangeWholeDocument(
+              TextDocumentContentChangeWholeDocument(text: document.text),
+            ),
+          ],
+        ),
+      );
+    });
+    if (sent) document.lastSentVersion = document.version;
   }
 
   @override
@@ -126,11 +134,16 @@ final class DartLanguageService implements EditorLanguageService {
     if (document == null) return;
     document.changeTimer?.cancel();
     if (document.opened) {
-      _client?.server.textDocument.didClose(
-        DidCloseTextDocumentParams(
-          textDocument: TextDocumentIdentifier(uri: document.uri),
-        ),
-      );
+      final client = _client;
+      if (client != null) {
+        _trySendNotification(client, () {
+          client.server.textDocument.didClose(
+            DidCloseTextDocumentParams(
+              textDocument: TextDocumentIdentifier(uri: document.uri),
+            ),
+          );
+        });
+      }
     }
   }
 
@@ -138,12 +151,37 @@ final class DartLanguageService implements EditorLanguageService {
   void saveDocument({required String path, required String text}) {
     final document = _documents[path];
     if (document == null || !document.opened) return;
-    _client?.server.textDocument.didSave(
-      DidSaveTextDocumentParams(
-        textDocument: TextDocumentIdentifier(uri: document.uri),
-        text: text,
-      ),
-    );
+    final client = _client;
+    if (client == null) return;
+    _trySendNotification(client, () {
+      client.server.textDocument.didSave(
+        DidSaveTextDocumentParams(
+          textDocument: TextDocumentIdentifier(uri: document.uri),
+          text: text,
+        ),
+      );
+    });
+  }
+
+  /// Sends a notification unless the transport has already disconnected.
+  ///
+  /// The explicit `StateError` check handles the small synchronous window
+  /// between checking our lifecycle flag and `json_rpc_2` checking its own
+  /// closed flag. Other errors remain visible to the caller.
+  bool _trySendNotification(LspClient client, void Function() send) {
+    if (_disposed ||
+        !identical(_client, client) ||
+        !_clientCanSendNotifications) {
+      return false;
+    }
+    try {
+      send();
+      return true;
+    } on StateError catch (error) {
+      if (error.message != 'The client is closed.') rethrow;
+      _clientCanSendNotifications = false;
+      return false;
+    }
   }
 
   @override
@@ -307,9 +345,11 @@ final class DartLanguageService implements EditorLanguageService {
       throw StateError('Language service disposed during startup.');
     }
     _client = client;
+    _clientCanSendNotifications = true;
     _emit(const EditorLanguageStatus('Dart LSP ready', ready: true));
     unawaited(
       process.exitCode.then((code) {
+        if (identical(_client, client)) _clientCanSendNotifications = false;
         if (!_disposed) {
           _emit(
             EditorLanguageStatus(
@@ -367,6 +407,7 @@ final class DartLanguageService implements EditorLanguageService {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _clientCanSendNotifications = false;
     for (final document in _documents.values) {
       document.changeTimer?.cancel();
     }
