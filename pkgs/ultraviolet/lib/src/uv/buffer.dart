@@ -1243,6 +1243,7 @@ int _bitMask(int from, int to) {
 
 void _renderLine(StringSink out, Line line) {
   var pen = const UvStyle();
+  var penStyleId = 0;
   var link = const Link();
   final pending = StringBuffer();
 
@@ -1250,9 +1251,10 @@ void _renderLine(StringSink out, Line line) {
     if (c.isZero) continue;
 
     if (c.isEmpty) {
-      if (!pen.isZero) {
+      if (penStyleId != 0) {
         out.write(UvAnsi.resetStyle);
         pen = const UvStyle();
+        penStyleId = 0;
       }
       if (!link.isZero) {
         out.write(UvAnsi.resetHyperlink());
@@ -1267,13 +1269,16 @@ void _renderLine(StringSink out, Line line) {
       pending.clear();
     }
 
-    if (c.style.isZero && !pen.isZero) {
+    final cellStyleId = c.styleId;
+    if (cellStyleId == 0 && penStyleId != 0) {
       out.write(UvAnsi.resetStyle);
       pen = const UvStyle();
+      penStyleId = 0;
     }
-    if (c.style != pen) {
+    if (cellStyleId != penStyleId) {
       out.write(style_ops.styleDiff(pen, c.style));
       pen = c.style;
+      penStyleId = cellStyleId;
     }
 
     if (c.link != link && link.url.isNotEmpty) {
@@ -1291,7 +1296,7 @@ void _renderLine(StringSink out, Line line) {
   if (link.url.isNotEmpty) {
     out.write(UvAnsi.resetHyperlink());
   }
-  if (!pen.isZero) {
+  if (penStyleId != 0) {
     out.write(UvAnsi.resetStyle);
   }
 }

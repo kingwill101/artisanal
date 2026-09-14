@@ -5,6 +5,8 @@
 - Require Dart SDK 3.13.0 or newer.
 - Expose `RenderMetrics.isIdle` for diagnostic displays without changing the
   numeric FPS behavior for idle applications.
+- Compare canonical cell style identifiers while rendering buffer lines,
+  avoiding repeated style hashing and equality checks.
 - Allocate cell finalizer detach tokens lazily, avoiding two auxiliary objects
   for cells without pooled graphemes or hyperlinks.
 - Reuse dirty-line metadata for touches already covered by a dirty span,
