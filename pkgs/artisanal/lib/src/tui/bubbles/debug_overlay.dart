@@ -63,6 +63,7 @@ final class DebugOverlayModel {
     required this.dragging,
     required this.dragOffsetX,
     required this.dragOffsetY,
+    this.pointerCaptured = false,
     this.panelWidth = 40,
     this.marginRight = 2,
     this.marginTop = 0,
@@ -78,6 +79,7 @@ final class DebugOverlayModel {
 
   // Cached panel render - only rebuild when data changes.
   String? _cachedPanel;
+  int _cachedPanelWidth = 0;
   int _cachedPanelHeight = 0;
   int _cachedCacheKey = 0;
 
@@ -127,6 +129,9 @@ final class DebugOverlayModel {
   final int dragOffsetX;
   final int dragOffsetY;
 
+  /// Whether a press began on this panel and its release belongs to it.
+  final bool pointerCaptured;
+
   // Layout config.
   final int panelWidth;
   final int marginRight;
@@ -169,6 +174,7 @@ final class DebugOverlayModel {
     bool? dragging,
     int? dragOffsetX,
     int? dragOffsetY,
+    bool? pointerCaptured,
     int? panelWidth,
     int? marginRight,
     int? marginTop,
@@ -192,6 +198,7 @@ final class DebugOverlayModel {
       dragging: dragging ?? this.dragging,
       dragOffsetX: dragOffsetX ?? this.dragOffsetX,
       dragOffsetY: dragOffsetY ?? this.dragOffsetY,
+      pointerCaptured: pointerCaptured ?? this.pointerCaptured,
       panelWidth: panelWidth ?? this.panelWidth,
       marginRight: marginRight ?? this.marginRight,
       marginTop: marginTop ?? this.marginTop,
@@ -206,21 +213,36 @@ final class DebugOverlayModel {
     );
   }
 
-  DebugOverlayModel toggle() =>
-      copyWith(enabled: !enabled, panelX: null, panelY: null, dragging: false);
+  DebugOverlayModel toggle() {
+    final next = copyWith(
+      enabled: !enabled,
+      dragging: false,
+      pointerCaptured: false,
+    );
+    return next.enabled ? next._clampStoredPosition() : next;
+  }
 
-  DebugOverlayModel setEnabled(bool v) =>
-      v == enabled ? this : copyWith(enabled: v);
+  DebugOverlayModel setEnabled(bool v) => v == enabled
+      ? this
+      : copyWith(
+          enabled: v,
+          dragging: v && dragging,
+          pointerCaptured: v && pointerCaptured,
+        );
 
   /// Cycles through [DebugOverlayMode] values.
   ///
-  /// Resets panel position so the new (potentially different-sized) panel
-  /// snaps back to the default position.
+  /// Preserves the selected position; composition clamps the new panel size
+  /// to the terminal bounds.
   DebugOverlayModel cycleMode() {
     final modes = DebugOverlayMode.values;
     final next = modes[(mode.index + 1) % modes.length];
-    return copyWith(mode: next, panelX: null, panelY: null);
+    return selectMode(next);
   }
+
+  /// Selects a tab while keeping a manually positioned panel on screen.
+  DebugOverlayModel selectMode(DebugOverlayMode value) =>
+      copyWith(mode: value, dragging: false)._clampStoredPosition();
 
   /// Updates overlay state and reports whether the message was consumed.
   ({DebugOverlayModel model, Cmd? cmd, bool consumed}) update(Msg msg) {
@@ -250,20 +272,15 @@ final class DebugOverlayModel {
         if (dragging) {
           if (action == MouseAction.release) {
             return (
-              model: copyWith(dragging: false),
+              model: copyWith(dragging: false, pointerCaptured: false),
               cmd: null,
               consumed: true,
             );
           }
           if (action == MouseAction.motion) {
-            // Use cached panel dimensions to avoid expensive re-render during
-            // drag.
-            final panelHeight = this.panelHeight;
-            final maxX = (terminalWidth - panelWidth).clamp(0, terminalWidth);
-            final maxY = (terminalHeight - panelHeight).clamp(
-              0,
-              terminalHeight,
-            );
+            final bounds = panelBounds;
+            final maxX = (terminalWidth - bounds.w).clamp(0, terminalWidth);
+            final maxY = (terminalHeight - bounds.h).clamp(0, terminalHeight);
             final nx = (x - dragOffsetX).clamp(0, maxX);
             final ny = (y - dragOffsetY).clamp(0, maxY);
             return (
@@ -275,20 +292,37 @@ final class DebugOverlayModel {
           return (model: this, cmd: null, consumed: true);
         }
 
-        // Start dragging when clicking inside the panel.
+        if (pointerCaptured) {
+          return (
+            model: action == MouseAction.release
+                ? copyWith(pointerCaptured: false)
+                : this,
+            cmd: null,
+            consumed: true,
+          );
+        }
+
+        // Tabs and the title bar have distinct pointer actions. Neither takes
+        // keyboard focus from the application.
         if (action == MouseAction.press && button == MouseButton.left) {
-          // Use cached bounds for hit-testing (avoids rendering panel).
-          final panelHeight = this.panelHeight;
-          final px = panelX ?? (terminalWidth - panelWidth - marginRight);
-          final py = panelY ?? (terminalHeight - panelHeight - marginBottom);
-          final inPanel =
-              x >= px && x < px + panelWidth && y >= py && y < py + panelHeight;
-          if (inPanel) {
+          final tab = _tabAt(x, y);
+          if (tab != null) {
+            return (
+              model: selectMode(tab).copyWith(pointerCaptured: true),
+              cmd: null,
+              consumed: true,
+            );
+          }
+          final bounds = panelBounds;
+          if (containsPoint(x, y) && y == bounds.y) {
             return (
               model: copyWith(
+                panelX: bounds.x,
+                panelY: bounds.y,
                 dragging: true,
-                dragOffsetX: x - px,
-                dragOffsetY: y - py,
+                pointerCaptured: true,
+                dragOffsetX: x - bounds.x,
+                dragOffsetY: y - bounds.y,
               ),
               cmd: null,
               consumed: true,
@@ -296,6 +330,16 @@ final class DebugOverlayModel {
           }
         }
 
+        // Do not activate application buttons hidden behind the opaque panel.
+        if (action == MouseAction.press &&
+            button == MouseButton.left &&
+            containsPoint(x, y)) {
+          return (
+            model: copyWith(pointerCaptured: true),
+            cmd: null,
+            consumed: true,
+          );
+        }
         return (model: this, cmd: null, consumed: false);
 
       default:
@@ -329,7 +373,14 @@ final class DebugOverlayModel {
     );
     final cacheKey = Object.hash(
       currentFrame,
+      m?.isIdle,
       panelWidth,
+      terminalWidthOverride ?? terminalWidth,
+      terminalHeight,
+      title,
+      rendererLabel,
+      maxDisplayMessages,
+      maxDisplayOutput,
       customHash,
       mode,
       messageHash,
@@ -344,9 +395,7 @@ final class DebugOverlayModel {
     final label = Style().foreground(Colors.yellow).bold();
     final dim = Style().dim();
     final content = StringBuffer();
-    final tabs = DebugOverlayMode.values
-        .map((value) => value == mode ? '[${value.name}]' : value.name)
-        .join(' ');
+    final tabs = DebugOverlayMode.values.map(_tabLabel).join(' ');
     content
       ..writeln(dim.render(tabs))
       ..writeln();
@@ -359,10 +408,17 @@ final class DebugOverlayModel {
       final frameCount = m?.frameCount ?? 0;
       final skippedFrames = m?.skippedFrames ?? 0;
       final renderPct = m?.renderTimePercentage ?? 0.0;
+      final fpsText = m == null
+          ? 'pending'
+          : m.isIdle
+          ? 'idle'
+          : avgFrameTimeUs == 0
+          ? 'pending'
+          : avgFps.toStringAsFixed(1);
 
       content
         ..writeln(
-          '${label.render('FPS:')} ${avgFps.toStringAsFixed(1)} '
+          '${label.render('FPS:')} $fpsText '
           '(${m?.minFps.toStringAsFixed(0) ?? 0}-${m?.maxFps.toStringAsFixed(0) ?? 0})',
         )
         ..writeln(
@@ -452,7 +508,12 @@ final class DebugOverlayModel {
       content: content.toString().trimRight(),
       width: panelWidth,
       renderConfig: RenderConfig(
-        terminalWidth: terminalWidthOverride ?? terminalWidth,
+        // Keep panel construction valid in small terminals; composition
+        // clips the completed panel to the actual viewport.
+        terminalWidth: mathMax(
+          tabs.length + 4,
+          mathMax(panelWidth, terminalWidthOverride ?? terminalWidth),
+        ),
       ),
     ).render();
 
@@ -461,6 +522,10 @@ final class DebugOverlayModel {
     _cachedCacheKey = cacheKey;
     final lines = rendered.split('\n');
     _cachedPanelHeight = lines.length;
+    _cachedPanelWidth = lines.fold(
+      0,
+      (width, line) => mathMax(width, Style.visibleLength(line)),
+    );
 
     return rendered;
   }
@@ -474,13 +539,17 @@ final class DebugOverlayModel {
   String compose(String base) {
     if (!enabled) return base;
     final p = panel();
-    // Use cached dimensions from panel() call
-    final panelH = _cachedPanelHeight;
-    final x = panelX ?? (terminalWidth - panelWidth - marginRight);
-    final y = panelY ?? (terminalHeight - panelH - marginBottom);
+    final bounds = panelBounds;
 
     // Fast path: overlay panel onto base using string manipulation
-    return _overlayStrings(base, p, x, y, terminalWidth, terminalHeight);
+    return _overlayStrings(
+      base,
+      p,
+      bounds.x,
+      bounds.y,
+      terminalWidth,
+      terminalHeight,
+    );
   }
 
   /// Truncates [s] to [maxVisible] visible characters, preserving ANSI.
@@ -576,19 +645,72 @@ final class DebugOverlayModel {
   ({int w, int h}) _panelSize() {
     // Ensure panel is rendered to populate cache
     panel();
-    return (w: panelWidth, h: _cachedPanelHeight);
+    return (w: _cachedPanelWidth, h: _cachedPanelHeight);
   }
 
   /// Current panel height based on cached render data.
   ///
-  /// Falls back to 8 rows before the first render.
-  int get panelHeight => _cachedPanelHeight > 0 ? _cachedPanelHeight : 8;
+  /// Renders the panel if necessary so input and painting use the same size.
+  int get panelHeight => _panelSize().h;
+
+  /// Rendered bounds shared by composition and pointer input.
+  ({int x, int y, int w, int h}) get panelBounds => _panelRect();
+
+  /// Whether a terminal coordinate lies on the visible part of this panel.
+  bool containsPoint(int x, int y) {
+    final bounds = panelBounds;
+    return x >= 0 &&
+        y >= 0 &&
+        x < terminalWidth &&
+        y < terminalHeight &&
+        x >= bounds.x &&
+        x < bounds.x + bounds.w &&
+        y >= bounds.y &&
+        y < bounds.y + bounds.h;
+  }
+
+  String _tabLabel(DebugOverlayMode value) =>
+      value == mode ? '[${value.name}]' : value.name;
+
+  DebugOverlayMode? _tabAt(int x, int y) {
+    final bounds = panelBounds;
+    if (!containsPoint(x, y) || y != bounds.y + 1) return null;
+    // PanelComponent has one border cell and one horizontal padding cell.
+    var column = bounds.x + 2;
+    for (final value in DebugOverlayMode.values) {
+      final end = column + _tabLabel(value).length;
+      if (x >= column && x < end) return value;
+      column = end + 1;
+    }
+    return null;
+  }
 
   ({int x, int y, int w, int h}) _panelRect() {
     final (:w, :h) = _panelSize();
-    final x = panelX ?? (terminalWidth - w - marginRight);
-    final y = panelY ?? (terminalHeight - h - marginBottom);
+    // Explicit caller coordinates may intentionally clip a panel. Interactive
+    // dragging/resizing/tab changes clamp those coordinates at the update.
+    final x =
+        panelX ??
+        (terminalWidth - w - marginRight).clamp(
+          0,
+          mathMax(0, terminalWidth - w),
+        );
+    final y =
+        panelY ??
+        (terminalHeight - h - marginBottom).clamp(
+          0,
+          mathMax(0, terminalHeight - h),
+        );
     return (x: x, y: y, w: w, h: h);
+  }
+
+  DebugOverlayModel _clampStoredPosition() {
+    if (panelX == null && panelY == null) return this;
+    final (:w, :h) = _panelSize();
+    return copyWith(
+      panelX: panelX?.clamp(0, mathMax(0, terminalWidth - w)),
+      panelY: panelY?.clamp(0, mathMax(0, terminalHeight - h)),
+    );
   }
 }
 

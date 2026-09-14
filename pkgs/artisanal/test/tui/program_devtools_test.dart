@@ -33,7 +33,54 @@ void main() {
 
     test('uses tabs and consumes scrolling while visible', () {
       final controller = ProgramDevToolsController(
+        ProgramDiagnosticsOptions(
+          initiallyVisible: true,
+          keyboardNavigation: true,
+        ),
+      );
+      controller.handle(const WindowSizeMsg(80, 24));
+
+      expect(controller.handle(const KeyMsg(Key(KeyType.tab))), isTrue);
+      expect(controller.compose('content').toString(), contains('[messages]'));
+      expect(controller.handle(const KeyMsg(Key(KeyType.pageDown))), isTrue);
+    });
+
+    test('does not consume application keyboard input by default', () {
+      final controller = ProgramDevToolsController(
         ProgramDiagnosticsOptions(initiallyVisible: true),
+      );
+      controller.handle(const WindowSizeMsg(80, 24));
+
+      for (final key in [
+        const Key(KeyType.tab),
+        const Key(KeyType.tab, shift: true),
+        const Key(KeyType.up),
+        const Key(KeyType.down),
+        const Key(KeyType.left),
+        const Key(KeyType.right),
+        const Key(KeyType.pageUp),
+        const Key(KeyType.pageDown),
+        const Key(KeyType.home),
+        const Key(KeyType.end),
+      ]) {
+        expect(
+          controller.handle(KeyMsg(key)),
+          isFalse,
+          reason: '$key should remain available to the application',
+        );
+      }
+      expect(
+        controller.handle(const KeyMsg(Key(KeyType.runes, runes: [0x61]))),
+        isFalse,
+      );
+    });
+
+    test('opt-in keyboard navigation consumes overlay controls', () {
+      final controller = ProgramDevToolsController(
+        ProgramDiagnosticsOptions(
+          initiallyVisible: true,
+          keyboardNavigation: true,
+        ),
       );
       controller.handle(const WindowSizeMsg(80, 24));
 

@@ -1241,6 +1241,7 @@ class Program<M extends Model> with HotReloadMixin {
   /// [scheduleRender] between event-loop ticks set this flag but only
   /// the first one schedules the microtask; [_flushRender] clears it.
   bool _needsRender = false;
+  bool _scheduledRenderIsMetricsOnly = false;
 
   /// The zone in which the program is running.
   ///
@@ -1480,7 +1481,7 @@ class Program<M extends Model> with HotReloadMixin {
         metrics,
       ) {
         programDevTools.updateCustomMetrics(metrics);
-        scheduleRender();
+        _scheduleRender(metricsOnly: true);
       });
     }
     _cleanupErrors.clear();
@@ -3104,13 +3105,8 @@ class Program<M extends Model> with HotReloadMixin {
       // render metrics). Keep timers in sync with current model flags.
       _syncModelOptionalTimers();
 
-      // Re-render
-      // Mark metrics-only frames so the renderer doesn't count them toward
-      // FPS.  The metrics timer fires every ~1s which would otherwise produce
-      // a steady 1.0 FPS when idle.
-      if (msg is RenderMetricsMsg) {
-        _renderer?.metrics?.metricsOnlyFrame = true;
-      }
+      // Re-render. Keep bookkeeping classification with the pending request,
+      // not on the renderer: this request may be deferred or skipped.
       final startupProbeActive = _startupProbes?.hasActiveProbe ?? false;
       if (deferRender || startupProbeActive || _backendShutdownRequested) {
         if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
@@ -3127,7 +3123,7 @@ class Program<M extends Model> with HotReloadMixin {
           );
         }
       } else {
-        scheduleRender();
+        _scheduleRender(metricsOnly: msg is RenderMetricsMsg);
       }
 
       // Execute command
@@ -3834,7 +3830,7 @@ class Program<M extends Model> with HotReloadMixin {
   }
 
   /// Renders the current view.
-  void _render() {
+  void _render({bool metricsOnly = false}) {
     if (_model == null || _renderer == null) return;
     if (_terminalReleased) return;
     // Skip rendering during initialization phase to avoid visual flash
@@ -3933,67 +3929,75 @@ class Program<M extends Model> with HotReloadMixin {
         break;
     }
 
-    final renderSw = Stopwatch()..start();
-    _renderer!.render(effectiveView);
-    _renderGeneration += 1;
-    renderSw.stop();
-    final nativeFrame = shouldCaptureNativeFrames
-        ? switch (_renderer) {
-            NativeFrameInspectableRenderer inspector =>
-              inspector.captureNativeFrame(),
-            _ => null,
-          }
-        : null;
-    final nativeDelta = shouldCaptureNativeFrames
-        ? switch (_renderer) {
-            NativeFrameInspectableRenderer inspector =>
-              inspector.captureNativeDelta(),
-            _ => null,
-          }
-        : null;
-    final nativeCellDelta = shouldCaptureNativeFrames
-        ? switch (_renderer) {
-            NativeFrameInspectableRenderer inspector =>
-              inspector.captureNativeCellDelta(),
-            _ => null,
-          }
-        : null;
-    final nativeSpanDelta = nativeCellDelta?.spanDeltas;
-    TuiEvidence.logRenderFrame(
-      view: effectiveView,
-      renderGeneration: _renderGeneration,
-      degradationLevel: degradationLevel.name,
-      renderDurationUs: renderSw.elapsedMicroseconds,
-      width: _lastRenderWidth,
-      height: _lastRenderHeight,
-      nativeSpanDelta: nativeSpanDelta,
-    );
-    _options.interceptor?.onRendered(
-      renderGeneration: _renderGeneration,
-      view: effectiveView,
-      degradationLevel: degradationLevel,
-      renderDuration: renderSw.elapsed,
-      width: _lastRenderWidth,
-      height: _lastRenderHeight,
-      nativeFrame: nativeFrame,
-      nativeDelta: nativeDelta,
-      nativeCellDelta: nativeCellDelta,
-      nativeSpanDelta: nativeSpanDelta,
-    );
-    final changed = _renderBudgetController.recordFrame(renderSw.elapsed);
-    if (changed) {
-      send(RenderBudgetMsg(_renderBudgetController.state));
-      _scheduleDegradationRepaint();
+    final frameMetrics = _renderer!.metrics;
+    frameMetrics?.metricsOnlyFrame = metricsOnly;
+    try {
+      final renderSw = Stopwatch()..start();
+      _renderer!.render(effectiveView);
+      _renderGeneration += 1;
+      renderSw.stop();
+      final nativeFrame = shouldCaptureNativeFrames
+          ? switch (_renderer) {
+              NativeFrameInspectableRenderer inspector =>
+                inspector.captureNativeFrame(),
+              _ => null,
+            }
+          : null;
+      final nativeDelta = shouldCaptureNativeFrames
+          ? switch (_renderer) {
+              NativeFrameInspectableRenderer inspector =>
+                inspector.captureNativeDelta(),
+              _ => null,
+            }
+          : null;
+      final nativeCellDelta = shouldCaptureNativeFrames
+          ? switch (_renderer) {
+              NativeFrameInspectableRenderer inspector =>
+                inspector.captureNativeCellDelta(),
+              _ => null,
+            }
+          : null;
+      final nativeSpanDelta = nativeCellDelta?.spanDeltas;
+      TuiEvidence.logRenderFrame(
+        view: effectiveView,
+        renderGeneration: _renderGeneration,
+        degradationLevel: degradationLevel.name,
+        renderDurationUs: renderSw.elapsedMicroseconds,
+        width: _lastRenderWidth,
+        height: _lastRenderHeight,
+        nativeSpanDelta: nativeSpanDelta,
+      );
+      _options.interceptor?.onRendered(
+        renderGeneration: _renderGeneration,
+        view: effectiveView,
+        degradationLevel: degradationLevel,
+        renderDuration: renderSw.elapsed,
+        width: _lastRenderWidth,
+        height: _lastRenderHeight,
+        nativeFrame: nativeFrame,
+        nativeDelta: nativeDelta,
+        nativeCellDelta: nativeCellDelta,
+        nativeSpanDelta: nativeSpanDelta,
+      );
+      final changed = _renderBudgetController.recordFrame(renderSw.elapsed);
+      if (changed) {
+        send(RenderBudgetMsg(_renderBudgetController.state));
+        _scheduleDegradationRepaint();
+      }
+      if (renderId != null) {
+        _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
+      }
+      // Emit per-frame Layout operation counters before flushing.
+      Layout.emitFrameCounters();
+      // Ensure the underlying sink paints promptly. Some terminals (and Dart IO
+      // implementations) may buffer output until an explicit flush, and the UV
+      // renderer in particular emits bytes through an intermediate writer.
+      unawaited(_renderer!.flush());
+    } finally {
+      // endFrame normally resets this, but renderer admission/limiting can
+      // return without a frame. Never let that suppress the next real render.
+      frameMetrics?.metricsOnlyFrame = false;
     }
-    if (renderId != null) {
-      _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
-    }
-    // Emit per-frame Layout operation counters before flushing.
-    Layout.emitFrameCounters();
-    // Ensure the underlying sink paints promptly. Some terminals (and Dart IO
-    // implementations) may buffer output until an explicit flush, and the UV
-    // renderer in particular emits bytes through an intermediate writer.
-    unawaited(_renderer!.flush());
   }
 
   /// Schedules a render to occur at the end of the current microtask turn.
@@ -4006,9 +4010,17 @@ class Program<M extends Model> with HotReloadMixin {
   ///
   /// For startup paths and explicit repaint requests that must render
   /// synchronously, call [_render] or [_forceRender] directly instead.
-  void scheduleRender() {
-    if (_needsRender) return;
+  void scheduleRender() => _scheduleRender();
+
+  void _scheduleRender({bool metricsOnly = false}) {
+    if (_needsRender) {
+      // Any real update in a coalesced batch makes this a real frame,
+      // irrespective of whether the metrics refresh arrived first or last.
+      _scheduledRenderIsMetricsOnly &= metricsOnly;
+      return;
+    }
     _needsRender = true;
+    _scheduledRenderIsMetricsOnly = metricsOnly;
     scheduleMicrotask(_flushRender);
   }
 
@@ -4019,10 +4031,12 @@ class Program<M extends Model> with HotReloadMixin {
   /// callback) schedules a fresh microtask rather than being swallowed.
   void _flushRender() {
     if (!_needsRender) return;
+    final metricsOnly = _scheduledRenderIsMetricsOnly;
     _needsRender = false;
+    _scheduledRenderIsMetricsOnly = false;
     if (_model == null || _renderer == null) return;
     if (!_running || _backendShutdownRequested) return;
-    _render();
+    _render(metricsOnly: metricsOnly);
   }
 
   /// Applies metadata from a [View] object to the terminal state.
@@ -4120,6 +4134,8 @@ class Program<M extends Model> with HotReloadMixin {
     // Cancel any pending coalesced render – we are about to render
     // synchronously so the scheduled microtask would be redundant.
     _needsRender = false;
+    _scheduledRenderIsMetricsOnly = false;
+    _renderer!.metrics?.metricsOnlyFrame = false;
 
     // Clear the renderer's cached view to force a full redraw without
     // performing immediate terminal I/O. Calling clear() here can delete

@@ -63,9 +63,11 @@ final class RenderMetrics {
   /// Duration after the last real frame beyond which FPS is reported as 0.
   static const _idleTimeout = Duration(seconds: 2);
 
-  /// Whether there has been any real (non-metrics-only) rendering activity
-  /// within the idle timeout window.
-  bool get _isIdle {
+  /// Whether real (non-metrics-only) rendering is idle.
+  ///
+  /// Returns true before the first frame and after two seconds without a
+  /// real frame. Diagnostic refreshes do not end this idle state.
+  bool get isIdle {
     final lastFrame = _lastFrameElapsedMicros;
     if (lastFrame == null) return true;
     return _clock.elapsedMicroseconds - lastFrame > _idleTimeout.inMicroseconds;
@@ -123,7 +125,7 @@ final class RenderMetrics {
   /// Returns 0.0 when the application is idle (no real frames within the
   /// timeout window).
   double get currentFps {
-    if (_isIdle) return 0.0;
+    if (isIdle) return 0.0;
     final ft = lastFrameTime;
     if (ft.inMicroseconds == 0) return 0.0;
     return 1000000.0 / ft.inMicroseconds;
@@ -133,7 +135,7 @@ final class RenderMetrics {
   /// Returns 0.0 when the application is idle (no real frames within the
   /// timeout window).
   double get averageFps {
-    if (_isIdle) return 0.0;
+    if (isIdle) return 0.0;
     final avg = averageFrameTime;
     if (avg.inMicroseconds == 0) return 0.0;
     return 1000000.0 / avg.inMicroseconds;

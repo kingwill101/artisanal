@@ -4,6 +4,7 @@ import 'package:artisanal/src/tui/model.dart' show OutputLogEntry;
 import 'package:artisanal/src/tui/msg.dart' show OutputSource;
 import 'package:artisanal/style.dart' show Style;
 import 'package:ultraviolet/core.dart' as uv;
+import 'package:ultraviolet/rendering.dart' show RenderMetrics;
 
 import 'package:test/test.dart';
 
@@ -97,13 +98,13 @@ void main() {
         expect(m.mode, DebugOverlayMode.metrics);
       });
 
-      test('resets panel position on cycle', () {
+      test('preserves panel position on cycle', () {
         final positioned = overlay.copyWith(panelX: 10, panelY: 5);
         expect(positioned.panelX, 10);
 
         final cycled = positioned.cycleMode();
-        expect(cycled.panelX, isNull);
-        expect(cycled.panelY, isNull);
+        expect(cycled.panelX, 10);
+        expect(cycled.panelY, 5);
       });
     });
 
@@ -112,6 +113,49 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('panel() metrics mode', () {
+      test('shows pending before metrics arrive', () {
+        expect(
+          Style.stripAnsi(overlay.copyWith(enabled: true).panel()),
+          contains('FPS: pending'),
+        );
+      });
+
+      test(
+        'cached panel reflects idle state without overlay interaction',
+        () async {
+          final metrics = RenderMetrics();
+          final model = overlay.copyWith(enabled: true, metrics: metrics);
+          expect(Style.stripAnsi(model.panel()), contains('FPS: idle'));
+
+          metrics.beginFrame();
+          metrics.endFrame();
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+          metrics.beginFrame();
+          metrics.endFrame();
+          expect(metrics.averageFps, greaterThan(0));
+          expect(Style.stripAnsi(model.panel()), isNot(contains('FPS: idle')));
+          final frames = metrics.frameCount;
+
+          await Future<void>.delayed(const Duration(milliseconds: 2100));
+          expect(metrics.isIdle, isTrue);
+          expect(metrics.averageFps, 0);
+          expect(metrics.frameCount, frames);
+          expect(Style.stripAnsi(model.panel()), contains('FPS: idle'));
+
+          metrics.metricsOnlyFrame = true;
+          metrics.beginFrame();
+          metrics.endFrame();
+          expect(metrics.isIdle, isTrue);
+          expect(metrics.frameCount, frames);
+          expect(Style.stripAnsi(model.panel()), contains('FPS: idle'));
+
+          metrics.beginFrame();
+          metrics.endFrame();
+          expect(metrics.isIdle, isFalse);
+          expect(Style.stripAnsi(model.panel()), isNot(contains('FPS: idle')));
+        },
+      );
+
       test('renders metrics panel (default mode)', () {
         final m = overlay.copyWith(enabled: true);
         final rendered = m.panel();

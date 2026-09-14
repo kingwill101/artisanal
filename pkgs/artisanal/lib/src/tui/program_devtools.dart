@@ -13,6 +13,7 @@ final class ProgramDiagnosticsOptions {
   ProgramDiagnosticsOptions({
     this.initiallyVisible = false,
     KeyBinding? toggleBinding,
+    this.keyboardNavigation = false,
     this.maxMessages = 8,
     this.position = ProgramDiagnosticsPosition.topRight,
     this.captureOutput = true,
@@ -25,6 +26,14 @@ final class ProgramDiagnosticsOptions {
 
   /// Binding consumed by [Program] to toggle the overlay.
   final KeyBinding toggleBinding;
+
+  /// Whether the overlay consumes keyboard navigation while visible.
+  ///
+  /// This is disabled by default so that, apart from [toggleBinding], the
+  /// application retains Tab, arrows, paging, Home/End, and typing.
+  /// Enable it when the diagnostics panel should be navigable from the
+  /// keyboard; mouse dragging remains available regardless of this setting.
+  final bool keyboardNavigation;
 
   /// Maximum number of recent runtime messages displayed.
   final int maxMessages;
@@ -139,6 +148,7 @@ final class ProgramDevToolsController {
   int _revision = 0;
   int _messageOffset = 0;
   int _outputOffset = 0;
+  bool _manuallyPositioned = false;
 
   /// Changes whenever visible overlay content changes.
   int get revision => _revision;
@@ -147,22 +157,37 @@ final class ProgramDevToolsController {
   bool handle(Msg msg) {
     if (msg case KeyMsg() when _options.toggleBinding.matches(msg)) {
       _overlay = _overlay.toggle();
+      if (_overlay.enabled && !_manuallyPositioned) _positionOverlay();
       _revision++;
       return true;
     }
 
-    if (_overlay.enabled && msg is KeyMsg) {
+    if (_overlay.enabled &&
+        !_overlay.dragging &&
+        !_overlay.pointerCaptured &&
+        _overlay.mode != DebugOverlayMode.metrics &&
+        msg is MouseMsg &&
+        msg.action == MouseAction.press) {
+      final delta = switch (msg.button) {
+        MouseButton.wheelUp => -3,
+        MouseButton.wheelDown => 3,
+        _ => 0,
+      };
+      if (delta != 0 && _overlay.containsPoint(msg.x, msg.y)) {
+        _scroll(delta);
+        _revision++;
+        return true;
+      }
+    }
+
+    if (_overlay.enabled && _options.keyboardNavigation && msg is KeyMsg) {
       final key = msg.key;
       if (key.type == KeyType.tab) {
         final modes = DebugOverlayMode.values;
         final delta = key.shift ? -1 : 1;
         final index = (_overlay.mode.index + delta) % modes.length;
-        _overlay = _overlay.copyWith(
-          mode: modes[index],
-          panelX: null,
-          panelY: null,
-        );
-        _positionOverlay();
+        _overlay = _overlay.selectMode(modes[index]);
+        if (!_manuallyPositioned) _positionOverlay();
         _revision++;
         return true;
       }
@@ -182,10 +207,15 @@ final class ProgramDevToolsController {
       }
     }
 
+    final previousMode = _overlay.mode;
     final update = _overlay.update(msg);
     _overlay = update.model;
-    if (msg is WindowSizeMsg) _positionOverlay();
+    if (_overlay.dragging) _manuallyPositioned = true;
     _syncSession();
+    if (!_manuallyPositioned &&
+        (msg is WindowSizeMsg || _overlay.mode != previousMode)) {
+      _positionOverlay();
+    }
     if (_overlay.enabled) _revision++;
     return update.consumed;
   }
@@ -256,8 +286,9 @@ final class ProgramDevToolsController {
   void _positionOverlay() {
     final width = _overlay.terminalWidth;
     final height = _overlay.terminalHeight;
-    final maxX = (width - _overlay.panelWidth).clamp(0, width);
-    final maxY = (height - _overlay.panelHeight).clamp(0, height);
+    final bounds = _overlay.panelBounds;
+    final maxX = (width - bounds.w).clamp(0, width);
+    final maxY = (height - bounds.h).clamp(0, height);
     final (x, y) = switch (_options.position) {
       ProgramDiagnosticsPosition.topLeft => (0, 0),
       ProgramDiagnosticsPosition.topRight => (maxX, 0),

@@ -3,6 +3,14 @@
 ## 0.6.2
 
 - Require Dart SDK 3.13.0 or newer.
+- Keep diagnostics keyboard-passive by default, with explicit
+  `ProgramDiagnosticsOptions.keyboardNavigation` opt-in for panel navigation.
+- Support pointer tab selection, title-bar dragging, and message/output wheel
+  scrolling without taking application keyboard focus. Honor the initial
+  corner and preserve dragged placement across toggles, tabs, and resizing.
+- Scope metrics-only accounting to actual render requests so skipped refreshes
+  cannot suppress subsequent application frames. Show idle/pending FPS states
+  explicitly in the diagnostics overlay.
 
 ### Added
 
