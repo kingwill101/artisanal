@@ -3,6 +3,7 @@
 ## 0.6.0
 
 - Require Dart SDK 3.13.0 or newer.
+- Skip terminal-graphics parsing when measuring ordinary styled text bounds.
 - Expose `RenderMetrics.isIdle` for diagnostic displays without changing the
   numeric FPS behavior for idle applications.
 - Compare canonical cell style identifiers while rendering buffer lines,

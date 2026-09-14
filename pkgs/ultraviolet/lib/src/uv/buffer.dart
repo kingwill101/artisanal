@@ -1406,6 +1406,8 @@ Rectangle styledStringBounds(String text, WidthMethod method) {
 int _visibleStringWidth(String line, WidthMethod method) {
   final stripped = term_ansi.Ansi.stripAnsi(line);
   final expanded = term_ansi.Ansi.expandTabs(stripped);
-  return method.stringWidth(expanded) +
-      terminal_graphics.terminalGraphicsCellWidth(line);
+  final graphicsWidth = terminal_graphics.mayContainTerminalGraphics(line)
+      ? terminal_graphics.terminalGraphicsCellWidth(line)
+      : 0;
+  return method.stringWidth(expanded) + graphicsWidth;
 }
