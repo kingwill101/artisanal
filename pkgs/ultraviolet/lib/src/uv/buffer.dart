@@ -1276,7 +1276,7 @@ void _renderLine(StringSink out, Line line) {
       penStyleId = 0;
     }
     if (cellStyleId != penStyleId) {
-      out.write(style_ops.styleDiff(pen, c.style));
+      out.write(_cachedLineStyleDiff(penStyleId, pen, cellStyleId, c.style));
       pen = c.style;
       penStyleId = cellStyleId;
     }
@@ -1299,6 +1299,25 @@ void _renderLine(StringSink out, Line line) {
   if (penStyleId != 0) {
     out.write(UvAnsi.resetStyle);
   }
+}
+
+const _lineStyleDiffCacheMax = 256;
+final Map<int, Map<int, String>> _lineStyleDiffCache =
+    <int, Map<int, String>>{};
+var _lineStyleDiffCacheEntries = 0;
+
+String _cachedLineStyleDiff(int fromId, UvStyle from, int toId, UvStyle to) {
+  final cached = _lineStyleDiffCache[fromId]?[toId];
+  if (cached != null) return cached;
+
+  final diff = style_ops.styleDiff(from, to);
+  if (_lineStyleDiffCacheEntries >= _lineStyleDiffCacheMax) {
+    _lineStyleDiffCache.clear();
+    _lineStyleDiffCacheEntries = 0;
+  }
+  (_lineStyleDiffCache[fromId] ??= <int, String>{})[toId] = diff;
+  _lineStyleDiffCacheEntries++;
+  return diff;
 }
 
 /// A screen buffer that implements `Screen` operations and carries a width
