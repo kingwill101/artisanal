@@ -23,6 +23,8 @@
 
 ### Fixed
 
+- Keep one trace file handle open for the active session, flush it on close,
+  and prevent teardown events from reopening a second trace file.
 - Scan ANSI controls directly when measuring styled text, avoiding regular
   expression replacement work on render-time width cache misses.
 - Preserve preloaded image caches in nested quote renders, handle nonpositive

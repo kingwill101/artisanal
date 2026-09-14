@@ -1470,6 +1470,7 @@ class Program<M extends Model> with HotReloadMixin {
       throw StateError('Program is already running');
     }
 
+    TuiTrace.startSession();
     _running = true;
     _cancelled = false;
     _cleanedUp = false;
