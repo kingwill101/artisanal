@@ -10,6 +10,14 @@ void main() {
   // MarkdownText
   // ---------------------------------------------------------------------------
   group('MarkdownText', () {
+    test('renders inline math', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(MarkdownText(data: r'see \(x^2\)'));
+      expect(tester.find.text('x'), isTrue);
+    });
+
     test('renders plain text', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());

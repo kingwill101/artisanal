@@ -25,7 +25,8 @@ final class _MarkdownLinkOpenedMsg extends Msg {
 ///
 /// Uses the `markdownToAnsi` renderer from the artisanal core package, which
 /// supports headings, bold, italic, code blocks, blockquotes, lists, tables,
-/// horizontal rules, hyperlinks, and syntax highlighting.
+/// horizontal rules, hyperlinks, syntax highlighting, and LaTeX math
+/// (`\(…\)`, `\[…\]`, `$$…$$`, `$…$`).
 ///
 /// ```dart
 /// MarkdownText(
@@ -382,6 +383,7 @@ class _MarkdownTextRenderObjectWidget extends LeafRenderObjectWidget {
       maxWidth: maxWidth,
       hasDarkBackground: hasDarkBackground,
     );
+    rt.markDescendantNeedsPaint();
   }
 
   @override
@@ -427,6 +429,14 @@ class _RenderMarkdownText extends RenderText {
     required int? maxWidth,
     required bool hasDarkBackground,
   }) {
+    if (data != _data ||
+        options != _options ||
+        textStyle != _textStyle ||
+        softWrapMarkdown != _softWrapMarkdown ||
+        maxWidth != _maxWidth ||
+        hasDarkBackground != _hasDarkBackground) {
+      _lastRenderKey = null;
+    }
     _data = data;
     _options = options;
     _textStyle = textStyle;
@@ -470,6 +480,13 @@ class _RenderMarkdownText extends RenderText {
     // context and break list indentation.
     softWrap = false;
     super.layout(constraints);
+  }
+
+  @override
+  String paint() {
+    // Display math is a cell grid. Hard-clipping those lines at the pane
+    // width drops radicals and scripts; let the parent clip visually.
+    return text;
   }
 
   String? linkAt(int x, int y) {
