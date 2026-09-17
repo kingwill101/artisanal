@@ -3,14 +3,27 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:html_unescape/html_unescape.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import 'math_syntax.dart';
+
+/// The shared `package:markdown` document for every Artisanal renderer.
+///
+/// Registers GitHub-flavored markdown plus math delimiters (`\(`, `\[`,
+/// `$$`, and `$…$` when not currency). Apps should not construct their own
+/// `md.Document` if they want math to render automatically.
+md.Document createMarkdownDocument() {
+  return md.Document(
+    extensionSet: md.ExtensionSet.gitHubFlavored,
+    inlineSyntaxes: mathInlineSyntaxes,
+    blockSyntaxes: mathBlockSyntaxes,
+  );
+}
+
 /// Parses Markdown using the shared renderer backend.
 ///
-/// Both the lightweight ANSI renderer and the Glamour renderer should enter
-/// through this function so GitHub-flavored Markdown, raw HTML blocks, task
-/// inputs, and blockquote normalization behave consistently.
+/// [MarkdownRenderer], [markdownToAnsi], Glamour, and [MarkdownText] all enter
+/// here so math, raw HTML, task lists, and blockquotes stay consistent.
 List<md.Node> parseMarkdownNodes(String markdown) {
-  final document = md.Document(extensionSet: md.ExtensionSet.gitHubFlavored);
-  return normalizeMarkdownNodes(document.parse(markdown));
+  return normalizeMarkdownNodes(createMarkdownDocument().parse(markdown));
 }
 
 /// Normalizes already-parsed Markdown nodes into the shared renderer AST.

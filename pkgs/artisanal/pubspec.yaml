@@ -25,6 +25,7 @@ dependencies:
   mime: ^2.1.0
   path: ^1.9.1
   markdown: ^7.3.0
+  katex_dart: ^0.1.1
   completion: ^1.0.2
   petitparser: ^7.0.1
   characters: ^1.4.1

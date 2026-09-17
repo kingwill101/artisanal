@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Added terminal math rendering via `katex_dart`: inline Unicode
+  linearization, display cell-buffer layout, and Markdown delimiters
+  `\(…\)`, `\[…\]`, and `$$…$$`. Single `$` remains literal.
+- Display math covers fractions, roots, stretchy delimiters, sums/products/
+  integrals with limits, matrices, accents, and boxed expressions. Unclosed
+  math in Markdown renders as `…`.
+- Compact Unicode scripts (`x²`, `b²`) stay on one row; `$…$` is math unless
+  it looks like currency (`$5`).
+- Math is part of the shared markdown document (`createMarkdownDocument` /
+  `parseMarkdownNodes`). `markdownToAnsi`, `MarkdownText`, and the legacy
+  ANSI/Glamour renderers all pick it up without calling `renderMath`.
+
 ## 0.6.2
 
 - Require Dart SDK 3.13.0 or newer.

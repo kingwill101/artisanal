@@ -28,6 +28,8 @@ import 'image_bytes_loader_stub.dart'
     if (dart.library.io) 'image_bytes_loader_io.dart'
     as image_loader;
 import 'github_images.dart';
+import 'math.dart';
+import 'math_syntax.dart';
 
 /// Renders markdown to ANSI-styled terminal output using standalone functions.
 ///
@@ -389,6 +391,34 @@ class MarkdownRenderer implements NodeVisitor {
         _forgetElement();
         return false;
 
+      case 'math':
+        _writeMath(element, display: false);
+        _forgetElement();
+        return false;
+
+      case 'mathDisplay':
+        _writeMath(element, display: true);
+        _forgetElement();
+        return false;
+
+      case 'mathBlock':
+        _ensureNewline();
+        _writeMath(
+          element,
+          display: true,
+          pending:
+              element.attributes[unterminatedMath] == 'true' &&
+              element.textContent.trim().isEmpty,
+        );
+        _outputBuffer.write('\n');
+        _forgetElement();
+        return false;
+
+      case 'mathPending':
+        _outputBuffer.write(mathFallback(element.textContent, pending: true));
+        _forgetElement();
+        return false;
+
       case 'input':
         if (_ctx.listItemStack.isNotEmpty &&
             _ctx.listItemStack.last.taskCheckboxRendered) {
@@ -616,6 +646,34 @@ class MarkdownRenderer implements NodeVisitor {
   }
 
   StringBuffer get _outputBuffer => _ctx.outputBuffer;
+
+  void _writeMath(
+    Element element, {
+    required bool display,
+    bool pending = false,
+  }) {
+    _outputBuffer.write(
+      _styleMath(
+        formatMarkdownMath(
+          element.textContent,
+          display: display,
+          pending: pending,
+          width: display ? _ctx.options.width : null,
+        ),
+      ),
+    );
+  }
+
+  String _styleMath(String pictured) {
+    final style = _ctx.options.textStyle;
+    if (style == null) return pictured;
+    final open = _styleToAnsiOpen(style);
+    if (open.isEmpty) return pictured;
+    return pictured
+        .split('\n')
+        .map((line) => '$open$line$_ansiReset')
+        .join('\n');
+  }
 
   bool _isInsidePreBlock() =>
       _ctx.elementStack.any((element) => element.tag == 'pre');

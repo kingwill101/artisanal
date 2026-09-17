@@ -34,6 +34,8 @@ import '../../tui/bubbles/components/table.dart' as table_component;
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
 
 import 'renderer.dart' show MarkdownRenderer;
+import 'math.dart' show formatMarkdownMath;
+import 'math_syntax.dart' show unterminatedMath;
 import 'syntax_highlighter.dart';
 import 'options.dart';
 import 'blockquote.dart';
@@ -504,6 +506,51 @@ class AnsiRenderer implements NodeVisitor {
 
       case 'br':
         _activeBuffer.write('\n');
+        _forgetElement();
+        return false;
+
+      case 'math':
+        _activeBuffer.write(
+          formatMarkdownMath(element.textContent, display: false),
+        );
+        _forgetElement();
+        return false;
+
+      case 'mathDisplay':
+        _activeBuffer.write(
+          formatMarkdownMath(
+            element.textContent,
+            display: true,
+            width: options.width,
+          ),
+        );
+        _forgetElement();
+        return false;
+
+      case 'mathBlock':
+        _ensureNewline();
+        _buffer.write(
+          formatMarkdownMath(
+            element.textContent,
+            display: true,
+            pending:
+                element.attributes[unterminatedMath] == 'true' &&
+                element.textContent.trim().isEmpty,
+            width: options.width,
+          ),
+        );
+        _buffer.write('\n');
+        _forgetElement();
+        return false;
+
+      case 'mathPending':
+        _activeBuffer.write(
+          formatMarkdownMath(
+            element.textContent,
+            display: false,
+            pending: true,
+          ),
+        );
         _forgetElement();
         return false;
 
@@ -1841,6 +1888,7 @@ class AnsiRenderer implements NodeVisitor {
       'p' || 'blockquote' || 'pre' || 'ul' || 'ol' || 'li' => true,
       'hr' || 'table' || 'thead' || 'tbody' || 'tfoot' || 'tr' => true,
       'th' || 'td' || 'details' || 'figure' || 'section' || 'article' => true,
+      'mathBlock' => true,
       _ => false,
     };
   }

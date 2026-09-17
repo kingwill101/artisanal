@@ -24,7 +24,21 @@ export 'image_renderer.dart'
         imageCellDimensions,
         renderImageToAnsi;
 export 'renderer.dart' show MarkdownRenderer;
+export 'backend.dart' show createMarkdownDocument, parseMarkdownNodes;
 export 'fence_language_resolver.dart' show FenceLanguageResolver;
+export 'math.dart'
+    show
+        MathFragment,
+        MathInlineParseFailed,
+        MathInlineRendered,
+        MathInlineResult,
+        MathParseFailed,
+        MathRenderResult,
+        MathRendered,
+        formatMarkdownMath,
+        mathFallback,
+        renderMath,
+        renderMathInline;
 export 'syntax_highlighter.dart'
     show
         AdaptiveChromaTheme,

@@ -3,6 +3,8 @@ import 'package:markdown/markdown.dart' as md;
 
 import 'theme.dart';
 import '../style/style.dart';
+import '../tui/markdown/math.dart' show formatMarkdownMath;
+import '../tui/markdown/math_syntax.dart' show unterminatedMath;
 
 import 'package:ultraviolet/rendering.dart' as uv_wrap;
 
@@ -502,6 +504,34 @@ class GlamourRenderer implements md.NodeVisitor {
         _inTableCell = true;
         return true;
 
+      case 'math':
+        _outputBuffer.write(
+          formatMarkdownMath(element.textContent, display: false),
+        );
+        return false;
+      case 'mathDisplay':
+      case 'mathBlock':
+        _outputBuffer.write(
+          formatMarkdownMath(
+            element.textContent,
+            display: true,
+            pending:
+                element.attributes[unterminatedMath] == 'true' &&
+                element.textContent.trim().isEmpty,
+            width: width,
+          ),
+        );
+        if (element.tag == 'mathBlock') _outputBuffer.write('\n');
+        return false;
+      case 'mathPending':
+        _outputBuffer.write(
+          formatMarkdownMath(
+            element.textContent,
+            display: false,
+            pending: true,
+          ),
+        );
+        return false;
       default:
         return true;
     }
