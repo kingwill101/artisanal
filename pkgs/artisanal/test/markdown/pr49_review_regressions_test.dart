@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:artisanal/markdown.dart';
 import 'package:artisanal/src/tui/markdown/ansi_renderer.dart' as legacy;
-import 'package:artisanal/src/tui/markdown/backend.dart';
 import 'package:artisanal/src/tui/markdown/github_html_tags.dart';
 import 'package:artisanal/style.dart';
 import 'package:image/image.dart' as img;

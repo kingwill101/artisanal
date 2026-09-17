@@ -1,6 +1,5 @@
 import 'package:artisanal/markdown.dart';
 import 'package:artisanal/src/tui/markdown/ansi_renderer.dart' as legacy;
-import 'package:artisanal/src/tui/markdown/backend.dart';
 import 'package:test/test.dart';
 
 const _lightHref = 'https://example.test/button#gh-light-mode-only';
