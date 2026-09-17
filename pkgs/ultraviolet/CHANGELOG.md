@@ -2,6 +2,17 @@
 
 ## 0.6.0
 
+- Added optional clipped `Buffer.draw` so out-of-bounds destinations write the
+  overlapping cells instead of no-opping. The default remains all-or-nothing.
+- Added `skipEmpty` to `Buffer.draw` so space cells can be skipped when
+  composing fragments.
+- Added `trimTrailing` to `Line.render`, `Buffer.render`, and `Canvas.render`.
+  Trailing empty cells stay omitted by default.
+- Added `drawHorizontal`, `drawVertical`, and `drawStroke` for generic
+  cell-buffer strokes with a caller-supplied glyph and style.
+
+## 0.6.0
+
 - Require Dart SDK 3.13.0 or newer.
 - Skip terminal-graphics parsing when measuring ordinary styled text bounds.
 - Expose `RenderMetrics.isIdle` for diagnostic displays without changing the

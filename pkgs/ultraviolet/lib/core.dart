@@ -28,6 +28,7 @@ export 'src/uv/geometry.dart' show Position, Rectangle, rect;
 export 'src/uv/layer.dart' show Layer, Compositor, newLayer, LayerHit;
 export 'src/uv/layout.dart';
 export 'src/uv/screen.dart';
+export 'src/uv/stroke.dart' show drawHorizontal, drawVertical, drawStroke;
 export 'src/uv/styled_string.dart'
     show
         StyledString,

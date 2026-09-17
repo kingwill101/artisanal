@@ -133,6 +133,10 @@ task uv-demos   # compiles each example, then records all GIFs into assets/
 
 ![Draw demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/draw.gif)
 
+**Stroke and buffer composition** (`example/strokes.dart`):
+
+Demonstrates `drawHorizontal`, `drawVertical`, `drawStroke`, `Buffer.draw` with `clip`/`skipEmpty`, and `trimTrailing` rendering.
+
 ### Effects & shaders
 
 **Shader toy** (`example/terminal_shader_toy.dart`):
@@ -192,6 +196,10 @@ task uv-demos   # compiles each example, then records all GIFs into assets/
 **Prepend line** (`example/prependline.dart`):
 
 ![Prepend line demo](https://github.com/kingwill101/artisanal/raw/artisanal/pkgs/ultraviolet/assets/prependline.gif)
+
+**Stroke and buffer composition** (`example/strokes.dart`):
+
+Demonstrates `drawHorizontal`, `drawVertical`, `drawStroke`, `Buffer.draw` with `clip`/`skipEmpty`, and `trimTrailing` rendering.
 
 ## Performance Tips
 

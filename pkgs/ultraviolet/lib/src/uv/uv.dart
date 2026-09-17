@@ -31,6 +31,7 @@ export 'screen.dart';
 export 'screen_ops.dart';
 export 'sixel.dart';
 export 'sixel_drawable.dart';
+export 'stroke.dart';
 export 'style_ops.dart';
 export 'styled_string.dart';
 export 'tabstop.dart';

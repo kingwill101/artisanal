@@ -117,8 +117,12 @@ final class Canvas
     return this;
   }
 
-  /// Renders the canvas into a string (trimming trailing spaces per line).
-  String render() => _scr.buffer.render();
+  /// Renders the canvas into a string.
+  ///
+  /// Trailing empty cells on each line are omitted unless [trimTrailing] is
+  /// `false`.
+  String render({bool trimTrailing = true}) =>
+      _scr.buffer.render(trimTrailing: trimTrailing);
 
   /// Releases the canvas-owned backing screen buffer.
   ///
@@ -130,4 +134,8 @@ final class Canvas
   /// Draws this canvas onto another [Screen] within [area].
   @override
   void draw(Screen screen, Rectangle area) => _scr.draw(screen, area);
+
+  /// Draws this canvas onto [screen] at [area], clipping to destination bounds.
+  void drawClipped(Screen screen, Rectangle area) =>
+      _scr.draw(screen, area, clip: true);
 }

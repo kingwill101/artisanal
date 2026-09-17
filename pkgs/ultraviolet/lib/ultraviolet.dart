@@ -70,6 +70,7 @@ export 'src/uv/styled_string.dart'
         SgrParam;
 export 'src/uv/layer.dart' show Layer, Compositor, newLayer, LayerHit;
 export 'src/uv/canvas.dart' show Canvas;
+export 'src/uv/stroke.dart' show drawHorizontal, drawVertical, drawStroke;
 export 'src/uv/layout.dart';
 export 'src/uv/screen.dart';
 export 'src/uv/filters.dart'

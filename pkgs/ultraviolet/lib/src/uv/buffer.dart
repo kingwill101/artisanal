@@ -368,12 +368,12 @@ final class Line {
     return out.toString();
   }
 
-  /// Renders the line to a styled string (including SGR and OSC 8 sequences),
-  /// trimming trailing spaces.
+  /// Renders the line to a styled string (including SGR and OSC 8 sequences).
   ///
-  String render() {
+  /// Trailing empty cells are omitted unless [trimTrailing] is `false`.
+  String render({bool trimTrailing = true}) {
     final out = StringBuffer();
-    _renderLine(out, this);
+    _renderLine(out, this, trimTrailing: trimTrailing);
     return out.toString();
   }
 }
@@ -820,10 +820,12 @@ final class Buffer {
 
   /// Renders buffer content to a string.
   ///
-  String render() {
+  /// Trailing empty cells on each line are omitted unless [trimTrailing] is
+  /// `false`.
+  String render({bool trimTrailing = true}) {
     final out = StringBuffer();
     for (var i = 0; i < lines.length; i++) {
-      _renderLine(out, lines[i]);
+      _renderLine(out, lines[i], trimTrailing: trimTrailing);
       if (i < lines.length - 1) out.write('\n');
     }
     return out.toString();
@@ -1082,21 +1084,30 @@ final class Buffer {
 
   /// Draws this buffer onto [screen] at the specified [area].
   ///
-  void draw(Screen screen, Rectangle area) {
+  /// [area] is the destination rectangle whose origin maps to this buffer's
+  /// `(0, 0)`. When [clip] is `false` (the default), the draw is a no-op unless
+  /// [area] lies entirely inside [screen] bounds. When [clip] is `true`, only
+  /// the intersection with the destination is written.
+  ///
+  /// When [skipEmpty] is `true`, space cells are not copied, so a fragment can
+  /// be composed without wiping glyphs already in the destination.
+  void draw(
+    Screen screen,
+    Rectangle area, {
+    bool clip = false,
+    bool skipEmpty = false,
+  }) {
     if (area.isEmpty) return;
     final bounds = screen.bounds();
-    if (area.minX < bounds.minX ||
-        area.minY < bounds.minY ||
-        area.maxX > bounds.maxX ||
-        area.maxY > bounds.maxY) {
-      return;
-    }
+    final dest = clip ? area.intersect(bounds) : area;
+    if (dest.isEmpty) return;
+    if (!clip && !bounds.containsRect(area)) return;
 
-    for (var y = area.minY; y < area.maxY; y++) {
-      var x = area.minX;
-      while (x < area.maxX) {
+    for (var y = dest.minY; y < dest.maxY; y++) {
+      var x = dest.minX;
+      while (x < dest.maxX) {
         final c = cellAt(x - area.minX, y - area.minY);
-        if (c == null || c.isZero) {
+        if (c == null || c.isZero || (skipEmpty && c.isEmpty)) {
           x++;
           continue;
         }
@@ -1241,7 +1252,7 @@ int _bitMask(int from, int to) {
   return mask;
 }
 
-void _renderLine(StringSink out, Line line) {
+void _renderLine(StringSink out, Line line, {bool trimTrailing = true}) {
   var pen = const UvStyle();
   var penStyleId = 0;
   var link = const Link();
@@ -1291,6 +1302,10 @@ void _renderLine(StringSink out, Line line) {
     }
 
     out.write(c.content);
+  }
+
+  if (!trimTrailing && pending.isNotEmpty) {
+    out.write(pending.toString());
   }
 
   if (link.url.isNotEmpty) {
@@ -1386,7 +1401,12 @@ final class ScreenBuffer
   WidthMethod widthMethod() => method;
 
   @override
-  void draw(Screen screen, Rectangle area) => buffer.draw(screen, area);
+  void draw(
+    Screen screen,
+    Rectangle area, {
+    bool clip = false,
+    bool skipEmpty = false,
+  }) => buffer.draw(screen, area, clip: clip, skipEmpty: skipEmpty);
 }
 
 /// Parses a string and returns its bounds (width/height) using a width method.
