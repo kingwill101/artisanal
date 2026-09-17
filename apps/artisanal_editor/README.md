@@ -20,6 +20,12 @@ The executable also accepts a file directly:
 dart run artisanal_editor README.md
 ```
 
+Markdown buffers open a live preview. To inspect math rendering:
+
+```sh
+dart run artisanal_editor edit apps/artisanal_editor/examples/math_preview.md
+```
+
 ## Trace and profile editor scrolling
 
 Artisanal's structured TUI tracer is already connected to the editor's input,

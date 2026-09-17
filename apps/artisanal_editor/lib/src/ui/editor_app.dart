@@ -1530,6 +1530,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
                 final height = constraints.maxHeight.isFinite
                     ? constraints.maxHeight.toInt()
                     : editorHeight - 1;
+                final markdownWidth = width - 4;
                 return w.ScrollArea(
                   key: w.ValueKey('markdown-preview:${buffer.file.path}'),
                   width: width,
@@ -1542,7 +1543,7 @@ class _EditorScreenState extends w.State<EditorScreen> {
                   ),
                   child: w.MarkdownText(
                     data: buffer.controller.text,
-                    maxWidth: (width - 4).clamp(8, 200),
+                    maxWidth: markdownWidth < 48 ? 48 : markdownWidth,
                     softWrap: true,
                     textStyle: theme.bodyMedium.copy().foreground(
                       theme.onBackground,

@@ -11,6 +11,12 @@ renderer for documents. Choose based on the output you need:
 Use the ANSI renderer for fast, minimal output. Use Glamour for rich,
 document-style rendering.
 
+Math is registered on the shared markdown parser. `markdownToAnsi`,
+`MarkdownRenderer`, `MarkdownText`, GitHub CLI issue/PR bodies, and the
+Artisanal editor preview all render `\(…\)`, `\[…\]`, `$$…$$`, and `$…$`
+(when it is not currency) without calling `renderMath` yourself. See the
+[math rendering notes](math_rendering_design.md).
+
 ## Nested blockquotes
 
 The ANSI renderers lay out a quote's contents inside its available width,

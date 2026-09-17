@@ -2,6 +2,14 @@
 
 A comprehensive demo CLI showcasing all artisanal features.
 
+## Math progress demo
+
+Track terminal math rendering as constructs land:
+
+```bash
+dart run pkgs/artisanal/example/math_demo.dart
+```
+
 ## Running the Example
 
 From the workspace root:
