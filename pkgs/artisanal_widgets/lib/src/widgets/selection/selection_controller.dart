@@ -1,5 +1,8 @@
 part of 'selection.dart';
 
+/// Receives selected plain text without terminal styling escapes.
+typedef SelectionCallback = void Function(String text);
+
 /// Manages text selection state independently of scroll.
 ///
 /// Holds selection start/end coordinates, a selecting flag, and provides
@@ -33,6 +36,7 @@ class SelectionController {
       <Object, _SelectionParticipant>{};
 
   final Set<void Function()> _listeners = <void Function()>{};
+  final Set<void Function()? Function()> _completionListeners = {};
   final DateTime Function() _nowProvider;
 
   /// Maximum spacing between clicks that still counts as sequential.
@@ -101,6 +105,15 @@ class SelectionController {
   void _notifyListeners() {
     for (final listener in _listeners.toList()) {
       listener();
+    }
+  }
+
+  void _notifySelectionEnd() {
+    final callbacks = [
+      for (final listener in _completionListeners.toList()) ?listener(),
+    ];
+    for (final callback in callbacks) {
+      callback();
     }
   }
 

@@ -15,6 +15,8 @@ class SelectableRichText extends StatelessWidget {
     this.overflow = TextOverflow.clip,
     this.maxWidth,
     this.controller,
+    this.onSelectionChanged,
+    this.onSelectionEnd,
   });
 
   final TextSpan text;
@@ -32,6 +34,14 @@ class SelectableRichText extends StatelessWidget {
   final int? maxWidth;
   final SelectionController? controller;
 
+  /// Reports this widget's selected plain text, including an empty selection.
+  final SelectionCallback? onSelectionChanged;
+
+  /// Reports nonempty selected plain text after a user completes a selection.
+  ///
+  /// Programmatic changes and clearing do not fire this callback.
+  final SelectionCallback? onSelectionEnd;
+
   @override
   Widget build(BuildContext context) {
     final content = _renderRichSpanContent(
@@ -46,6 +56,8 @@ class SelectableRichText extends StatelessWidget {
     return _SelectableRenderedText(
       text: content.text,
       controller: controller,
+      onSelectionChanged: onSelectionChanged,
+      onSelectionEnd: onSelectionEnd,
       selectionHighlightStyle: selectionHighlightStyle,
       selectionHighlightRangesByLine: content.selectionHighlightRangesByLine,
     );

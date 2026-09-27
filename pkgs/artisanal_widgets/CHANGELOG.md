@@ -2,6 +2,16 @@
 
 ## 0.4.2
 
+- Fix automatic parent-width wrapping and resize reflow for selectable plain
+  text, Markdown, and view content without requiring a caller-supplied width.
+- Allow selectable text to discover its enclosing scroll viewport, accept wheel
+  scrolling during a drag, and continue edge scrolling until release.
+- Add plain-text `onSelectionChanged` and `onSelectionEnd` callbacks to
+  selectable widgets, their adapters, and `SelectionArea`. Standalone selection
+  now consistently notifies external controller listeners.
+- Fix shared drag-selection coordinates for virtual-list items, including
+  scrolled and cross-item selections with selection-completion callbacks.
+
 - Require Dart SDK 3.13.0 or newer.
 
 ### Added

@@ -34,6 +34,8 @@ class SelectionArea extends StatefulWidget {
     required this.child,
     this.controller,
     this.scrollController,
+    this.onSelectionChanged,
+    this.onSelectionEnd,
     super.key,
   });
 
@@ -43,9 +45,19 @@ class SelectionArea extends StatefulWidget {
   /// Optional external [SelectionController]. If null, one is created.
   final SelectionController? controller;
 
-  /// Optional scroll controller used to auto-scroll while drag selection
-  /// approaches the top or bottom edge of this selection viewport.
+  /// Overrides the scroll controller discovered from the selection viewport.
+  ///
+  /// Selection coordinates remain anchored in content space while scrolling.
   final ScrollController? scrollController;
+
+  /// Reports selected plain text across the registered descendants.
+  final SelectionCallback? onSelectionChanged;
+
+  /// Reports nonempty combined text once a user completes a selection.
+  ///
+  /// Use this to implement copy-on-selection without handling each child.
+  /// Programmatic changes and clearing do not fire this callback.
+  final SelectionCallback? onSelectionEnd;
 
   @override
   State createState() => _SelectionAreaState();
@@ -53,7 +65,17 @@ class SelectionArea extends StatefulWidget {
 
 class _SelectionAreaState extends State<SelectionArea> {
   SelectionController? _ownController;
+  SelectionController? _listeningController;
   bool _isDraggingFromArea = false;
+
+  ScrollController? get _scrollController =>
+      widget.scrollController ??
+      switch (_findSelectionViewport()) {
+        RenderSingleChildViewport viewport => viewport.controller,
+        RenderListViewScrollViewport viewport => viewport.controller,
+        RenderListViewport viewport => viewport.controller,
+        _ => null,
+      };
 
   /// Tracks the action type of the last HitTestMouseMsg received.
   /// Reset to `null` when the corresponding raw MouseMsg is consumed.
@@ -65,6 +87,36 @@ class _SelectionAreaState extends State<SelectionArea> {
     if (widget.controller != null) return widget.controller!;
     _ownController ??= SelectionController();
     return _ownController!;
+  }
+
+  void _selectionChanged() {
+    widget.onSelectionChanged?.call(
+      _effectiveController.getSelectedRegisteredText(),
+    );
+  }
+
+  void Function()? _selectionEnded() {
+    final callback = widget.onSelectionEnd;
+    if (callback == null) return null;
+    final text = _effectiveController.getSelectedRegisteredText();
+    return text.isEmpty ? null : () => callback(text);
+  }
+
+  void _syncSelectionCallbacks() {
+    final controller = _effectiveController;
+    if (identical(controller, _listeningController)) return;
+    _listeningController?.removeListener(_selectionChanged);
+    _listeningController?._completionListeners.remove(_selectionEnded);
+    _listeningController = controller;
+    controller.addListener(_selectionChanged);
+    controller._completionListeners.add(_selectionEnded);
+  }
+
+  @override
+  void dispose() {
+    _listeningController?.removeListener(_selectionChanged);
+    _listeningController?._completionListeners.remove(_selectionEnded);
+    super.dispose();
   }
 
   /// Clears the shared selection if one is active.
@@ -84,7 +136,7 @@ class _SelectionAreaState extends State<SelectionArea> {
   }
 
   SelectionPoint _selectionPointForEvent(MouseMsg event) {
-    final yOffset = widget.scrollController?.offset ?? 0;
+    final yOffset = _scrollController?.offset ?? 0;
     return (x: event.x.toInt(), y: event.y.toInt() + yOffset);
   }
 
@@ -114,6 +166,7 @@ class _SelectionAreaState extends State<SelectionArea> {
     );
     ctrl._selecting = false;
     ctrl._notifyListeners();
+    ctrl._notifySelectionEnd();
   }
 
   void _selectRegisteredLineAt(
@@ -131,6 +184,7 @@ class _SelectionAreaState extends State<SelectionArea> {
     );
     ctrl._selecting = false;
     ctrl._notifyListeners();
+    ctrl._notifySelectionEnd();
   }
 
   bool _maybeStartSharedSelectionFromArea(MouseMsg event) {
@@ -189,6 +243,7 @@ class _SelectionAreaState extends State<SelectionArea> {
       ctrl._selecting = false;
       elementOf(widget)?.releaseMouse();
       ctrl._notifyListeners();
+      ctrl._notifySelectionEnd();
       return true;
     }
 
@@ -196,9 +251,11 @@ class _SelectionAreaState extends State<SelectionArea> {
   }
 
   void _maybeAutoScrollSelection(MouseMsg event) {
-    final scrollController = widget.scrollController;
+    final scrollController = _scrollController;
     final ctrl = _effectiveController;
-    if (scrollController == null || !ctrl.selecting) return;
+    if (scrollController == null || !ctrl.selecting || !_isDraggingFromArea) {
+      return;
+    }
 
     final ro = _findSelectionViewport();
     if (ro == null) return;
@@ -229,7 +286,24 @@ class _SelectionAreaState extends State<SelectionArea> {
       }
       current = current.parent;
     }
-    return null;
+    RenderObject? descendantViewport(Element node) {
+      if (node is RenderObjectElement) {
+        final render = node.renderObject;
+        if (render is RenderSingleChildViewport ||
+            render is RenderListViewScrollViewport ||
+            render is RenderListViewport ||
+            render is RenderViewport) {
+          return render;
+        }
+      }
+      for (final child in node.children) {
+        final found = descendantViewport(child);
+        if (found != null) return found;
+      }
+      return null;
+    }
+
+    return el == null ? null : descendantViewport(el);
   }
 
   /// The SelectionArea clears the shared selection when a click lands
@@ -247,11 +321,12 @@ class _SelectionAreaState extends State<SelectionArea> {
       }
       final isWheelLike = _isWheelLike(msg.event);
       if (isWheelLike &&
-          widget.scrollController != null &&
+          _isDraggingFromArea &&
+          _scrollController != null &&
           _effectiveController.selecting) {
         final delta = _wheelScrollDelta(msg.event);
         if (delta != 0) {
-          widget.scrollController!.scrollBy(delta);
+          _scrollController!.scrollBy(delta);
           return Cmd.none();
         }
       }
@@ -264,11 +339,12 @@ class _SelectionAreaState extends State<SelectionArea> {
       final wasHandledByHitTest = _lastHitTestAction == msg.action;
 
       if (_isWheelLike(msg) &&
-          widget.scrollController != null &&
+          _isDraggingFromArea &&
+          _scrollController != null &&
           _effectiveController.selecting) {
         final delta = _wheelScrollDelta(msg);
         if (delta != 0) {
-          widget.scrollController!.scrollBy(delta);
+          _scrollController!.scrollBy(delta);
           return Cmd.none();
         }
       }
@@ -315,6 +391,7 @@ class _SelectionAreaState extends State<SelectionArea> {
 
   @override
   Widget build(BuildContext context) {
+    _syncSelectionCallbacks();
     return _SelectionScope(
       controller: _effectiveController,
       scrollController: widget.scrollController,

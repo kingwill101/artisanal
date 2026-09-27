@@ -4,6 +4,9 @@ part of 'selection.dart';
 ///
 /// This mirrors [MarkdownText] but participates in the shared selection
 /// system used by [SelectionArea].
+///
+/// Wrapped content follows the parent's available width and reflows on resize.
+/// [maxWidth] can impose a smaller limit without exceeding the parent.
 class SelectableMarkdownText extends StatelessWidget {
   SelectableMarkdownText({
     required this.data,
@@ -14,6 +17,8 @@ class SelectableMarkdownText extends StatelessWidget {
     this.softWrap = true,
     this.maxWidth,
     this.controller,
+    this.onSelectionChanged,
+    this.onSelectionEnd,
   });
 
   final String data;
@@ -24,18 +29,36 @@ class SelectableMarkdownText extends StatelessWidget {
   final int? maxWidth;
   final SelectionController? controller;
 
+  /// Reports this widget's selected plain text, including an empty selection.
+  final SelectionCallback? onSelectionChanged;
+
+  /// Reports nonempty selected plain text after a user completes a selection.
+  ///
+  /// Programmatic changes and clearing do not fire this callback.
+  final SelectionCallback? onSelectionEnd;
+
   @override
   Widget build(BuildContext context) {
-    return _SelectableRenderedText(
-      text: MarkdownText(
-        data: data,
-        options: options,
-        textStyle: textStyle,
-        softWrap: softWrap,
-        maxWidth: maxWidth,
-      ).view().toString(),
-      controller: controller,
-      selectionHighlightStyle: selectionHighlightStyle,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = _selectionLayoutWidth(constraints, maxWidth);
+        final rendered = MarkdownText(
+          data: data,
+          options: options,
+          textStyle: textStyle,
+          softWrap: softWrap,
+          maxWidth: softWrap ? width : math.max(1, Layout.getWidth(data)),
+        ).view().toString();
+        return _SelectableRenderedText(
+          text: !softWrap && width != null
+              ? Layout.truncateLines(rendered, width)
+              : rendered,
+          controller: controller,
+          onSelectionChanged: onSelectionChanged,
+          onSelectionEnd: onSelectionEnd,
+          selectionHighlightStyle: selectionHighlightStyle,
+        );
+      },
     );
   }
 }

@@ -4415,6 +4415,27 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   Set<int> get debugActiveChildIndices =>
       _childManager?.activeChildIndices ?? const <int>{};
 
+  /// Returns the content-space row of an already mounted item render object.
+  ///
+  /// Virtual items retain local offsets; their position in the list is applied
+  /// during painting and hit testing rather than stored in [RenderObject.offset].
+  /// Coordinate consumers such as shared text selection must include this row
+  /// when walking from an item into its viewport. Unmounted children return null
+  /// without materializing additional items.
+  int? contentOffsetForChild(RenderObject child) {
+    final indices =
+        _childManager?.activeChildIndices ??
+        Iterable<int>.generate(children.length);
+    for (final index in indices) {
+      if (!identical(_childAt(index), child)) continue;
+      if (!variableHeight) {
+        return index * (math.max(1, itemExtent) + _separatorBreaks(separator));
+      }
+      return _itemStartOffset(index);
+    }
+    return null;
+  }
+
   RenderObject _childAt(int index) {
     final manager = _childManager;
     if (manager != null) {
