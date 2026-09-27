@@ -5,6 +5,8 @@ part of 'selection.dart';
 extension SelectableTextAdapter on Text {
   Widget selectable({
     SelectionController? controller,
+    SelectionCallback? onSelectionChanged,
+    SelectionCallback? onSelectionEnd,
     Style? selectionHighlightStyle,
   }) {
     if (textSpan != null) {
@@ -17,6 +19,8 @@ extension SelectableTextAdapter on Text {
         overflow: overflow,
         maxWidth: maxWidth,
         controller: controller,
+        onSelectionChanged: onSelectionChanged,
+        onSelectionEnd: onSelectionEnd,
       );
     }
     return SelectableText(
@@ -28,6 +32,8 @@ extension SelectableTextAdapter on Text {
       overflow: overflow,
       maxWidth: maxWidth,
       controller: controller,
+      onSelectionChanged: onSelectionChanged,
+      onSelectionEnd: onSelectionEnd,
     );
   }
 }
@@ -36,6 +42,8 @@ extension SelectableTextAdapter on Text {
 extension SelectableRichTextAdapter on RichText {
   Widget selectable({
     SelectionController? controller,
+    SelectionCallback? onSelectionChanged,
+    SelectionCallback? onSelectionEnd,
     Style? selectionHighlightStyle,
   }) {
     return SelectableRichText(
@@ -46,6 +54,8 @@ extension SelectableRichTextAdapter on RichText {
       overflow: overflow,
       maxWidth: maxWidth,
       controller: controller,
+      onSelectionChanged: onSelectionChanged,
+      onSelectionEnd: onSelectionEnd,
     );
   }
 }
@@ -54,6 +64,8 @@ extension SelectableRichTextAdapter on RichText {
 extension SelectableMarkdownTextAdapter on MarkdownText {
   Widget selectable({
     SelectionController? controller,
+    SelectionCallback? onSelectionChanged,
+    SelectionCallback? onSelectionEnd,
     Style? selectionHighlightStyle,
   }) {
     return SelectableMarkdownText(
@@ -64,6 +76,8 @@ extension SelectableMarkdownTextAdapter on MarkdownText {
       softWrap: softWrap,
       maxWidth: maxWidth,
       controller: controller,
+      onSelectionChanged: onSelectionChanged,
+      onSelectionEnd: onSelectionEnd,
     );
   }
 }
@@ -72,6 +86,8 @@ extension SelectableMarkdownTextAdapter on MarkdownText {
 extension SelectableViewAdapter on View {
   Widget selectable({
     SelectionController? controller,
+    SelectionCallback? onSelectionChanged,
+    SelectionCallback? onSelectionEnd,
     Style? selectionHighlightStyle,
     TextAlign textAlign = TextAlign.left,
     bool softWrap = true,
@@ -81,6 +97,8 @@ extension SelectableViewAdapter on View {
     return SelectableView(
       this,
       controller: controller,
+      onSelectionChanged: onSelectionChanged,
+      onSelectionEnd: onSelectionEnd,
       selectionHighlightStyle: selectionHighlightStyle,
       textAlign: textAlign,
       softWrap: softWrap,

@@ -38,6 +38,25 @@ Use the focused stable entrypoints when you need those modules:
 - `package:artisanal_widgets/selection.dart` for `SelectableText` and `SelectionArea`
 - `package:artisanal_widgets/testing.dart` for `WidgetTester`
 
+Selectable text, Markdown, rich text, views, and their `.selectable()` adapters
+accept `onSelectionChanged` and `onSelectionEnd` callbacks with plain selected
+text. For a combined selection across children, attach callbacks to
+`SelectionArea` instead:
+
+```dart
+SelectionArea(
+  onSelectionEnd: copySelectedText,
+  child: transcript,
+)
+```
+
+`copySelectedText(String text)` is an application-owned clipboard handler.
+Callbacks do not execute returned TUI commands. Completion fires once for
+nonempty user selections (drag release, double-click word, or triple-click
+line), not on programmatic changes or clearing. Change callbacks also report
+empty selections. Widget callbacks report their own fragment; area callbacks
+report the combined registered text.
+
 The main `package:artisanal_widgets/widgets.dart` barrel also re-exports
 `KeyMap` and `KeyBinding`, so component-level shortcut UIs such as `HelpView`
 and zone-hit messages such as `ZoneInBoundsMsg`, so shortcut and pointer-aware

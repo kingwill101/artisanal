@@ -160,8 +160,13 @@ void main() {
       final bottomEdgeY = 22;
 
       tester.mouseDown(start.x, start.y);
-      for (var i = 0; i < 96; i++) {
-        tester.mouseMove(start.x + 10, bottomEdgeY);
+      tester.mouseMove(start.x + 10, bottomEdgeY);
+      for (
+        var attempt = 0;
+        attempt < 96 && scrollController.offset < scrollController.maxOffset;
+        attempt++
+      ) {
+        await Future<void>.delayed(const Duration(milliseconds: 60));
       }
       tester.mouseUp(start.x + 10, bottomEdgeY);
 
@@ -199,8 +204,13 @@ void main() {
       final topEdgeY = 1;
 
       tester.mouseDown(footer.x + 20, footer.y);
-      for (var i = 0; i < 96; i++) {
-        tester.mouseMove(footer.x + 10, topEdgeY);
+      tester.mouseMove(footer.x + 10, topEdgeY);
+      for (
+        var attempt = 0;
+        attempt < 96 && scrollController.offset > 0;
+        attempt++
+      ) {
+        await Future<void>.delayed(const Duration(milliseconds: 60));
       }
       tester.mouseUp(footer.x + 10, topEdgeY);
 

@@ -597,17 +597,20 @@ void main() {
       }
     });
 
-    test('SelectableMarkdownText renders display math as selectable text', () async {
-      final tester = WidgetTester(screenWidth: 50, screenHeight: 8);
-      try {
-        await tester.pumpWidget(
-          SelectableMarkdownText(data: r'see \(x^2\)', maxWidth: 40),
-        );
-        expect(tester.find.text('x'), isTrue);
-      } finally {
-        await tester.dispose();
-      }
-    });
+    test(
+      'SelectableMarkdownText renders display math as selectable text',
+      () async {
+        final tester = WidgetTester(screenWidth: 50, screenHeight: 8);
+        try {
+          await tester.pumpWidget(
+            SelectableMarkdownText(data: r'see \(x^2\)', maxWidth: 40),
+          );
+          expect(tester.find.text('x'), isTrue);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
 
     test('Text.selectable() adapts plain text widgets', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
@@ -1271,8 +1274,9 @@ void main() {
 
         // The shared controller should have a selection.
         expect(selCtrl.hasSelection, isTrue);
-        expect(selCtrl.selectionStart!.y, equals(0));
-        expect(selCtrl.selectionEnd!.y, equals(0));
+        expect(selCtrl.selectionStart!.y, equals(15));
+        expect(selCtrl.selectionEnd!.y, equals(15));
+        expect(selCtrl.getSelectedRegisteredText(), 'Item');
       } finally {
         await tester.dispose();
       }

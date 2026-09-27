@@ -40,3 +40,11 @@ part 'selectable_view.dart';
 part 'selection_adapters.dart';
 part 'selection_area.dart';
 part 'selection_controller.dart';
+
+int? _selectionLayoutWidth(BoxConstraints constraints, int? requestedWidth) {
+  if (!constraints.hasBoundedWidth) return requestedWidth;
+  final available = math.max(1, constraints.maxWidth.floor());
+  return requestedWidth == null
+      ? available
+      : math.min(available, math.max(1, requestedWidth));
+}

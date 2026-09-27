@@ -118,6 +118,10 @@ class RenderSelectableText extends RenderBox {
 /// This is a drop-in replacement for [Text] with the same parameters plus
 /// selection support. When selection is active, highlighted text is rendered
 /// with the current theme's highlight colors and Ctrl+C copies to clipboard.
+/// Wrapped content follows the parent's available width and reflows on resize;
+/// [maxWidth] can impose a smaller limit.
+/// During a drag, the nearest scroll viewport supports wheel scrolling and
+/// continuous edge scrolling without an explicit selection scroll binding.
 ///
 /// Can be used standalone or inside a [SelectionArea] for cross-widget
 /// selection.
@@ -133,6 +137,8 @@ class SelectableText extends StatelessWidget {
     this.overflow = TextOverflow.clip,
     this.maxWidth,
     this.controller,
+    this.onSelectionChanged,
+    this.onSelectionEnd,
   });
 
   final String data;
@@ -150,20 +156,32 @@ class SelectableText extends StatelessWidget {
   final int? maxWidth;
   final SelectionController? controller;
 
+  /// Reports this widget's selected plain text, including an empty selection.
+  final SelectionCallback? onSelectionChanged;
+
+  /// Reports nonempty selected plain text after a user completes a selection.
+  ///
+  /// Programmatic changes and clearing do not fire this callback.
+  final SelectionCallback? onSelectionEnd;
+
   @override
   Widget build(BuildContext context) {
-    return _SelectableRenderedText(
-      text: _renderPlainText(
-        data,
-        style: style,
-        textStyle: textStyle,
-        textAlign: textAlign,
-        softWrap: softWrap,
-        overflow: overflow,
-        maxWidth: maxWidth,
+    return LayoutBuilder(
+      builder: (context, constraints) => _SelectableRenderedText(
+        text: _renderPlainText(
+          data,
+          style: style,
+          textStyle: textStyle,
+          textAlign: textAlign,
+          softWrap: softWrap,
+          overflow: overflow,
+          maxWidth: _selectionLayoutWidth(constraints, maxWidth),
+        ),
+        controller: controller,
+        onSelectionChanged: onSelectionChanged,
+        onSelectionEnd: onSelectionEnd,
+        selectionHighlightStyle: selectionHighlightStyle,
       ),
-      controller: controller,
-      selectionHighlightStyle: selectionHighlightStyle,
     );
   }
 }
@@ -174,15 +192,26 @@ class _SelectableRenderedText extends StatefulWidget {
     this.selectionHighlightRangesByLine,
     this.controller,
     this.selectionHighlightStyle,
+    this.onSelectionChanged,
+    this.onSelectionEnd,
   });
 
   final String text;
   final List<List<StyleRange>>? selectionHighlightRangesByLine;
   final SelectionController? controller;
   final Style? selectionHighlightStyle;
+  final SelectionCallback? onSelectionChanged;
+  final SelectionCallback? onSelectionEnd;
 
   @override
   State createState() => _SelectableRenderedTextState();
+}
+
+class _SelectionAutoScrollTick extends Msg {
+  const _SelectionAutoScrollTick(this.owner, this.generation);
+
+  final Object owner;
+  final int generation;
 }
 
 class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
@@ -194,6 +223,11 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   bool _justFinishedDrag = false;
   double _screenToLocalDx = 0;
   double _screenToLocalDy = 0;
+  int _dragScrollOffset = 0;
+  MouseMsg? _dragPointer;
+  int _autoScrollGeneration = 0;
+  bool _autoScrollScheduled = false;
+  bool _wheelHandledByHitTest = false;
 
   SelectionController get _effectiveController {
     if (widget.controller != null) return widget.controller!;
@@ -209,7 +243,13 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   }
 
   ScrollController? get _sharedScrollController =>
-      _SelectionScope.maybeScrollController(context);
+      _SelectionScope.maybeScrollController(context) ??
+      switch (_findSelectionViewport()) {
+        RenderSingleChildViewport viewport => viewport.controller,
+        RenderListViewScrollViewport viewport => viewport.controller,
+        RenderListViewport viewport => viewport.controller,
+        _ => null,
+      };
 
   int get _sharedSelectionYOffset => _sharedScrollController?.offset ?? 0;
 
@@ -224,22 +264,34 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
 
   void _handleControllerChanged() {
     _markNeedsPaint();
+    widget.onSelectionChanged?.call(_selectedText());
+  }
+
+  String _selectedText() => extractSelectedText(
+    _getContentLines(),
+    selectionStart: _localSelectionPoint(_effectiveController.selectionStart),
+    selectionEnd: _localSelectionPoint(_effectiveController.selectionEnd),
+  );
+
+  void Function()? _handleSelectionEnd() {
+    final callback = widget.onSelectionEnd;
+    if (callback == null) return null;
+    final text = _selectedText();
+    return text.isEmpty ? null : () => callback(text);
   }
 
   void _syncControllerListener() {
     final ctrl = _effectiveController;
     if (identical(ctrl, _listeningController)) return;
     _listeningController?.removeListener(_handleControllerChanged);
+    _listeningController?._completionListeners.remove(_handleSelectionEnd);
     _listeningController = ctrl;
     ctrl.addListener(_handleControllerChanged);
+    ctrl._completionListeners.add(_handleSelectionEnd);
   }
 
   void _emitSelectionChanged(SelectionController ctrl) {
-    if (_usingSharedController) {
-      ctrl._notifyListeners();
-    } else {
-      _markNeedsPaint();
-    }
+    ctrl._notifyListeners();
   }
 
   void _clearSelectionOnOutsideClick() {
@@ -309,6 +361,7 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     ctrl._selectionEnd = _selectionPointForLocal(endX, localY);
     ctrl._selecting = false;
     _emitSelectionChanged(ctrl);
+    ctrl._notifySelectionEnd();
   }
 
   void _selectLineAt(SelectionController ctrl, int localY) {
@@ -318,25 +371,89 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     ctrl._selectionEnd = _selectionPointForLocal(endX, localY);
     ctrl._selecting = false;
     _emitSelectionChanged(ctrl);
+    ctrl._notifySelectionEnd();
   }
 
-  void _maybeAutoScrollSharedSelection(MouseMsg event) {
-    if (!_usingSharedController) return;
-    final scrollController = _sharedScrollController;
-    if (scrollController == null) return;
-
+  Cmd? _maybeAutoScrollSharedSelection(MouseMsg event) {
+    _dragPointer = event;
     final ro = _findSelectionViewport();
-    if (ro == null) return;
-
-    final viewportLocalY = (event.y - _renderObjectScreenY(ro)).toInt();
-    final viewportHeight = ro.size.height.toInt();
-    final delta = _selectionAreaAutoScrollDelta(
-      localY: viewportLocalY,
-      viewportHeight: viewportHeight,
-    );
-    if (delta != 0) {
-      scrollController.scrollBy(delta);
+    if (ro == null ||
+        _sharedScrollController == null ||
+        _selectionAreaAutoScrollDelta(
+              localY: (event.y - _renderObjectScreenY(ro)).toInt(),
+              viewportHeight: ro.size.height.toInt(),
+            ) ==
+            0) {
+      _stopAutoScroll();
+      return null;
     }
+    return _scheduleAutoScroll();
+  }
+
+  bool _advanceAutoScroll() {
+    final pointer = _dragPointer;
+    final viewport = _findSelectionViewport();
+    if (!mounted ||
+        !_isDragging ||
+        !_effectiveController.selecting ||
+        pointer == null ||
+        viewport == null) {
+      _stopAutoScroll();
+      return false;
+    }
+    final delta = _selectionAreaAutoScrollDelta(
+      localY: (pointer.y - _renderObjectScreenY(viewport)).toInt(),
+      viewportHeight: viewport.size.height.toInt(),
+    );
+    if (delta == 0 || _sharedScrollController?.scrollBy(delta) != true) {
+      _stopAutoScroll();
+      return false;
+    }
+    _updateDragEndpoint(pointer);
+    return true;
+  }
+
+  Cmd? _scheduleAutoScroll() {
+    if (_autoScrollScheduled) return null;
+    _autoScrollScheduled = true;
+    final generation = _autoScrollGeneration;
+    return Cmd.tick(
+      const Duration(milliseconds: 50),
+      (_) => _SelectionAutoScrollTick(this, generation),
+    );
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollGeneration++;
+    _autoScrollScheduled = false;
+  }
+
+  void _updateDragEndpoint(MouseMsg event) {
+    final ctrl = _effectiveController;
+    ctrl._selectionEnd = _usingSharedController
+        ? _selectionPointForEvent(event)
+        : (
+            x: (event.x - _screenToLocalDx).toInt(),
+            y:
+                (event.y - _screenToLocalDy).toInt() +
+                (_sharedScrollController?.offset ?? 0) -
+                _dragScrollOffset,
+          );
+    _emitSelectionChanged(ctrl);
+  }
+
+  bool _scrollDuringDrag(MouseMsg event) {
+    if (!_isDragging) return false;
+    final delta = switch (event.button) {
+      MouseButton.wheelUp => -3,
+      MouseButton.wheelDown => 3,
+      _ => 0,
+    };
+    final controller = _sharedScrollController;
+    if (delta == 0 || controller == null) return false;
+    controller.scrollBy(delta);
+    _updateDragEndpoint(_dragPointer ?? event);
+    return true;
   }
 
   RenderObject? _findSelectionViewport() {
@@ -359,14 +476,25 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
 
   @override
   void dispose() {
+    _stopAutoScroll();
     _listeningController?.removeListener(_handleControllerChanged);
+    _listeningController?._completionListeners.remove(_handleSelectionEnd);
     _registeredController?._unregisterParticipant(this);
     super.dispose();
   }
 
   @override
   Cmd? handleUpdate(Msg msg) {
+    if (msg is _SelectionAutoScrollTick && identical(msg.owner, this)) {
+      if (msg.generation != _autoScrollGeneration) return null;
+      _autoScrollScheduled = false;
+      return _advanceAutoScroll() ? _scheduleAutoScroll() : null;
+    }
     if (msg is HitTestMouseMsg) {
+      if (_scrollDuringDrag(msg.event)) {
+        _wheelHandledByHitTest = true;
+        return Cmd.none();
+      }
       final isWheelLike =
           msg.event.action == MouseAction.wheel ||
           msg.event.button == MouseButton.wheelUp ||
@@ -379,6 +507,14 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     }
 
     if (msg is MouseMsg) {
+      if (msg.button == MouseButton.wheelUp ||
+          msg.button == MouseButton.wheelDown) {
+        if (_wheelHandledByHitTest) {
+          _wheelHandledByHitTest = false;
+          return Cmd.none();
+        }
+        if (_scrollDuringDrag(msg)) return Cmd.none();
+      }
       if (_hitTestedThisFrame && !_isDragging) {
         _hitTestedThisFrame = false;
       } else if (msg.action == MouseAction.motion ||
@@ -414,19 +550,18 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final localY = msg.localY.toInt();
 
     if (event.action == MouseAction.motion && _isDragging) {
-      _maybeAutoScrollSharedSelection(event);
-      ctrl._selectionEnd = _usingSharedController
-          ? _selectionPointForEvent(event)
-          : (x: localX, y: localY);
-      _emitSelectionChanged(ctrl);
-      return null;
+      final command = _maybeAutoScrollSharedSelection(event);
+      _updateDragEndpoint(event);
+      return command;
     }
     if (event.action == MouseAction.release && _isDragging) {
+      _stopAutoScroll();
       ctrl._selecting = false;
       _isDragging = false;
       _justFinishedDrag = true;
       elementOf(widget)?.releaseMouse();
       _emitSelectionChanged(ctrl);
+      ctrl._notifySelectionEnd();
       return null;
     }
 
@@ -454,6 +589,8 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
       _isDragging = true;
       _screenToLocalDx = event.x.toDouble() - localX;
       _screenToLocalDy = event.y.toDouble() - localY;
+      _dragScrollOffset = _sharedScrollController?.offset ?? 0;
+      _dragPointer = event;
       elementOf(widget)?.captureMouse();
       _emitSelectionChanged(ctrl);
       return null;
@@ -465,23 +602,20 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   Cmd? _handleRawMouse(MouseMsg msg) {
     if (!_isDragging) return null;
     final ctrl = _effectiveController;
-    final localX = (msg.x - _screenToLocalDx).toInt();
-    final localY = (msg.y - _screenToLocalDy).toInt();
 
     if (msg.action == MouseAction.motion) {
-      _maybeAutoScrollSharedSelection(msg);
-      ctrl._selectionEnd = _usingSharedController
-          ? _selectionPointForEvent(msg)
-          : (x: localX, y: localY);
-      _emitSelectionChanged(ctrl);
-      return null;
+      final command = _maybeAutoScrollSharedSelection(msg);
+      _updateDragEndpoint(msg);
+      return command;
     }
     if (msg.action == MouseAction.release) {
+      _stopAutoScroll();
       ctrl._selecting = false;
       _isDragging = false;
       _justFinishedDrag = true;
       elementOf(widget)?.releaseMouse();
       _emitSelectionChanged(ctrl);
+      ctrl._notifySelectionEnd();
       return null;
     }
     return null;
@@ -636,7 +770,7 @@ String _finalizeRenderedText(
   int? maxWidth,
 }) {
   if (softWrap) {
-    final wrapWidth = Layout.getWidth(content);
+    final wrapWidth = maxWidth ?? Layout.getWidth(content);
     content = Layout.wrapLines(content, wrapWidth);
   }
 
@@ -883,6 +1017,10 @@ double _renderObjectGlobalY(RenderObject ro) {
   while (current != null) {
     y += current.offset.dy;
     y -= _renderObjectScrollYOffset(current);
+    final parent = current.parent;
+    if (parent is RenderListViewport) {
+      y += parent.contentOffsetForChild(current) ?? 0;
+    }
     current = current.parent;
   }
   return y;
