@@ -207,6 +207,13 @@ class _SelectableRenderedText extends StatefulWidget {
   State createState() => _SelectableRenderedTextState();
 }
 
+class _SelectionAutoScrollTick extends Msg {
+  const _SelectionAutoScrollTick(this.owner, this.generation);
+
+  final Object owner;
+  final int generation;
+}
+
 class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   SelectionController? _ownController;
   SelectionController? _registeredController;
@@ -218,7 +225,8 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   double _screenToLocalDy = 0;
   int _dragScrollOffset = 0;
   MouseMsg? _dragPointer;
-  Timer? _autoScrollTimer;
+  int _autoScrollGeneration = 0;
+  bool _autoScrollScheduled = false;
   bool _wheelHandledByHitTest = false;
 
   SelectionController get _effectiveController {
@@ -366,7 +374,7 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     ctrl._notifySelectionEnd();
   }
 
-  void _maybeAutoScrollSharedSelection(MouseMsg event) {
+  Cmd? _maybeAutoScrollSharedSelection(MouseMsg event) {
     _dragPointer = event;
     final ro = _findSelectionViewport();
     if (ro == null ||
@@ -377,34 +385,47 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
             ) ==
             0) {
       _stopAutoScroll();
-      return;
+      return null;
     }
-    _autoScrollTimer ??= Timer.periodic(const Duration(milliseconds: 50), (_) {
-      if (!mounted || !_isDragging || !_effectiveController.selecting) {
-        _stopAutoScroll();
-        return;
-      }
-      final pointer = _dragPointer;
-      final viewport = _findSelectionViewport();
-      if (pointer == null || viewport == null) {
-        _stopAutoScroll();
-        return;
-      }
-      final delta = _selectionAreaAutoScrollDelta(
-        localY: (pointer.y - _renderObjectScreenY(viewport)).toInt(),
-        viewportHeight: viewport.size.height.toInt(),
-      );
-      if (delta == 0 || _sharedScrollController?.scrollBy(delta) != true) {
-        _stopAutoScroll();
-        return;
-      }
-      _updateDragEndpoint(pointer);
-    });
+    return _scheduleAutoScroll();
+  }
+
+  bool _advanceAutoScroll() {
+    final pointer = _dragPointer;
+    final viewport = _findSelectionViewport();
+    if (!mounted ||
+        !_isDragging ||
+        !_effectiveController.selecting ||
+        pointer == null ||
+        viewport == null) {
+      _stopAutoScroll();
+      return false;
+    }
+    final delta = _selectionAreaAutoScrollDelta(
+      localY: (pointer.y - _renderObjectScreenY(viewport)).toInt(),
+      viewportHeight: viewport.size.height.toInt(),
+    );
+    if (delta == 0 || _sharedScrollController?.scrollBy(delta) != true) {
+      _stopAutoScroll();
+      return false;
+    }
+    _updateDragEndpoint(pointer);
+    return true;
+  }
+
+  Cmd? _scheduleAutoScroll() {
+    if (_autoScrollScheduled) return null;
+    _autoScrollScheduled = true;
+    final generation = _autoScrollGeneration;
+    return Cmd.tick(
+      const Duration(milliseconds: 50),
+      (_) => _SelectionAutoScrollTick(this, generation),
+    );
   }
 
   void _stopAutoScroll() {
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = null;
+    _autoScrollGeneration++;
+    _autoScrollScheduled = false;
   }
 
   void _updateDragEndpoint(MouseMsg event) {
@@ -464,6 +485,11 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
 
   @override
   Cmd? handleUpdate(Msg msg) {
+    if (msg is _SelectionAutoScrollTick && identical(msg.owner, this)) {
+      if (msg.generation != _autoScrollGeneration) return null;
+      _autoScrollScheduled = false;
+      return _advanceAutoScroll() ? _scheduleAutoScroll() : null;
+    }
     if (msg is HitTestMouseMsg) {
       if (_scrollDuringDrag(msg.event)) {
         _wheelHandledByHitTest = true;
@@ -524,9 +550,9 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final localY = msg.localY.toInt();
 
     if (event.action == MouseAction.motion && _isDragging) {
-      _maybeAutoScrollSharedSelection(event);
+      final command = _maybeAutoScrollSharedSelection(event);
       _updateDragEndpoint(event);
-      return null;
+      return command;
     }
     if (event.action == MouseAction.release && _isDragging) {
       _stopAutoScroll();
@@ -578,9 +604,9 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final ctrl = _effectiveController;
 
     if (msg.action == MouseAction.motion) {
-      _maybeAutoScrollSharedSelection(msg);
+      final command = _maybeAutoScrollSharedSelection(msg);
       _updateDragEndpoint(msg);
-      return null;
+      return command;
     }
     if (msg.action == MouseAction.release) {
       _stopAutoScroll();

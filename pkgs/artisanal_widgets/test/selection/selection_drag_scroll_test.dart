@@ -4,6 +4,47 @@ import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'stationary edge drag renders through the runtime without pumping',
+    () async {
+      final tester = WidgetTester(
+        screenWidth: 40,
+        screenHeight: 6,
+        enableRenderer: true,
+      );
+      addTearDown(tester.dispose);
+      final scroll = WidgetScrollController();
+      final selection = SelectionController();
+      await tester.pumpWidget(
+        SizedBox(
+          height: 6,
+          child: SingleChildScrollView(
+            controller: scroll,
+            child: SelectableText(
+              List.generate(
+                80,
+                (index) => 'Line $index selectable text',
+              ).join('\n'),
+              controller: selection,
+            ),
+          ),
+        ),
+      );
+      tester.mouseDown(1, 1);
+      tester.mouseMove(8, 5);
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      tester.clearRendererOutput();
+      final before = scroll.offset;
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+      expect(scroll.offset, greaterThan(before));
+      expect(tester.rendererOutput, isNotEmpty);
+      tester.mouseUp(8, 5);
+      final stopped = scroll.offset;
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(scroll.offset, stopped);
+    },
+  );
+
   for (final virtual in [false, true]) {
     for (final shared in [false, true]) {
       test(

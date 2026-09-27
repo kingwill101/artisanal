@@ -9,7 +9,6 @@
 /// {@category Selection}
 library;
 
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:artisanal/markdown.dart' show AnsiRendererOptions;
