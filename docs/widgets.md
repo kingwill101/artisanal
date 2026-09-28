@@ -1790,6 +1790,9 @@ ScrollBehaviorScope(
 `VirtualListView`, `Scrollbar`, `GitDiffViewer`, and `DiffReviewViewport`
 consume the scope. Their optional `scrollBehavior` overrides the scope.
 Without either, their existing wheel defaults remain unchanged.
+Shift-wheel retains horizontal navigation in non-wrapping viewports and Git diff
+viewers; it does not consume the vertical policy's fractional accumulator.
+Wrapped content continues to scroll vertically using the configured policy.
 
 Fractions accumulate per mounted surface, so four unaccelerated quarter-row
 pulses move one row. Nested surfaces consume their own pulses even when no full

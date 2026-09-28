@@ -709,6 +709,7 @@ class _ViewportState extends State<Viewport> {
   /// Handles a mouse event using local coordinates (from hit-testing or zone).
   Cmd? _handleLocalMouse(MouseMsg local) {
     if (widget.mouseWheelEnabled &&
+        !(local.shift && !widget.softWrap && widget.horizontalStep > 0) &&
         (local.button == MouseButton.wheelUp ||
             local.button == MouseButton.wheelDown)) {
       final delta = _wheel.delta(

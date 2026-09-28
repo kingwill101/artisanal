@@ -851,10 +851,14 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       if (!_isWheelEvent(msg.event)) return null;
       final policy =
           widget.scrollBehavior ?? ScrollBehaviorScope.maybeOf(context);
+      final viewport = _controller.model.viewport;
       if (policy != null &&
+          !(msg.event.shift &&
+              !widget.wrapLines &&
+              !viewport.softWrap &&
+              viewport.horizontalStep > 0) &&
           (msg.event.button == MouseButton.wheelUp ||
               msg.event.button == MouseButton.wheelDown)) {
-        final viewport = _controller.model.viewport;
         final delta = _wheel.consume(
           msg.event.button == MouseButton.wheelUp ? -1 : 1,
           behavior: policy,

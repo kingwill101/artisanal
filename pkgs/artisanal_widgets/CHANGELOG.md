@@ -2,6 +2,9 @@
 
 ## 0.4.2
 
+- Preserve Shift-wheel horizontal navigation in non-wrapping viewports and
+  Git diff viewers when a scroll policy is installed.
+
 - Add optional `maximumBytes` budgets to `FileImage` and `MemoryImage`, include
   budgets in provider identity, and report `ImageByteLimitException` consistently
   across file, memory and network sources. File budgets use streaming reads.
