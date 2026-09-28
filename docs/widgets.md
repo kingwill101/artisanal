@@ -2505,6 +2505,25 @@ Image(
 Responses are deduplicated and cached in an in-process `LruCache` keyed by
 `(url, headers, maximumBytes, decodeFrame, allowedContentTypes, blockedContentTypes)`.
 
+`FileImage` and `MemoryImage` also accept `maximumBytes`:
+
+```dart
+final file = FileImage('preview.png', maximumBytes: 8 * 1024 * 1024, decodeFrame: 0);
+final memory = MemoryImage(bytes, maximumBytes: 8 * 1024 * 1024, decodeFrame: 0);
+```
+
+All three providers throw `ImageByteLimitException` before decoding when a
+declared or received source exceeds its budget. The exception exposes
+`maximumBytes` and `observedBytes`, without including paths or URLs. Negative
+budgets are invalid; null leaves encoded size unrestricted. File loading with a
+budget streams and rejects before buffering the entire oversized file. Memory
+loading cannot undo the caller's allocation of the supplied bytes.
+
+Changing a budget changes provider identity, and network cache entries from a
+larger budget cannot bypass a stricter one. These are **encoded-byte limits**,
+not bounds on decoded pixels, animation frames or compressed metadata. Applications
+handling untrusted previews still need a separate decoder-allocation policy.
+
 ---
 
 ## Animation Widgets

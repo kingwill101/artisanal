@@ -2,6 +2,11 @@
 
 ## 0.4.2
 
+- Add optional `maximumBytes` budgets to `FileImage` and `MemoryImage`, include
+  budgets in provider identity, and report `ImageByteLimitException` consistently
+  across file, memory and network sources. File budgets use streaming reads.
+  These encoded-byte limits do not bound decoded pixel/frame allocations.
+
 - Add controlled `ExpansionTile.expanded` state. Toggle requests leave the
   accepted value unchanged until the parent updates it.
 

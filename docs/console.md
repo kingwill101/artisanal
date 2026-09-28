@@ -404,6 +404,31 @@ print(console.renderer.hasDarkBackground); // true/false
 print(console.terminalWidth); // 80/120/etc.
 ```
 
+### Desktop Notifications
+
+```dart
+final accepted = await console.notify(
+  'Build finished',
+  body: 'All checks passed',
+  silent: true,
+);
+```
+
+Notifications are best-effort on Linux and macOS. The returned boolean reports
+native command success, not proof that the operating system displayed a banner.
+Missing tools, unsupported platforms, command failures, and commands exceeding
+the ten-second exit timeout return `false` without printing subprocess output.
+Executable discovery and process startup are outside that exit timeout.
+
+`silent: true` overrides a supplied macOS `sound` and requests suppression of
+Linux notification sounds. Linux silent delivery requires `notify-send`; it
+does not use the `kdialog` provider, which cannot guarantee this policy.
+The operating system ultimately controls notification presentation.
+
+Applications still own focus policy, event deduplication, notification consent,
+and independent audio playback. This one-shot helper is not a lifecycle-managed
+attention service and does not supply audio volume or cancellation controls.
+
 ### Inline Animations
 
 ```dart

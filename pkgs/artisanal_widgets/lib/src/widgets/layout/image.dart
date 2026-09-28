@@ -25,6 +25,47 @@ import '../render_object.dart';
 import 'geometry.dart';
 import 'text.dart';
 
+/// An encoded source exceeded its provider's configured byte budget.
+///
+/// This limit is checked before decoding. It does not bound decoded pixels,
+/// animation frames or decoder metadata allocations.
+class ImageByteLimitException implements Exception {
+  const ImageByteLimitException({
+    required this.maximumBytes,
+    required this.observedBytes,
+  });
+
+  /// The caller's encoded-byte budget.
+  final int maximumBytes;
+
+  /// The declared or received size when the provider rejected the source.
+  final int observedBytes;
+
+  @override
+  String toString() =>
+      'Image source is too large: $observedBytes bytes '
+      '(limit $maximumBytes)';
+}
+
+void _validateMaximumBytes(int? maximumBytes) {
+  if (maximumBytes != null && maximumBytes < 0) {
+    throw ArgumentError.value(
+      maximumBytes,
+      'maximumBytes',
+      'Must be nonnegative.',
+    );
+  }
+}
+
+void _checkMaximumBytes(int observedBytes, int? maximumBytes) {
+  if (maximumBytes != null && observedBytes > maximumBytes) {
+    throw ImageByteLimitException(
+      maximumBytes: maximumBytes,
+      observedBytes: observedBytes,
+    );
+  }
+}
+
 /// Data class holding a decoded image.
 class ImageData {
   ImageData(this.image);
@@ -169,7 +210,7 @@ abstract class ImageProvider {
 /// Image(image: FileImage('/path/to/photo.png'))
 /// ```
 class FileImage extends ImageProvider {
-  const FileImage(this.path, {this.decodeFrame});
+  const FileImage(this.path, {this.decodeFrame, this.maximumBytes});
 
   /// The file system path to the image.
   final String path;
@@ -177,9 +218,26 @@ class FileImage extends ImageProvider {
   /// Optional frame index to decode for animated image formats.
   final int? decodeFrame;
 
+  /// Optional encoded-byte budget, enforced while streaming the file.
+  ///
+  /// Oversized sources throw [ImageByteLimitException] before decoding without
+  /// buffering the whole file. Null retains unrestricted loading.
+  final int? maximumBytes;
+
   @override
   Future<ImageData> resolve() async {
-    final bytes = await File(path).readAsBytes();
+    _validateMaximumBytes(maximumBytes);
+    final Uint8List bytes;
+    if (maximumBytes == null) {
+      bytes = await File(path).readAsBytes();
+    } else {
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in File(path).openRead()) {
+        _checkMaximumBytes(builder.length + chunk.length, maximumBytes);
+        builder.add(chunk);
+      }
+      bytes = builder.takeBytes();
+    }
     return _decodeImageData(bytes, 'image: $path', frame: decodeFrame);
   }
 
@@ -187,10 +245,11 @@ class FileImage extends ImageProvider {
   bool operator ==(Object other) =>
       other is FileImage &&
       other.path == path &&
-      other.decodeFrame == decodeFrame;
+      other.decodeFrame == decodeFrame &&
+      other.maximumBytes == maximumBytes;
 
   @override
-  int get hashCode => Object.hash(FileImage, path, decodeFrame);
+  int get hashCode => Object.hash(FileImage, path, decodeFrame, maximumBytes);
 }
 
 /// An [ImageProvider] that loads an image from raw bytes.
@@ -199,16 +258,24 @@ class FileImage extends ImageProvider {
 /// Image(image: MemoryImage(myPngBytes))
 /// ```
 class MemoryImage extends ImageProvider {
-  const MemoryImage(this.bytes, {this.decodeFrame});
+  const MemoryImage(this.bytes, {this.decodeFrame, this.maximumBytes});
 
   /// The raw image bytes (PNG, JPEG, etc.).
   final Uint8List bytes;
+
+  /// Optional encoded-byte budget checked before entering the decoder isolate.
+  ///
+  /// This cannot limit the caller's allocation of [bytes] or decoded pixels.
+  /// Oversized input throws [ImageByteLimitException].
+  final int? maximumBytes;
 
   /// Optional frame index to decode for animated image formats.
   final int? decodeFrame;
 
   @override
   Future<ImageData> resolve() async {
+    _validateMaximumBytes(maximumBytes);
+    _checkMaximumBytes(bytes.length, maximumBytes);
     return _decodeImageData(bytes, 'image from bytes', frame: decodeFrame);
   }
 
@@ -216,11 +283,16 @@ class MemoryImage extends ImageProvider {
   bool operator ==(Object other) =>
       other is MemoryImage &&
       identical(other.bytes, bytes) &&
-      other.decodeFrame == decodeFrame;
+      other.decodeFrame == decodeFrame &&
+      other.maximumBytes == maximumBytes;
 
   @override
-  int get hashCode =>
-      Object.hash(MemoryImage, identityHashCode(bytes), decodeFrame);
+  int get hashCode => Object.hash(
+    MemoryImage,
+    identityHashCode(bytes),
+    decodeFrame,
+    maximumBytes,
+  );
 }
 
 /// An [ImageProvider] that loads an image from an HTTP(S) URL.
@@ -251,6 +323,7 @@ class NetworkImage extends ImageProvider {
   /// When set, responses with a known larger `Content-Length` are rejected
   /// before reading the body. Chunked responses are rejected once the streamed
   /// byte count exceeds this value.
+  /// Oversized sources throw [ImageByteLimitException] before decoding.
   final int? maximumBytes;
 
   /// Optional frame index to decode for animated image formats.
@@ -284,6 +357,7 @@ class NetworkImage extends ImageProvider {
   }
 
   Future<ImageData> _load() async {
+    _validateMaximumBytes(maximumBytes);
     final client = HttpClient();
     try {
       final request = await client.getUrl(Uri.parse(url));
@@ -303,25 +377,13 @@ class NetworkImage extends ImageProvider {
       _checkContentType(contentType);
       final maximumBytes = this.maximumBytes;
       final contentLength = response.contentLength;
-      if (maximumBytes != null &&
-          contentLength >= 0 &&
-          contentLength > maximumBytes) {
-        throw Exception(
-          'Image response is too large: $contentLength bytes '
-          '(limit $maximumBytes)',
-        );
-      }
+      if (contentLength >= 0) _checkMaximumBytes(contentLength, maximumBytes);
 
       final builder = BytesBuilder(copy: false);
       var receivedBytes = 0;
       await for (final chunk in response) {
         receivedBytes += chunk.length;
-        if (maximumBytes != null && receivedBytes > maximumBytes) {
-          throw Exception(
-            'Image response is too large: $receivedBytes bytes '
-            '(limit $maximumBytes)',
-          );
-        }
+        _checkMaximumBytes(receivedBytes, maximumBytes);
         builder.add(chunk);
       }
       final bytes = builder.takeBytes();
