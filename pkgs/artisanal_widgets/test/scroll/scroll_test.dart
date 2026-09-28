@@ -1766,6 +1766,16 @@ void main() {
       expect(ctrl.scrollPercent, equals(0.0));
     });
 
+    test('clamps an initial offset after layout metrics arrive', () {
+      final ctrl = WidgetScrollController(initialOffset: 30);
+      expect(ctrl.offset, equals(30));
+
+      ctrl.updateMetrics(viewportExtent: 10, contentExtent: 20);
+
+      expect(ctrl.offset, equals(10));
+      expect(ctrl.maxOffset, equals(10));
+    });
+
     test('updateMetrics sets viewport and content extents', () {
       final ctrl = WidgetScrollController();
       ctrl.updateMetrics(viewportExtent: 10, contentExtent: 50);

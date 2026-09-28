@@ -1813,6 +1813,10 @@ Scroll controllers:
 - `ListViewController` for list-style offset/extent tracking
 - `ViewportController` for viewport-model backed content
 
+`WidgetScrollController(initialOffset: row)` can restore or position content
+before its first layout. The requested offset is clamped once viewport and
+content extents are known.
+
 ### ScrollView
 
 Renders a single child into a scrollable viewport:
@@ -2177,7 +2181,8 @@ Implemented component widgets and companion types include:
 - **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
   `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
   `DebugConsole`, `Wizard`, `WizardFormStep`, `FilePicker`, `CommandPalette`,
-  `CommandPaletteItem`, `CommandPaletteMatch`, `CommandPaletteController`
+  `CommandPaletteItem`, `CommandPaletteMatch`, `CommandPaletteController`,
+  `SettingsList`, `SettingsListItem`, `SettingsListResult`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
 - **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,
@@ -2208,6 +2213,27 @@ The callback may return a command for asynchronous persistence. The parent owns
 loading/error feedback and rebuilds the tile with its accepted value; the tile
 does not infer success from the callback completing. Disabled tiles still render
 the controlled state but do not emit toggle requests.
+
+### Controlled settings list
+
+`SettingsList<T>` provides grouped searchable rows with keyboard and pointer
+navigation for settings backed by an application-owned source of truth. Give
+each `SettingsListItem<T>` a stable typed ID, accepted value, category, search
+terms, and optional disabled explanation. Search matches all words across the
+row's searchable text, and selection follows the row ID when the host filters
+or replaces the list.
+By default, left/right stay with search-caret navigation until the row list is
+focused with Tab. Set `adjustWhileSearching` when the host intentionally routes
+left/right to the selected setting while filtering.
+
+Use `onAdjust` for enum cycling or bounded numeric edits. Left/right requests
+the corresponding direction; Enter requests an increase by default. Set
+`canDecrease` and `canIncrease` from the accepted value so endpoint edits are
+disabled. Use `SettingsListActivation.action` and `onActivate` for navigation
+or other actions. Requests can be asynchronous; the list serializes edits,
+shows a pending state, and displays a returned rejection message without
+changing the presented value. Persistence, authorization, and accepted values
+remain with the host.
 
 ### Button
 

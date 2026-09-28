@@ -41,17 +41,17 @@ class SpinnerIndicator extends StatefulWidget {
 
 class _SpinnerIndicatorState extends State<SpinnerIndicator> {
   int _index = 0;
-  final Object _tickToken = Object();
-  late final String _tickCmdId = 'spinner:${identityHashCode(this)}';
+  Object _tickToken = Object();
+
+  Cmd _scheduleTick() {
+    final token = _tickToken;
+    return Cmd.tick(widget.interval, (_) => _SpinnerTickMsg(token));
+  }
 
   @override
   Cmd? handleInit() {
     if (!widget.active || widget.frames.isEmpty) return null;
-    return every(
-      widget.interval,
-      (_) => _SpinnerTickMsg(_tickToken),
-      id: _tickCmdId,
-    );
+    return _scheduleTick();
   }
 
   @override
@@ -68,15 +68,15 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
     if (widget.frames.isNotEmpty && _index >= widget.frames.length) {
       _index = 0;
     }
-    if (!widget.active || widget.frames.isEmpty) return null;
+    if (!widget.active || widget.frames.isEmpty) {
+      _tickToken = Object();
+      return null;
+    }
     if (!oldWidget.active ||
         oldWidget.frames.isEmpty ||
         oldWidget.interval != widget.interval) {
-      return every(
-        widget.interval,
-        (_) => _SpinnerTickMsg(_tickToken),
-        id: _tickCmdId,
-      );
+      _tickToken = Object();
+      return _scheduleTick();
     }
     return null;
   }
@@ -88,7 +88,7 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
       setState(() {
         _index = (_index + 1) % widget.frames.length;
       });
-      return null;
+      return _scheduleTick();
     }
     return null;
   }
@@ -150,5 +150,5 @@ class _SpinnerTickMsg extends Msg {
   final Object token;
 
   @override
-  bool get dropWhenInputQueued => true;
+  bool get dropWhenInputQueued => false;
 }

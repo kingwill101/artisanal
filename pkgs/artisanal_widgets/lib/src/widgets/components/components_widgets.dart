@@ -42,6 +42,7 @@ export 'checkbox.dart';
 export 'radio.dart';
 export 'switch.dart';
 export 'select.dart';
+export 'settings_list.dart';
 export 'popup_menu.dart';
 export 'list_item.dart';
 export 'breadcrumbs.dart';

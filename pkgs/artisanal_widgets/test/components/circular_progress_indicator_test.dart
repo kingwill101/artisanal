@@ -1,4 +1,3 @@
-import 'package:artisanal/tui.dart' show EveryCmd;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
@@ -47,18 +46,15 @@ void main() {
       final before = frames.indexWhere(tester.find.text);
       expect(before, isNonNegative);
 
-      final spinnerElement = tester.elements
-          .whereType<StatefulElement>()
-          .singleWhere((element) => element.widget is SpinnerIndicator);
-      final ticker = spinnerElement.state.handleInit();
-      expect(ticker, isA<EveryCmd>());
+      final deadline = DateTime.now().add(const Duration(seconds: 1));
+      var after = before;
+      while (DateTime.now().isBefore(deadline) && after == before) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        tester.pump();
+        after = frames.indexWhere(tester.find.text);
+      }
 
-      final tick = (ticker! as EveryCmd).callback(DateTime.now());
-      expect(tick, isNotNull);
-      spinnerElement.state.handleUpdate(tick!);
-      tester.pump();
-
-      expect(tester.find.text(frames[(before + 1) % frames.length]), isTrue);
+      expect(after, isNot(before));
     });
   });
 }

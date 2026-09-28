@@ -2,6 +2,12 @@
 
 ## 0.4.3
 
+- Stop `SpinnerIndicator`'s tick chain when deactivated or unmounted, and restart
+  from one fresh tick chain when reactivated.
+- Add a searchable `SettingsList` with typed stable row IDs, grouped settings,
+  bounded directional edits, action rows, async-save serialization, and
+  host-owned accepted values. Hosts can route adjustment keys while search
+  retains focus.
 - Preserve Shift-wheel horizontal navigation in non-wrapping viewports and
   Git diff viewers when a scroll policy is installed.
 
@@ -17,6 +23,8 @@
   bounded fractional accumulation with optional adaptive acceleration across
   scroll views, lists, scrollbars and diff surfaces. Selection wheel dragging
   shares the viewport policy; keyboard and edge-autoscroll behavior is unchanged.
+- Allow `WidgetScrollController` to start at a requested content-row offset,
+  clamped when its first layout reports viewport and content extents.
 
 - Fix automatic parent-width wrapping and resize reflow for selectable plain
   text, Markdown, and view content without requiring a caller-supplied width.

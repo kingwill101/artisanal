@@ -138,7 +138,14 @@ abstract class ScrollController {
 /// render object calls [updateMetrics] after layout; the widget state calls
 /// [scrollBy] / [jumpTo] in response to user input.
 class WidgetScrollController implements ScrollController {
-  int _offset = 0;
+  /// Creates a controller with an optional initial content-row offset.
+  ///
+  /// The offset is clamped to the available range when the first layout
+  /// supplies viewport and content metrics.
+  WidgetScrollController({int initialOffset = 0})
+    : _offset = math.max(0, initialOffset);
+
+  int _offset;
   int _viewportExtent = 0;
   int _contentExtent = 0;
   final Set<void Function()> _listeners = <void Function()>{};

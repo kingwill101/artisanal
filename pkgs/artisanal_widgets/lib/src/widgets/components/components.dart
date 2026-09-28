@@ -45,6 +45,7 @@ export 'replay_event_history_panel.dart';
 export 'replay_event_panel.dart';
 export 'scroll_area.dart';
 export 'select.dart';
+export 'settings_list.dart';
 export 'sidebar.dart';
 export 'slider.dart';
 export 'spinner_indicator.dart';

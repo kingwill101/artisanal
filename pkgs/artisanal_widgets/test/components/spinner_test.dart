@@ -477,5 +477,50 @@ void main() {
       );
       expect(spinner.handleInit(), isNull);
     });
+
+    test(
+      'deactivation stops ticks and reactivation starts a fresh chain',
+      () async {
+        const frames = ['A', 'B', 'C'];
+        final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+        try {
+          await tester.pumpWidget(
+            SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+            ),
+          );
+          final beforePause = _visibleSpinnerFrame(tester, frames);
+          expect(beforePause, 'A');
+
+          await tester.pumpWidget(
+            SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+              active: false,
+            ),
+          );
+          final pausedFrame = _visibleSpinnerFrame(tester, frames);
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          tester.pump();
+          expect(_visibleSpinnerFrame(tester, frames), pausedFrame);
+
+          await tester.pumpWidget(
+            SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+            ),
+          );
+          final resumed = await _waitForSpinnerFrame(
+            tester,
+            frames,
+            except: pausedFrame,
+          );
+          expect(resumed, isNotEmpty);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
   });
 }
