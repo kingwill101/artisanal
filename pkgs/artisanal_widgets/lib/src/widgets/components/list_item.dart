@@ -361,6 +361,7 @@ class ExpansionTile extends StatefulWidget {
     this.trailing,
     this.children = const <Widget>[],
     this.initiallyExpanded = false,
+    this.expanded,
     this.onExpansionChanged,
     this.enabled = true,
     this.dense = false,
@@ -376,6 +377,13 @@ class ExpansionTile extends StatefulWidget {
   @override
   final List<Widget> children;
   final bool initiallyExpanded;
+
+  /// Controlled disclosure state, or null to manage expansion locally.
+  ///
+  /// When supplied, taps request a new value through [onExpansionChanged]
+  /// without changing the displayed state until the parent accepts it.
+  /// Returning to local control retains the last controlled value.
+  final bool? expanded;
   final ValueCmdCallback<bool>? onExpansionChanged;
   final bool enabled;
   final bool dense;
@@ -389,18 +397,30 @@ class ExpansionTile extends StatefulWidget {
 class _ExpansionTileState extends State<ExpansionTile> {
   late bool _expanded;
 
+  bool get _isExpanded => widget.expanded ?? _expanded;
+
   @override
   void initState() {
     super.initState();
     _expanded = widget.initiallyExpanded;
   }
 
+  @override
+  Cmd? didUpdateWidget(covariant ExpansionTile oldWidget) {
+    if (oldWidget.expanded != null && widget.expanded == null) {
+      _expanded = oldWidget.expanded!;
+    }
+    return super.didUpdateWidget(oldWidget);
+  }
+
   Cmd? _toggleExpanded() {
     if (!widget.enabled) return null;
-    final nextExpanded = !_expanded;
-    setState(() {
-      _expanded = nextExpanded;
-    });
+    final nextExpanded = !_isExpanded;
+    if (widget.expanded == null) {
+      setState(() {
+        _expanded = nextExpanded;
+      });
+    }
     return widget.onExpansionChanged?.call(nextExpanded);
   }
 
@@ -410,13 +430,13 @@ class _ExpansionTileState extends State<ExpansionTile> {
     final indicator =
         widget.trailing ??
         Text(
-          _expanded ? 'v' : '>',
+          _isExpanded ? 'v' : '>',
           style: copyStyle(theme.labelMedium)..foreground(theme.muted),
         );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      gap: _expanded && widget.children.isNotEmpty ? 1 : 0,
+      gap: _isExpanded && widget.children.isNotEmpty ? 1 : 0,
       children: [
         ListTile(
           title: widget.title,
@@ -428,7 +448,7 @@ class _ExpansionTileState extends State<ExpansionTile> {
           padding: widget.tilePadding,
           onTap: widget.enabled ? _toggleExpanded : null,
         ),
-        if (_expanded && widget.children.isNotEmpty)
+        if (_isExpanded && widget.children.isNotEmpty)
           Padding(
             padding: widget.childrenPadding ?? const EdgeInsets.only(left: 2),
             child: Column(

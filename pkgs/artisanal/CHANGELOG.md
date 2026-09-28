@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `Cmd.setDevToolsVisible` and `Cmd.requestDevToolsState`, with runtime-owned
+  `DevToolsStateMsg` capability/visibility responses and shortcut notifications.
+  Overlay visibility changes preserve diagnostics and do not enable capture.
+
 - Added terminal math rendering via `katex_dart`: inline Unicode
   linearization, display cell-buffer layout, and Markdown delimiters
   `\(…\)`, `\[…\]`, and `$$…$$`. Single `$` remains literal.

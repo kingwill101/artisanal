@@ -1771,6 +1771,39 @@ highlighting through a dedicated decoration layer.
 
 ## Scroll Widgets
 
+### Shared wheel policy
+
+Wrap an application or subtree to share fractional speed and optional adaptive
+acceleration without replacing its scroll controllers:
+
+```dart
+ScrollBehaviorScope(
+  behavior: const ScrollBehavior(
+    wheelStep: 0.25,
+    acceleration: ScrollAcceleration.adaptive,
+  ),
+  child: app,
+)
+```
+
+`Viewport`, `SingleChildScrollView`, `ScrollView`, `ListView`,
+`VirtualListView`, `Scrollbar`, `GitDiffViewer`, and `DiffReviewViewport`
+consume the scope. Their optional `scrollBehavior` overrides the scope.
+Without either, their existing wheel defaults remain unchanged.
+
+Fractions accumulate per mounted surface, so four unaccelerated quarter-row
+pulses move one row. Nested surfaces consume their own pulses even when no full
+row has accumulated. Direction changes, external position changes, changed
+policies and viewport bounds discard stale movement. Adaptive acceleration ramps
+from 1x to 4x in half-step increments for pulses less than 200ms apart; idle gaps
+reset acceleration but preserve fractions for slow input.
+
+Live policy changes preserve scroll positions and controllers. Wheel scrolling
+during text selection follows the enclosing viewport's policy while retaining
+the selection anchor. Keyboard navigation, scrollbar dragging and selection edge
+autoscroll keep their independent semantics. Custom scroll surfaces can use
+`ScrollWheelAccumulator` with an injected timestamp for deterministic testing.
+
 Scroll controllers:
 
 - `WidgetScrollController` for widget-native scrolling (recommended)
@@ -2158,6 +2191,20 @@ Implemented component widgets and companion types include:
   `Switch`
 - **Overlay/debug helpers:** `Overlay`, `OverlayEntry`, `FadeModalBarrier`,
   `DebugOverlay`, `PerformanceOverlay`, `GitDiffViewer`, `GitDiffController`
+
+### Controlled disclosure
+
+`ExpansionTile` accepts an optional controlled `expanded` value. When set,
+`onExpansionChanged` reports the requested value without optimistically
+changing the panel. Update `expanded` after accepting the request; rejected
+requests leave the current disclosure visible. Omit it for local toggle state
+seeded by `initiallyExpanded`. Switching back to local control retains the last
+controlled value.
+
+The callback may return a command for asynchronous persistence. The parent owns
+loading/error feedback and rebuilds the tile with its accepted value; the tile
+does not infer success from the callback completing. Disabled tiles still render
+the controlled state but do not emit toggle requests.
 
 ### Button
 

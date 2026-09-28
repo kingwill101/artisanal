@@ -215,6 +215,7 @@ class _SelectionAutoScrollTick extends Msg {
 }
 
 class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
+  final _dragWheel = ScrollWheelAccumulator();
   SelectionController? _ownController;
   SelectionController? _registeredController;
   SelectionController? _listeningController;
@@ -444,16 +445,51 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
 
   bool _scrollDuringDrag(MouseMsg event) {
     if (!_isDragging) return false;
-    final delta = switch (event.button) {
-      MouseButton.wheelUp => -3,
-      MouseButton.wheelDown => 3,
+    final direction = switch (event.button) {
+      MouseButton.wheelUp => -1,
+      MouseButton.wheelDown => 1,
       _ => 0,
     };
     final controller = _sharedScrollController;
-    if (delta == 0 || controller == null) return false;
+    if (direction == 0 || controller == null) return false;
+    final behavior = _selectionWheelBehavior();
+    if (behavior == null) return true;
+    final delta = _dragWheel.consume(
+      direction,
+      behavior: behavior,
+      offset: controller.offset,
+      maxOffset: controller.maxOffset,
+    );
     controller.scrollBy(delta);
     _updateDragEndpoint(_dragPointer ?? event);
     return true;
+  }
+
+  ScrollBehavior? _selectionWheelBehavior() {
+    final inherited = ScrollBehaviorScope.maybeOf(context);
+    Element? ancestor = elementOf(widget)?.parent;
+    while (ancestor != null) {
+      final configuration = switch (ancestor.widget) {
+        SingleChildScrollView(:final scrollBehavior, :final mouseWheelDelta) ||
+        ScrollView(:final scrollBehavior, :final mouseWheelDelta) ||
+        ListView(:final scrollBehavior, :final mouseWheelDelta) ||
+        VirtualListView(:final scrollBehavior, :final mouseWheelDelta) ||
+        Viewport(
+          :final scrollBehavior,
+          :final mouseWheelDelta,
+        ) => (scrollBehavior, mouseWheelDelta),
+        _ => null,
+      };
+      if (configuration != null) {
+        return configuration.$1 ??
+            inherited ??
+            (configuration.$2 > 0
+                ? ScrollBehavior(wheelStep: configuration.$2.toDouble())
+                : null);
+      }
+      ancestor = ancestor.parent;
+    }
+    return inherited ?? const ScrollBehavior();
   }
 
   RenderObject? _findSelectionViewport() {
@@ -590,6 +626,7 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
       _screenToLocalDx = event.x.toDouble() - localX;
       _screenToLocalDy = event.y.toDouble() - localY;
       _dragScrollOffset = _sharedScrollController?.offset ?? 0;
+      _dragWheel.reset();
       _dragPointer = event;
       elementOf(widget)?.captureMouse();
       _emitSelectionChanged(ctrl);

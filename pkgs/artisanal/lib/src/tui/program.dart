@@ -2950,7 +2950,27 @@ class Program<M extends Model> with HotReloadMixin {
   void _processMessage(Msg msg, {bool deferRender = false}) {
     if (_model == null) return;
 
-    if (_programDevTools?.handle(msg) ?? false) {
+    final devTools = _programDevTools;
+    if (msg is SetDevToolsVisibleMsg || msg is RequestDevToolsStateMsg) {
+      if (msg is SetDevToolsVisibleMsg &&
+          (devTools?.setVisible(msg.visible) ?? false)) {
+        scheduleRender();
+      }
+      send(
+        DevToolsStateMsg(
+          isCommandResponse: true,
+          available: devTools != null,
+          visible: devTools?.visible ?? false,
+        ),
+      );
+      return;
+    }
+    final wasVisible = devTools?.visible;
+    final consumed = devTools?.handle(msg) ?? false;
+    if (devTools != null && wasVisible != devTools.visible) {
+      send(DevToolsStateMsg(available: true, visible: devTools.visible));
+    }
+    if (consumed) {
       scheduleRender();
       return;
     }

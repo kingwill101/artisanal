@@ -153,12 +153,25 @@ final class ProgramDevToolsController {
   /// Changes whenever visible overlay content changes.
   int get revision => _revision;
 
+  /// Whether the program-owned overlay is currently visible.
+  bool get visible => _overlay.enabled;
+
+  /// Applies visibility without changing diagnostic collection or capture.
+  ///
+  /// Returns whether visibility changed. Repeated values do not invalidate
+  /// rendering, reposition the panel, or reset its history.
+  bool setVisible(bool value) {
+    if (value == visible) return false;
+    _overlay = _overlay.toggle();
+    if (value && !_manuallyPositioned) _positionOverlay();
+    _revision++;
+    return true;
+  }
+
   /// Handles overlay input and runtime data. Returns whether [msg] was consumed.
   bool handle(Msg msg) {
     if (msg case KeyMsg() when _options.toggleBinding.matches(msg)) {
-      _overlay = _overlay.toggle();
-      if (_overlay.enabled && !_manuallyPositioned) _positionOverlay();
-      _revision++;
+      setVisible(!visible);
       return true;
     }
 

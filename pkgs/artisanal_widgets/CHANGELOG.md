@@ -2,6 +2,14 @@
 
 ## 0.4.2
 
+- Add controlled `ExpansionTile.expanded` state. Toggle requests leave the
+  accepted value unchanged until the parent updates it.
+
+- Add inherited `ScrollBehaviorScope`, per-widget wheel-policy overrides and
+  bounded fractional accumulation with optional adaptive acceleration across
+  scroll views, lists, scrollbars and diff surfaces. Selection wheel dragging
+  shares the viewport policy; keyboard and edge-autoscroll behavior is unchanged.
+
 - Fix automatic parent-width wrapping and resize reflow for selectable plain
   text, Markdown, and view content without requiring a caller-supplied width.
 - Allow selectable text to discover its enclosing scroll viewport, accept wheel

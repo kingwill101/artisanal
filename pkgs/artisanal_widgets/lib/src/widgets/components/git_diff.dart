@@ -17,7 +17,13 @@ import 'package:artisanal_widgets/src/widgets/framework.dart';
 import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
 import 'package:artisanal_widgets/src/widgets/layout/_layout_core.dart';
 import 'package:artisanal_widgets/src/widgets/scroll_widgets.dart'
-    show ScrollController, WidgetScrollController, SingleChildScrollView;
+    show
+        ScrollController,
+        WidgetScrollController,
+        SingleChildScrollView,
+        ScrollBehavior,
+        ScrollBehaviorScope,
+        ScrollWheelAccumulator;
 import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
 import 'package:artisanal_widgets/src/widgets/gestures/events.dart';
 import 'package:artisanal_widgets/src/widgets/gestures/hit_testing.dart';
@@ -354,6 +360,7 @@ class GitDiffViewer extends StatefulWidget {
     this.styles,
     this.controller,
     this.scrollController,
+    this.scrollBehavior,
     this.handleKeys = true,
     this.scrollable = true,
     this.fitContentHeight = false,
@@ -401,6 +408,9 @@ class GitDiffViewer extends StatefulWidget {
   /// layouts can drive the diff viewer without forcing full-content rendering.
   final ScrollController? scrollController;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   /// Inline comment blocks rendered as widgets between diff lines. When empty,
   /// the viewer renders the diff as a plain text proxy. When non-empty, the
   /// viewer composes a scrollable column of diff lines interleaved with these
@@ -433,6 +443,7 @@ class GitDiffViewer extends StatefulWidget {
 }
 
 class _GitDiffViewerState extends State<GitDiffViewer> {
+  final _wheel = ScrollWheelAccumulator();
   late GitDiffController _controller;
   bool _controllerAttached = false;
   ScrollController? _scrollController;
@@ -539,6 +550,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
   }
 
   void _attachController(GitDiffController? controller) {
+    _wheel.reset();
     if (_controllerAttached) {
       _controller.removeListener(_onChanged);
     }
@@ -837,6 +849,22 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
 
     if (msg is HitTestMouseMsg) {
       if (!_isWheelEvent(msg.event)) return null;
+      final policy =
+          widget.scrollBehavior ?? ScrollBehaviorScope.maybeOf(context);
+      if (policy != null &&
+          (msg.event.button == MouseButton.wheelUp ||
+              msg.event.button == MouseButton.wheelDown)) {
+        final viewport = _controller.model.viewport;
+        final delta = _wheel.consume(
+          msg.event.button == MouseButton.wheelUp ? -1 : 1,
+          behavior: policy,
+          offset: viewport.yOffset,
+          maxOffset: viewport.gotoBottom().yOffset,
+        );
+        _controller.setScrollOffset(viewport.yOffset + delta);
+        _syncExternalOffsetFromModel();
+        return Cmd.none();
+      }
       return _updateController(
         msg.event.copyWith(x: msg.localX.toInt(), y: msg.localY.toInt()),
       );
@@ -916,6 +944,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
         onTapDown: _handleTapDown,
         child: SingleChildScrollView(
           controller: _commentScrollController,
+          scrollBehavior: widget.scrollBehavior,
           child: content,
         ),
       );

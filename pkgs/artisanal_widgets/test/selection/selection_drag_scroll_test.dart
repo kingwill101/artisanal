@@ -5,6 +5,46 @@ import 'package:test/test.dart';
 
 void main() {
   test(
+    'selection drag wheel honors explicit fractional viewport policy',
+    () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 8);
+      addTearDown(tester.dispose);
+      final scroll = WidgetScrollController();
+      final selection = SelectionController();
+      await tester.pumpWidget(
+        ScrollBehaviorScope(
+          behavior: const ScrollBehavior(wheelStep: 5),
+          child: SingleChildScrollView(
+            controller: scroll,
+            scrollBehavior: const ScrollBehavior(wheelStep: .25),
+            child: SelectableText(
+              List.generate(80, (index) => 'Line $index text').join('\n'),
+              controller: selection,
+            ),
+          ),
+        ),
+      );
+      tester.mouseDown(1, 2);
+      tester.mouseMove(8, 3);
+      final anchor = selection.selectionStart;
+      for (var count = 0; count < 4; count++) {
+        tester.sendMsg(
+          tui.MouseMsg(
+            action: tui.MouseAction.wheel,
+            button: tui.MouseButton.wheelDown,
+            x: 8,
+            y: 3,
+          ),
+        );
+        expect(scroll.offset, count == 3 ? 1 : 0);
+      }
+      expect(selection.selectionStart, anchor);
+      expect(selection.selecting, isTrue);
+      tester.mouseUp(8, 3);
+    },
+  );
+
+  test(
     'stationary edge drag renders through the runtime without pumping',
     () async {
       final tester = WidgetTester(

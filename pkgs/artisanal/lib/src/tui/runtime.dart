@@ -34,6 +34,9 @@ export 'key.dart' show Key, KeyType, KeyParser, Keys;
 export 'msg.dart'
     show
         Msg,
+        SetDevToolsVisibleMsg,
+        RequestDevToolsStateMsg,
+        DevToolsStateMsg,
         KeyMsg,
         ClipboardMsg,
         ClipboardSelection,

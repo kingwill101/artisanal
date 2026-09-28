@@ -294,6 +294,17 @@ class Cmd {
     return Cmd(() async => SetWindowTitleMsg(title));
   }
 
+  /// Sets diagnostics overlay visibility without enabling collection or capture.
+  ///
+  /// Program replies with a [DevToolsStateMsg], even when unavailable or already
+  /// at the requested visibility.
+  static Cmd setDevToolsVisible(bool visible) =>
+      Cmd(() async => SetDevToolsVisibleMsg(visible));
+
+  /// Queries overlay availability and visibility through [DevToolsStateMsg].
+  static Cmd requestDevToolsState() =>
+      Cmd(() async => const RequestDevToolsStateMsg());
+
   /// A command that writes raw bytes/escape sequences directly to the terminal.
   static Cmd writeRaw(String data) {
     return Cmd(() async => WriteRawMsg(data));

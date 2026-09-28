@@ -1,6 +1,10 @@
 library;
 
+export 'scroll_behavior.dart';
+
 import 'dart:math' as math;
+
+import 'scroll_behavior.dart';
 
 import 'package:artisanal/runtime.dart'
     show
@@ -48,6 +52,38 @@ void _traceScroll(String message) {
 }
 
 DateTime _defaultNowProvider() => DateTime.now();
+
+class _ScrollWheelHandler {
+  final _accumulator = ScrollWheelAccumulator();
+  ScrollController? _controller;
+
+  int delta(
+    BuildContext context,
+    MouseButton button,
+    ScrollController controller, {
+    required int fallback,
+    ScrollBehavior? behavior,
+    Duration? timestamp,
+  }) {
+    if (!identical(controller, _controller)) {
+      _accumulator.reset();
+      _controller = controller;
+    }
+    final policy = behavior ?? ScrollBehaviorScope.maybeOf(context);
+    if (policy == null && fallback <= 0) return 0;
+    return _accumulator.consume(
+      switch (button) {
+        MouseButton.wheelUp => -1,
+        MouseButton.wheelDown => 1,
+        _ => 0,
+      },
+      behavior: policy ?? ScrollBehavior(wheelStep: fallback.toDouble()),
+      offset: controller.offset,
+      maxOffset: controller.maxOffset,
+      timestamp: timestamp,
+    );
+  }
+}
 
 int _selectionAutoScrollDelta({
   required int localY,
@@ -516,6 +552,7 @@ class Viewport extends StatefulWidget {
     this.showLineNumbers = false,
     this.mouseWheelEnabled = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     this.horizontalStep = 6,
     this.keyMap,
     this.style,
@@ -556,6 +593,9 @@ class Viewport extends StatefulWidget {
   /// Rows to scroll per wheel tick.
   final int mouseWheelDelta;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   /// Horizontal scroll amount for applicable keybindings.
   final int horizontalStep;
 
@@ -591,6 +631,7 @@ class Viewport extends StatefulWidget {
 }
 
 class _ViewportState extends State<Viewport> {
+  final _wheel = _ScrollWheelHandler();
   late ViewportController _controller;
   bool _controllerAttached = false;
 
@@ -667,6 +708,19 @@ class _ViewportState extends State<Viewport> {
 
   /// Handles a mouse event using local coordinates (from hit-testing or zone).
   Cmd? _handleLocalMouse(MouseMsg local) {
+    if (widget.mouseWheelEnabled &&
+        (local.button == MouseButton.wheelUp ||
+            local.button == MouseButton.wheelDown)) {
+      final delta = _wheel.delta(
+        context,
+        local.button,
+        _controller,
+        fallback: widget.mouseWheelDelta,
+        behavior: widget.scrollBehavior,
+      );
+      if (_controller.scrollBy(delta)) _markNeedsPaint();
+      return Cmd.none();
+    }
     if (widget.showScrollbar) {
       final pane = _controller.scrollPane(
         separator: widget.scrollbarSeparator,
@@ -775,6 +829,7 @@ class SingleChildScrollView extends StatefulWidget {
     this.controller,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     this.enableSelection = false,
     DateTime Function()? nowProvider,
     super.key,
@@ -797,6 +852,9 @@ class SingleChildScrollView extends StatefulWidget {
   /// Number of rows to scroll per mouse wheel tick.
   final int mouseWheelDelta;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   /// Whether in-app text selection is enabled.
   ///
   /// When true, click+drag inside the content area selects text.
@@ -811,6 +869,7 @@ class SingleChildScrollView extends StatefulWidget {
 }
 
 class _SingleChildScrollViewState extends State<SingleChildScrollView> {
+  final _wheel = _ScrollWheelHandler();
   WidgetScrollController? _ownController;
 
   ScrollController get _effectiveController =>
@@ -908,11 +967,13 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
         y: msg.localY.toInt(),
       );
       if (_isWheelEvent(local)) {
-        final delta = switch (local.button) {
-          MouseButton.wheelUp => -widget.mouseWheelDelta,
-          MouseButton.wheelDown => widget.mouseWheelDelta,
-          _ => 0,
-        };
+        final delta = _wheel.delta(
+          context,
+          local.button,
+          _effectiveController,
+          fallback: widget.mouseWheelDelta,
+          behavior: widget.scrollBehavior,
+        );
         _traceScroll(
           'single_child_scroll.wheel '
           'id=${widget.id} local=(${local.x},${local.y}) '
@@ -1344,6 +1405,7 @@ class ScrollView extends StatefulWidget {
     this.controller,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     this.enableSelection = false,
     this.autoCopySelectionOnMouseUp = false,
     this.autoCopySelectionOnExit = false,
@@ -1363,6 +1425,9 @@ class ScrollView extends StatefulWidget {
 
   /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
+
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
 
   /// Whether in-app text selection is enabled.
   ///
@@ -1388,6 +1453,7 @@ class ScrollView extends StatefulWidget {
 }
 
 class _ScrollViewState extends State<ScrollView> {
+  final _wheel = _ScrollWheelHandler();
   WidgetScrollController? _ownController;
   MouseMsg? _lastSelectionHitMouse;
 
@@ -1487,11 +1553,13 @@ class _ScrollViewState extends State<ScrollView> {
         y: msg.localY.toInt(),
       );
       if (_isWheelEvent(local)) {
-        final delta = switch (local.button) {
-          MouseButton.wheelUp => -widget.mouseWheelDelta,
-          MouseButton.wheelDown => widget.mouseWheelDelta,
-          _ => 0,
-        };
+        final delta = _wheel.delta(
+          context,
+          local.button,
+          _effectiveController,
+          fallback: widget.mouseWheelDelta,
+          behavior: widget.scrollBehavior,
+        );
         _traceScroll(
           'scroll_view.wheel '
           'id=${widget.id} local=(${local.x},${local.y}) '
@@ -1753,6 +1821,7 @@ class Scrollbar extends StatefulWidget {
     this.overlay = false,
     this.gap = 0,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     this.enableDrag = true,
     this.zoneId,
     super.key,
@@ -1845,6 +1914,9 @@ class Scrollbar extends StatefulWidget {
   /// Number of rows to scroll per mouse wheel tick.
   final int mouseWheelDelta;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   /// Whether dragging the thumb updates scroll offset.
   final bool enableDrag;
 
@@ -1884,6 +1956,7 @@ class ScrollbarGradient {
 }
 
 class _ScrollbarState extends State<Scrollbar> {
+  final _wheel = _ScrollWheelHandler();
   bool _dragging = false;
   int _dragOffset = 0;
   int? _dragOriginY;
@@ -2213,12 +2286,14 @@ class _ScrollbarState extends State<Scrollbar> {
       _setHovering(true);
     }
     if (_isWheelEvent(local)) {
-      final delta = switch (local.button) {
-        MouseButton.wheelUp => -widget.mouseWheelDelta,
-        MouseButton.wheelDown => widget.mouseWheelDelta,
-        _ => 0,
-      };
-      if (delta == 0) return null;
+      final delta = _wheel.delta(
+        context,
+        local.button,
+        widget.controller,
+        fallback: widget.mouseWheelDelta,
+        behavior: widget.scrollBehavior,
+      );
+      if (delta == 0) return Cmd.none();
       final before = widget.controller.offset;
       if (widget.controller.scrollBy(delta)) {
         _markNeedsPaintScrollOnly();
@@ -3114,6 +3189,7 @@ class ListView extends StatefulWidget {
     this.padding,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     super.key,
   }) : _children = children,
        itemBuilder = null,
@@ -3129,6 +3205,7 @@ class ListView extends StatefulWidget {
     this.padding,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     super.key,
   }) : assert(itemCount >= 0),
        _children = null,
@@ -3144,6 +3221,7 @@ class ListView extends StatefulWidget {
     this.padding,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     super.key,
   }) : assert(itemCount >= 0),
        _children = null;
@@ -3178,11 +3256,15 @@ class ListView extends StatefulWidget {
   /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   @override
   State createState() => _ListViewState();
 }
 
 class _ListViewState extends State<ListView> {
+  final _wheel = _ScrollWheelHandler();
   WidgetScrollController? _ownController;
 
   ScrollController get _effectiveController =>
@@ -3266,11 +3348,13 @@ class _ListViewState extends State<ListView> {
         y: msg.localY.toInt(),
       );
       if (_isWheelEvent(local)) {
-        final delta = switch (local.button) {
-          MouseButton.wheelUp => -widget.mouseWheelDelta,
-          MouseButton.wheelDown => widget.mouseWheelDelta,
-          _ => 0,
-        };
+        final delta = _wheel.delta(
+          context,
+          local.button,
+          _effectiveController,
+          fallback: widget.mouseWheelDelta,
+          behavior: widget.scrollBehavior,
+        );
         if (delta != 0) _scrollBy(delta);
         return Cmd.none();
       }
@@ -3702,6 +3786,7 @@ class VirtualListView extends StatefulWidget {
     this.handleKeys = true,
     this.mouseWheelEnabled = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     this.enableSelection = false,
     this.autoCopySelectionOnMouseUp = false,
     this.autoCopySelectionOnExit = false,
@@ -3730,6 +3815,7 @@ class VirtualListView extends StatefulWidget {
     this.handleKeys = true,
     this.mouseWheelEnabled = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     this.enableSelection = false,
     this.autoCopySelectionOnMouseUp = false,
     this.autoCopySelectionOnExit = false,
@@ -3788,6 +3874,9 @@ class VirtualListView extends StatefulWidget {
   /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   /// Whether in-app text selection is enabled.
   final bool enableSelection;
 
@@ -3806,7 +3895,7 @@ class VirtualListView extends StatefulWidget {
   /// Optional mouse zone id override.
   final String? zoneId;
 
-  /// Logical clock used for wheel pulse dedupe and click sequencing.
+  /// Logical clock used for wheel acceleration and click sequencing.
   final DateTime Function() nowProvider;
 
   @override
@@ -3814,14 +3903,10 @@ class VirtualListView extends StatefulWidget {
 }
 
 class _VirtualListViewState extends State<VirtualListView> {
-  static const _wheelMinTickInterval = Duration(milliseconds: 6);
-
+  final _wheel = _ScrollWheelHandler();
   late ScrollController _controller;
   bool _controllerAttached = false;
   MouseMsg? _lastSelectionHitMouse;
-  double _wheelAccumulator = 0;
-  DateTime? _lastWheelEventAt;
-  int _lastWheelDirection = 0;
 
   String get _zoneId => widget.zoneId ?? 'listview-${widget.id}';
 
@@ -3880,44 +3965,6 @@ class _VirtualListViewState extends State<VirtualListView> {
       'max=${_controller.maxOffset} changed=$changed',
     );
     return changed;
-  }
-
-  Cmd? _applyWheelDelta(int delta) {
-    if (delta == 0) return null;
-
-    final direction = delta > 0 ? 1 : -1;
-    final beforeAccumulator = _wheelAccumulator;
-    final now = widget.nowProvider();
-    final last = _lastWheelEventAt;
-    final duplicatePulse =
-        last != null &&
-        now.difference(last) < _wheelMinTickInterval &&
-        _lastWheelDirection == direction;
-    _lastWheelEventAt = now;
-    _lastWheelDirection = direction;
-
-    if (beforeAccumulator != 0 && beforeAccumulator.sign != delta.sign) {
-      _traceScroll(
-        'virtual_list.wheel.flip '
-        'id=${widget.id} accumulator=$beforeAccumulator delta=$delta '
-        'offset=${_controller.offset} max=${_controller.maxOffset}',
-      );
-      _wheelAccumulator = 0;
-    }
-
-    _wheelAccumulator += delta;
-    final step = _wheelAccumulator.truncate();
-    _wheelAccumulator -= step;
-    final changed = step != 0 && _scrollBy(step);
-
-    _traceScroll(
-      'virtual_list.wheel.apply '
-      'id=${widget.id} delta=$delta step=$step '
-      'accumulator=$beforeAccumulator->$_wheelAccumulator '
-      'duplicate=$duplicatePulse changed=$changed '
-      'offset=${_controller.offset} max=${_controller.maxOffset}',
-    );
-    return null;
   }
 
   bool _handleKey(terminal_keys.Key key) {
@@ -4004,16 +4051,23 @@ class _VirtualListViewState extends State<VirtualListView> {
           y: msg.localY.toInt(),
         );
         if (_isWheelEvent(local)) {
-          final delta = local.button == MouseButton.wheelUp
-              ? -widget.mouseWheelDelta
-              : widget.mouseWheelDelta;
+          final delta = _wheel.delta(
+            context,
+            local.button,
+            _controller,
+            fallback: widget.mouseWheelDelta,
+            behavior: widget.scrollBehavior,
+            timestamp: Duration(
+              microseconds: widget.nowProvider().microsecondsSinceEpoch,
+            ),
+          );
           _traceScroll(
             'virtual_list.wheel.hit '
             'id=${widget.id} local=(${local.x},${local.y}) '
             'button=${local.button} delta=$delta '
             'offset=${_controller.offset} max=${_controller.maxOffset}',
           );
-          cmd = _applyWheelDelta(delta) ?? cmd;
+          if (delta != 0) _scrollBy(delta);
           return cmd ?? Cmd.none();
         }
       }

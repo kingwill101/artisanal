@@ -1805,9 +1805,29 @@ ProgramDiagnosticsOptions(
 )
 ```
 
+Applications can control visibility explicitly without synthesizing a shortcut:
+
+```dart
+Cmd.setDevToolsVisible(true)
+Cmd.requestDevToolsState()
+```
+
+Both commands deliver a `DevToolsStateMsg` to the model with `available` and
+`visible` fields. Query in `init()` to discover the initial state; visibility
+changes made with the shortcut also emit that message. Repeating a set command
+sets `isCommandResponse` to true, as does querying; shortcut notifications set
+it to false. Use this distinction to persist user changes without echo writes.
+Repeating a set command
+acknowledges the current state without toggling, clearing history or moving the
+panel. A Program without diagnostics replies with both fields false; the command
+does not silently enable diagnostics. Showing and hiding the overlay never
+changes output capture or diagnostic collection. Use
+`ProgramDiagnosticsOptions(captureOutput: false)` when output capture is unwanted.
+
 The overlay shows render metrics, recent runtime messages (including
 `HotReloadStatusMsg`), captured `print()` output, and custom metrics. Enabling
-it automatically captures program output. The toggle is consumed by the
+diagnostics captures program output by default unless `captureOutput` is false.
+The toggle is consumed by the
 runtime and is not forwarded to the application model.
 
 The overlay is keyboard-passive by default: typing, **Tab**, arrows, paging,
