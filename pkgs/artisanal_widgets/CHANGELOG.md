@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.2
+## 0.4.3
 
 - Preserve Shift-wheel horizontal navigation in non-wrapping viewports and
   Git diff viewers when a scroll policy is installed.
@@ -29,6 +29,8 @@
   now consistently notifies external controller listeners.
 - Fix shared drag-selection coordinates for virtual-list items, including
   scrolled and cross-item selections with selection-completion callbacks.
+
+## 0.4.2
 
 - Require Dart SDK 3.13.0 or newer.
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.3
 
 - Bound desktop-notification subprocesses, discard their output and resolve
   executable paths without spawning `which`. Treat notification text as data
