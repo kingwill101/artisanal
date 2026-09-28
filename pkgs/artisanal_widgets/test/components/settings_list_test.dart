@@ -416,6 +416,55 @@ void main() {
     });
 
     test(
+      'keeps the saving indicator on its row while selection moves',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(tester.dispose);
+        final completion = Completer<SettingsListResult>();
+
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: Theme.dark(),
+            child: SettingsList<String>(
+              items: const [
+                SettingsListItem(
+                  id: 'first',
+                  label: 'First option',
+                  value: 'old value',
+                ),
+                SettingsListItem(
+                  id: 'second',
+                  label: 'Second option',
+                  value: 'accepted value',
+                ),
+              ],
+              onAdjust: (id, direction) => completion.future,
+            ),
+          ),
+        );
+
+        tester.sendSpecialKey(KeyType.tab);
+        tester.sendSpecialKey(KeyType.right);
+        tester.sendSpecialKey(KeyType.down);
+        tester.pump();
+
+        final rendered = tester.view;
+        final firstRow = rendered.indexOf('First option');
+        final savingIndicator = rendered.indexOf('Saving…');
+        final secondRow = rendered.indexOf('Second option');
+        expect(firstRow, greaterThanOrEqualTo(0));
+        expect(savingIndicator, greaterThan(firstRow));
+        expect(savingIndicator, lessThan(secondRow));
+        expect(rendered, contains('accepted value'));
+
+        completion.complete(const SettingsListResult.accepted());
+        await Future<void>.delayed(Duration.zero);
+        tester.pump();
+        expect(tester.view, isNot(contains('Saving…')));
+      },
+    );
+
+    test(
       'action rows activate only with Enter and ignore adjustments',
       () async {
         final tester = WidgetTester();

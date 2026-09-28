@@ -6,8 +6,8 @@
   from one fresh tick chain when reactivated.
 - Add a searchable `SettingsList` with typed stable row IDs, grouped settings,
   bounded directional edits, action rows, async-save serialization, and
-  host-owned accepted values. Hosts can route adjustment keys while search
-  retains focus.
+  host-owned accepted values. Saving feedback stays on the row with the pending
+  request; hosts can route adjustment keys while search retains focus.
 - Preserve Shift-wheel horizontal navigation in non-wrapping viewports and
   Git diff viewers when a scroll policy is installed.
 

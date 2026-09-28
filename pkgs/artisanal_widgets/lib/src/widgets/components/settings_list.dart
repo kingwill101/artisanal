@@ -225,6 +225,7 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
   var _searchQuery = '';
   var _selectedIndex = 0;
   var _busy = false;
+  T? _pendingId;
   String? _error;
   late List<SettingsListItem<T>> _filteredItems;
 
@@ -339,7 +340,7 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
       case SettingsListActivation.action:
         final callback = widget.onActivate;
         if (callback != null) {
-          unawaited(_run(() => callback(item.id)));
+          unawaited(_run(item.id, () => callback(item.id)));
         }
       case SettingsListActivation.none:
         return;
@@ -358,12 +359,16 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
         (direction > 0 && !item.canIncrease)) {
       return;
     }
-    unawaited(_run(() => callback(item.id, direction)));
+    unawaited(_run(item.id, () => callback(item.id, direction)));
   }
 
-  Future<void> _run(FutureOr<SettingsListResult> Function() request) async {
+  Future<void> _run(
+    T itemId,
+    FutureOr<SettingsListResult> Function() request,
+  ) async {
     setState(() {
       _busy = true;
+      _pendingId = itemId;
       _error = null;
     });
     try {
@@ -372,7 +377,12 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _pendingId = null;
+        });
+      }
     }
   }
 
@@ -615,7 +625,7 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
                       ..foreground(rowForeground),
                   ),
                 ),
-                if (_busy && selected || item.isBusy)
+                if ((_busy && item.id == _pendingId) || item.isBusy)
                   Text(
                     'Saving…',
                     style: copyStyle(theme.bodySmall)..foreground(theme.muted),
