@@ -73,6 +73,35 @@ class _GrowingBodyState extends w.State<_GrowingBody> {
 }
 
 void main() {
+  test('rich review inherits fractional wheel policy', () async {
+    final tester = WidgetTester(screenWidth: 60, screenHeight: 8);
+    addTearDown(tester.dispose);
+    final controller = _controller(threads: []);
+    await _pumpSmallRoot(
+      tester,
+      w.ScrollBehaviorScope(
+        behavior: const w.ScrollBehavior(wheelStep: .25),
+        child: w.DiffReviewViewport(
+          controller: controller,
+          width: 60,
+          height: 8,
+          threadBuilder: (_, _) => w.Text('Thread'),
+        ),
+      ),
+    );
+    for (var count = 0; count < 4; count++) {
+      tester.sendMsg(
+        tui.MouseMsg(
+          action: tui.MouseAction.wheel,
+          button: tui.MouseButton.wheelDown,
+          x: 4,
+          y: 3,
+        ),
+      );
+      expect(controller.scrollController.offset, count == 3 ? 1 : 0);
+    }
+  });
+
   for (final explicit in [false, true]) {
     test(
       'parent bounds control review geometry (explicit: $explicit)',

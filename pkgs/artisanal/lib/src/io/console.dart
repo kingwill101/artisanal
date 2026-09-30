@@ -451,7 +451,10 @@ class Console implements ConsolePromptHost {
   /// - **Linux**: tries `notify-send`, then falls back to `kdialog`.
   /// - Other platforms: returns `false` immediately.
   ///
-  /// Returns `true` if the notification was delivered successfully.
+  /// Returns `true` when the native command succeeds; OS preferences may still
+  /// suppress display. Commands time out after ten seconds and never write their
+  /// output into the console. Set [silent] to suppress notification sound;
+  /// this overrides [sound] and excludes providers without silent delivery.
   ///
   /// Example:
   /// ```dart
@@ -463,12 +466,14 @@ class Console implements ConsolePromptHost {
     String subtitle = '',
     String sound = '',
     String icon = '',
+    bool silent = false,
   }) => _desktopNotifications.send(
     title,
     body: body,
     subtitle: subtitle,
     sound: sound,
     icon: icon,
+    silent: silent,
   );
 
   // ─────────────────────────────────────────────────────────────────────────────

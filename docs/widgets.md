@@ -1771,11 +1771,51 @@ highlighting through a dedicated decoration layer.
 
 ## Scroll Widgets
 
+### Shared wheel policy
+
+Wrap an application or subtree to share fractional speed and optional adaptive
+acceleration without replacing its scroll controllers:
+
+```dart
+ScrollBehaviorScope(
+  behavior: const ScrollBehavior(
+    wheelStep: 0.25,
+    acceleration: ScrollAcceleration.adaptive,
+  ),
+  child: app,
+)
+```
+
+`Viewport`, `SingleChildScrollView`, `ScrollView`, `ListView`,
+`VirtualListView`, `Scrollbar`, `GitDiffViewer`, and `DiffReviewViewport`
+consume the scope. Their optional `scrollBehavior` overrides the scope.
+Without either, their existing wheel defaults remain unchanged.
+Shift-wheel retains horizontal navigation in non-wrapping viewports and Git diff
+viewers; it does not consume the vertical policy's fractional accumulator.
+Wrapped content continues to scroll vertically using the configured policy.
+
+Fractions accumulate per mounted surface, so four unaccelerated quarter-row
+pulses move one row. Nested surfaces consume their own pulses even when no full
+row has accumulated. Direction changes, external position changes, changed
+policies and viewport bounds discard stale movement. Adaptive acceleration ramps
+from 1x to 4x in half-step increments for pulses less than 200ms apart; idle gaps
+reset acceleration but preserve fractions for slow input.
+
+Live policy changes preserve scroll positions and controllers. Wheel scrolling
+during text selection follows the enclosing viewport's policy while retaining
+the selection anchor. Keyboard navigation, scrollbar dragging and selection edge
+autoscroll keep their independent semantics. Custom scroll surfaces can use
+`ScrollWheelAccumulator` with an injected timestamp for deterministic testing.
+
 Scroll controllers:
 
 - `WidgetScrollController` for widget-native scrolling (recommended)
 - `ListViewController` for list-style offset/extent tracking
 - `ViewportController` for viewport-model backed content
+
+`WidgetScrollController(initialOffset: row)` can restore or position content
+before its first layout. The requested offset is clamped once viewport and
+content extents are known.
 
 ### ScrollView
 
@@ -2141,7 +2181,8 @@ Implemented component widgets and companion types include:
 - **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
   `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
   `DebugConsole`, `Wizard`, `WizardFormStep`, `FilePicker`, `CommandPalette`,
-  `CommandPaletteItem`, `CommandPaletteMatch`, `CommandPaletteController`
+  `CommandPaletteItem`, `CommandPaletteMatch`, `CommandPaletteController`,
+  `SettingsList`, `SettingsListItem`, `SettingsListResult`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
 - **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,
@@ -2158,6 +2199,41 @@ Implemented component widgets and companion types include:
   `Switch`
 - **Overlay/debug helpers:** `Overlay`, `OverlayEntry`, `FadeModalBarrier`,
   `DebugOverlay`, `PerformanceOverlay`, `GitDiffViewer`, `GitDiffController`
+
+### Controlled disclosure
+
+`ExpansionTile` accepts an optional controlled `expanded` value. When set,
+`onExpansionChanged` reports the requested value without optimistically
+changing the panel. Update `expanded` after accepting the request; rejected
+requests leave the current disclosure visible. Omit it for local toggle state
+seeded by `initiallyExpanded`. Switching back to local control retains the last
+controlled value.
+
+The callback may return a command for asynchronous persistence. The parent owns
+loading/error feedback and rebuilds the tile with its accepted value; the tile
+does not infer success from the callback completing. Disabled tiles still render
+the controlled state but do not emit toggle requests.
+
+### Controlled settings list
+
+`SettingsList<T>` provides grouped searchable rows with keyboard and pointer
+navigation for settings backed by an application-owned source of truth. Give
+each `SettingsListItem<T>` a stable typed ID, accepted value, category, search
+terms, and optional disabled explanation. Search matches all words across the
+row's searchable text, and selection follows the row ID when the host filters
+or replaces the list.
+By default, left/right stay with search-caret navigation until the row list is
+focused with Tab. Set `adjustWhileSearching` when the host intentionally routes
+left/right to the selected setting while filtering.
+
+Use `onAdjust` for enum cycling or bounded numeric edits. Left/right requests
+the corresponding direction; Enter requests an increase by default. Set
+`canDecrease` and `canIncrease` from the accepted value so endpoint edits are
+disabled. Use `SettingsListActivation.action` and `onActivate` for navigation
+or other actions. Requests can be asynchronous; the list serializes edits,
+shows a pending state, and displays a returned rejection message without
+changing the presented value. Persistence, authorization, and accepted values
+remain with the host.
 
 ### Button
 
@@ -2457,6 +2533,25 @@ Image(
 
 Responses are deduplicated and cached in an in-process `LruCache` keyed by
 `(url, headers, maximumBytes, decodeFrame, allowedContentTypes, blockedContentTypes)`.
+
+`FileImage` and `MemoryImage` also accept `maximumBytes`:
+
+```dart
+final file = FileImage('preview.png', maximumBytes: 8 * 1024 * 1024, decodeFrame: 0);
+final memory = MemoryImage(bytes, maximumBytes: 8 * 1024 * 1024, decodeFrame: 0);
+```
+
+All three providers throw `ImageByteLimitException` before decoding when a
+declared or received source exceeds its budget. The exception exposes
+`maximumBytes` and `observedBytes`, without including paths or URLs. Negative
+budgets are invalid; null leaves encoded size unrestricted. File loading with a
+budget streams and rejects before buffering the entire oversized file. Memory
+loading cannot undo the caller's allocation of the supplied bytes.
+
+Changing a budget changes provider identity, and network cache entries from a
+larger budget cannot bypass a stricter one. These are **encoded-byte limits**,
+not bounds on decoded pixels, animation frames or compressed metadata. Applications
+handling untrusted previews still need a separate decoder-allocation policy.
 
 ---
 

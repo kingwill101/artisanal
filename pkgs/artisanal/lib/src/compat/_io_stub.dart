@@ -10,6 +10,10 @@ class File {
   final String path;
   Future<Uint8List> readAsBytes() async => Uint8List(0);
 
+  /// Filesystem streams are unavailable in the browser host.
+  Stream<List<int>> openRead([int? start, int? end]) =>
+      Stream.error(UnsupportedError('File streams are not available on web'));
+
   Future<void> writeAsString(String s) async {}
 
   Future<void> delete() async {}

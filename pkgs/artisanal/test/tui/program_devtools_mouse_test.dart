@@ -3,6 +3,21 @@ import 'package:artisanal/tui.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('explicit visibility changes release overlay pointer capture', () {
+    final controller = ProgramDevToolsController(
+      ProgramDiagnosticsOptions(initiallyVisible: true),
+    );
+    controller.handle(const WindowSizeMsg(100, 30));
+    final body = _point(controller, 'FPS:');
+    expect(
+      controller.handle(_mouse(body.x, body.y, MouseAction.press)),
+      isTrue,
+    );
+    controller.setVisible(false);
+    controller.setVisible(true);
+    expect(controller.handle(_mouse(0, 29, MouseAction.release)), isFalse);
+  });
+
   test('pointer releases follow the owner of the original press', () {
     final controller = ProgramDevToolsController(
       ProgramDiagnosticsOptions(initiallyVisible: true),

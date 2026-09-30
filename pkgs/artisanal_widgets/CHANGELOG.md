@@ -1,6 +1,30 @@
 # Changelog
 
-## 0.4.2
+## 0.4.3
+
+- Stop `SpinnerIndicator`'s tick chain when deactivated or unmounted, and restart
+  from one fresh tick chain when reactivated.
+- Add a searchable `SettingsList` with typed stable row IDs, grouped settings,
+  bounded directional edits, action rows, async-save serialization, and
+  host-owned accepted values. Saving feedback stays on the row with the pending
+  request; hosts can route adjustment keys while search retains focus.
+- Preserve Shift-wheel horizontal navigation in non-wrapping viewports and
+  Git diff viewers when a scroll policy is installed.
+
+- Add optional `maximumBytes` budgets to `FileImage` and `MemoryImage`, include
+  budgets in provider identity, and report `ImageByteLimitException` consistently
+  across file, memory and network sources. File budgets use streaming reads.
+  These encoded-byte limits do not bound decoded pixel/frame allocations.
+
+- Add controlled `ExpansionTile.expanded` state. Toggle requests leave the
+  accepted value unchanged until the parent updates it.
+
+- Add inherited `ScrollBehaviorScope`, per-widget wheel-policy overrides and
+  bounded fractional accumulation with optional adaptive acceleration across
+  scroll views, lists, scrollbars and diff surfaces. Selection wheel dragging
+  shares the viewport policy; keyboard and edge-autoscroll behavior is unchanged.
+- Allow `WidgetScrollController` to start at a requested content-row offset,
+  clamped when its first layout reports viewport and content extents.
 
 - Fix automatic parent-width wrapping and resize reflow for selectable plain
   text, Markdown, and view content without requiring a caller-supplied width.
@@ -13,6 +37,8 @@
   now consistently notifies external controller listeners.
 - Fix shared drag-selection coordinates for virtual-list items, including
   scrolled and cross-item selections with selection-completion callbacks.
+
+## 0.4.2
 
 - Require Dart SDK 3.13.0 or newer.
 

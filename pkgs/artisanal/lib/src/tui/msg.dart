@@ -50,6 +50,42 @@ abstract class Msg {
   bool get dropWhenInputQueued => false;
 }
 
+/// Requests an idempotent change to diagnostics overlay visibility.
+///
+/// The runtime replies with [DevToolsStateMsg], including when unavailable.
+/// This does not enable diagnostics or change output capture.
+class SetDevToolsVisibleMsg extends Msg {
+  const SetDevToolsVisibleMsg(this.visible);
+
+  /// Requested overlay visibility.
+  final bool visible;
+}
+
+/// Requests the current diagnostics overlay capability and visibility.
+class RequestDevToolsStateMsg extends Msg {
+  const RequestDevToolsStateMsg();
+}
+
+/// Runtime-owned diagnostics state, returned for requests and visibility changes.
+///
+/// Visibility is independent of diagnostic collection and output capture.
+class DevToolsStateMsg extends Msg {
+  const DevToolsStateMsg({
+    required this.available,
+    required this.visible,
+    this.isCommandResponse = false,
+  }) : assert(available || !visible);
+
+  /// Whether this Program was configured with an overlay.
+  final bool available;
+
+  /// Whether the overlay is currently visible.
+  final bool visible;
+
+  /// Whether this reports an explicit set/query command rather than a shortcut.
+  final bool isCommandResponse;
+}
+
 /// Message sent when a key is pressed.
 ///
 /// Contains the parsed [Key] with information about:

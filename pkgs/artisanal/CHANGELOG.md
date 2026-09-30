@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.6.3
+
+- Bound desktop-notification subprocesses, discard their output and resolve
+  executable paths without spawning `which`. Treat notification text as data
+  rather than command options or interpolated AppleScript. Add
+  `Console.notify(silent: true)` for independent notification/audio preferences;
+  providers without silent delivery are excluded when requested.
+
+- Add `Cmd.setDevToolsVisible` and `Cmd.requestDevToolsState`, with runtime-owned
+  `DevToolsStateMsg` capability/visibility responses and shortcut notifications.
+  Overlay visibility changes preserve diagnostics and do not enable capture.
 
 - Added terminal math rendering via `katex_dart`: inline Unicode
   linearization, display cell-buffer layout, and Markdown delimiters

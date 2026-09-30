@@ -17,6 +17,7 @@ import '../core/widget.dart';
 import '../layout/_layout_core.dart';
 import '../rendering/render_object.dart';
 import '../scroll/scroll_widgets.dart' show WidgetScrollController;
+import '../scroll/scroll_behavior.dart';
 import '../theme/theme_scope.dart';
 import 'diff_review_extents.dart';
 
@@ -253,6 +254,7 @@ class DiffReviewViewport extends StatefulWidget {
     this.height,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
+    this.scrollBehavior,
     super.key,
   });
 
@@ -274,11 +276,15 @@ class DiffReviewViewport extends StatefulWidget {
   /// Number of composed rows per vertical wheel tick.
   final int mouseWheelDelta;
 
+  /// Explicit wheel policy, taking precedence over the inherited scope.
+  final ScrollBehavior? scrollBehavior;
+
   @override
   State<DiffReviewViewport> createState() => _DiffReviewViewportState();
 }
 
 class _DiffReviewViewportState extends State<DiffReviewViewport> {
+  final _wheel = ScrollWheelAccumulator();
   bool _configuring = false;
   RenderObject? _viewport;
 
@@ -307,6 +313,7 @@ class _DiffReviewViewportState extends State<DiffReviewViewport> {
   @override
   Cmd? didUpdateWidget(covariant DiffReviewViewport oldWidget) {
     if (oldWidget.controller != widget.controller) {
+      _wheel.reset();
       _detach(oldWidget.controller);
       _attach(widget.controller);
     }
@@ -375,11 +382,19 @@ class _DiffReviewViewportState extends State<DiffReviewViewport> {
     final event = msg.event;
     if (event.button == MouseButton.wheelUp ||
         event.button == MouseButton.wheelDown) {
-      controller.scrollController.scrollBy(
-        event.button == MouseButton.wheelUp
-            ? -widget.mouseWheelDelta
-            : widget.mouseWheelDelta,
+      final scroll = controller.scrollController;
+      final policy =
+          widget.scrollBehavior ?? ScrollBehaviorScope.maybeOf(context);
+      if (policy == null && widget.mouseWheelDelta <= 0) return Cmd.none();
+      final delta = _wheel.consume(
+        event.button == MouseButton.wheelUp ? -1 : 1,
+        behavior:
+            policy ??
+            ScrollBehavior(wheelStep: widget.mouseWheelDelta.toDouble()),
+        offset: scroll.offset,
+        maxOffset: scroll.maxOffset,
       );
+      scroll.scrollBy(delta);
       return Cmd.none();
     }
     if (event.button != MouseButton.left ||

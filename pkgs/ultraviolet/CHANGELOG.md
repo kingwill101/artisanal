@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0
+## 0.6.1
 
 - Added optional clipped `Buffer.draw` so out-of-bounds destinations write the
   overlapping cells instead of no-opping. The default remains all-or-nothing.
