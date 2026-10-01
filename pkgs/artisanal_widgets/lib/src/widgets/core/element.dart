@@ -566,6 +566,9 @@ class BuildOwner {
   final List<Cmd> _pendingDeferredCmds = <Cmd>[];
   void Function()? _onDeferredCommandQueued;
 
+  /// Wakes the host when a build is requested outside frame traversal.
+  void Function()? onBuildScheduled;
+
   /// Notifies the runtime when a frame mounts children with init commands.
   ///
   /// The host should enqueue an event and drain commands afterward, not execute
@@ -693,7 +696,9 @@ class BuildOwner {
 
   /// Schedules [element] to rebuild in the next build scope.
   void scheduleBuildFor(Element element) {
+    final wasEmpty = _dirty.isEmpty;
     _dirty.add(element);
+    if (wasEmpty && !_inFrame) onBuildScheduled?.call();
   }
 
   /// Removes [element] from the dirty queue if present.

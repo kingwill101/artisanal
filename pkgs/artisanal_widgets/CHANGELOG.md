@@ -2,6 +2,9 @@
 
 ## 0.4.3
 
+- Repaint asynchronous state and listenable changes without waiting for input
+  or enabling periodic frame ticks.
+
 - Clear completed repeat state on stop, keep enabled fuzzy search results in
   view, and honor explicit spinner frame resets after parent rebuilds.
 

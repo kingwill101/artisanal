@@ -300,6 +300,32 @@ class WidgetApp
       ),
     );
 
+    final buildSignals = StreamController<void>();
+    var buildSignalPending = false;
+    void notifyBuild() {
+      if (buildSignalPending) return;
+      buildSignalPending = true;
+      buildSignals.add(null);
+    }
+
+    buildSignals.onListen = () {
+      _tree.owner.onBuildScheduled = notifyBuild;
+      if (_tree.hasDirty) notifyBuild();
+    };
+    buildSignals.onCancel = () {
+      _tree.owner.onBuildScheduled = null;
+      unawaited(buildSignals.close());
+    };
+    cmds.add(
+      Cmd.listen<void>(
+        buildSignals.stream,
+        onData: (_) {
+          buildSignalPending = false;
+          return const _BuildReadyMsg();
+        },
+      ),
+    );
+
     final initCmd = _tree.collectHandleInit();
     if (initCmd != null) cmds.add(initCmd);
     return ParallelCmd(cmds);
@@ -412,6 +438,10 @@ class WidgetApp
     }
 
     try {
+      if (msg is _BuildReadyMsg) {
+        _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+        return (this, null);
+      }
       if (msg is _MountInitReadyMsg) {
         return (this, _tree.owner.drainMountInitCmds());
       }
@@ -1122,4 +1152,8 @@ final class _MountInitReadyMsg extends Msg {
 
 final class _DeferredCommandReadyMsg extends Msg {
   const _DeferredCommandReadyMsg();
+}
+
+final class _BuildReadyMsg extends Msg {
+  const _BuildReadyMsg();
 }

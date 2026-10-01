@@ -114,7 +114,9 @@ abstract class State<T extends StatefulWidget> {
   /// Notifies the framework that this state's internal data has changed.
   ///
   /// The callback [fn] runs synchronously, then the owning element is marked
-  /// dirty so it can rebuild in the next build scope.
+  /// dirty so it can rebuild in the next build scope. A mounted `WidgetApp`
+  /// wakes its runtime for changes made outside message dispatch, including
+  /// asynchronous completions and listenable callbacks.
   void setState(void Function() fn) {
     fn();
     _element?.markNeedsBuild();
