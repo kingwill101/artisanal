@@ -125,6 +125,24 @@ class _DelayedSpinnerMountHostState extends State<_DelayedSpinnerMountHost> {
 }
 
 void main() {
+  test(
+    'explicit start index resets after a remembered-frame rebuild',
+    () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      addTearDown(tester.dispose);
+      SpinnerIndicator spinner(int startIndex) => SpinnerIndicator(
+        frames: const ['A', 'B', 'C'],
+        interval: const Duration(milliseconds: 150),
+        startIndex: startIndex,
+      );
+      await tester.pumpWidget(spinner(0));
+      expect(await _waitForSpinnerFrame(tester, const ['B']), 'B');
+      await tester.pumpWidget(spinner(0));
+      expect(await _waitForSpinnerFrame(tester, const ['C']), 'C');
+      await tester.pumpWidget(spinner(1));
+      expect(tester.find.text('B'), isTrue);
+    },
+  );
   // ---------------------------------------------------------------------------
   // SpinnerIndicator — property / construction tests
   // ---------------------------------------------------------------------------

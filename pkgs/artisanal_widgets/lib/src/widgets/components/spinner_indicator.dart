@@ -79,6 +79,7 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
       frames: widget.frames,
       interval: widget.interval,
       startIndex: _index,
+      resetIndex: widget.startIndex,
       style: style,
       onIndexChanged: _rememberIndex,
     );
@@ -90,6 +91,7 @@ class _AnimatedSpinnerIndicator extends StatefulWidget {
     required this.frames,
     required this.interval,
     required this.startIndex,
+    required this.resetIndex,
     required this.style,
     required this.onIndexChanged,
   });
@@ -97,6 +99,7 @@ class _AnimatedSpinnerIndicator extends StatefulWidget {
   final List<String> frames;
   final Duration interval;
   final int startIndex;
+  final int resetIndex;
   final Style style;
   final void Function(int index) onIndexChanged;
 
@@ -128,7 +131,7 @@ class _AnimatedSpinnerIndicatorState extends State<_AnimatedSpinnerIndicator> {
     if (widget.frames.isNotEmpty && _index >= widget.frames.length) {
       _index = 0;
     }
-    if (widget.startIndex != oldWidget.startIndex) {
+    if (widget.resetIndex != oldWidget.resetIndex) {
       _index = widget.startIndex % widget.frames.length;
     }
     if (oldWidget.interval != widget.interval ||

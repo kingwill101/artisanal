@@ -3,6 +3,19 @@ import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
+  for (final duration in [Duration.zero, null]) {
+    test('stopped completed repeat tolerates motion changes: $duration', () {
+      final controller = AnimationController(duration: duration);
+      addTearDown(controller.dispose);
+      controller.repeat();
+      controller.processTick(DateTime(2026));
+      controller.stop();
+      controller.setMotionPolicy(true);
+      controller.setMotionPolicy(false);
+      expect(controller.isAnimating, isFalse);
+      expect(controller.processTick(DateTime(2026)), isNull);
+    });
+  }
   group('AnimationController construction', () {
     test('initial value defaults to lowerBound', () {
       final controller = AnimationController(

@@ -916,7 +916,7 @@ void main() {
         final tester = WidgetTester();
         addTearDown(tester.dispose);
 
-        final heights = List<int>.filled(100, 2);
+        final heights = List<int>.generate(100, (index) => index % 3 + 1);
         final controller = ListViewController();
         final listView = VirtualListView.builder(
           width: 30,

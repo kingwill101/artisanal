@@ -4,6 +4,27 @@ import 'package:artisanal_widgets/widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('search scrolls past disabled matches to the enabled result', () async {
+    final tester = WidgetTester(screenWidth: 60, screenHeight: 12);
+    addTearDown(tester.dispose);
+    await tester.pumpWidget(
+      DialogSelect<String>(
+        filterThreshold: 0.7,
+        items: [
+          for (var index = 0; index < 20; index++)
+            DialogSelectItem(
+              label: 'Color mode',
+              value: 'disabled$index',
+              isDisabled: true,
+            ),
+          const DialogSelectItem(label: 'Color mood', value: 'enabled'),
+        ],
+      ),
+    );
+    tester.typeText('color mode');
+    tester.pump();
+    expect(tester.find.text('Color mood'), isTrue);
+  });
   group('DialogSelectItem', () {
     test('searches additional terms exactly and fuzzily', () {
       const item = DialogSelectItem<String>(

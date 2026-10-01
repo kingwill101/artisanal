@@ -401,6 +401,7 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   /// the most recent direction.
   void stop({bool canceled = false}) {
     _invalidatePendingTicks();
+    _repeating = false;
     if (!isAnimating) {
       final suspended = _suspendedRepeat;
       _repeatSettings = null;
@@ -418,7 +419,6 @@ class AnimationController extends Animation<double> with ChangeNotifier {
       }
       return;
     }
-    _repeating = false;
     _repeatSettings = null;
     _suspendedRepeat = null;
     _resumeRepeatPending = false;

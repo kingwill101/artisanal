@@ -2,6 +2,9 @@
 
 ## 0.4.3
 
+- Clear completed repeat state on stop, keep enabled fuzzy search results in
+  view, and honor explicit spinner frame resets after parent rebuilds.
+
 - Add reusable fuzzy relevance scoring and optional threshold-based ranked
   filtering to `SettingsList` and `DialogSelect`, while preserving exact
   matching by default. `DialogSelect` reports query-driven highlight changes

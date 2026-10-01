@@ -584,6 +584,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
                       selectFirstMatch: widget.filterThreshold != null,
                     );
                   });
+                  _scrollSelectionIntoView(_filteredItems.length);
                   _notifyHighlightChanged(previousSelection);
                 },
               ),
