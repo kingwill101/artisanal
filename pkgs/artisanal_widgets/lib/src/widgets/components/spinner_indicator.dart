@@ -40,6 +40,32 @@ class SpinnerIndicator extends StatefulWidget {
 }
 
 class _SpinnerIndicatorState extends State<SpinnerIndicator> {
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = _initialIndex(widget);
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant SpinnerIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.startIndex != oldWidget.startIndex && widget.frames.isNotEmpty) {
+      _index = _initialIndex(widget);
+    } else if (widget.frames.isNotEmpty) {
+      _index %= widget.frames.length;
+    }
+    return null;
+  }
+
+  int _initialIndex(SpinnerIndicator widget) =>
+      widget.frames.isEmpty ? 0 : widget.startIndex % widget.frames.length;
+
+  void _rememberIndex(int index) {
+    _index = index;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.frames.isEmpty) return SizedBox.shrink();
@@ -47,14 +73,14 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
     final style = copyStyle(widget.textStyle ?? theme.bodyMedium)
       ..foreground(widget.color ?? theme.primary);
     if (!widget.active || MediaQuery.disableAnimationsOf(context)) {
-      final index = widget.startIndex % widget.frames.length;
-      return Text(widget.frames[index], style: style);
+      return Text(widget.frames[_index], style: style);
     }
     return _AnimatedSpinnerIndicator(
       frames: widget.frames,
       interval: widget.interval,
-      startIndex: widget.startIndex,
+      startIndex: _index,
       style: style,
+      onIndexChanged: _rememberIndex,
     );
   }
 }
@@ -65,12 +91,14 @@ class _AnimatedSpinnerIndicator extends StatefulWidget {
     required this.interval,
     required this.startIndex,
     required this.style,
+    required this.onIndexChanged,
   });
 
   final List<String> frames;
   final Duration interval;
   final int startIndex;
   final Style style;
+  final void Function(int index) onIndexChanged;
 
   @override
   State createState() => _AnimatedSpinnerIndicatorState();
@@ -100,6 +128,9 @@ class _AnimatedSpinnerIndicatorState extends State<_AnimatedSpinnerIndicator> {
     if (widget.frames.isNotEmpty && _index >= widget.frames.length) {
       _index = 0;
     }
+    if (widget.startIndex != oldWidget.startIndex) {
+      _index = widget.startIndex % widget.frames.length;
+    }
     if (oldWidget.interval != widget.interval ||
         !_sameFrames(oldWidget.frames, widget.frames)) {
       _tickToken = Object();
@@ -111,9 +142,9 @@ class _AnimatedSpinnerIndicatorState extends State<_AnimatedSpinnerIndicator> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is _SpinnerTickMsg && identical(msg.token, _tickToken)) {
-      setState(() {
-        _index = (_index + 1) % widget.frames.length;
-      });
+      _index = (_index + 1) % widget.frames.length;
+      widget.onIndexChanged(_index);
+      setState(() {});
       return _scheduleTick();
     }
     return null;

@@ -309,7 +309,10 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
           }
         }
       } else if (selectFirstMatch) {
-        nextIndex = 0;
+        final firstEnabledIndex = nextItems.indexWhere(
+          (item) => !item.isDisabled,
+        );
+        nextIndex = firstEnabledIndex < 0 ? 0 : firstEnabledIndex;
       } else {
         nextIndex = _indexOfCurrent(nextItems);
       }

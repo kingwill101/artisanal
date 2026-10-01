@@ -10,7 +10,7 @@ import 'package:artisanal/runtime.dart' show Msg;
 /// via `handleUpdate` (or [AnimationMixin]) back to the controller's
 /// [AnimationController.processTick] method.
 class AnimationTickMsg extends Msg {
-  const AnimationTickMsg(this.controllerId, this.time);
+  const AnimationTickMsg(this.controllerId, this.time, {this.generation});
 
   /// Identifies which [AnimationController] this tick belongs to.
   ///
@@ -26,6 +26,12 @@ class AnimationTickMsg extends Msg {
   /// animation value.
   final DateTime time;
 
+  /// Identifies the controller run that scheduled this tick.
+  ///
+  /// Ticks with an obsolete generation are ignored after an animation is
+  /// stopped, replaced, or suspended. Manually-created ticks may omit it.
+  final int? generation;
+
   @override
-  String toString() => 'AnimationTickMsg($controllerId, $time)';
+  String toString() => 'AnimationTickMsg($controllerId, $time, $generation)';
 }

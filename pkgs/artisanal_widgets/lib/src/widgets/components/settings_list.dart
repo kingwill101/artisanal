@@ -270,7 +270,8 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
   @override
   Cmd? didUpdateWidget(covariant SettingsList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.items, widget.items)) {
+    if (!identical(oldWidget.items, widget.items) ||
+        oldWidget.filterThreshold != widget.filterThreshold) {
       _recomputeItems(preserveSelection: true);
       _scrollSelectionIntoView();
     }

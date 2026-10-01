@@ -154,7 +154,7 @@ mixin AnimationMixin<T extends StatefulWidget> on State<T> {
           // processTick calls notifyListeners internally, which triggers
           // any setState callbacks the user registered — so the widget
           // is already marked dirty by the time we return.
-          return controller.processTick(msg.time);
+          return controller.processTick(msg.time, generation: msg.generation);
         }
       }
     }

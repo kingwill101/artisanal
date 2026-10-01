@@ -309,6 +309,42 @@ void main() {
       expect(controller.isAnimating, isFalse);
       expect(controller.processTick(DateTime(2026)), isNull);
     });
+
+    test('stop with canceled preserves suspended repeat direction', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      final start = DateTime(2026);
+      controller.repeat(reverse: true);
+      controller.processTick(start);
+      controller.processTick(start.add(const Duration(seconds: 1)));
+      expect(controller.status, AnimationStatus.reverse);
+
+      controller.setMotionPolicy(true);
+      controller.stop(canceled: true);
+
+      expect(controller.status, AnimationStatus.completed);
+    });
+
+    test('ignores a repeat tick queued before motion is suspended', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      controller.repeat();
+      controller.setMotionPolicy(true);
+      controller.setMotionPolicy(false);
+
+      final stale = controller.processTick(
+        DateTime(2026, 1, 1, 0, 0, 0, 400),
+        generation: 1,
+      );
+
+      expect(stale, isNull);
+      expect(controller.value, 0);
+      expect(controller.isAnimating, isTrue);
+    });
   });
 
   group('AnimationController.reverse', () {

@@ -71,6 +71,42 @@ void main() {
   });
 
   test(
+    'fuzzy search skips disabled results when selecting a highlight',
+    () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+      final highlighted = <String>[];
+      String? selected;
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.dark(),
+          child: DialogSelect<String>(
+            filterThreshold: 0.7,
+            items: const [
+              DialogSelectItem(
+                label: 'Color mode',
+                value: 'disabled',
+                isDisabled: true,
+              ),
+              DialogSelectItem(label: 'Color mood', value: 'enabled'),
+            ],
+            onHighlightChanged: (item) => highlighted.add(item.value!),
+            onSelect: (item) => selected = item.value,
+          ),
+        ),
+      );
+
+      tester.typeText('color mode');
+      tester.sendSpecialKey(KeyType.enter);
+
+      expect(highlighted, isNotEmpty);
+      expect(highlighted.last, 'enabled');
+      expect(selected, 'enabled');
+    },
+  );
+
+  test(
     'search changes clear the highlight when there are no matches',
     () async {
       final tester = WidgetTester();

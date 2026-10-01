@@ -910,6 +910,45 @@ void main() {
       expect((viewport as dynamic).debugActiveChildCount, equals(5));
     });
 
+    test(
+      'variable-height builder preserves the middle anchor after measuring',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(tester.dispose);
+
+        final heights = List<int>.filled(100, 2);
+        final controller = ListViewController();
+        final listView = VirtualListView.builder(
+          width: 30,
+          height: 5,
+          controller: controller,
+          cacheExtentItems: 2,
+          variableHeight: true,
+          estimatedItemExtent: 1,
+          itemCount: heights.length,
+          itemBuilder: (_, index) =>
+              Text(_variableHeightItem(index, heights[index]), softWrap: false),
+        );
+
+        await _pumpSmallRoot(tester, Container(height: 5, child: listView));
+        controller.jumpTo(51);
+        final anchorBeforeMeasurement = _resolveOffsetForDebugViewport(
+          _findRenderListViewport(listView),
+          controller.offset,
+        );
+        tester.pump();
+
+        final viewport = _findRenderListViewport(listView);
+        final visibleStart = _resolveOffsetForDebugViewport(
+          viewport,
+          controller.offset,
+        );
+        expect(visibleStart.index, anchorBeforeMeasurement.index);
+        expect(visibleStart.offsetInItem, anchorBeforeMeasurement.offsetInItem);
+        expect(tester.view, contains('Item ${visibleStart.index} line 1'));
+      },
+    );
+
     test('builder parent rebuild updates only mounted children', () {
       var revision = 0;
       final built = <String>[];

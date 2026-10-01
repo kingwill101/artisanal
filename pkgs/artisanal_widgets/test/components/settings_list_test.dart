@@ -1,9 +1,42 @@
 import 'dart:async';
 
 import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg;
 import 'package:artisanal_widgets/widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
+
+class _FilterThresholdHost extends StatefulWidget {
+  _FilterThresholdHost();
+
+  @override
+  State createState() => _FilterThresholdHostState();
+}
+
+class _FilterThresholdHostState extends State<_FilterThresholdHost> {
+  double? _filterThreshold;
+
+  @override
+  Cmd? handleIntercept(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'f') {
+      setState(() => _filterThreshold = 0.7);
+      return Cmd.none();
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => ThemeScope(
+    theme: Theme.dark(),
+    child: SettingsList<String>(
+      filterThreshold: _filterThreshold,
+      items: const [
+        SettingsListItem(id: 'mode', label: 'Color mode'),
+        SettingsListItem(id: 'animations', label: 'Animations'),
+      ],
+    ),
+  );
+}
 
 void main() {
   group('SettingsListItem', () {
@@ -112,6 +145,19 @@ void main() {
       tester.pump();
 
       expect(activated, 'exact');
+    });
+
+    test('recomputes filtered rows when the threshold changes', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(_FilterThresholdHost());
+      tester.typeText('colr mode');
+      expect(tester.find.text('Color mode'), isFalse);
+
+      tester.sendKey('f');
+
+      expect(tester.find.text('Color mode'), isTrue);
     });
 
     test('shows grouped values and explicit unavailable reasons', () async {

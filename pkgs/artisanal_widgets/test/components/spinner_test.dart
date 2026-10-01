@@ -19,6 +19,32 @@ class _SpinnerParentRebuildHost extends StatefulWidget {
   State createState() => _SpinnerParentRebuildHostState();
 }
 
+class _ToggleSpinnerHost extends StatefulWidget {
+  _ToggleSpinnerHost();
+
+  @override
+  State createState() => _ToggleSpinnerHostState();
+}
+
+class _ToggleSpinnerHostState extends State<_ToggleSpinnerHost> {
+  var _active = true;
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'd') {
+      setState(() => _active = !_active);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => SpinnerIndicator(
+    frames: const ['A', 'B', 'C'],
+    interval: const Duration(milliseconds: 35),
+    active: _active,
+  );
+}
+
 class _SpinnerParentRebuildHostState extends State<_SpinnerParentRebuildHost> {
   var _count = 0;
 
@@ -484,33 +510,25 @@ void main() {
         const frames = ['A', 'B', 'C'];
         final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
         try {
-          await tester.pumpWidget(
-            SpinnerIndicator(
-              frames: frames,
-              interval: const Duration(milliseconds: 35),
-            ),
+          await tester.pumpWidget(_ToggleSpinnerHost());
+          final initialFrame = _visibleSpinnerFrame(tester, frames);
+          expect(initialFrame, isNotEmpty);
+          final beforePause = await _waitForSpinnerFrame(
+            tester,
+            frames,
+            except: initialFrame,
           );
-          final beforePause = _visibleSpinnerFrame(tester, frames);
-          expect(beforePause, 'A');
+          expect(beforePause, isNotEmpty);
 
-          await tester.pumpWidget(
-            SpinnerIndicator(
-              frames: frames,
-              interval: const Duration(milliseconds: 35),
-              active: false,
-            ),
-          );
+          tester.sendKey('d');
           final pausedFrame = _visibleSpinnerFrame(tester, frames);
+          expect(pausedFrame, beforePause);
           await Future<void>.delayed(const Duration(milliseconds: 100));
           tester.pump();
           expect(_visibleSpinnerFrame(tester, frames), pausedFrame);
 
-          await tester.pumpWidget(
-            SpinnerIndicator(
-              frames: frames,
-              interval: const Duration(milliseconds: 35),
-            ),
-          );
+          tester.sendKey('d');
+          expect(_visibleSpinnerFrame(tester, frames), pausedFrame);
           final resumed = await _waitForSpinnerFrame(
             tester,
             frames,

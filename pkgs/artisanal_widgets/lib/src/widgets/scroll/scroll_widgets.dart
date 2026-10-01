@@ -4578,7 +4578,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     final firstVisible = debugResolveOffsetForContentOffset(controller.offset)
         .index;
     final visibleItems = (viewportHeight + estimate - 1) ~/ estimate;
-    final start = math.max(0, firstVisible - cacheExtentItems);
+    final start = firstVisible;
     final end = math.min(
       itemCount,
       firstVisible + visibleItems + cacheExtentItems,

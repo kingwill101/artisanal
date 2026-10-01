@@ -29,6 +29,15 @@ void main() {
     expect(Layout.stripAnsi(stack.paint()), 'AB  \nX   \n    ');
   });
 
+  test('single full-size child overflow remains clipped', () {
+    final child = _OverflowingRenderBox();
+    final stack = RenderStack(width: 4, height: 2, fit: StackFit.expand)
+      ..attach(child);
+    stack.layout(BoxConstraints(maxWidth: 4, maxHeight: 2));
+
+    expect(Layout.stripAnsi(stack.paint()), 'ABCD\nX   ');
+  });
+
   test('opposite insets stretch against the final allocated size', () {
     final child = RenderText(
       text: 'x',
@@ -197,6 +206,17 @@ void main() {
     tester.tapAt(4, 0);
     expect(taps, 1);
   });
+}
+
+class _OverflowingRenderBox extends RenderBox {
+  @override
+  void layout(BoxConstraints constraints) {
+    super.layout(constraints);
+    size = constraints.constrain(const Size(4, 2));
+  }
+
+  @override
+  String paint() => 'ABCDE\nX';
 }
 
 final class _CountingBox extends RenderBox {
