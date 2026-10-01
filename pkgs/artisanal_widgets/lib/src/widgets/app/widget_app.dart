@@ -284,6 +284,22 @@ class WidgetApp
       ),
     );
 
+    final deferredCommandSignals = StreamController<void>();
+    void notifyDeferredCommand() => deferredCommandSignals.add(null);
+    deferredCommandSignals.onListen = () {
+      _tree.owner.setDeferredCommandCallback(notifyDeferredCommand);
+    };
+    deferredCommandSignals.onCancel = () {
+      _tree.owner.setDeferredCommandCallback(null);
+      unawaited(deferredCommandSignals.close());
+    };
+    cmds.add(
+      Cmd.listen<void>(
+        deferredCommandSignals.stream,
+        onData: (_) => const _DeferredCommandReadyMsg(),
+      ),
+    );
+
     final initCmd = _tree.collectHandleInit();
     if (initCmd != null) cmds.add(initCmd);
     return ParallelCmd(cmds);
@@ -398,6 +414,9 @@ class WidgetApp
     try {
       if (msg is _MountInitReadyMsg) {
         return (this, _tree.owner.drainMountInitCmds());
+      }
+      if (msg is _DeferredCommandReadyMsg) {
+        return (this, _tree.owner.drainDeferredCommands());
       }
       if (msg is FrameTickMsg) {
         if (!handleFrameTick) {
@@ -1099,4 +1118,8 @@ final class _RenderMetricsInjectionMsg extends Msg {
 
 final class _MountInitReadyMsg extends Msg {
   const _MountInitReadyMsg();
+}
+
+final class _DeferredCommandReadyMsg extends Msg {
+  const _DeferredCommandReadyMsg();
 }

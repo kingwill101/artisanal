@@ -20,6 +20,15 @@ void main() {
     expect(Layout.getHeight(stack.paint()), 6);
   });
 
+  test('single full-size child preserves padded stack output', () {
+    final child = RenderText(text: 'AB\nX', softWrap: false);
+    final stack = RenderStack(width: 4, height: 3, fit: StackFit.expand)
+      ..attach(child);
+    stack.layout(BoxConstraints(maxWidth: 4, maxHeight: 3));
+
+    expect(Layout.stripAnsi(stack.paint()), 'AB  \nX   \n    ');
+  });
+
   test('opposite insets stretch against the final allocated size', () {
     final child = RenderText(
       text: 'x',

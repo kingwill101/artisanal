@@ -4460,7 +4460,6 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   int _cachedVisibleItemCount = -1;
   int _cachedVisibleSeparatorBreaks = -1;
   bool _cachedVisibleVariableHeight = false;
-  int _measuredWarmupCount = 0;
 
   @override
   set childManager(LazyRenderObjectChildManager? manager) {
@@ -4566,24 +4565,26 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     _strideTree.resize(0);
     _cachedItemCount = -1;
     _cachedSeparatorBreaks = -1;
-    _measuredWarmupCount = 0;
   }
-
-  static const int _warmupItemLimit = 500;
 
   void _preMeasureItems({
     required int itemCount,
     required int maxWidth,
     required int estimate,
     required int separatorBreaks,
+    required int viewportHeight,
   }) {
-    if (maxWidth <= 0) return;
-    final warmUntil = math.min(
-      _measuredWarmupCount + _warmupItemLimit,
+    if (maxWidth <= 0 || viewportHeight <= 0 || itemCount == 0) return;
+    final firstVisible = debugResolveOffsetForContentOffset(controller.offset)
+        .index;
+    final visibleItems = (viewportHeight + estimate - 1) ~/ estimate;
+    final start = math.max(0, firstVisible - cacheExtentItems);
+    final end = math.min(
       itemCount,
+      firstVisible + visibleItems + cacheExtentItems,
     );
-    if (_measuredWarmupCount >= warmUntil) return;
-    for (var i = _measuredWarmupCount; i < warmUntil; i++) {
+    for (var i = start; i < end; i++) {
+      if (_measuredHeights.containsKey(i)) continue;
       final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
       if (_measuredHeights[i] != resolved.measured) {
         _storeMeasuredHeight(
@@ -4595,7 +4596,6 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
         );
       }
     }
-    _measuredWarmupCount = warmUntil;
   }
 
   @override
@@ -4770,7 +4770,8 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
       );
     }
 
-    if (_cachedItemCount <= _smallListExactResolutionLimit) {
+    if (_childManager == null &&
+        _cachedItemCount <= _smallListExactResolutionLimit) {
       return _resolveOffsetForContentOffsetByMeasuring(
         contentOffset: targetOffset,
       );
@@ -4986,6 +4987,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
         maxWidth: maxWidth,
         estimate: estimate,
         separatorBreaks: separatorBreaks,
+        viewportHeight: viewportHeight ?? estimate,
       );
       final contentHeight = _estimatedContentHeight();
       final layoutHeight = viewportHeight ?? contentHeight;

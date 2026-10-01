@@ -16,6 +16,20 @@ Animations in Artisanal work by scheduling future messages:
 3.  The controller processes the tick, updates its value, and returns a new `Cmd` to schedule the *next* frame.
 4.  This cycle continues until the animation completes, self-terminating by not returning a new `Cmd`.
 
+Use `MotionScope(enabled: ...)` to propagate an application reduced-motion
+preference. Its policy composes with an ancestor's `MediaQueryData` request;
+widgets should replace decorative motion with a stable representation rather
+than hiding busy or progress state. `SpinnerIndicator` follows this policy
+automatically.
+
+States using `AnimationMixin` also inherit this policy through
+`MediaQuery.disableAnimationsOf(context)`. When motion is disabled, an active
+one-shot transition completes at its target; a repeating animation stops on its
+current frame and resumes from that value and direction when motion is restored.
+New one-shot transitions complete immediately and new repeats remain on their
+initial frame. Widgets that own their own tick loops should provide a stable
+state and explicitly resume the loop when motion is restored.
+
 ### AnimationController
 
 The `AnimationController` manages the state of a single value (usually 0.0 to 1.0) over time.
@@ -35,6 +49,7 @@ Key features of `AnimationController`:
 - **Indefinite Loops**: `repeat()` with optional `reverse` (ping-pong) mode.
 - **Custom Ranges**: Define `lowerBound` and `upperBound`.
 - **Status Tracking**: Listen for status changes (dismissed, forward, reverse, completed).
+- **Reduced Motion**: `MotionScope(enabled: false)` completes transitions immediately and keeps repeats static.
 
 ### AnimationMixin
 
@@ -42,6 +57,7 @@ Integrating animations into a `StatefulWidget` is simplified using `AnimationMix
 - Correctly dispatching `AnimationTickMsg` to the right controller.
 - Chaining the next frame's `Cmd`.
 - Automatic disposal of controllers when the widget is removed.
+- Inherited reduced-motion policy for controllers registered with the mixin.
 
 ```dart
 class _MyState extends State<MyWidget> with AnimationMixin {

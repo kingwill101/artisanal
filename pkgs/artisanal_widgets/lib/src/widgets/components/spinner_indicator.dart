@@ -40,8 +40,51 @@ class SpinnerIndicator extends StatefulWidget {
 }
 
 class _SpinnerIndicatorState extends State<SpinnerIndicator> {
-  int _index = 0;
+  @override
+  Widget build(BuildContext context) {
+    if (widget.frames.isEmpty) return SizedBox.shrink();
+    final theme = ThemeScope.of(context);
+    final style = copyStyle(widget.textStyle ?? theme.bodyMedium)
+      ..foreground(widget.color ?? theme.primary);
+    if (!widget.active || MediaQuery.disableAnimationsOf(context)) {
+      final index = widget.startIndex % widget.frames.length;
+      return Text(widget.frames[index], style: style);
+    }
+    return _AnimatedSpinnerIndicator(
+      frames: widget.frames,
+      interval: widget.interval,
+      startIndex: widget.startIndex,
+      style: style,
+    );
+  }
+}
+
+class _AnimatedSpinnerIndicator extends StatefulWidget {
+  _AnimatedSpinnerIndicator({
+    required this.frames,
+    required this.interval,
+    required this.startIndex,
+    required this.style,
+  });
+
+  final List<String> frames;
+  final Duration interval;
+  final int startIndex;
+  final Style style;
+
+  @override
+  State createState() => _AnimatedSpinnerIndicatorState();
+}
+
+class _AnimatedSpinnerIndicatorState extends State<_AnimatedSpinnerIndicator> {
+  late int _index;
   Object _tickToken = Object();
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.startIndex % widget.frames.length;
+  }
 
   Cmd _scheduleTick() {
     final token = _tickToken;
@@ -49,32 +92,16 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
   }
 
   @override
-  Cmd? handleInit() {
-    if (!widget.active || widget.frames.isEmpty) return null;
-    return _scheduleTick();
-  }
+  Cmd? handleInit() => _scheduleTick();
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.frames.isNotEmpty) {
-      _index = widget.startIndex % widget.frames.length;
-    }
-  }
-
-  @override
-  Cmd? didUpdateWidget(covariant SpinnerIndicator oldWidget) {
+  Cmd? didUpdateWidget(covariant _AnimatedSpinnerIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.frames.isNotEmpty && _index >= widget.frames.length) {
       _index = 0;
     }
-    if (!widget.active || widget.frames.isEmpty) {
-      _tickToken = Object();
-      return null;
-    }
-    if (!oldWidget.active ||
-        oldWidget.frames.isEmpty ||
-        oldWidget.interval != widget.interval) {
+    if (oldWidget.interval != widget.interval ||
+        !_sameFrames(oldWidget.frames, widget.frames)) {
       _tickToken = Object();
       return _scheduleTick();
     }
@@ -84,7 +111,6 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is _SpinnerTickMsg && identical(msg.token, _tickToken)) {
-      if (!widget.active || widget.frames.isEmpty) return null;
       setState(() {
         _index = (_index + 1) % widget.frames.length;
       });
@@ -93,15 +119,17 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
     return null;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (widget.frames.isEmpty) return SizedBox.shrink();
-    final theme = ThemeScope.of(context);
-    final style = copyStyle(widget.textStyle ?? theme.bodyMedium)
-      ..foreground(widget.color ?? theme.primary);
-    final frame = widget.frames[_index % widget.frames.length];
-    return Text(frame, style: style);
+  static bool _sameFrames(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(widget.frames[_index % widget.frames.length], style: widget.style);
 }
 
 /// Flutter-style circular progress indicator.

@@ -20,9 +20,100 @@ void main() {
       expect(item.matchesQuery('support pointer'), isTrue);
       expect(item.matchesQuery('wheel volume'), isFalse);
     });
+
+    test('scores fuzzy matches and ranks spelling differences', () {
+      const item = SettingsListItem<String>(
+        id: 'color-mode',
+        label: 'Color mode',
+        category: 'Appearance',
+      );
+
+      expect(item.searchScore('colr mode'), greaterThanOrEqualTo(0.7));
+      expect(item.searchScore('scroll speed'), lessThan(0.7));
+      expect(
+        item.searchScore('color mode'),
+        greaterThan(item.searchScore('color mood')),
+      );
+    });
   });
 
   group('SettingsList', () {
+    test('filters using an opt-in fuzzy threshold', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.dark(),
+          child: SettingsList<String>(
+            filterThreshold: 0.7,
+            items: const [
+              SettingsListItem(
+                id: 'animations',
+                label: 'Animations',
+                category: 'Appearance',
+              ),
+              SettingsListItem(
+                id: 'color-mode',
+                label: 'Color mode',
+                category: 'Appearance',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      tester.typeText('colr mode');
+
+      expect(tester.find.text('Color mode'), isTrue);
+      expect(tester.find.text('Animations'), isFalse);
+    });
+
+    test('selects the best-ranked result as a fuzzy query changes', () async {
+      final tester = WidgetTester();
+      addTearDown(tester.dispose);
+      String? activated;
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.dark(),
+          child: SettingsList<String>(
+            filterThreshold: 0.7,
+            items: const [
+              SettingsListItem(
+                id: 'animations',
+                label: 'Animations',
+                category: 'Appearance',
+              ),
+              SettingsListItem(
+                id: 'near',
+                label: 'Color mood',
+                category: 'Appearance',
+                activation: SettingsListActivation.action,
+              ),
+              SettingsListItem(
+                id: 'exact',
+                label: 'Color mode',
+                category: 'Appearance',
+                activation: SettingsListActivation.action,
+              ),
+            ],
+            onActivate: (id) {
+              activated = id;
+              return const SettingsListResult.accepted();
+            },
+          ),
+        ),
+      );
+
+      tester.typeText('color mode');
+      tester.sendSpecialKey(KeyType.enter);
+      await Future<void>.delayed(Duration.zero);
+      tester.pump();
+
+      expect(activated, 'exact');
+    });
+
     test('shows grouped values and explicit unavailable reasons', () async {
       final tester = WidgetTester();
       addTearDown(tester.dispose);

@@ -522,5 +522,39 @@ void main() {
         }
       },
     );
+
+    test('MotionScope stops spinner ticks and resumes them live', () async {
+      const frames = ['A', 'B', 'C'];
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          MotionScope(
+            enabled: false,
+            child: SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+            ),
+          ),
+        );
+        expect(_visibleSpinnerFrame(tester, frames), 'A');
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        tester.pump();
+        expect(_visibleSpinnerFrame(tester, frames), 'A');
+
+        await tester.pumpWidget(
+          MotionScope(
+            enabled: true,
+            child: SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+            ),
+          ),
+        );
+        final resumed = await _waitForSpinnerFrame(tester, frames, except: 'A');
+        expect(resumed, isNotEmpty);
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 }

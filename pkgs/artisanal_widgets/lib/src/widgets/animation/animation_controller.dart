@@ -76,8 +76,68 @@ class AnimationController extends Animation<double> with ChangeNotifier {
 
   final Object _id;
 
+  bool _disableAnimations = false;
+
   /// The unique identity of this controller, used to match tick messages.
   Object get id => _id;
+
+  /// Whether transitions complete immediately and repeating motion stops.
+  bool get disableAnimations => _disableAnimations;
+
+  @override
+  bool get isAnimating => _suspendedRepeat == null && super.isAnimating;
+
+  /// Applies a reduced-motion policy and returns a command to resume a
+  /// suspended repeating animation when motion is restored.
+  Cmd? setMotionPolicy(bool disableAnimations) {
+    if (_disableAnimations == disableAnimations) return null;
+    _disableAnimations = disableAnimations;
+    if (disableAnimations) {
+      if (_repeating) {
+        final repeat = _repeatSettings!;
+        _suspendedRepeat = (
+          min: repeat.min,
+          max: repeat.max,
+          reverse: repeat.reverse,
+          period: repeat.period,
+          curve: repeat.curve,
+          target: _targetValue,
+          direction: _status,
+        );
+        _repeatSettings = null;
+        _repeating = false;
+        _resumeRepeatPending = false;
+        notifyListeners();
+      } else if (isAnimating) {
+        _value = _targetValue;
+        _completeAnimation();
+      }
+      return null;
+    }
+
+    final repeat = _suspendedRepeat;
+    _suspendedRepeat = null;
+    if (repeat == null) return null;
+    if (repeat.period != null) duration = repeat.period;
+    _repeatSettings = (
+      min: repeat.min,
+      max: repeat.max,
+      reverse: repeat.reverse,
+      period: repeat.period,
+      curve: repeat.curve,
+    );
+    _startValue = _value;
+    _targetValue = repeat.target;
+    _curve = repeat.curve;
+    _startTime = null;
+    _reverseOnRepeat = repeat.reverse;
+    _repeating = true;
+    _resumeRepeatPending = true;
+    _status = repeat.direction;
+    _notifyStatusListeners();
+    notifyListeners();
+    return _scheduleTick();
+  }
 
   // ── Configuration ─────────────────────────────────────────────────────────
 
@@ -114,6 +174,19 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   Curve _curve = Curves.linear;
   bool _repeating = false;
   bool _reverseOnRepeat = false;
+  ({double min, double max, bool reverse, Duration? period, Curve curve})?
+  _repeatSettings;
+  ({
+    double min,
+    double max,
+    bool reverse,
+    Duration? period,
+    Curve curve,
+    double target,
+    AnimationStatus direction,
+  })?
+  _suspendedRepeat;
+  bool _resumeRepeatPending = false;
 
   @override
   double get value => _value;
@@ -150,8 +223,11 @@ class AnimationController extends Animation<double> with ChangeNotifier {
     _status = AnimationStatus.forward;
     _startTime = null;
     _repeating = false;
+    _repeatSettings = null;
+    _suspendedRepeat = null;
+    _resumeRepeatPending = false;
     _notifyStatusListeners();
-    if (duration == null || duration == Duration.zero) {
+    if (_disableAnimations || duration == null || duration == Duration.zero) {
       _value = _targetValue;
       _completeAnimation();
       return Cmd.none();
@@ -173,9 +249,14 @@ class AnimationController extends Animation<double> with ChangeNotifier {
     _status = AnimationStatus.reverse;
     _startTime = null;
     _repeating = false;
+    _repeatSettings = null;
+    _suspendedRepeat = null;
+    _resumeRepeatPending = false;
     _notifyStatusListeners();
     final activeDuration = _activeDuration;
-    if (activeDuration == null || activeDuration == Duration.zero) {
+    if (_disableAnimations ||
+        activeDuration == null ||
+        activeDuration == Duration.zero) {
       _value = _targetValue;
       _completeAnimation();
       return Cmd.none();
@@ -200,7 +281,15 @@ class AnimationController extends Animation<double> with ChangeNotifier {
         : AnimationStatus.reverse;
     _startTime = null;
     _repeating = false;
+    _repeatSettings = null;
+    _suspendedRepeat = null;
+    _resumeRepeatPending = false;
     _notifyStatusListeners();
+    if (_disableAnimations) {
+      _value = _targetValue;
+      _completeAnimation();
+      return Cmd.none();
+    }
     return _scheduleTick();
   }
 
@@ -225,7 +314,15 @@ class AnimationController extends Animation<double> with ChangeNotifier {
         : AnimationStatus.forward;
     _startTime = null;
     _repeating = false;
+    _repeatSettings = null;
+    _suspendedRepeat = null;
+    _resumeRepeatPending = false;
     _notifyStatusListeners();
+    if (_disableAnimations) {
+      _value = _targetValue;
+      _completeAnimation();
+      return Cmd.none();
+    }
     return _scheduleTick();
   }
 
@@ -245,14 +342,42 @@ class AnimationController extends Animation<double> with ChangeNotifier {
     final lo = min ?? lowerBound;
     final hi = max ?? upperBound;
     if (period != null) duration = period;
+    final request = (
+      min: lo,
+      max: hi,
+      reverse: reverse,
+      period: period,
+      curve: curve,
+    );
     _value = lo;
     _startValue = lo;
     _targetValue = hi;
     _curve = curve;
-    _status = AnimationStatus.forward;
     _startTime = null;
-    _repeating = true;
     _reverseOnRepeat = reverse;
+    _resumeRepeatPending = false;
+    if (_disableAnimations) {
+      _repeatSettings = null;
+      _suspendedRepeat = (
+        min: lo,
+        max: hi,
+        reverse: reverse,
+        period: period,
+        curve: curve,
+        target: hi,
+        direction: AnimationStatus.forward,
+      );
+      _targetValue = hi;
+      _repeating = false;
+      _status = AnimationStatus.dismissed;
+      notifyListeners();
+      _notifyStatusListeners();
+      return Cmd.none();
+    }
+    _repeatSettings = request;
+    _suspendedRepeat = null;
+    _status = AnimationStatus.forward;
+    _repeating = true;
     _notifyStatusListeners();
     return _scheduleTick();
   }
@@ -268,8 +393,23 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   /// on the current value. If [canceled] is true the status is set based on
   /// the most recent direction.
   void stop({bool canceled = false}) {
-    if (!isAnimating) return;
+    if (!isAnimating) {
+      final wasSuspended = _suspendedRepeat != null;
+      _repeatSettings = null;
+      _suspendedRepeat = null;
+      _resumeRepeatPending = false;
+      if (wasSuspended) {
+        _status = _value >= upperBound
+            ? AnimationStatus.completed
+            : AnimationStatus.dismissed;
+        _notifyStatusListeners();
+      }
+      return;
+    }
     _repeating = false;
+    _repeatSettings = null;
+    _suspendedRepeat = null;
+    _resumeRepeatPending = false;
     if (canceled) {
       _status = _status == AnimationStatus.forward
           ? AnimationStatus.dismissed
@@ -288,6 +428,9 @@ class AnimationController extends Animation<double> with ChangeNotifier {
     _status = AnimationStatus.dismissed;
     _startTime = null;
     _repeating = false;
+    _repeatSettings = null;
+    _suspendedRepeat = null;
+    _resumeRepeatPending = false;
     notifyListeners();
     _notifyStatusListeners();
   }
@@ -379,6 +522,26 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   ///
   /// Returns a [Cmd] to schedule the next tick.
   Cmd? _handleRepeatCycle() {
+    if (_resumeRepeatPending) {
+      _resumeRepeatPending = false;
+      final repeat = _repeatSettings!;
+      if (_reverseOnRepeat) {
+        _startValue = _targetValue;
+        _targetValue = _targetValue == repeat.max ? repeat.min : repeat.max;
+        _status = _status == AnimationStatus.forward
+            ? AnimationStatus.reverse
+            : AnimationStatus.forward;
+      } else {
+        _value = repeat.min;
+        _startValue = repeat.min;
+        _targetValue = repeat.max;
+        _status = AnimationStatus.forward;
+      }
+      _startTime = null;
+      notifyListeners();
+      _notifyStatusListeners();
+      return _scheduleTick();
+    }
     if (_reverseOnRepeat) {
       // Swap direction.
       final tmp = _startValue;

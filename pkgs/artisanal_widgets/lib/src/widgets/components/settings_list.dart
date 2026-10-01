@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '_component_foundation.dart';
 import 'frame.dart' as widget_frame;
+import 'fuzzy_search.dart';
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/runtime.dart';
@@ -99,6 +100,18 @@ class SettingsListItem<T> {
         .split(RegExp(r'\s+'))
         .every(searchable.contains);
   }
+
+  /// Returns a fuzzy relevance score for [query] across this row's text.
+  double searchScore(String query) => FuzzySearch.score(
+    query,
+    [
+      label,
+      category ?? '',
+      description ?? '',
+      disabledReason ?? '',
+      ...searchTerms,
+    ].join(' '),
+  );
 }
 
 /// Result of a host-owned setting change or action.
@@ -165,6 +178,7 @@ class SettingsList<T> extends StatefulWidget {
     this.searchHint = 'Search settings',
     this.initialSelection,
     this.adjustWhileSearching = false,
+    double? filterThreshold,
     this.onAdjust,
     this.onActivate,
     this.onDismiss,
@@ -173,7 +187,11 @@ class SettingsList<T> extends StatefulWidget {
     this.height,
     this.focusId = 'settings-list',
     super.key,
-  });
+  }) : filterThreshold = filterThreshold {
+    assert(
+      filterThreshold == null || (filterThreshold >= 0 && filterThreshold <= 1),
+    );
+  }
 
   /// Rows to display. Supply stable IDs and rebuild after accepted changes.
   final List<SettingsListItem<T>> items;
@@ -192,6 +210,12 @@ class SettingsList<T> extends StatefulWidget {
   /// Disable this to preserve normal search-caret navigation. Enable it when
   /// the host routes setting changes independently from text-field focus.
   final bool adjustWhileSearching;
+
+  /// Minimum fuzzy relevance score for an item to match a non-empty query.
+  ///
+  /// When omitted, matching uses [SettingsListItem.matchesQuery] and preserves
+  /// exact all-term substring behavior. Values must be between `0` and `1`.
+  final double? filterThreshold;
 
   /// Requests a relative adjustment for an adjustable row.
   final SettingsListAdjustCallback<T>? onAdjust;
@@ -259,32 +283,58 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
     super.dispose();
   }
 
-  void _recomputeItems({required bool preserveSelection}) {
+  void _recomputeItems({
+    required bool preserveSelection,
+    bool selectFirstMatch = false,
+  }) {
     final previousSelection =
         preserveSelection &&
             _selectedIndex >= 0 &&
             _selectedIndex < _filteredItems.length
         ? _filteredItems[_selectedIndex]
         : null;
-    final nextItems = widget.items
-        .where((item) => item.matchesQuery(_searchQuery))
-        .toList(growable: false);
+    final threshold = widget.filterThreshold;
+    final nextItems = threshold == null || _searchQuery.trim().isEmpty
+        ? widget.items
+              .where((item) => item.matchesQuery(_searchQuery))
+              .toList(growable: false)
+        : _filterFuzzyItems(threshold);
 
     var nextIndex = -1;
     if (previousSelection != null) {
       nextIndex = nextItems.indexWhere(
         (item) => item.id == previousSelection.id,
       );
-    } else if (!preserveSelection && widget.initialSelection != null) {
+    } else if (!preserveSelection &&
+        !selectFirstMatch &&
+        widget.initialSelection != null) {
       nextIndex = nextItems.indexWhere(
         (item) => item.id == widget.initialSelection,
       );
     }
     if (nextIndex < 0 && nextItems.isNotEmpty) {
-      nextIndex = _selectedIndex.clamp(0, nextItems.length - 1);
+      nextIndex = selectFirstMatch
+          ? 0
+          : _selectedIndex.clamp(0, nextItems.length - 1);
     }
     _filteredItems = nextItems;
     _selectedIndex = nextIndex < 0 ? 0 : nextIndex;
+  }
+
+  List<SettingsListItem<T>> _filterFuzzyItems(double threshold) {
+    final rankedItems =
+        <({int index, double score, SettingsListItem<T> item})>[];
+    for (final (index, item) in widget.items.indexed) {
+      final score = item.searchScore(_searchQuery);
+      if (score >= threshold) {
+        rankedItems.add((index: index, score: score, item: item));
+      }
+    }
+    rankedItems.sort((left, right) {
+      final scoreOrder = right.score.compareTo(left.score);
+      return scoreOrder == 0 ? left.index.compareTo(right.index) : scoreOrder;
+    });
+    return rankedItems.map((entry) => entry.item).toList(growable: false);
   }
 
   void _moveSelection(int delta) {
@@ -542,7 +592,10 @@ class _SettingsListState<T> extends State<SettingsList<T>> {
                 onChanged: (value) {
                   setState(() {
                     _searchQuery = value;
-                    _recomputeItems(preserveSelection: true);
+                    _recomputeItems(
+                      preserveSelection: widget.filterThreshold == null,
+                      selectFirstMatch: widget.filterThreshold != null,
+                    );
                     _error = null;
                   });
                   _scroll.jumpTo(0);

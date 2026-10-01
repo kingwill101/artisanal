@@ -2,6 +2,19 @@
 
 ## 0.4.3
 
+- Add reusable fuzzy relevance scoring and optional threshold-based ranked
+  filtering to `SettingsList` and `DialogSelect`, while preserving exact
+  matching by default. `DialogSelect` reports query-driven highlight changes
+  and provides a separate clear event when no results remain, for live previews.
+
+- Add a composable reduced-motion policy to `MediaQueryData` and `MotionScope`;
+  `SpinnerIndicator` displays a stable busy frame and stops its tick loop while
+  motion is disabled, then resumes when the policy is lifted.
+- Propagate reduced-motion policy through `AnimationMixin` to registered
+  controllers, completing one-shot transitions and suspending/resuming repeating
+  animations from their frozen value and direction.
+- Add `State.schedule(Cmd)` for safely queueing runtime effects from lifecycle
+  callbacks after widget-tree reconciliation.
 - Stop `SpinnerIndicator`'s tick chain when deactivated or unmounted, and restart
   from one fresh tick chain when reactivated.
 - Add a searchable `SettingsList` with typed stable row IDs, grouped settings,

@@ -4,6 +4,7 @@ import '_component_foundation.dart';
 import '../navigation/animation_style.dart';
 import '../navigation/navigator.dart';
 import 'frame.dart' as widget_frame;
+import 'fuzzy_search.dart';
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
 
@@ -24,6 +25,7 @@ class DialogSelectItem<T> {
     this.isCurrent = false,
     this.isDisabled = false,
     this.background,
+    this.searchTerms = const [],
   });
 
   /// Primary display text for the item.
@@ -51,6 +53,26 @@ class DialogSelectItem<T> {
 
   /// Optional per-item background color override.
   final Color? background;
+
+  /// Extra words included in exact and fuzzy search without changing the label.
+  final List<String> searchTerms;
+
+  /// Returns a fuzzy relevance score across the item's searchable text.
+  double searchScore(String query) => FuzzySearch.score(
+    query,
+    [label, description ?? '', category ?? '', ...searchTerms].join(' '),
+  );
+
+  /// Whether a non-fuzzy query appears in the item's searchable text.
+  bool matchesQuery(String query) {
+    final normalizedQuery = query.toLowerCase();
+    return [
+      label,
+      description ?? '',
+      category ?? '',
+      ...searchTerms,
+    ].any((term) => term.toLowerCase().contains(normalizedQuery));
+  }
 }
 
 /// A generic searchable, grouped selection list dialog.
@@ -60,7 +82,7 @@ class DialogSelectItem<T> {
 ///
 /// Features:
 /// - Title bar with `esc` dismiss hint
-/// - Search input with fuzzy text filtering
+/// - Search input with optional threshold-based fuzzy ranking
 /// - Grouped items with section headers
 /// - Keyboard nav: up/down, pgup/pgdn, home/end, enter, esc
 /// - Mouse hover + click
@@ -106,9 +128,11 @@ class DialogSelect<T> extends StatefulWidget {
     void Function(DialogSelectItem<R> item)? onSelect,
     int? width,
     int? height,
+    double? filterThreshold,
     List<({String key, String description})> keybinds = const [],
     Widget Function(int filteredCount, int totalCount)? trailing,
     void Function(DialogSelectItem<R> item)? onHighlightChanged,
+    void Function()? onHighlightCleared,
     Widget Function(String searchQuery)? emptyBuilder,
     bool barrierDismissible = true,
     Color? barrierColor,
@@ -134,9 +158,11 @@ class DialogSelect<T> extends StatefulWidget {
             : null,
         width: width,
         height: height,
+        filterThreshold: filterThreshold,
         keybinds: keybinds,
         trailing: trailing,
         onHighlightChanged: onHighlightChanged,
+        onHighlightCleared: onHighlightCleared,
         emptyBuilder: emptyBuilder,
       ),
     );
@@ -150,12 +176,18 @@ class DialogSelect<T> extends StatefulWidget {
     this.onDismiss,
     this.width,
     this.height,
+    double? filterThreshold,
     this.keybinds = const [],
     this.trailing,
     this.onHighlightChanged,
+    this.onHighlightCleared,
     this.emptyBuilder,
     super.key,
-  });
+  }) : filterThreshold = filterThreshold {
+    assert(
+      filterThreshold == null || (filterThreshold >= 0 && filterThreshold <= 1),
+    );
+  }
 
   /// Items to display and filter.
   final List<DialogSelectItem<T>> items;
@@ -178,16 +210,24 @@ class DialogSelect<T> extends StatefulWidget {
   /// Height of the dialog in rows. Defaults to theme or 22.
   final int? height;
 
+  /// Minimum fuzzy relevance score for a result to match a non-empty query.
+  ///
+  /// When omitted, the list retains case-insensitive substring filtering.
+  /// Values must be between `0` and `1`.
+  final double? filterThreshold;
+
   /// Additional keybind hints shown in the footer.
   final List<({String key, String description})> keybinds;
 
   /// Optional trailing widget shown at the bottom (e.g., item count).
   final Widget Function(int filteredCount, int totalCount)? trailing;
 
-  /// Called when the highlighted (selected) item changes due to keyboard
-  /// navigation or mouse hover. Useful for live-preview scenarios like
-  /// theme switching.
+  /// Called when keyboard navigation, mouse hover, or search changes the
+  /// highlighted item. Useful for live-preview scenarios like theme switching.
   final void Function(DialogSelectItem<T> item)? onHighlightChanged;
+
+  /// Called when filtering removes every result and clears the highlight.
+  final void Function()? onHighlightCleared;
 
   /// Custom builder for the empty state (when no items match the search).
   /// Receives the current search query. If null, a default "No matches" text
@@ -219,7 +259,8 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
   @override
   Cmd? didUpdateWidget(covariant DialogSelect<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.items, widget.items)) {
+    if (!identical(oldWidget.items, widget.items) ||
+        oldWidget.filterThreshold != widget.filterThreshold) {
       _recomputeFilteredItems(preserveSelection: true);
     }
     return null;
@@ -233,7 +274,10 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
-  void _recomputeFilteredItems({required bool preserveSelection}) {
+  void _recomputeFilteredItems({
+    required bool preserveSelection,
+    bool selectFirstMatch = false,
+  }) {
     final previousItems = _filteredItems;
     final previousSelection =
         preserveSelection &&
@@ -242,17 +286,13 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
         ? previousItems[_selectedIndex]
         : null;
 
-    final nextItems = () {
-      if (_searchQuery.isEmpty) return widget.items;
-      final q = _searchQuery.toLowerCase();
-      return widget.items
-          .where((item) {
-            return item.label.toLowerCase().contains(q) ||
-                (item.description?.toLowerCase().contains(q) ?? false) ||
-                (item.category?.toLowerCase().contains(q) ?? false);
-          })
-          .toList(growable: false);
-    }();
+    final nextItems = _searchQuery.trim().isEmpty
+        ? widget.items
+        : widget.filterThreshold == null
+        ? widget.items
+              .where((item) => item.matchesQuery(_searchQuery))
+              .toList(growable: false)
+        : _filterFuzzyItems(widget.filterThreshold!);
 
     var nextIndex = 0;
     if (nextItems.isNotEmpty) {
@@ -268,16 +308,59 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
             );
           }
         }
+      } else if (selectFirstMatch) {
+        nextIndex = 0;
       } else {
         nextIndex = _indexOfCurrent(nextItems);
       }
       if (nextIndex < 0) {
-        nextIndex = _selectedIndex.clamp(0, nextItems.length - 1);
+        nextIndex = selectFirstMatch
+            ? 0
+            : _selectedIndex.clamp(0, nextItems.length - 1);
       }
     }
 
     _filteredItems = nextItems;
     _selectedIndex = nextIndex;
+  }
+
+  List<DialogSelectItem<T>> _filterFuzzyItems(double threshold) {
+    final rankedItems =
+        <({int index, double score, DialogSelectItem<T> item})>[];
+    for (final (index, item) in widget.items.indexed) {
+      final score = item.searchScore(_searchQuery);
+      if (score >= threshold) {
+        rankedItems.add((index: index, score: score, item: item));
+      }
+    }
+    rankedItems.sort((left, right) {
+      final scoreOrder = right.score.compareTo(left.score);
+      return scoreOrder == 0 ? left.index.compareTo(right.index) : scoreOrder;
+    });
+    return rankedItems.map((entry) => entry.item).toList(growable: false);
+  }
+
+  DialogSelectItem<T>? get _selectedItem =>
+      _selectedIndex >= 0 && _selectedIndex < _filteredItems.length
+      ? _filteredItems[_selectedIndex]
+      : null;
+
+  void _notifyHighlightChanged(DialogSelectItem<T>? previous) {
+    final current = _selectedItem;
+    if (_sameSelection(previous, current)) return;
+    if (current == null) {
+      widget.onHighlightCleared?.call();
+    } else {
+      widget.onHighlightChanged?.call(current);
+    }
+  }
+
+  bool _sameSelection(DialogSelectItem<T>? left, DialogSelectItem<T>? right) {
+    if (identical(left, right)) return true;
+    if (left == null || right == null) return false;
+    final leftValue = left.value;
+    final rightValue = right.value;
+    return leftValue != null && rightValue != null && leftValue == rightValue;
   }
 
   int _indexOfCurrent(List<DialogSelectItem<T>> items) {
@@ -490,10 +573,15 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
                 placeholder: widget.searchHint ?? 'Search',
                 autofocus: true,
                 onChanged: (value) {
+                  final previousSelection = _selectedItem;
                   setState(() {
                     _searchQuery = value;
-                    _recomputeFilteredItems(preserveSelection: false);
+                    _recomputeFilteredItems(
+                      preserveSelection: false,
+                      selectFirstMatch: widget.filterThreshold != null,
+                    );
                   });
+                  _notifyHighlightChanged(previousSelection);
                 },
               ),
             ),

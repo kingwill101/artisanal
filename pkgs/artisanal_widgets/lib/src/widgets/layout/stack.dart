@@ -262,6 +262,17 @@ class RenderStack extends RenderBox {
     final targetHeight = size.height.toInt();
     if (targetWidth == 0 || targetHeight == 0) return '';
 
+    if (children.length == 1) {
+      final child = children.single;
+      if (child.offset.dx.toInt() == 0 &&
+          child.offset.dy.toInt() == 0 &&
+          child.size.width.toInt() == targetWidth &&
+          child.size.height.toInt() == targetHeight) {
+        _pruneChildPaintCache();
+        return padToStackSize(_paintChild(child), targetWidth, targetHeight);
+      }
+    }
+
     final canvas = Canvas(targetWidth, targetHeight);
     try {
       final bgStyle = const UvStyle();

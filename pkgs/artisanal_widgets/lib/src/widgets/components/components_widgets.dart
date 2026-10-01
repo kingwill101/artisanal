@@ -25,6 +25,7 @@ export 'code_editor.dart' show CodeEditor;
 export 'markdown_editor.dart' show MarkdownEditor;
 
 export 'frame.dart';
+export 'fuzzy_search.dart';
 export 'button.dart';
 export 'badge.dart';
 export 'chip.dart';

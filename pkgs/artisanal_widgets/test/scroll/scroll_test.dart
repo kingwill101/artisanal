@@ -877,6 +877,39 @@ void main() {
       );
     });
 
+    test('variable-height builder measures only the visible window', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final controller = ListViewController();
+      final built = <int>[];
+      final listView = VirtualListView.builder(
+        width: 30,
+        height: 5,
+        controller: controller,
+        variableHeight: true,
+        estimatedItemExtent: 1,
+        itemCount: 100,
+        itemBuilder: (_, index) {
+          built.add(index);
+          return Text('Row $index');
+        },
+      );
+
+      await _pumpSmallRoot(tester, Container(height: 5, child: listView));
+
+      expect(built, equals(<int>[0, 1, 2, 3, 4]));
+      final viewport = _findRenderListViewport(listView);
+      expect((viewport as dynamic).debugActiveChildCount, equals(5));
+
+      controller.jumpTo(50);
+      tester.pump();
+
+      expect(built, equals(<int>[0, 1, 2, 3, 4, 50, 51, 52, 53, 54]));
+      expect(tester.locateText('Row 50'), isNotNull);
+      expect((viewport as dynamic).debugActiveChildCount, equals(5));
+    });
+
     test('builder parent rebuild updates only mounted children', () {
       var revision = 0;
       final built = <String>[];
