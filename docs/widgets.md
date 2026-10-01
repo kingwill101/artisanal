@@ -540,6 +540,14 @@ class MyWidget extends Widget {
 
 > **Important:** Override `handleInit()`, not `init()`. The base `init()` handles child initialization and background color detection.
 
+### Scheduling from lifecycle callbacks
+
+`State.schedule(Cmd)` queues a command for the normal runtime loop when a
+lifecycle callback such as `didChangeDependencies()` cannot return one. The
+command runs after reconciliation, rather than starting an effect inside the
+widget-tree update. Use it for effects caused by inherited policy changes; use
+`handleInit()` or `handleUpdate()` when those callbacks can return the command.
+
 ### Update (`update` / `handleUpdate`)
 
 When a message arrives, `update()` is called. The default implementation:
@@ -2182,7 +2190,8 @@ Implemented component widgets and companion types include:
   `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
   `DebugConsole`, `Wizard`, `WizardFormStep`, `FilePicker`, `CommandPalette`,
   `CommandPaletteItem`, `CommandPaletteMatch`, `CommandPaletteController`,
-  `SettingsList`, `SettingsListItem`, `SettingsListResult`
+  `DialogSelect`, `DialogSelectItem`, `SettingsList`, `SettingsListItem`,
+  `SettingsListResult`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
 - **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,
@@ -2219,9 +2228,10 @@ the controlled state but do not emit toggle requests.
 `SettingsList<T>` provides grouped searchable rows with keyboard and pointer
 navigation for settings backed by an application-owned source of truth. Give
 each `SettingsListItem<T>` a stable typed ID, accepted value, category, search
-terms, and optional disabled explanation. Search matches all words across the
-row's searchable text, and selection follows the row ID when the host filters
-or replaces the list.
+terms, and optional disabled explanation. By default, search matches all words
+across the row's searchable text, and selection follows the row ID when the host
+filters or replaces the list. Set `filterThreshold` to opt into fuzzy relevance
+ranking; exact matching remains the default.
 By default, left/right stay with search-caret navigation until the row list is
 focused with Tab. Set `adjustWhileSearching` when the host intentionally routes
 left/right to the selected setting while filtering.
@@ -2234,6 +2244,17 @@ or other actions. Requests can be asynchronous; the list serializes edits,
 shows a pending state, and displays a returned rejection message without
 changing the presented value. Persistence, authorization, and accepted values
 remain with the host.
+
+### Searchable selection dialog
+
+`DialogSelect<T>` and `DialogSelectItem<T>` provide a grouped searchable picker
+for choices such as models and themes. Add `searchTerms` without changing the
+visible label. By default, filtering uses case-insensitive substring matches;
+set `filterThreshold` from `0` to `1` to filter and rank fuzzy matches.
+`onHighlightChanged` reports keyboard, pointer-hover, and query-driven changes
+to the highlighted item. `onHighlightCleared` reports when a query has no
+results, allowing a host to restore a live preview. Selection and persistence
+remain host-owned.
 
 ### Button
 
@@ -2501,6 +2522,13 @@ The media module currently includes:
 final mq = MediaQuery.of(context);
 Text('Terminal size: ${mq.width}x${mq.height}');
 ```
+
+`MediaQueryData.disableAnimations` carries a reduced-motion request through the
+widget tree. `MotionScope` combines an app preference with any ancestor request;
+it can reduce motion but cannot override an ancestor's accessibility policy.
+Widgets can use `MediaQuery.disableAnimationsOf(context)` to switch decorative
+motion off while keeping the underlying status visible. `SpinnerIndicator`
+does this automatically and resumes its timer if the scope later allows motion.
 
 ### NetworkImage
 

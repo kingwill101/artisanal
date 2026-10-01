@@ -19,6 +19,32 @@ class _SpinnerParentRebuildHost extends StatefulWidget {
   State createState() => _SpinnerParentRebuildHostState();
 }
 
+class _ToggleSpinnerHost extends StatefulWidget {
+  _ToggleSpinnerHost();
+
+  @override
+  State createState() => _ToggleSpinnerHostState();
+}
+
+class _ToggleSpinnerHostState extends State<_ToggleSpinnerHost> {
+  var _active = true;
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'd') {
+      setState(() => _active = !_active);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => SpinnerIndicator(
+    frames: const ['A', 'B', 'C'],
+    interval: const Duration(milliseconds: 35),
+    active: _active,
+  );
+}
+
 class _SpinnerParentRebuildHostState extends State<_SpinnerParentRebuildHost> {
   var _count = 0;
 
@@ -99,6 +125,24 @@ class _DelayedSpinnerMountHostState extends State<_DelayedSpinnerMountHost> {
 }
 
 void main() {
+  test(
+    'explicit start index resets after a remembered-frame rebuild',
+    () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      addTearDown(tester.dispose);
+      SpinnerIndicator spinner(int startIndex) => SpinnerIndicator(
+        frames: const ['A', 'B', 'C'],
+        interval: const Duration(milliseconds: 150),
+        startIndex: startIndex,
+      );
+      await tester.pumpWidget(spinner(0));
+      expect(await _waitForSpinnerFrame(tester, const ['B']), 'B');
+      await tester.pumpWidget(spinner(0));
+      expect(await _waitForSpinnerFrame(tester, const ['C']), 'C');
+      await tester.pumpWidget(spinner(1));
+      expect(tester.find.text('B'), isTrue);
+    },
+  );
   // ---------------------------------------------------------------------------
   // SpinnerIndicator — property / construction tests
   // ---------------------------------------------------------------------------
@@ -484,33 +528,25 @@ void main() {
         const frames = ['A', 'B', 'C'];
         final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
         try {
-          await tester.pumpWidget(
-            SpinnerIndicator(
-              frames: frames,
-              interval: const Duration(milliseconds: 35),
-            ),
+          await tester.pumpWidget(_ToggleSpinnerHost());
+          final initialFrame = _visibleSpinnerFrame(tester, frames);
+          expect(initialFrame, isNotEmpty);
+          final beforePause = await _waitForSpinnerFrame(
+            tester,
+            frames,
+            except: initialFrame,
           );
-          final beforePause = _visibleSpinnerFrame(tester, frames);
-          expect(beforePause, 'A');
+          expect(beforePause, isNotEmpty);
 
-          await tester.pumpWidget(
-            SpinnerIndicator(
-              frames: frames,
-              interval: const Duration(milliseconds: 35),
-              active: false,
-            ),
-          );
+          tester.sendKey('d');
           final pausedFrame = _visibleSpinnerFrame(tester, frames);
+          expect(pausedFrame, beforePause);
           await Future<void>.delayed(const Duration(milliseconds: 100));
           tester.pump();
           expect(_visibleSpinnerFrame(tester, frames), pausedFrame);
 
-          await tester.pumpWidget(
-            SpinnerIndicator(
-              frames: frames,
-              interval: const Duration(milliseconds: 35),
-            ),
-          );
+          tester.sendKey('d');
+          expect(_visibleSpinnerFrame(tester, frames), pausedFrame);
           final resumed = await _waitForSpinnerFrame(
             tester,
             frames,
@@ -522,5 +558,39 @@ void main() {
         }
       },
     );
+
+    test('MotionScope stops spinner ticks and resumes them live', () async {
+      const frames = ['A', 'B', 'C'];
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          MotionScope(
+            enabled: false,
+            child: SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+            ),
+          ),
+        );
+        expect(_visibleSpinnerFrame(tester, frames), 'A');
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        tester.pump();
+        expect(_visibleSpinnerFrame(tester, frames), 'A');
+
+        await tester.pumpWidget(
+          MotionScope(
+            enabled: true,
+            child: SpinnerIndicator(
+              frames: frames,
+              interval: const Duration(milliseconds: 35),
+            ),
+          ),
+        );
+        final resumed = await _waitForSpinnerFrame(tester, frames, except: 'A');
+        expect(resumed, isNotEmpty);
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 }

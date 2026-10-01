@@ -27,6 +27,9 @@ abstract class BuildContext {
 abstract class StateSetter {
   /// Marks the owning element as needing rebuild.
   void markNeedsBuild();
+
+  /// Queues a runtime command to be executed outside tree reconciliation.
+  void enqueueCommand(Cmd command);
 }
 
 /// A widget with a build method and no mutable state.
@@ -111,10 +114,19 @@ abstract class State<T extends StatefulWidget> {
   /// Notifies the framework that this state's internal data has changed.
   ///
   /// The callback [fn] runs synchronously, then the owning element is marked
-  /// dirty so it can rebuild in the next build scope.
+  /// dirty so it can rebuild in the next build scope. A mounted `WidgetApp`
+  /// wakes its runtime for changes made outside message dispatch, including
+  /// asynchronous completions and listenable callbacks.
   void setState(void Function() fn) {
     fn();
     _element?.markNeedsBuild();
+  }
+
+  /// Schedules a runtime effect from a lifecycle callback that cannot return a
+  /// [Cmd], such as [didChangeDependencies]. The widget app executes the
+  /// command through its normal event loop after reconciliation finishes.
+  void schedule(Cmd command) {
+    _element?.enqueueCommand(command);
   }
 
   @internal

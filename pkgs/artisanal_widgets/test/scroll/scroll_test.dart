@@ -877,6 +877,78 @@ void main() {
       );
     });
 
+    test('variable-height builder measures only the visible window', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final controller = ListViewController();
+      final built = <int>[];
+      final listView = VirtualListView.builder(
+        width: 30,
+        height: 5,
+        controller: controller,
+        variableHeight: true,
+        estimatedItemExtent: 1,
+        itemCount: 100,
+        itemBuilder: (_, index) {
+          built.add(index);
+          return Text('Row $index');
+        },
+      );
+
+      await _pumpSmallRoot(tester, Container(height: 5, child: listView));
+
+      expect(built, equals(<int>[0, 1, 2, 3, 4]));
+      final viewport = _findRenderListViewport(listView);
+      expect((viewport as dynamic).debugActiveChildCount, equals(5));
+
+      controller.jumpTo(50);
+      tester.pump();
+
+      expect(built, equals(<int>[0, 1, 2, 3, 4, 50, 51, 52, 53, 54]));
+      expect(tester.locateText('Row 50'), isNotNull);
+      expect((viewport as dynamic).debugActiveChildCount, equals(5));
+    });
+
+    test(
+      'variable-height builder preserves the middle anchor after measuring',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(tester.dispose);
+
+        final heights = List<int>.generate(100, (index) => index % 3 + 1);
+        final controller = ListViewController();
+        final listView = VirtualListView.builder(
+          width: 30,
+          height: 5,
+          controller: controller,
+          cacheExtentItems: 2,
+          variableHeight: true,
+          estimatedItemExtent: 1,
+          itemCount: heights.length,
+          itemBuilder: (_, index) =>
+              Text(_variableHeightItem(index, heights[index]), softWrap: false),
+        );
+
+        await _pumpSmallRoot(tester, Container(height: 5, child: listView));
+        controller.jumpTo(51);
+        final anchorBeforeMeasurement = _resolveOffsetForDebugViewport(
+          _findRenderListViewport(listView),
+          controller.offset,
+        );
+        tester.pump();
+
+        final viewport = _findRenderListViewport(listView);
+        final visibleStart = _resolveOffsetForDebugViewport(
+          viewport,
+          controller.offset,
+        );
+        expect(visibleStart.index, anchorBeforeMeasurement.index);
+        expect(visibleStart.offsetInItem, anchorBeforeMeasurement.offsetInItem);
+        expect(tester.view, contains('Item ${visibleStart.index} line 1'));
+      },
+    );
+
     test('builder parent rebuild updates only mounted children', () {
       var revision = 0;
       final built = <String>[];

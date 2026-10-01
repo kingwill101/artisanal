@@ -563,6 +563,12 @@ class BuildOwner {
   bool _captureMountInitCmds = false;
   final List<Cmd> _pendingMountInitCmds = <Cmd>[];
 
+  final List<Cmd> _pendingDeferredCmds = <Cmd>[];
+  void Function()? _onDeferredCommandQueued;
+
+  /// Wakes the host when a build is requested outside frame traversal.
+  void Function()? onBuildScheduled;
+
   /// Notifies the runtime when a frame mounts children with init commands.
   ///
   /// The host should enqueue an event and drain commands afterward, not execute
@@ -628,6 +634,27 @@ class BuildOwner {
     _pendingMountInitCmds.clear();
   }
 
+  /// Queues a lifecycle command and wakes the app event loop to execute it.
+  void queueDeferredCommand(Cmd command) {
+    final wasEmpty = _pendingDeferredCmds.isEmpty;
+    _pendingDeferredCmds.add(command);
+    if (wasEmpty) _onDeferredCommandQueued?.call();
+  }
+
+  /// Drains lifecycle commands queued outside normal message dispatch.
+  Cmd? drainDeferredCommands() {
+    if (_pendingDeferredCmds.isEmpty) return null;
+    final drained = _pendingDeferredCmds.toList();
+    _pendingDeferredCmds.clear();
+    return _coalesceCommands(drained);
+  }
+
+  /// Installs the event-loop wake callback and wakes it for queued work.
+  void setDeferredCommandCallback(void Function()? callback) {
+    _onDeferredCommandQueued = callback;
+    if (callback != null && _pendingDeferredCmds.isNotEmpty) callback();
+  }
+
   /// Recent widget frame timings (up to [_maxRecentTimings]).
   List<WidgetFrameTiming> get recentTimings =>
       List.unmodifiable(_recentTimings);
@@ -669,7 +696,9 @@ class BuildOwner {
 
   /// Schedules [element] to rebuild in the next build scope.
   void scheduleBuildFor(Element element) {
+    final wasEmpty = _dirty.isEmpty;
     _dirty.add(element);
+    if (wasEmpty && !_inFrame) onBuildScheduled?.call();
   }
 
   /// Removes [element] from the dirty queue if present.
@@ -958,6 +987,11 @@ class StatefulElement extends Element implements StateSetter {
   }
 
   final State state;
+
+  @override
+  void enqueueCommand(Cmd command) {
+    _owner?.queueDeferredCommand(command);
+  }
 
   /// Commands returned by [State.didUpdateWidget] that have not yet been
   /// drained by [dispatch].  This bridges the gap between the reconciliation

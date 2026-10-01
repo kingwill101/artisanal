@@ -284,6 +284,48 @@ class WidgetApp
       ),
     );
 
+    final deferredCommandSignals = StreamController<void>();
+    void notifyDeferredCommand() => deferredCommandSignals.add(null);
+    deferredCommandSignals.onListen = () {
+      _tree.owner.setDeferredCommandCallback(notifyDeferredCommand);
+    };
+    deferredCommandSignals.onCancel = () {
+      _tree.owner.setDeferredCommandCallback(null);
+      unawaited(deferredCommandSignals.close());
+    };
+    cmds.add(
+      Cmd.listen<void>(
+        deferredCommandSignals.stream,
+        onData: (_) => const _DeferredCommandReadyMsg(),
+      ),
+    );
+
+    final buildSignals = StreamController<void>();
+    var buildSignalPending = false;
+    void notifyBuild() {
+      if (buildSignalPending) return;
+      buildSignalPending = true;
+      buildSignals.add(null);
+    }
+
+    buildSignals.onListen = () {
+      _tree.owner.onBuildScheduled = notifyBuild;
+      if (_tree.hasDirty) notifyBuild();
+    };
+    buildSignals.onCancel = () {
+      _tree.owner.onBuildScheduled = null;
+      unawaited(buildSignals.close());
+    };
+    cmds.add(
+      Cmd.listen<void>(
+        buildSignals.stream,
+        onData: (_) {
+          buildSignalPending = false;
+          return const _BuildReadyMsg();
+        },
+      ),
+    );
+
     final initCmd = _tree.collectHandleInit();
     if (initCmd != null) cmds.add(initCmd);
     return ParallelCmd(cmds);
@@ -396,8 +438,15 @@ class WidgetApp
     }
 
     try {
+      if (msg is _BuildReadyMsg) {
+        _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+        return (this, null);
+      }
       if (msg is _MountInitReadyMsg) {
         return (this, _tree.owner.drainMountInitCmds());
+      }
+      if (msg is _DeferredCommandReadyMsg) {
+        return (this, _tree.owner.drainDeferredCommands());
       }
       if (msg is FrameTickMsg) {
         if (!handleFrameTick) {
@@ -1099,4 +1148,12 @@ final class _RenderMetricsInjectionMsg extends Msg {
 
 final class _MountInitReadyMsg extends Msg {
   const _MountInitReadyMsg();
+}
+
+final class _DeferredCommandReadyMsg extends Msg {
+  const _DeferredCommandReadyMsg();
+}
+
+final class _BuildReadyMsg extends Msg {
+  const _BuildReadyMsg();
 }

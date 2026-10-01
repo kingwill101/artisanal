@@ -1,6 +1,7 @@
 import 'package:artisanal/runtime.dart' show Cmd, Msg;
 
 import '../core/framework.dart' show State, StatefulWidget;
+import '../media/media_query.dart' show MediaQuery;
 import 'animation_controller.dart';
 import 'animation_tick.dart';
 
@@ -72,6 +73,16 @@ import 'animation_tick.dart';
 mixin AnimationMixin<T extends StatefulWidget> on State<T> {
   final List<AnimationController> _controllers = [];
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    for (final controller in _controllers) {
+      final command = controller.setMotionPolicy(disableAnimations);
+      if (command != null) schedule(command);
+    }
+  }
+
   /// Creates and registers an [AnimationController].
   ///
   /// The controller is automatically disposed when this State is disposed.
@@ -96,6 +107,10 @@ mixin AnimationMixin<T extends StatefulWidget> on State<T> {
       fps: fps,
       id: id,
     );
+    final command = controller.setMotionPolicy(
+      MediaQuery.disableAnimationsOf(context),
+    );
+    if (command != null) schedule(command);
     _controllers.add(controller);
     return controller;
   }
@@ -108,6 +123,10 @@ mixin AnimationMixin<T extends StatefulWidget> on State<T> {
     if (!_controllers.contains(controller)) {
       _controllers.add(controller);
     }
+    final command = controller.setMotionPolicy(
+      MediaQuery.disableAnimationsOf(context),
+    );
+    if (command != null) schedule(command);
   }
 
   /// Unregisters a [controller] so it no longer receives tick dispatch
@@ -135,7 +154,7 @@ mixin AnimationMixin<T extends StatefulWidget> on State<T> {
           // processTick calls notifyListeners internally, which triggers
           // any setState callbacks the user registered — so the widget
           // is already marked dirty by the time we return.
-          return controller.processTick(msg.time);
+          return controller.processTick(msg.time, generation: msg.generation);
         }
       }
     }

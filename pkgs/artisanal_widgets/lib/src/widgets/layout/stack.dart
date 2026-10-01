@@ -262,6 +262,26 @@ class RenderStack extends RenderBox {
     final targetHeight = size.height.toInt();
     if (targetWidth == 0 || targetHeight == 0) return '';
 
+    RenderObject? prepaintedChild;
+    String? prepaintedContent;
+    if (children.length == 1) {
+      final child = children.single;
+      if (child.offset.dx.toInt() == 0 &&
+          child.offset.dy.toInt() == 0 &&
+          child.size.width.toInt() == targetWidth &&
+          child.size.height.toInt() == targetHeight) {
+        final content = _paintChild(child);
+        final contentBounds = StyledString(content).bounds();
+        if (contentBounds.width <= targetWidth &&
+            contentBounds.height <= targetHeight) {
+          _pruneChildPaintCache();
+          return padToStackSize(content, targetWidth, targetHeight);
+        }
+        prepaintedChild = child;
+        prepaintedContent = content;
+      }
+    }
+
     final canvas = Canvas(targetWidth, targetHeight);
     try {
       final bgStyle = const UvStyle();
@@ -269,7 +289,9 @@ class RenderStack extends RenderBox {
 
       var isFirstChild = true;
       for (final child in children) {
-        final content = _paintChild(child);
+        final content = identical(child, prepaintedChild)
+            ? prepaintedContent!
+            : _paintChild(child);
         final childWidth = child.size.width.toInt();
         final childHeight = child.size.height.toInt();
         final x = child.offset.dx.toInt();

@@ -1433,9 +1433,14 @@ final class _ControllerRuntime implements _TimelineStepRuntime {
     if (_isComplete) {
       return null;
     }
-    if (msg case AnimationTickMsg(controllerId: final id, time: final time)
+    if (msg
+        case AnimationTickMsg(
+          controllerId: final id,
+          time: final time,
+          generation: final generation,
+        )
         when id == controller.id) {
-      final next = controller.processTick(time);
+      final next = controller.processTick(time, generation: generation);
       if (!controller.isAnimating) {
         _isComplete = true;
       }

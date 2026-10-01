@@ -25,6 +25,7 @@ void main() {
       expect(data.width, equals(0));
       expect(data.height, equals(0));
       expect(data.size, equals(Size.zero));
+      expect(data.disableAnimations, isFalse);
     });
   });
 
@@ -52,6 +53,19 @@ void main() {
       final copy = original.copyWith();
       expect(identical(original, copy), isFalse);
     });
+
+    test('copyWith preserves and overrides reduced-motion policy', () {
+      final original = MediaQueryData(
+        size: Size(80, 24),
+        disableAnimations: true,
+      );
+
+      expect(original.copyWith().disableAnimations, isTrue);
+      expect(
+        original.copyWith(disableAnimations: false).disableAnimations,
+        isFalse,
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -73,6 +87,12 @@ void main() {
     test('different height makes them unequal', () {
       final a = MediaQueryData(size: Size(80, 24));
       final b = MediaQueryData(size: Size(80, 30));
+      expect(a, isNot(equals(b)));
+    });
+
+    test('different motion policies make them unequal', () {
+      final a = MediaQueryData(size: Size(80, 24));
+      final b = MediaQueryData(size: Size(80, 24), disableAnimations: true);
       expect(a, isNot(equals(b)));
     });
 
@@ -236,6 +256,29 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test(
+      'MotionScope reduces motion and preserves ancestor requests',
+      () async {
+        final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+        try {
+          await tester.pumpWidget(
+            MotionScope(enabled: false, child: _MotionPolicyWidget()),
+          );
+          expect(tester.find.text('reduced: 80x24'), isTrue);
+
+          await tester.pumpWidget(
+            MediaQuery(
+              data: MediaQueryData(size: Size(80, 24), disableAnimations: true),
+              child: MotionScope(enabled: true, child: _MotionPolicyWidget()),
+            ),
+          );
+          expect(tester.find.text('reduced: 80x24'), isTrue);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
   });
 }
 
@@ -267,5 +310,14 @@ class _MediaQuerySizeWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = MediaQuery.of(context);
     return Text('${data.width.toInt()}x${data.height.toInt()}');
+  }
+}
+
+class _MotionPolicyWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final data = MediaQuery.of(context);
+    final motion = MediaQuery.disableAnimationsOf(context) ? 'reduced' : 'full';
+    return Text('$motion: ${data.width.toInt()}x${data.height.toInt()}');
   }
 }

@@ -3,6 +3,19 @@ import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
+  for (final duration in [Duration.zero, null]) {
+    test('stopped completed repeat tolerates motion changes: $duration', () {
+      final controller = AnimationController(duration: duration);
+      addTearDown(controller.dispose);
+      controller.repeat();
+      controller.processTick(DateTime(2026));
+      controller.stop();
+      controller.setMotionPolicy(true);
+      controller.setMotionPolicy(false);
+      expect(controller.isAnimating, isFalse);
+      expect(controller.processTick(DateTime(2026)), isNull);
+    });
+  }
   group('AnimationController construction', () {
     test('initial value defaults to lowerBound', () {
       final controller = AnimationController(
@@ -144,6 +157,206 @@ void main() {
       controller.forward();
       expect(reported, AnimationStatus.forward);
       addTearDown(controller.dispose);
+    });
+  });
+
+  group('AnimationController reduced motion', () {
+    test('forward completes immediately when animations are disabled', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      controller.setMotionPolicy(true);
+
+      final command = controller.forward();
+
+      expect(controller.value, 1.0);
+      expect(controller.status, AnimationStatus.completed);
+      expect(controller.isAnimating, isFalse);
+      expect(command, Cmd.none());
+    });
+
+    test('disabling animations completes an active transition', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      controller.forward();
+      final start = DateTime(2026);
+      controller.processTick(start);
+      controller.processTick(start.add(const Duration(milliseconds: 400)));
+
+      controller.setMotionPolicy(true);
+
+      expect(controller.value, 1.0);
+      expect(controller.status, AnimationStatus.completed);
+      expect(controller.isAnimating, isFalse);
+      expect(
+        controller.processTick(start.add(const Duration(seconds: 2))),
+        isNull,
+      );
+    });
+
+    test('repeat stays on its initial frame when animations are disabled', () {
+      final controller = AnimationController(lowerBound: 0, upperBound: 10);
+      addTearDown(controller.dispose);
+      controller.setMotionPolicy(true);
+
+      final command = controller.repeat(min: 2, max: 8, reverse: true);
+
+      expect(controller.value, 2);
+      expect(controller.status, AnimationStatus.dismissed);
+      expect(controller.isAnimating, isFalse);
+      expect(command, Cmd.none());
+    });
+
+    test('reenabling motion allows later transitions to animate', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      controller.setMotionPolicy(true);
+      controller.forward();
+
+      controller.setMotionPolicy(false);
+      controller.reverse();
+
+      expect(controller.value, 1.0);
+      expect(controller.status, AnimationStatus.reverse);
+      expect(controller.isAnimating, isTrue);
+    });
+
+    test('resumes a repeating animation from its frozen position', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      final start = DateTime(2026);
+      controller.repeat();
+      controller.processTick(start);
+      controller.processTick(start.add(const Duration(milliseconds: 400)));
+      expect(controller.value, closeTo(0.4, 0.001));
+
+      controller.setMotionPolicy(true);
+      expect(controller.value, closeTo(0.4, 0.001));
+      expect(controller.status, AnimationStatus.forward);
+      expect(controller.isAnimating, isFalse);
+
+      final resume = controller.setMotionPolicy(false);
+      expect(resume, isA<Cmd>());
+      expect(controller.isAnimating, isTrue);
+      expect(controller.value, closeTo(0.4, 0.001));
+
+      controller.processTick(start.add(const Duration(seconds: 10)));
+      controller.processTick(
+        start.add(const Duration(seconds: 10, milliseconds: 400)),
+      );
+      expect(controller.value, closeTo(0.64, 0.001));
+    });
+
+    test('resumes the current reverse leg of a ping-pong repeat', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      final start = DateTime(2026);
+      controller.repeat(min: 2, max: 8, reverse: true);
+      controller.processTick(start);
+      controller.processTick(start.add(const Duration(seconds: 1)));
+      controller.processTick(
+        start.add(const Duration(seconds: 1, milliseconds: 400)),
+      );
+      controller.processTick(
+        start.add(const Duration(seconds: 1, milliseconds: 800)),
+      );
+      expect(controller.status, AnimationStatus.reverse);
+      expect(controller.value, closeTo(5.6, 0.001));
+
+      controller.setMotionPolicy(true);
+      expect(controller.status, AnimationStatus.reverse);
+      expect(controller.isAnimating, isFalse);
+      controller.setMotionPolicy(false);
+      expect(controller.status, AnimationStatus.reverse);
+      expect(controller.value, closeTo(5.6, 0.001));
+
+      controller.processTick(start.add(const Duration(seconds: 10)));
+      controller.processTick(
+        start.add(const Duration(seconds: 10, milliseconds: 400)),
+      );
+      expect(controller.value, closeTo(4.16, 0.001));
+    });
+
+    test(
+      'a repeat requested under reduced motion starts after restoration',
+      () {
+        final controller = AnimationController(
+          duration: const Duration(seconds: 1),
+        );
+        addTearDown(controller.dispose);
+        controller.setMotionPolicy(true);
+
+        final initial = controller.repeat(min: 2, max: 8, reverse: true);
+        expect(initial, Cmd.none());
+        expect(controller.value, 2);
+        expect(controller.isAnimating, isFalse);
+
+        final resumed = controller.setMotionPolicy(false);
+        expect(resumed, isA<Cmd>());
+        expect(controller.value, 2);
+        expect(controller.status, AnimationStatus.forward);
+        expect(controller.isAnimating, isTrue);
+      },
+    );
+
+    test('stop cancels a repeat suspended by reduced motion', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      controller.repeat();
+      controller.setMotionPolicy(true);
+
+      controller.stop();
+      controller.setMotionPolicy(false);
+
+      expect(controller.isAnimating, isFalse);
+      expect(controller.processTick(DateTime(2026)), isNull);
+    });
+
+    test('stop with canceled preserves suspended repeat direction', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      final start = DateTime(2026);
+      controller.repeat(reverse: true);
+      controller.processTick(start);
+      controller.processTick(start.add(const Duration(seconds: 1)));
+      expect(controller.status, AnimationStatus.reverse);
+
+      controller.setMotionPolicy(true);
+      controller.stop(canceled: true);
+
+      expect(controller.status, AnimationStatus.completed);
+    });
+
+    test('ignores a repeat tick queued before motion is suspended', () {
+      final controller = AnimationController(
+        duration: const Duration(seconds: 1),
+      );
+      addTearDown(controller.dispose);
+      controller.repeat();
+      controller.setMotionPolicy(true);
+      controller.setMotionPolicy(false);
+
+      final stale = controller.processTick(
+        DateTime(2026, 1, 1, 0, 0, 0, 400),
+        generation: 1,
+      );
+
+      expect(stale, isNull);
+      expect(controller.value, 0);
+      expect(controller.isAnimating, isTrue);
     });
   });
 
